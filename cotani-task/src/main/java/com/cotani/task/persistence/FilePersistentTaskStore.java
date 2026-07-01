@@ -6,10 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -36,23 +36,16 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
         Path file = directory.resolve(task.id() + EXTENSION);
         String id = task.id().toString();
         String payload = Base64.getEncoder().encodeToString(task.payload());
-
-        int estimatedSize = id.length()
-                + task.taskName().length()
-                + task.scheduledAt().toString().length()
-                + task.delay().toString().length()
-                + payload.length()
-                + 16;
-
-        StringBuilder content = new StringBuilder(estimatedSize);
-        content.append(id).append('\n');
-        content.append(task.taskName()).append('\n');
-        content.append(task.scheduledAt().toString()).append('\n');
-        content.append(task.delay().toString()).append('\n');
-        content.append(payload);
+        String content = String.join(
+                "\n",
+                id,
+                task.taskName(),
+                task.scheduledAt().toString(),
+                task.delay().toString(),
+                payload);
 
         try {
-            Files.writeString(file, content.toString(), StandardCharsets.UTF_8);
+            Files.writeString(file, content, StandardCharsets.UTF_8);
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to save persistent task: " + task.id(), exception);
         }
@@ -60,16 +53,14 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
 
     @Override
     public List<PersistentTask> loadPending() {
-        List<PersistentTask> tasks = new ArrayList<>();
-
         try (Stream<Path> files = Files.list(directory)) {
-            files.filter(path -> path.toString().endsWith(EXTENSION))
-                    .forEach(path -> parse(path).ifPresent(tasks::add));
+            return files.filter(path -> path.toString().endsWith(EXTENSION))
+                    .map(this::parse)
+                    .flatMap(Optional::stream)
+                    .toList();
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to load persistent tasks", exception);
         }
-
-        return tasks;
     }
 
     @Override
@@ -85,12 +76,12 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
         }
     }
 
-    private java.util.Optional<PersistentTask> parse(Path file) {
+    private Optional<PersistentTask> parse(Path file) {
         try {
             List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
 
             if (lines.size() < 5) {
-                return java.util.Optional.empty();
+                return Optional.empty();
             }
 
             UUID id = UUID.fromString(lines.get(0));
@@ -99,9 +90,9 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
             Duration delay = Duration.parse(lines.get(3));
             byte[] payload = Base64.getDecoder().decode(lines.get(4));
 
-            return java.util.Optional.of(new PersistentTask(id, taskName, scheduledAt, delay, payload));
+            return Optional.of(new PersistentTask(id, taskName, scheduledAt, delay, payload));
         } catch (IOException | IllegalArgumentException _) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
     }
 }

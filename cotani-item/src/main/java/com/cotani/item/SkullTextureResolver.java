@@ -54,14 +54,14 @@ public final class SkullTextureResolver {
     }
 
     private static String normalizeTextureUrl(String input) {
-        var trimmed = input.trim();
-        if (trimmed.startsWith(TEXTURES_DOMAIN)) {
-            return trimmed;
+        var stripped = input.strip();
+        if (stripped.startsWith(TEXTURES_DOMAIN)) {
+            return stripped;
         }
-        if (trimmed.startsWith("textures.minecraft.net/texture/")) {
-            return "https://" + trimmed;
+        if (stripped.startsWith("textures.minecraft.net/texture/")) {
+            return "https://" + stripped;
         }
-        return TEXTURES_DOMAIN + trimmed;
+        return TEXTURES_DOMAIN + stripped;
     }
 
     private static String escapeJson(String value) {

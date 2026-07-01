@@ -1,6 +1,8 @@
 package com.cotani.task.api;
 
+import com.cotani.task.impl.chain.DefaultTaskChain;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -15,28 +17,18 @@ public interface TaskChain<T> {
     @SuppressWarnings("varargs")
     static <T> TaskChain<List<T>> allOf(PaperTaskScheduler scheduler, TaskChain<T>... chains) {
         if (chains.length == 0) {
-            return new com.cotani.task.impl.chain.DefaultTaskChain<>(
-                    CompletableFuture.completedFuture(List.of()), scheduler);
+            return new DefaultTaskChain<>(CompletableFuture.completedFuture(List.of()), scheduler);
         }
 
         @SuppressWarnings({"unchecked", "rawtypes"})
-        CompletableFuture<T>[] futures = new CompletableFuture[chains.length];
+        CompletableFuture<T>[] futures =
+                Arrays.stream(chains).map(TaskChain::future).toArray(CompletableFuture[]::new);
 
-        for (int index = 0; index < chains.length; index++) {
-            futures[index] = chains[index].future();
-        }
+        CompletableFuture<List<T>> all = CompletableFuture.allOf(futures)
+                .thenApply(ignored ->
+                        Arrays.stream(futures).map(CompletableFuture::join).toList());
 
-        CompletableFuture<List<T>> all = CompletableFuture.allOf(futures).thenApply(ignored -> {
-            List<T> result = new java.util.ArrayList<>(futures.length);
-
-            for (CompletableFuture<T> future : futures) {
-                result.add(future.join());
-            }
-
-            return result;
-        });
-
-        return new com.cotani.task.impl.chain.DefaultTaskChain<>(all, scheduler);
+        return new DefaultTaskChain<>(all, scheduler);
     }
 
     @SafeVarargs
@@ -47,11 +39,11 @@ public interface TaskChain<T> {
         }
 
         CompletableFuture<Object> any = CompletableFuture.anyOf(
-                java.util.Arrays.stream(chains).map(TaskChain::future).toArray(CompletableFuture[]::new));
+                Arrays.stream(chains).map(TaskChain::future).toArray(CompletableFuture[]::new));
 
         CompletableFuture<T> typed = any.thenApply(value -> (T) value);
 
-        return new com.cotani.task.impl.chain.DefaultTaskChain<>(typed, scheduler);
+        return new DefaultTaskChain<>(typed, scheduler);
     }
 
     <U> TaskChain<U> thenAsync(Function<T, U> function);

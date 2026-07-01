@@ -1,0 +1,6 @@
+name: CotaniTeleport
+version: '${version}'
+main: com.cotani.teleport.impl.CotaniTeleportPlugin
+api-version: '1.21'
+author: Haniel Cota
+description: Módulo moderno de teleport para Cotani API.

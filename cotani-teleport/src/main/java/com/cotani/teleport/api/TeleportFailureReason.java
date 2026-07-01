@@ -1,0 +1,16 @@
+package com.cotani.teleport.api;
+
+public enum TeleportFailureReason {
+    PLAYER_OFFLINE,
+    WORLD_UNLOADED,
+    INVALID_LOCATION,
+    UNSAFE_LOCATION,
+    BLOCKED_BY_REGION,
+    BLOCKED_BY_COMBAT,
+    BLOCKED_BY_COOLDOWN,
+    BLOCKED_BY_PERMISSION,
+    CANCELLED_BY_EVENT,
+    TELEPORT_FAILED,
+    TIMEOUT,
+    UNKNOWN_ERROR
+}

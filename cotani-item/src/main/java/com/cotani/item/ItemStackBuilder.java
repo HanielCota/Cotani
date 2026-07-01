@@ -106,7 +106,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
         if (lines.length == 0) {
             return clearLore();
         }
-        return lore(Arrays.asList(lines));
+        return lore(List.of(lines));
     }
 
     public final T lore(String... miniMessages) {
@@ -160,7 +160,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
         }
         var filtered = existing.enchantments().entrySet().stream()
                 .filter(e -> !e.getKey().equals(enchantment))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
         item.setData(DataComponentTypes.ENCHANTMENTS, ItemEnchantments.itemEnchantments(filtered));
         return self();
     }

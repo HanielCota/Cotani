@@ -94,13 +94,13 @@ public final class VirtualThreadExecutor implements AutoCloseable {
             return Executors.newThreadPerTaskExecutor(factory);
         }
 
-        ThreadFactory factory = runnable -> new Thread(runnable, THREAD_NAME);
+        ThreadFactory factory = Thread.ofPlatform().name(THREAD_NAME).factory();
 
         return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), factory);
     }
 
     private static ScheduledExecutorService createDelayedExecutor() {
-        ThreadFactory factory = runnable -> new Thread(runnable, DELAYED_THREAD_NAME);
+        ThreadFactory factory = Thread.ofPlatform().name(DELAYED_THREAD_NAME).factory();
 
         return Executors.newSingleThreadScheduledExecutor(factory);
     }

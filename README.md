@@ -36,10 +36,11 @@ Writing Paper plugins usually means juggling dozens of small concerns: formattin
 
 ```
 cotani/
-├── 🏗️ cotani-core    # Plugin lifecycle and shared contracts
-├── 💬 cotani-text    # MiniMessage, placeholders, and Adventure helpers
-├── ⚔️ cotani-item    # Fluent ItemStack builders with data components
-└── ⏱️ cotani-task    # TaskChain, async executors, and virtual threads
+├── 🏗️ cotani-core      # Plugin lifecycle and shared contracts
+├── 💬 cotani-text      # MiniMessage, placeholders, and Adventure helpers
+├── ⚔️ cotani-item      # Fluent ItemStack builders with data components
+├── ⏱️ cotani-task      # TaskChain, async executors, and virtual threads
+└── 🌀 cotani-teleport  # Safe, async-aware teleport API for Paper
 ```
 
 ### 🏗️ `cotani-core`
@@ -112,6 +113,50 @@ ItemStack sword = ItemBuilder.of(Material.DIAMOND_SWORD)
 ItemStack skull = SkullBuilder.create()
     .textureUrl("https://textures.minecraft.net/texture/...")
     .build();
+```
+
+### 🌀 `cotani-teleport`
+
+A thread-safe, event-driven teleport API that keeps the main thread happy.
+
+| Concept | Description |
+|---------|-------------|
+| `TeleportService` | Async teleport with validation, events, and timeout. |
+| `PendingTeleportService` | Delayed teleports cancellable by movement, damage, or quit. |
+| `TeleportOptions` | Fine-grained control over safety, policies, player effects, and feedback. |
+| `TeleportPolicyChain` | Pluggable policies for combat, cooldown, permission, and region checks. |
+| `SafeLocationResolver` | Async safe-location search that avoids chunk loads. |
+| `TeleportEventBus` | Dispatches Bukkit events on the main thread automatically. |
+
+```java
+TeleportModule module = TeleportModule.create(this);
+
+module.teleportService().teleport(
+    TeleportRequest.builder()
+        .player(player)
+        .target(target)
+        .cause(TeleportCause.HOME)
+        .source("/home")
+        .options(TeleportOptions.builder()
+            .safeLocation(true)
+            .checkCooldown(true)
+            .cooldownDuration(Duration.ofSeconds(30))
+            .preserveVelocity(false)
+            .dismount(true)
+            .closeInventory(true)
+            .build())
+        .build()
+).whenComplete((result, error) -> {
+    if (result instanceof TeleportResult.Success success) {
+        player.sendMessage("Teleported in " + success.durationMillis() + " ms");
+    } else if (result instanceof TeleportResult.Failure failure) {
+        player.sendMessage("Teleport failed: " + failure.reason());
+    }
+});
+
+// Delayed teleport with automatic cancellation on move/damage/quit
+UUID pendingId = module.pendingTeleportService().schedule(
+    player, target, Duration.ofSeconds(3), TeleportOptions.defaults(), TeleportCause.WARP, "warp");
 ```
 
 ### ⏱️ `cotani-task`
@@ -208,6 +253,7 @@ dependencies {
     implementation("com.cotani:cotani-text:1.0.0")
     implementation("com.cotani:cotani-item:1.0.0")
     implementation("com.cotani:cotani-task:1.0.0")
+    implementation("com.cotani:cotani-teleport:1.0.0")
 }
 ```
 

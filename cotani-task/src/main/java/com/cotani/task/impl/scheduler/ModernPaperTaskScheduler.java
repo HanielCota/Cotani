@@ -219,22 +219,26 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         Objects.requireNonNull(runnable, "runnable");
         Objects.requireNonNull(quietPeriod, "quietPeriod");
 
+        final SchedulerTask[] taskHolder = new SchedulerTask[1];
         SchedulerTask previous = pendingDebounces.remove(name);
-
-        if (previous != null) {
-            previous.cancel();
-        }
 
         var metadata = metadata("debounce-" + name, ExecutionTarget.async());
         SchedulerTask task = platformScheduler.runAsyncLater(
                 metadata,
                 taskRunner.wrap(metadata, () -> {
-                    pendingDebounces.remove(name);
+                    pendingDebounces.remove(name, taskHolder[0]);
                     runnable.run();
                 }),
                 quietPeriod);
+        taskHolder[0] = task;
 
-        pendingDebounces.put(name, task);
+        SchedulerTask stale = pendingDebounces.put(name, task);
+        if (stale != null && !stale.equals(previous)) {
+            stale.cancel();
+        }
+        if (previous != null) {
+            previous.cancel();
+        }
 
         return task;
     }
