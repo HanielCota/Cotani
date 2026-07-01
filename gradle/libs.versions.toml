@@ -1,0 +1,27 @@
+[versions]
+java = "25"
+caffeine = "3.2.0"
+errorprone = "5.1.0"
+errorprone-core = "2.50.0"
+jspecify = "1.0.0"
+junit = "6.1.1"
+mockito = "5.17.0"
+nullaway = "0.13.7"
+paper = "26.2.build.40-alpha"
+spotless = "8.7.0"
+
+[libraries]
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone-core" }
+errorprone-gradle = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
+
+[plugins]
+errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

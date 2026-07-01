@@ -1,0 +1,66 @@
+package com.cotani.task.bucket;
+
+import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.api.SchedulerTask;
+import com.cotani.task.throttle.RateLimiter;
+import com.cotani.task.throttle.TokenBucketRateLimiter;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class DefaultTaskBucket implements TaskBucket {
+
+    private final PaperTaskScheduler scheduler;
+    private final Map<String, RateLimiter> limiters = new ConcurrentHashMap<>();
+    private final long defaultCapacity;
+    private final Duration defaultRefillPeriod;
+
+    public DefaultTaskBucket(PaperTaskScheduler scheduler) {
+        this(scheduler, 10, Duration.ofSeconds(1));
+    }
+
+    public DefaultTaskBucket(PaperTaskScheduler scheduler, long defaultCapacity, Duration defaultRefillPeriod) {
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+
+        if (defaultCapacity <= 0) {
+            throw new IllegalArgumentException("defaultCapacity must be positive");
+        }
+
+        this.defaultCapacity = defaultCapacity;
+        this.defaultRefillPeriod = Objects.requireNonNull(defaultRefillPeriod, "defaultRefillPeriod");
+    }
+
+    @Override
+    public SchedulerTask submit(String bucketName, Runnable runnable) {
+        return submit(bucketName, bucketName + "-task", runnable);
+    }
+
+    @Override
+    public SchedulerTask submit(String bucketName, String taskName, Runnable runnable) {
+        Objects.requireNonNull(bucketName, "bucketName");
+        Objects.requireNonNull(taskName, "taskName");
+        Objects.requireNonNull(runnable, "runnable");
+
+        RateLimiter limiter = limiterFor(bucketName);
+
+        return scheduler.async(taskName, () -> {
+            try {
+                limiter.acquire();
+                runnable.run();
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+
+                throw new RuntimeException("Interrupted while acquiring bucket permit", interrupted);
+            }
+        });
+    }
+
+    @Override
+    public RateLimiter limiterFor(String bucketName) {
+        Objects.requireNonNull(bucketName, "bucketName");
+
+        return limiters.computeIfAbsent(
+                bucketName, ignored -> new TokenBucketRateLimiter(defaultCapacity, defaultRefillPeriod));
+    }
+}
