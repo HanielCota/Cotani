@@ -110,38 +110,51 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
         return scheduler
                 .supply(ExecutionTarget.entity(player), "teleport-prepare", () -> {
                     preparePlayer(player, options.player());
+
                     return player.getVelocity();
                 })
-                .thenCompose((Vector velocity) -> {
-                    CompletableFuture<Boolean> teleportFuture;
-                    if (options.async()) {
-                        teleportFuture = player.teleportAsync(eventTarget);
-                    } else if (Bukkit.isPrimaryThread()) {
-                        teleportFuture = CompletableFuture.completedFuture(player.teleport(eventTarget));
-                    } else {
-                        teleportFuture = scheduler.supply(
-                                ExecutionTarget.global(), "sync-teleport", () -> player.teleport(eventTarget));
+                .thenCompose((Vector velocity) -> runTeleport(player, context, eventTarget, velocity, startedAt));
+    }
+
+    private CompletableFuture<TeleportResult> runTeleport(
+            Player player, TeleportContext context, Location eventTarget, Vector velocity, Instant startedAt) {
+        TeleportOptions options = context.options();
+
+        CompletableFuture<Boolean> teleportFuture = startTeleport(player, eventTarget, options);
+
+        return teleportFuture
+                .orTimeout(options.timeout().toMillis(), TimeUnit.MILLISECONDS)
+                .thenCompose(success -> {
+                    if (!success) {
+                        return resultMapper.mapTeleportFailure(context);
                     }
 
-                    return teleportFuture
-                            .orTimeout(options.timeout().toMillis(), TimeUnit.MILLISECONDS)
-                            .thenCompose(success -> {
-                                if (!success) {
-                                    return resultMapper.mapTeleportFailure(context);
-                                }
-                                applyCooldown(context);
-                                return scheduler.supply(ExecutionTarget.entity(player), "teleport-cleanup", () -> {
-                                    if (options.preserveVelocity()) {
-                                        player.setVelocity(velocity);
-                                    }
-                                    return resultMapper
-                                            .mapSuccess(context, context.from(), eventTarget, startedAt)
-                                            .join();
-                                });
-                            })
-                            .exceptionally(error ->
-                                    resultMapper.mapException(context, error).join());
-                });
+                    applyCooldown(context);
+
+                    return scheduler.supply(ExecutionTarget.entity(player), "teleport-cleanup", () -> {
+                        if (options.preserveVelocity()) {
+                            player.setVelocity(velocity);
+                        }
+
+                        return resultMapper
+                                .mapSuccess(context, context.from(), eventTarget, startedAt)
+                                .join();
+                    });
+                })
+                .exceptionally(
+                        error -> resultMapper.mapException(context, error).join());
+    }
+
+    private CompletableFuture<Boolean> startTeleport(Player player, Location eventTarget, TeleportOptions options) {
+        if (options.async()) {
+            return player.teleportAsync(eventTarget);
+        }
+
+        if (Bukkit.isPrimaryThread()) {
+            return CompletableFuture.completedFuture(player.teleport(eventTarget));
+        }
+
+        return scheduler.supply(ExecutionTarget.global(), "sync-teleport", () -> player.teleport(eventTarget));
     }
 
     private CompletableFuture<TeleportResult> notifyFailure(TeleportResult.Failure failure) {

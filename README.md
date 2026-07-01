@@ -147,10 +147,11 @@ module.teleportService().teleport(
             .build())
         .build()
 ).whenComplete((result, error) -> {
-    if (result instanceof TeleportResult.Success success) {
-        player.sendMessage("Teleported in " + success.durationMillis() + " ms");
-    } else if (result instanceof TeleportResult.Failure failure) {
-        player.sendMessage("Teleport failed: " + failure.reason());
+    switch (result) {
+        case TeleportResult.Success success ->
+            player.sendMessage("Teleported in " + success.durationMillis() + " ms");
+        case TeleportResult.Failure failure ->
+            player.sendMessage("Teleport failed: " + failure.reason());
     }
 });
 
@@ -331,7 +332,7 @@ This project is intentionally strict:
 
 - Packages under `com.cotani` are annotated with `@NullMarked`.
 - Fluent builders return `this` or a typed `self()`.
-- Early returns are preferred over nested `else` blocks.
+- Early returns are preferred over nested conditionals.
 - `Objects.requireNonNull` guards every public parameter.
 - Records are preferred for immutable data carriers.
 - String concatenation inside hot loops is avoided.
