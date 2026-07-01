@@ -39,6 +39,7 @@ cotani/
 ├── 🏗️ cotani-core      # Plugin lifecycle and shared contracts
 ├── 💬 cotani-text      # MiniMessage, placeholders, and Adventure helpers
 ├── ⚔️ cotani-item      # Fluent ItemStack builders with data components
+├── 🗄️ cotani-storage   # Async SQL storage with migrations and repositories
 ├── ⏱️ cotani-task      # TaskChain, async executors, and virtual threads
 └── 🌀 cotani-teleport  # Safe, async-aware teleport API for Paper
 ```
@@ -114,6 +115,80 @@ ItemStack skull = SkullBuilder.create()
     .textureUrl("https://textures.minecraft.net/texture/...")
     .build();
 ```
+
+### 🗄️ `cotani-storage`
+
+Async SQL storage abstraction supporting SQLite, MySQL, and MariaDB with migrations, typed repositories, and virtual-thread-aware execution.
+
+| Concept | Description |
+|---------|-------------|
+| `CotaniStorage` | Entry point for opening and managing the storage lifecycle. |
+| `CotaniStorageBuilder` | Fluent builder for backends, thread pools, and repositories. |
+| `CrudRepository` | Base repository with `findById`, `exists`, `save`, and `deleteById`. |
+| `QueryExecutor` | Async query/update/batch/exists API backed by `CompletableFuture`. |
+| `Migration` | Versioned schema migrations executed automatically at startup. |
+| `StorageFuture` | `CompletableFuture` wrapper with scheduler-aware callbacks. |
+
+```java
+CotaniStorage storage = CotaniStorage.create(this)
+    .sqlite("database.db")
+    .virtualThreads()
+    .repositories(UserRepository.class)
+    .build()
+    .start();
+
+UserRepository users = storage.repository(UserRepository.class);
+users.findById(player.getUniqueId())
+    .thenAsync(user -> player.sendMessage("Found: " + user.name()));
+```
+
+#### Configuration example
+
+```yaml
+storage:
+  type: MYSQL
+  mysql:
+    host: localhost
+    port: 3306
+    database: minecraft
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    use-ssl: true
+```
+
+#### Migrations
+
+```java
+public final class CreateUsersTableMigration implements Migration {
+
+    @Override
+    public int version() {
+        return 1;
+    }
+
+    @Override
+    public String description() {
+        return "Create users table";
+    }
+
+    @Override
+    public StorageFuture<Void> migrate(Schema schema) {
+        return schema.table("users")
+            .id("id", ColumnType.UUID)
+            .required("name", ColumnType.STRING)
+            .required("balance", ColumnType.DOUBLE)
+            .createIfNotExists();
+    }
+}
+```
+
+#### Security notes
+
+- SQL identifiers (table and column names) are validated against `^[A-Za-z_]\w*$` to prevent injection through the fluent API.
+- Values are always bound via `PreparedStatement`; never concatenate user values into SQL.
+- SQLite database files are confined to the plugin data folder to avoid path traversal.
+- MySQL/MariaDB connections default to TLS (`useSSL=true`); disable only on trusted local networks.
+- Raw SQL is intentionally omitted from exception messages to avoid leaking query contents into logs.
 
 ### 🌀 `cotani-teleport`
 
@@ -253,6 +328,7 @@ dependencies {
     implementation("com.cotani:cotani-core:1.0.0")
     implementation("com.cotani:cotani-text:1.0.0")
     implementation("com.cotani:cotani-item:1.0.0")
+    implementation("com.cotani:cotani-storage:1.0.0")
     implementation("com.cotani:cotani-task:1.0.0")
     implementation("com.cotani:cotani-teleport:1.0.0")
 }

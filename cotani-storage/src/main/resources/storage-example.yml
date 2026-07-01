@@ -1,0 +1,18 @@
+storage:
+  type: SQLITE
+  sqlite:
+    file: database.db
+  mysql:
+    host: localhost
+    port: 3306
+    database: minecraft
+    # Required: do not use root or empty passwords in production.
+    username: your_user
+    password: your_password
+    # TLS is enabled by default. Only disable on trusted local networks.
+    use-ssl: true
+    pool-size: 10
+    minimum-idle: 2
+    connection-timeout: 10000
+    idle-timeout: 60000
+    max-lifetime: 1800000
