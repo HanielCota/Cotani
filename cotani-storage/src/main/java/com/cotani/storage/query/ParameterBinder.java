@@ -19,7 +19,7 @@ public final class ParameterBinder {
         this.serializers = serializers;
     }
 
-    public ParameterBinder set(Object value) throws SQLException {
+    public ParameterBinder set(@Nullable Object value) throws SQLException {
         var serialized = fastSerialize(value);
         statement.setObject(index++, serialized);
         return this;

@@ -6,11 +6,11 @@ import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import java.math.BigDecimal;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public interface EconomyTransferRepository {
 
-    CompletableFuture<EconomyTransaction> transfer(
+    CompletionStage<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,
             CurrencyId currencyId,

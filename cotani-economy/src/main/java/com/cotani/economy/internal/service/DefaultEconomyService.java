@@ -15,7 +15,7 @@ import com.cotani.economy.transaction.EconomyTransaction;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public final class DefaultEconomyService implements EconomyService {
 
@@ -39,12 +39,12 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletableFuture<EconomyBalance> balance(UUID userId) {
+    public CompletionStage<EconomyBalance> balance(UUID userId) {
         return balance(userId, settings.defaultCurrency().id());
     }
 
     @Override
-    public CompletableFuture<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
+    public CompletionStage<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
         guard.validateUserId(userId);
         guard.validateCurrencyId(currencyId);
 
@@ -52,12 +52,12 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletableFuture<Boolean> has(UUID userId, BigDecimal amount) {
+    public CompletionStage<Boolean> has(UUID userId, BigDecimal amount) {
         return has(userId, settings.defaultCurrency().id(), amount);
     }
 
     @Override
-    public CompletableFuture<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
+    public CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
         guard.validateUserId(userId);
         guard.validateCurrencyId(currencyId);
 
@@ -67,7 +67,7 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> deposit(
+    public CompletionStage<EconomyTransaction> deposit(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
         guard.validateUserId(userId);
         guard.validateReason(reason);
@@ -82,7 +82,7 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> withdraw(
+    public CompletionStage<EconomyTransaction> withdraw(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
         guard.validateUserId(userId);
         guard.validateReason(reason);
@@ -97,7 +97,7 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> set(
+    public CompletionStage<EconomyTransaction> set(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
         guard.validateUserId(userId);
         guard.validateReason(reason);
@@ -113,7 +113,7 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> transfer(
+    public CompletionStage<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,
             BigDecimal amount,

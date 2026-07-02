@@ -78,7 +78,7 @@ public final class QueryExecutor {
         return CompletableFuture.runAsync(() -> runBatch(sql, binders), executor);
     }
 
-    public CompletionStage<Void> transaction(Function<QueryExecutor, CompletionStage<Void>> operation) {
+    public <T> CompletionStage<T> transaction(Function<QueryExecutor, CompletionStage<T>> operation) {
         return CompletableFuture.supplyAsync(this::beginTransaction, executor).thenCompose(state -> {
             var transactional =
                     new QueryExecutor(provider, Runnable::run, serializers, queryTimeoutSeconds, state.connection);
