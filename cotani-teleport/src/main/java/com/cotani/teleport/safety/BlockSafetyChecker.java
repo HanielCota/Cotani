@@ -56,7 +56,7 @@ public final class BlockSafetyChecker {
 
     private static boolean isOutsideBounds(World world, Location location) {
         double y = location.getY();
-        return y <= world.getMinHeight() || y >= world.getMaxHeight() - 2;
+        return y < world.getMinHeight() || y + 1 >= world.getMaxHeight();
     }
 
     private static boolean isLiquid(Block... blocks) {

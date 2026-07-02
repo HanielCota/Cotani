@@ -1,0 +1,4 @@
+blocked-by-combat: "<red>You cannot teleport while in combat."
+blocked-by-cooldown: "<yellow>Please wait before teleporting again."
+blocked-by-permission: "<red>You do not have permission to teleport."
+blocked-by-region: "<red>You cannot teleport to this region."

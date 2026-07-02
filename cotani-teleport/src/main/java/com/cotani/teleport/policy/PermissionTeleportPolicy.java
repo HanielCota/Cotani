@@ -4,6 +4,8 @@ import com.cotani.teleport.api.TeleportContext;
 import com.cotani.teleport.api.TeleportFailureReason;
 import com.cotani.teleport.api.TeleportMessages;
 import java.util.Objects;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 public final class PermissionTeleportPolicy implements TeleportPolicy {
     private final String permission;
@@ -19,7 +21,8 @@ public final class PermissionTeleportPolicy implements TeleportPolicy {
         if (!context.options().checkPermission()) {
             return PolicyResult.allowed();
         }
-        if (!context.player().hasPermission(permission)) {
+        Player player = Bukkit.getPlayer(context.playerId());
+        if (player == null || !player.hasPermission(permission)) {
             return PolicyResult.denied(TeleportFailureReason.BLOCKED_BY_PERMISSION, messages.blockedByPermission());
         }
         return PolicyResult.allowed();

@@ -1,20 +1,20 @@
 package com.cotani.teleport.api;
 
+import java.util.UUID;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
 public sealed interface TeleportResult permits TeleportResult.Success, TeleportResult.Failure {
-    Player player();
+    UUID playerId();
 
     Location from();
 
     Location to();
 
-    record Success(Player player, Location from, Location to, long durationMillis) implements TeleportResult {}
+    record Success(UUID playerId, Location from, Location to, long durationMillis) implements TeleportResult {}
 
     record Failure(
-            Player player,
+            UUID playerId,
             Location from,
             Location to,
             TeleportFailureReason reason,

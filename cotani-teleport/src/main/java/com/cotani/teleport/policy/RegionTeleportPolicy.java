@@ -5,6 +5,8 @@ import com.cotani.teleport.api.TeleportContext;
 import com.cotani.teleport.api.TeleportFailureReason;
 import com.cotani.teleport.api.TeleportMessages;
 import java.util.Objects;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 public final class RegionTeleportPolicy implements TeleportPolicy {
     private final RegionProtectionAdapter regionAdapter;
@@ -20,7 +22,8 @@ public final class RegionTeleportPolicy implements TeleportPolicy {
         if (!context.options().checkRegion()) {
             return PolicyResult.allowed();
         }
-        if (!regionAdapter.canTeleport(context.player(), context.target())) {
+        Player player = Bukkit.getPlayer(context.playerId());
+        if (player == null || !regionAdapter.canTeleport(player, context.target())) {
             return PolicyResult.denied(TeleportFailureReason.BLOCKED_BY_REGION, messages.blockedByRegion());
         }
         return PolicyResult.allowed();

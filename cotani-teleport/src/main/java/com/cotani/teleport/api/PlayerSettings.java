@@ -9,10 +9,22 @@ public record PlayerSettings(boolean preserveVelocity, boolean dismount, boolean
         return new Builder();
     }
 
+    public static Builder builder(PlayerSettings base) {
+        return new Builder(base);
+    }
+
     public static final class Builder {
         private boolean preserveVelocity = false;
         private boolean dismount = true;
         private boolean closeInventory = true;
+
+        public Builder() {}
+
+        public Builder(PlayerSettings base) {
+            this.preserveVelocity = base.preserveVelocity();
+            this.dismount = base.dismount();
+            this.closeInventory = base.closeInventory();
+        }
 
         public Builder preserveVelocity(boolean preserveVelocity) {
             this.preserveVelocity = preserveVelocity;

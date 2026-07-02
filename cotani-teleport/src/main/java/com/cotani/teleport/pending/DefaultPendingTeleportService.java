@@ -1,14 +1,7 @@
 package com.cotani.teleport.pending;
 
 import com.cotani.task.api.PaperTaskScheduler;
-import com.cotani.teleport.api.PendingTeleportService;
-import com.cotani.teleport.api.PendingTeleportView;
-import com.cotani.teleport.api.TeleportCancelReason;
-import com.cotani.teleport.api.TeleportCause;
-import com.cotani.teleport.api.TeleportOptions;
-import com.cotani.teleport.api.TeleportRequest;
-import com.cotani.teleport.api.TeleportResult;
-import com.cotani.teleport.api.TeleportService;
+import com.cotani.teleport.api.*;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -30,40 +23,47 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
 
     @Override
     public UUID schedule(
-            Player player,
+            UUID playerId,
             Location target,
             Duration delay,
             TeleportOptions options,
             TeleportCause cause,
             String source) {
-        UUID playerId = player.getUniqueId();
         PendingTeleportData data = PendingTeleportData.create(playerId, target, delay, options, cause, source);
         PendingTeleportStateMachine pending = new PendingTeleportStateMachine(data);
 
         PendingTeleportStateMachine previous = pendingByPlayer.put(playerId, pending);
         if (previous != null) {
-            previous.cancel(TeleportCancelReason.REPLACED);
+            if (!previous.cancel(TeleportCancelReason.REPLACED)) {
+                previous.cancelExecution(TeleportCancelReason.REPLACED);
+            }
         }
 
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            pendingByPlayer.remove(playerId, pending);
+            pending.cancelExecution(TeleportCancelReason.QUIT);
+            return data.id();
+        }
         pending.attachTask(
                 scheduler.entityLater("pending-teleport-" + data.id(), player, () -> execute(pending), delay));
         return data.id();
     }
 
     @Override
-    public boolean cancel(Player player, TeleportCancelReason reason) {
-        PendingTeleportStateMachine pending = pendingByPlayer.remove(player.getUniqueId());
+    public boolean cancel(UUID playerId, TeleportCancelReason reason) {
+        PendingTeleportStateMachine pending = pendingByPlayer.remove(playerId);
         return pending != null && pending.cancel(reason);
     }
 
     @Override
-    public boolean hasPending(Player player) {
-        return pendingByPlayer.containsKey(player.getUniqueId());
+    public boolean hasPending(UUID playerId) {
+        return pendingByPlayer.containsKey(playerId);
     }
 
     @Override
-    public Optional<PendingTeleportView> find(Player player) {
-        return Optional.ofNullable(pendingByPlayer.get(player.getUniqueId())).map(this::toView);
+    public Optional<PendingTeleportView> find(UUID playerId) {
+        return Optional.ofNullable(pendingByPlayer.get(playerId)).map(this::toView);
     }
 
     @Override
@@ -86,7 +86,7 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         }
 
         TeleportRequest request = TeleportRequest.builder()
-                .player(player)
+                .playerId(data.playerId())
                 .target(data.target())
                 .cause(data.cause())
                 .source(data.source())

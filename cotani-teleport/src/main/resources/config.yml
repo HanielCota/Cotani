@@ -1,0 +1,73 @@
+presets:
+  spawn:
+    execution:
+      async: true
+    safety:
+      safe-location: true
+      horizontal-radius: 2
+      vertical-radius: 8
+      avoid-liquids: true
+      avoid-hazards: true
+      respect-world-border: true
+    policies:
+      check-combat: true
+      check-cooldown: true
+      cooldown-duration: 30s
+      check-permission: false
+      check-region: true
+    player:
+      preserve-velocity: false
+      dismount: true
+      close-inventory: true
+    feedback:
+      play-effects: true
+      send-messages: true
+    timeout: 10s
+  admin:
+    execution:
+      async: true
+    safety:
+      safe-location: false
+      horizontal-radius: 2
+      vertical-radius: 8
+      avoid-liquids: true
+      avoid-hazards: true
+      respect-world-border: true
+    policies:
+      check-combat: false
+      check-cooldown: false
+      cooldown-duration: 30s
+      check-permission: false
+      check-region: false
+    player:
+      preserve-velocity: false
+      dismount: true
+      close-inventory: true
+    feedback:
+      play-effects: true
+      send-messages: false
+    timeout: 5s
+  silent:
+    execution:
+      async: true
+    safety:
+      safe-location: true
+      horizontal-radius: 2
+      vertical-radius: 8
+      avoid-liquids: true
+      avoid-hazards: true
+      respect-world-border: true
+    policies:
+      check-combat: true
+      check-cooldown: true
+      cooldown-duration: 30s
+      check-permission: false
+      check-region: true
+    player:
+      preserve-velocity: false
+      dismount: true
+      close-inventory: true
+    feedback:
+      play-effects: false
+      send-messages: false
+    timeout: 10s

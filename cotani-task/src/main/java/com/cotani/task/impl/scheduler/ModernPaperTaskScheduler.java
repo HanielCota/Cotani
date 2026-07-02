@@ -19,10 +19,12 @@ import com.cotani.task.persistence.PersistentTask;
 import com.cotani.task.persistence.PersistentTaskStore;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -36,6 +38,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     private final SchedulerOptions options;
     private final TaskRunner taskRunner;
     private final TaskErrorReporter taskErrorReporter;
+    private final TaskExceptionHandler exceptionHandler;
     private final TaskDispatcher taskDispatcher;
     private final TaskMetrics metrics;
     private final PersistentTaskStore persistentTaskStore;
@@ -59,6 +62,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         this.options = Objects.requireNonNull(options, "options");
         this.metrics = Objects.requireNonNull(metrics, "metrics");
         this.persistentTaskStore = Objects.requireNonNull(persistentTaskStore, "persistentTaskStore");
+        this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
         this.taskRunner = new TaskRunner(exceptionHandler, metrics);
         this.taskErrorReporter = new TaskErrorReporter(exceptionHandler);
         this.taskDispatcher = new TaskDispatcher(platformScheduler, taskRunner);
@@ -139,6 +143,20 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     }
 
     @Override
+    public SchedulerTask region(UUID worldId, int chunkX, int chunkZ, Runnable runnable) {
+        return region("region-task", worldId, chunkX, chunkZ, runnable);
+    }
+
+    @Override
+    public SchedulerTask region(String name, UUID worldId, int chunkX, int chunkZ, Runnable runnable) {
+        var target = ExecutionTarget.region(worldId, chunkX, chunkZ);
+        var metadata = metadata(name, target);
+        var location = ((ExecutionTarget.Region) target).location();
+
+        return platformScheduler.runRegion(metadata, location, taskRunner.wrap(metadata, runnable));
+    }
+
+    @Override
     public SchedulerTask regionLater(Location location, Runnable runnable, Duration delay) {
         return regionLater("region-later-task", location, runnable, delay);
     }
@@ -172,6 +190,21 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     @Override
     public SchedulerTask entity(String name, Entity entity, Runnable runnable) {
         var metadata = metadata(name, ExecutionTarget.entity(entity));
+
+        return platformScheduler.runEntity(
+                metadata, entity, taskRunner.wrap(metadata, runnable), () -> taskErrorReporter.handleRetired(metadata));
+    }
+
+    @Override
+    public SchedulerTask entity(UUID entityId, Runnable runnable) {
+        return entity("entity-task", entityId, runnable);
+    }
+
+    @Override
+    public SchedulerTask entity(String name, UUID entityId, Runnable runnable) {
+        var target = ExecutionTarget.entity(entityId);
+        var metadata = metadata(name, target);
+        var entity = ((ExecutionTarget.EntityTarget) target).entity();
 
         return platformScheduler.runEntity(
                 metadata, entity, taskRunner.wrap(metadata, runnable), () -> taskErrorReporter.handleRetired(metadata));
@@ -280,6 +313,11 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     }
 
     @Override
+    public CompletionStage<List<PersistentTask>> recoverPendingTasksAsync() {
+        return supplyAsync("recover-pending", persistentTaskStore::loadPending).toCompletionStage();
+    }
+
+    @Override
     public <T> TaskChain<T> supplyAsync(Supplier<T> supplier) {
         return supplyAsync("supply-async-task", supplier);
     }
@@ -303,6 +341,11 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     }
 
     @Override
+    public <T> TaskChain<T> chain(CompletionStage<T> stage) {
+        return new DefaultTaskChain<>(stage.toCompletableFuture(), this);
+    }
+
+    @Override
     public Executor asyncExecutor() {
         return command -> async("executor-async", command);
     }
@@ -318,13 +361,28 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     }
 
     @Override
+    public Executor regionExecutor(UUID worldId, int chunkX, int chunkZ) {
+        return command -> region("executor-region", worldId, chunkX, chunkZ, command);
+    }
+
+    @Override
     public Executor entityExecutor(Entity entity) {
         return command -> entity("executor-entity", entity, command);
     }
 
     @Override
+    public Executor entityExecutor(UUID entityId) {
+        return command -> entity("executor-entity", entityId, command);
+    }
+
+    @Override
     public TaskMetrics metrics() {
         return metrics;
+    }
+
+    @Override
+    public TaskExceptionHandler exceptionHandler() {
+        return exceptionHandler;
     }
 
     @Override

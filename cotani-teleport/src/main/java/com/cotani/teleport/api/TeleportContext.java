@@ -1,11 +1,11 @@
 package com.cotani.teleport.api;
 
 import java.util.Objects;
+import java.util.UUID;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 
 public record TeleportContext(
-        Player player,
+        UUID playerId,
         Location from,
         Location target,
         TeleportCause cause,
@@ -13,7 +13,7 @@ public record TeleportContext(
         String source,
         java.time.Instant createdAt) {
     public TeleportContext {
-        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(cause, "cause");
@@ -27,6 +27,6 @@ public record TeleportContext(
     }
 
     public TeleportContext withTarget(Location newTarget) {
-        return new TeleportContext(player, from, newTarget, cause, options, source, createdAt);
+        return new TeleportContext(playerId, from, newTarget, cause, options, source, createdAt);
     }
 }

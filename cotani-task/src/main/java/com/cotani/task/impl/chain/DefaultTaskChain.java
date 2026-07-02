@@ -5,18 +5,21 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.RetryPolicy;
 import com.cotani.task.api.TaskChain;
 import com.cotani.task.exception.TaskTimeoutException;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
+
 import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import org.bukkit.Location;
-import org.bukkit.entity.Entity;
 
 public final class DefaultTaskChain<T> implements TaskChain<T> {
 
@@ -51,8 +54,18 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     }
 
     @Override
+    public <U> TaskChain<U> thenRegion(UUID worldId, int chunkX, int chunkZ, Function<T, U> function) {
+        return thenTarget(ExecutionTarget.region(worldId, chunkX, chunkZ), "chain-region", function);
+    }
+
+    @Override
     public <U> TaskChain<U> thenEntity(Entity entity, Function<T, U> function) {
         return thenTarget(ExecutionTarget.entity(entity), "chain-entity", function);
+    }
+
+    @Override
+    public <U> TaskChain<U> thenEntity(UUID entityId, Function<T, U> function) {
+        return thenTarget(ExecutionTarget.entity(entityId), "chain-entity", function);
     }
 
     @Override
@@ -71,8 +84,18 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     }
 
     @Override
+    public TaskChain<T> consumeRegion(UUID worldId, int chunkX, int chunkZ, Consumer<T> consumer) {
+        return consumeTarget(ExecutionTarget.region(worldId, chunkX, chunkZ), "consume-region", consumer);
+    }
+
+    @Override
     public TaskChain<T> consumeEntity(Entity entity, Consumer<T> consumer) {
         return consumeTarget(ExecutionTarget.entity(entity), "consume-entity", consumer);
+    }
+
+    @Override
+    public TaskChain<T> consumeEntity(UUID entityId, Consumer<T> consumer) {
+        return consumeTarget(ExecutionTarget.entity(entityId), "consume-entity", consumer);
     }
 
     @Override
@@ -105,13 +128,13 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
         CompletableFuture<U> mapped = future.thenCompose(value -> {
             TaskChain<U> inner = mapper.apply(value);
 
-            return inner.future();
+            return inner.toCompletionStage().toCompletableFuture();
         });
 
         Supplier<CompletableFuture<U>> factory = () -> futureFactory.get().thenCompose(value -> {
             TaskChain<U> inner = mapper.apply(value);
 
-            return inner.future();
+            return inner.toCompletionStage().toCompletableFuture();
         });
 
         return new DefaultTaskChain<>(mapped, scheduler, factory);
@@ -193,7 +216,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     }
 
     @Override
-    public CompletableFuture<T> future() {
+    public CompletionStage<T> toCompletionStage() {
         return future;
     }
 

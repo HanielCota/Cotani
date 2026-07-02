@@ -85,4 +85,6 @@ new RegionTeleportPolicy(new SeuWorldGuardAdapter())
 
 ## Observação
 
-O projeto está estruturado para servir como módulo base da Cotani. Ele compila contra Paper API `26.1.2.build.+`, conforme coordenada publicada pelo projeto PaperMC. Ajuste a versão no `build.gradle.kts` se o seu ambiente usar outro build.
+O projeto está estruturado para servir como módulo base da Cotani. Ele compila contra Paper API `26.1.2.build.+`,
+conforme coordenada publicada pelo projeto PaperMC. Ajuste a versão no `build.gradle.kts` se o seu ambiente usar outro
+build.

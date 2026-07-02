@@ -23,7 +23,6 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.damage.DamageType;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionType;
@@ -37,6 +36,22 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
     protected ItemStackBuilder(Material material) {
         this.item = ItemStack.of(material);
+    }
+
+    private static List<Float> boxedFloats(float[] floats) {
+        var list = new ArrayList<Float>(floats.length);
+        for (float value : floats) {
+            list.add(value);
+        }
+        return list;
+    }
+
+    private static List<Boolean> boxedBooleans(boolean[] flags) {
+        var list = new ArrayList<Boolean>(flags.length);
+        for (boolean flag : flags) {
+            list.add(flag);
+        }
+        return list;
     }
 
     protected abstract T self();
@@ -144,12 +159,14 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
     public final T enchant(Map<Enchantment, Integer> enchantments) {
         Objects.requireNonNull(enchantments, "Parameter 'enchantments' must not be null");
-        item.setData(DataComponentTypes.ENCHANTMENTS, ItemEnchantments.itemEnchantments(enchantments));
+        var existing = item.getData(DataComponentTypes.ENCHANTMENTS);
+        var builder = ItemEnchantments.itemEnchantments();
+        if (existing != null) {
+            existing.enchantments().forEach(builder::add);
+        }
+        enchantments.forEach(builder::add);
+        item.setData(DataComponentTypes.ENCHANTMENTS, builder.build());
         return self();
-    }
-
-    public final T enchantUnsafe(Enchantment enchantment, int level) {
-        return enchant(enchantment, level);
     }
 
     public final T removeEnchant(Enchantment enchantment) {
@@ -161,6 +178,10 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
         var filtered = existing.enchantments().entrySet().stream()
                 .filter(e -> !e.getKey().equals(enchantment))
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+        if (filtered.isEmpty()) {
+            item.unsetData(DataComponentTypes.ENCHANTMENTS);
+            return self();
+        }
         item.setData(DataComponentTypes.ENCHANTMENTS, ItemEnchantments.itemEnchantments(filtered));
         return self();
     }
@@ -177,7 +198,13 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
     public final T storedEnchant(Map<Enchantment, Integer> enchantments) {
         Objects.requireNonNull(enchantments, "Parameter 'enchantments' must not be null");
-        item.setData(DataComponentTypes.STORED_ENCHANTMENTS, ItemEnchantments.itemEnchantments(enchantments));
+        var existing = item.getData(DataComponentTypes.STORED_ENCHANTMENTS);
+        var builder = ItemEnchantments.itemEnchantments();
+        if (existing != null) {
+            existing.enchantments().forEach(builder::add);
+        }
+        enchantments.forEach(builder::add);
+        item.setData(DataComponentTypes.STORED_ENCHANTMENTS, builder.build());
         return self();
     }
 
@@ -287,8 +314,13 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T hideTooltip() {
-        var tooltip = TooltipDisplay.tooltipDisplay().hideTooltip(true).build();
-        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, tooltip);
+        var existing = item.getData(DataComponentTypes.TOOLTIP_DISPLAY);
+        var builder = TooltipDisplay.tooltipDisplay();
+        if (existing != null) {
+            builder.addHiddenComponents(existing.hiddenComponents().toArray(DataComponentType[]::new));
+        }
+        builder.hideTooltip(true);
+        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, builder.build());
         return self();
     }
 
@@ -312,7 +344,12 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
     public final T hideAdditionalTooltip(DataComponentType... components) {
         Objects.requireNonNull(components, "Parameter 'components' must not be null");
+        var existing = item.getData(DataComponentTypes.TOOLTIP_DISPLAY);
         var builder = TooltipDisplay.tooltipDisplay();
+        if (existing != null) {
+            builder.hideTooltip(existing.hideTooltip());
+            builder.addHiddenComponents(existing.hiddenComponents().toArray(DataComponentType[]::new));
+        }
         builder.addHiddenComponents(components);
         item.setData(DataComponentTypes.TOOLTIP_DISPLAY, builder.build());
         return self();
@@ -396,9 +433,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
     public final T alwaysEdible() {
         var existing = item.getData(DataComponentTypes.FOOD);
-        var builder = existing == null
-                ? FoodProperties.food()
-                : FoodProperties.food().nutrition(existing.nutrition()).saturation(existing.saturation());
+        var builder = existing == null ? FoodProperties.food() : existing.toBuilder();
         builder.canAlwaysEat(true);
         item.setData(DataComponentTypes.FOOD, builder.build());
         return self();
@@ -439,7 +474,14 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T useCooldown(float seconds, @Nullable Key group) {
-        return useCooldown(seconds, group == null ? null : NamespacedKey.fromString(group.asString()));
+        if (group == null) {
+            return useCooldown(seconds, (NamespacedKey) null);
+        }
+        var namespaced = NamespacedKey.fromString(group.asString());
+        if (namespaced == null) {
+            throw new IllegalArgumentException("Invalid cooldown group key: " + group);
+        }
+        return useCooldown(seconds, namespaced);
     }
 
     public final T useRemainder(Material material) {
@@ -522,12 +564,6 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
         return jukeboxPlayable(song);
     }
 
-    public final T trim(ArmorTrim trim) {
-        Objects.requireNonNull(trim, "Parameter 'trim' must not be null");
-        item.setData(DataComponentTypes.TRIM, ItemArmorTrim.itemArmorTrim(trim).build());
-        return self();
-    }
-
     public final T potion(PotionType type) {
         Objects.requireNonNull(type, "Parameter 'type' must not be null");
         var builder = potionContentsBuilder();
@@ -593,21 +629,5 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     public final boolean hasData(DataComponentType type) {
         Objects.requireNonNull(type, "Parameter 'type' must not be null");
         return item.hasData(type);
-    }
-
-    private static List<Float> boxedFloats(float[] floats) {
-        var list = new ArrayList<Float>(floats.length);
-        for (float value : floats) {
-            list.add(value);
-        }
-        return list;
-    }
-
-    private static List<Boolean> boxedBooleans(boolean[] flags) {
-        var list = new ArrayList<Boolean>(flags.length);
-        for (boolean flag : flags) {
-            list.add(flag);
-        }
-        return list;
     }
 }

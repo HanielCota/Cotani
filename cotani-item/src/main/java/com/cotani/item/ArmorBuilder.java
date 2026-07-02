@@ -19,6 +19,7 @@ public final class ArmorBuilder extends ItemStackBuilder<ArmorBuilder> {
     }
 
     public static ArmorBuilder of(Material material) {
+        Objects.requireNonNull(material, "Parameter 'material' must not be null");
         var preview = ItemStack.of(material);
 
         if (!(preview.getItemMeta() instanceof ArmorMeta)) {
@@ -33,16 +34,18 @@ public final class ArmorBuilder extends ItemStackBuilder<ArmorBuilder> {
         return this;
     }
 
+    public ArmorBuilder trim(ArmorTrim trim) {
+        Objects.requireNonNull(trim, "Parameter 'trim' must not be null");
+        item().setData(
+                        DataComponentTypes.TRIM,
+                        ItemArmorTrim.itemArmorTrim(trim).build());
+        return self();
+    }
+
     public ArmorBuilder trim(TrimMaterial material, TrimPattern pattern) {
         Objects.requireNonNull(material, "Parameter 'material' must not be null");
         Objects.requireNonNull(pattern, "Parameter 'pattern' must not be null");
-
-        item().setData(
-                        DataComponentTypes.TRIM,
-                        ItemArmorTrim.itemArmorTrim(new ArmorTrim(material, pattern))
-                                .build());
-
-        return self();
+        return trim(new ArmorTrim(material, pattern));
     }
 
     public ArmorBuilder removeTrim() {

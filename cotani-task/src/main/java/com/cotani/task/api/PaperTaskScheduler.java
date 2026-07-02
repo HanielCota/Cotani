@@ -68,8 +68,7 @@ public interface PaperTaskScheduler extends AutoCloseable {
 
     SchedulerTask entityTimer(Entity entity, Runnable runnable, Duration initialDelay, Duration period);
 
-    SchedulerTask entityTimer(
-            String name, Entity entity, Runnable runnable, Duration initialDelay, Duration period);
+    SchedulerTask entityTimer(String name, Entity entity, Runnable runnable, Duration initialDelay, Duration period);
 
     SchedulerTask debounce(String name, Runnable runnable, Duration quietPeriod);
 
@@ -100,7 +99,9 @@ public interface PaperTaskScheduler extends AutoCloseable {
 
         CompletableFuture<Void> future = new CompletableFuture<>();
         SchedulerTask pending = asyncLater("scheduler-delay", () -> future.complete(null), duration);
-        future.whenCompleteAsync((_, _) -> pending.cancel(), CompletableFuture.delayedExecutor(duration.toMillis(), TimeUnit.MILLISECONDS));
+        var _ = future.whenCompleteAsync(
+                (_, _) -> pending.cancel(),
+                CompletableFuture.delayedExecutor(duration.toMillis(), TimeUnit.MILLISECONDS));
         return future;
     }
 

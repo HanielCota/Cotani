@@ -5,7 +5,7 @@ import com.cotani.teleport.api.TeleportFailureReason;
 import com.cotani.teleport.api.TeleportResult;
 import com.cotani.teleport.api.TeleportResults;
 import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeoutException;
 import org.bukkit.Location;
 
@@ -16,27 +16,36 @@ public final class TeleportResultMapper {
         this.eventNotifier = eventNotifier;
     }
 
-    public CompletableFuture<TeleportResult> mapSuccess(
+    public CompletionStage<TeleportResult> mapSuccess(
             TeleportContext context, Location from, Location eventTarget, Instant startedAt) {
         TeleportResult.Success result =
                 TeleportResults.success(context, eventTarget, eventNotifier.elapsedMillis(startedAt));
         return eventNotifier
-                .firePostTeleport(context.player(), from, eventTarget, result)
+                .firePostTeleport(context.playerId(), from, eventTarget, result)
                 .thenApply(_ -> result);
     }
 
-    public CompletableFuture<TeleportResult> mapTeleportFailure(TeleportContext context) {
+    public CompletionStage<TeleportResult> mapTeleportFailure(TeleportContext context) {
         TeleportResult.Failure failure = TeleportResults.failure(context, TeleportFailureReason.TELEPORT_FAILED);
         return eventNotifier.fireFailure(failure).thenApply(_ -> failure);
     }
 
-    public CompletableFuture<TeleportResult> mapException(TeleportContext context, Throwable error) {
+    public CompletionStage<TeleportResult> mapException(TeleportContext context, Throwable error) {
+        Throwable cause = error;
+        while (cause instanceof java.util.concurrent.CompletionException
+                || cause instanceof java.util.concurrent.ExecutionException) {
+            var nested = cause.getCause();
+            if (nested == null) {
+                break;
+            }
+            cause = nested;
+        }
         TeleportFailureReason reason =
-                switch (error) {
+                switch (cause) {
                     case TimeoutException _ -> TeleportFailureReason.TIMEOUT;
                     default -> TeleportFailureReason.UNKNOWN_ERROR;
                 };
-        TeleportResult.Failure failure = TeleportResults.failure(context, reason, error);
+        TeleportResult.Failure failure = TeleportResults.failure(context, reason, cause);
         return eventNotifier.fireFailure(failure).thenApply(_ -> failure);
     }
 }

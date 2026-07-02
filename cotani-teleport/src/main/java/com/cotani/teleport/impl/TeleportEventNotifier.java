@@ -9,7 +9,9 @@ import com.cotani.teleport.event.TeleportEventBus;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
+import java.util.UUID;
+import java.util.concurrent.CompletionStage;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -22,22 +24,33 @@ public final class TeleportEventNotifier {
         this.clock = clock;
     }
 
-    public CompletableFuture<CotaniPreTeleportEvent> firePreTeleport(
-            Player player, Location from, Location resolvedTarget, TeleportCause cause, String source) {
+    public CompletionStage<CotaniPreTeleportEvent> firePreTeleport(
+            UUID playerId, Location from, Location resolvedTarget, TeleportCause cause, String source) {
+        Player player = resolvePlayer(playerId);
         CotaniPreTeleportEvent event = new CotaniPreTeleportEvent(player, from, resolvedTarget, cause, source);
-        return eventBus.callAsync(event).thenApply(_ -> event);
+        return eventBus.callAsync(event, player).thenApply(_ -> event);
     }
 
-    public CompletableFuture<Void> firePostTeleport(
-            Player player, Location from, Location eventTarget, TeleportResult.Success result) {
-        return eventBus.callAsync(new CotaniPostTeleportEvent(player, from, eventTarget, result));
+    public CompletionStage<Void> firePostTeleport(
+            UUID playerId, Location from, Location eventTarget, TeleportResult.Success result) {
+        Player player = resolvePlayer(playerId);
+        return eventBus.callAsync(new CotaniPostTeleportEvent(player, from, eventTarget, result), player);
     }
 
-    public CompletableFuture<Void> fireFailure(TeleportResult.Failure failure) {
-        return eventBus.callAsync(new CotaniTeleportFailEvent(failure.player(), failure));
+    public CompletionStage<Void> fireFailure(TeleportResult.Failure failure) {
+        Player player = resolvePlayer(failure.playerId());
+        return eventBus.callAsync(new CotaniTeleportFailEvent(player, failure), player);
     }
 
     public long elapsedMillis(Instant startedAt) {
         return Duration.between(startedAt, Instant.now(clock)).toMillis();
+    }
+
+    private Player resolvePlayer(UUID playerId) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            throw new IllegalStateException("Player is not online: " + playerId);
+        }
+        return player;
     }
 }

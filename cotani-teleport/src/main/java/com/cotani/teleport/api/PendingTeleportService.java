@@ -4,20 +4,19 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 
 public interface PendingTeleportService {
     UUID schedule(
-            Player player,
+            UUID playerId,
             Location target,
             Duration delay,
             TeleportOptions options,
             TeleportCause cause,
             String source);
 
-    boolean cancel(Player player, TeleportCancelReason reason);
+    boolean cancel(UUID playerId, TeleportCancelReason reason);
 
-    boolean hasPending(Player player);
+    boolean hasPending(UUID playerId);
 
-    Optional<PendingTeleportView> find(Player player);
+    Optional<PendingTeleportView> find(UUID playerId);
 }

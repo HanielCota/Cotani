@@ -6,11 +6,12 @@ import com.cotani.teleport.api.TeleportCancelReason;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 
 public final class PendingTeleportStateMachine {
     private final PendingTeleportData data;
     private final AtomicReference<PendingTeleportState> state = new AtomicReference<>(PendingTeleportState.WAITING);
-    private final AtomicReference<TeleportCancelReason> cancelReason = new AtomicReference<>();
+    private final AtomicReference<@Nullable TeleportCancelReason> cancelReason = new AtomicReference<>();
     private volatile SchedulerTask task = SchedulerTask.noop();
 
     public PendingTeleportStateMachine(PendingTeleportData data) {
@@ -22,8 +23,7 @@ public final class PendingTeleportStateMachine {
     }
 
     public PendingTeleportState state() {
-        PendingTeleportState current = state.get();
-        return current != null ? current : PendingTeleportState.CANCELLED;
+        return Objects.requireNonNull(state.get());
     }
 
     public Optional<TeleportCancelReason> cancelReason() {
@@ -32,6 +32,9 @@ public final class PendingTeleportStateMachine {
 
     public void attachTask(SchedulerTask task) {
         this.task = task;
+        if (state.get() != PendingTeleportState.WAITING) {
+            task.cancel();
+        }
     }
 
     public boolean markExecuting() {

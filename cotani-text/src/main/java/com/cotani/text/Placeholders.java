@@ -31,9 +31,7 @@ public final class Placeholders {
     private static final String COMPONENTS_NULL_MESSAGE = "Parameter 'components' must not be null";
     private static final String RESOLVERS_NULL_MESSAGE = "Parameter 'resolvers' must not be null";
 
-    private Placeholders() {
-        throw new AssertionError("utility class");
-    }
+    private Placeholders() {}
 
     /**
      * Creates a placeholder that inserts the given component directly.

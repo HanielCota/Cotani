@@ -12,9 +12,9 @@ public final class CotaniPreTeleportEvent extends Event implements Cancellable {
 
     private final Player player;
     private final Location from;
-    private Location to;
     private final TeleportCause cause;
     private final String source;
+    private Location to;
     private boolean cancelled;
 
     public CotaniPreTeleportEvent(Player player, Location from, Location to, TeleportCause cause, String source) {
@@ -23,6 +23,10 @@ public final class CotaniPreTeleportEvent extends Event implements Cancellable {
         this.to = to.clone();
         this.cause = cause;
         this.source = source;
+    }
+
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
     }
 
     public Player getPlayer() {
@@ -61,10 +65,6 @@ public final class CotaniPreTeleportEvent extends Event implements Cancellable {
 
     @Override
     public HandlerList getHandlers() {
-        return HANDLERS;
-    }
-
-    public static HandlerList getHandlerList() {
         return HANDLERS;
     }
 }

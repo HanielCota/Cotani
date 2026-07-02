@@ -10,6 +10,21 @@ import org.junit.jupiter.api.Test;
 
 class SkullTextureResolverTest {
 
+    private static String normalize(String input) throws Exception {
+        return invokeStatic("normalizeTextureUrl", String.class, input);
+    }
+
+    private static String escape(String input) throws Exception {
+        return invokeStatic("escapeJson", String.class, input);
+    }
+
+    private static String invokeStatic(String name, Class<?> paramType, String value)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        var method = SkullTextureResolver.class.getDeclaredMethod(name, paramType);
+        method.setAccessible(true);
+        return (String) method.invoke(null, value);
+    }
+
     @Test
     void isFinalUtilityClass() throws NoSuchMethodException {
         assertTrue(Modifier.isFinal(SkullTextureResolver.class.getModifiers()));
@@ -46,20 +61,5 @@ class SkullTextureResolverTest {
     @Test
     void escapesJsonSpecialCharacters() throws Exception {
         assertEquals("https://\\\\example.com/\\\"test\\\"", escape("https://\\example.com/\"test\""));
-    }
-
-    private static String normalize(String input) throws Exception {
-        return invokeStatic("normalizeTextureUrl", String.class, input);
-    }
-
-    private static String escape(String input) throws Exception {
-        return invokeStatic("escapeJson", String.class, input);
-    }
-
-    private static String invokeStatic(String name, Class<?> paramType, String value)
-            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        var method = SkullTextureResolver.class.getDeclaredMethod(name, paramType);
-        method.setAccessible(true);
-        return (String) method.invoke(null, value);
     }
 }

@@ -49,7 +49,5 @@ public final class ComponentSerializers {
      */
     public static final MiniMessage MINIMESSAGE = MiniMessage.miniMessage();
 
-    private ComponentSerializers() {
-        throw new AssertionError("utility class");
-    }
+    private ComponentSerializers() {}
 }

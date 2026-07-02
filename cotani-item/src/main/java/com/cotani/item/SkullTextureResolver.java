@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -18,12 +19,14 @@ public final class SkullTextureResolver {
 
     private static final String TEXTURES_PROPERTY = "textures";
     private static final String TEXTURES_DOMAIN = "https://textures.minecraft.net/texture/";
+    private static final String HTTP_TEXTURES_DOMAIN = "http://textures.minecraft.net/texture/";
+    private static final String BARE_DOMAIN = "textures.minecraft.net/texture/";
 
-    private static final long DEFAULT_CACHE_EXPIRE_MINUTES = 10;
+    private static final long DEFAULT_CACHE_EXPIRE_MINUTES = 60;
     private static final long DEFAULT_CACHE_MAXIMUM_SIZE = 1_000;
 
     private static final Cache<String, String> PAYLOAD_CACHE = Caffeine.newBuilder()
-            .expireAfterAccess(DEFAULT_CACHE_EXPIRE_MINUTES, TimeUnit.MINUTES)
+            .expireAfterWrite(DEFAULT_CACHE_EXPIRE_MINUTES, TimeUnit.MINUTES)
             .maximumSize(DEFAULT_CACHE_MAXIMUM_SIZE)
             .build();
 
@@ -48,6 +51,10 @@ public final class SkullTextureResolver {
         return fromUrl(textureUri.toString());
     }
 
+    public static void clearCache() {
+        PAYLOAD_CACHE.invalidateAll();
+    }
+
     private static String toBase64Payload(String normalizedUrl) {
         var payload = "{\"textures\":{\"SKIN\":{\"url\":\"" + escapeJson(normalizedUrl) + "\"}}}";
         return Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
@@ -55,16 +62,40 @@ public final class SkullTextureResolver {
 
     private static String normalizeTextureUrl(String input) {
         var stripped = input.strip();
-        if (stripped.startsWith(TEXTURES_DOMAIN)) {
+        var lower = stripped.toLowerCase(Locale.ROOT);
+        if (lower.startsWith(HTTP_TEXTURES_DOMAIN)) {
+            return "https://" + stripped.substring(HTTP_TEXTURES_DOMAIN.length());
+        }
+        if (lower.startsWith(TEXTURES_DOMAIN)) {
             return stripped;
         }
-        if (stripped.startsWith("textures.minecraft.net/texture/")) {
+        if (lower.startsWith(BARE_DOMAIN)) {
             return "https://" + stripped;
         }
         return TEXTURES_DOMAIN + stripped;
     }
 
     private static String escapeJson(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        var sb = new StringBuilder(value.length() + 16);
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '"' -> sb.append("\\\"");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 }

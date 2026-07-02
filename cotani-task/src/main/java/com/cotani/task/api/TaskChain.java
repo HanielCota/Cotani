@@ -1,10 +1,12 @@
 package com.cotani.task.api;
 
-import com.cotani.task.impl.chain.DefaultTaskChain;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -17,18 +19,35 @@ public interface TaskChain<T> {
     @SuppressWarnings("varargs")
     static <T> TaskChain<List<T>> allOf(PaperTaskScheduler scheduler, TaskChain<T>... chains) {
         if (chains.length == 0) {
-            return new DefaultTaskChain<>(CompletableFuture.completedFuture(List.of()), scheduler);
+            return scheduler.chain(CompletableFuture.completedFuture(List.of()));
         }
 
-        @SuppressWarnings({"unchecked", "rawtypes"})
-        CompletableFuture<T>[] futures =
-                Arrays.stream(chains).map(TaskChain::future).toArray(CompletableFuture[]::new);
+        List<CompletionStage<T>> stages =
+                Arrays.stream(chains).map(TaskChain::toCompletionStage).toList();
 
-        CompletableFuture<List<T>> all = CompletableFuture.allOf(futures)
-                .thenApply(ignored ->
-                        Arrays.stream(futures).map(CompletableFuture::join).toList());
+        CompletionStage<List<T>> all = stages.stream()
+                .reduce(
+                        CompletableFuture.completedFuture(List.of()),
+                        (acc, stage) -> acc.thenCombineAsync(
+                                stage,
+                                (list, value) -> {
+                                    var next = new ArrayList<T>(list.size() + 1);
+                                    next.addAll(list);
+                                    next.add(value);
+                                    return List.copyOf(next);
+                                },
+                                scheduler.asyncExecutor()),
+                        (left, right) -> left.thenCombineAsync(
+                                right,
+                                (l, r) -> {
+                                    var next = new ArrayList<T>(l.size() + r.size());
+                                    next.addAll(l);
+                                    next.addAll(r);
+                                    return List.copyOf(next);
+                                },
+                                scheduler.asyncExecutor()));
 
-        return new DefaultTaskChain<>(all, scheduler);
+        return scheduler.chain(all);
     }
 
     @SafeVarargs
@@ -38,12 +57,13 @@ public interface TaskChain<T> {
             throw new IllegalArgumentException("chains must not be empty");
         }
 
-        CompletableFuture<Object> any = CompletableFuture.anyOf(
-                Arrays.stream(chains).map(TaskChain::future).toArray(CompletableFuture[]::new));
+        CompletableFuture<Object> any = CompletableFuture.anyOf(Arrays.stream(chains)
+                .map(chain -> chain.toCompletionStage().toCompletableFuture())
+                .toArray(CompletableFuture[]::new));
 
-        CompletableFuture<T> typed = any.thenApply(value -> (T) value);
+        CompletableFuture<T> typed = any.thenApplyAsync(value -> (T) value, scheduler.asyncExecutor());
 
-        return new DefaultTaskChain<>(typed, scheduler);
+        return scheduler.chain(typed);
     }
 
     <U> TaskChain<U> thenAsync(Function<T, U> function);
@@ -52,7 +72,11 @@ public interface TaskChain<T> {
 
     <U> TaskChain<U> thenRegion(Location location, Function<T, U> function);
 
+    <U> TaskChain<U> thenRegion(UUID worldId, int chunkX, int chunkZ, Function<T, U> function);
+
     <U> TaskChain<U> thenEntity(Entity entity, Function<T, U> function);
+
+    <U> TaskChain<U> thenEntity(UUID entityId, Function<T, U> function);
 
     TaskChain<T> consumeAsync(Consumer<T> consumer);
 
@@ -60,7 +84,11 @@ public interface TaskChain<T> {
 
     TaskChain<T> consumeRegion(Location location, Consumer<T> consumer);
 
+    TaskChain<T> consumeRegion(UUID worldId, int chunkX, int chunkZ, Consumer<T> consumer);
+
     TaskChain<T> consumeEntity(Entity entity, Consumer<T> consumer);
+
+    TaskChain<T> consumeEntity(UUID entityId, Consumer<T> consumer);
 
     TaskChain<T> filter(Predicate<T> predicate);
 
@@ -68,6 +96,12 @@ public interface TaskChain<T> {
 
     TaskChain<T> timeout(Duration duration);
 
+    /**
+     * Retries the chain when it fails using {@code retryPolicy}.
+     *
+     * <p>Retry must only be used for idempotent operations. Re-executing a non-idempotent
+     * step can cause duplicated side effects.
+     */
     TaskChain<T> retry(RetryPolicy retryPolicy);
 
     TaskChain<T> onStart(Runnable action);
@@ -80,5 +114,5 @@ public interface TaskChain<T> {
 
     boolean cancel();
 
-    CompletableFuture<T> future();
+    CompletionStage<T> toCompletionStage();
 }

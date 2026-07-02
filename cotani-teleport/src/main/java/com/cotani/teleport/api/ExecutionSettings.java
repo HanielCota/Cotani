@@ -9,8 +9,18 @@ public record ExecutionSettings(boolean async) {
         return new Builder();
     }
 
+    public static Builder builder(ExecutionSettings base) {
+        return new Builder(base);
+    }
+
     public static final class Builder {
         private boolean async = true;
+
+        public Builder() {}
+
+        public Builder(ExecutionSettings base) {
+            this.async = base.async();
+        }
 
         public Builder async(boolean async) {
             this.async = async;

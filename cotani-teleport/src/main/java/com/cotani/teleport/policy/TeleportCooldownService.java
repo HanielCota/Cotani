@@ -33,6 +33,17 @@ public final class TeleportCooldownService implements AutoCloseable {
         return true;
     }
 
+    public boolean tryAcquire(UUID playerId, TeleportCause cause, Duration duration) {
+        var key = new CooldownKey(playerId, cause);
+        Instant now = Instant.now(clock);
+        Instant expiresAt = cooldowns.get(key);
+        if (expiresAt != null && now.isBefore(expiresAt)) {
+            return false;
+        }
+        cooldowns.put(key, now.plus(duration));
+        return true;
+    }
+
     public void put(UUID playerId, TeleportCause cause, Duration duration) {
         cooldowns.put(new CooldownKey(playerId, cause), Instant.now(clock).plus(duration));
     }

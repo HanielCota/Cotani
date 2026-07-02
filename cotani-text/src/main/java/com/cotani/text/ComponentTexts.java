@@ -28,9 +28,7 @@ public final class ComponentTexts {
     private static final String DECORATION_NULL_MESSAGE = "Parameter 'decoration' must not be null";
     private static final String JSON_NULL_MESSAGE = "Parameter 'json' must not be null";
 
-    private ComponentTexts() {
-        throw new AssertionError("utility class");
-    }
+    private ComponentTexts() {}
 
     /**
      * Gets an empty component.
@@ -62,6 +60,7 @@ public final class ComponentTexts {
      */
     public static Component text(String content, TextColor color) {
         Objects.requireNonNull(content, CONTENT_NULL_MESSAGE);
+        Objects.requireNonNull(color, "Parameter 'color' must not be null");
 
         return Component.text(content, color);
     }

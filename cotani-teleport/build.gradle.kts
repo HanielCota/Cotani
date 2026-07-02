@@ -9,6 +9,7 @@ description = "Cotani — modern teleport module for Paper"
 dependencies {
     api(project(":core"))
     api(project(":task"))
+    implementation(project(":config"))
     compileOnlyApi(libs.paper.api)
     api(libs.jspecify)
 

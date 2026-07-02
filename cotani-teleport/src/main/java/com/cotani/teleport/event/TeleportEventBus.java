@@ -3,8 +3,8 @@ package com.cotani.teleport.event;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import org.bukkit.Bukkit;
+import java.util.concurrent.CompletionStage;
+import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
 
 public final class TeleportEventBus {
@@ -14,12 +14,17 @@ public final class TeleportEventBus {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
     }
 
-    public CompletableFuture<Void> callAsync(Event event) {
+    public CompletionStage<Void> callAsync(Event event, Entity owner) {
         Objects.requireNonNull(event, "event");
-        if (Bukkit.isPrimaryThread()) {
+        Objects.requireNonNull(owner, "owner");
+        return scheduler.supply(ExecutionTarget.entity(owner), "teleport-event", () -> {
             call(event);
-            return CompletableFuture.completedFuture(null);
-        }
+            return null;
+        });
+    }
+
+    public CompletionStage<Void> callAsync(Event event) {
+        Objects.requireNonNull(event, "event");
         return scheduler.supply(ExecutionTarget.global(), "teleport-event", () -> {
             call(event);
             return null;
@@ -28,6 +33,6 @@ public final class TeleportEventBus {
 
     public void call(Event event) {
         Objects.requireNonNull(event, "event");
-        Bukkit.getPluginManager().callEvent(event);
+        org.bukkit.Bukkit.getPluginManager().callEvent(event);
     }
 }

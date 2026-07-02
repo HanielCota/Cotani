@@ -17,23 +17,23 @@ public final class PendingTeleportListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
-        if (!pendingService.hasPending(event.getPlayer())) {
+        if (!pendingService.hasPending(event.getPlayer().getUniqueId())) {
             return;
         }
         if (PendingTeleportCancellationPolicy.shouldCancel(event.getFrom(), event.getTo())) {
-            pendingService.cancel(event.getPlayer(), TeleportCancelReason.MOVED);
+            pendingService.cancel(event.getPlayer().getUniqueId(), TeleportCancelReason.MOVED);
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Player player) {
-            pendingService.cancel(player, TeleportCancelReason.DAMAGED);
+            pendingService.cancel(player.getUniqueId(), TeleportCancelReason.DAMAGED);
         }
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        pendingService.cancel(event.getPlayer(), TeleportCancelReason.QUIT);
+        pendingService.cancel(event.getPlayer().getUniqueId(), TeleportCancelReason.QUIT);
     }
 }

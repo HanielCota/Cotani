@@ -21,11 +21,6 @@ public record PendingTeleportData(
         }
     }
 
-    @Override
-    public Location target() {
-        return target.clone();
-    }
-
     public static PendingTeleportData create(
             UUID playerId,
             Location target,
@@ -34,5 +29,10 @@ public record PendingTeleportData(
             TeleportCause cause,
             String source) {
         return new PendingTeleportData(UUID.randomUUID(), playerId, target, delay, options, cause, source);
+    }
+
+    @Override
+    public Location target() {
+        return target.clone();
     }
 }

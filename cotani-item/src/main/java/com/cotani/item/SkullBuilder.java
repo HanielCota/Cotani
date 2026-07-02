@@ -5,7 +5,6 @@ import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import java.net.URI;
 import java.util.Objects;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
@@ -34,8 +33,7 @@ public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
 
     public SkullBuilder player(OfflinePlayer player) {
         Objects.requireNonNull(player, "Parameter 'player' must not be null");
-        var profile = Bukkit.createProfile(player.getUniqueId(), player.getName());
-        return profile(profile);
+        return profile(player.getPlayerProfile());
     }
 
     public SkullBuilder profile(PlayerProfile profile) {

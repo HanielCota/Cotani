@@ -19,9 +19,7 @@ public final class AudienceMessages {
     private static final String MINI_MESSAGE_NULL_MESSAGE = "Parameter 'miniMessage' must not be null";
     private static final String RESOLVERS_NULL_MESSAGE = "Parameter 'resolvers' must not be null";
 
-    private AudienceMessages() {
-        throw new AssertionError("utility class");
-    }
+    private AudienceMessages() {}
 
     /**
      * Sends a MiniMessage chat message to the audience.

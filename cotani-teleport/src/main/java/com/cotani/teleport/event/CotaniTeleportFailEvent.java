@@ -16,6 +16,10 @@ public final class CotaniTeleportFailEvent extends Event {
         this.failure = failure;
     }
 
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
+    }
+
     public Player getPlayer() {
         return player;
     }
@@ -26,10 +30,6 @@ public final class CotaniTeleportFailEvent extends Event {
 
     @Override
     public HandlerList getHandlers() {
-        return HANDLERS;
-    }
-
-    public static HandlerList getHandlerList() {
         return HANDLERS;
     }
 }

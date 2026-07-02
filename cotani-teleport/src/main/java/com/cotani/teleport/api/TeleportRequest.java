@@ -1,14 +1,14 @@
 package com.cotani.teleport.api;
 
 import java.util.Objects;
+import java.util.UUID;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
 public record TeleportRequest(
-        Player player, Location target, TeleportCause cause, TeleportOptions options, String source) {
+        UUID playerId, Location target, TeleportCause cause, TeleportOptions options, String source) {
     public TeleportRequest {
-        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(options, "options");
@@ -23,14 +23,14 @@ public record TeleportRequest(
     }
 
     public static final class Builder {
-        private @Nullable Player player;
+        private @Nullable UUID playerId;
         private @Nullable Location target;
         private TeleportCause cause = TeleportCause.UNKNOWN;
         private TeleportOptions options = TeleportOptions.defaults();
         private String source = "unknown";
 
-        public Builder player(Player player) {
-            this.player = Objects.requireNonNull(player, "player");
+        public Builder playerId(UUID playerId) {
+            this.playerId = Objects.requireNonNull(playerId, "playerId");
             return this;
         }
 
@@ -56,7 +56,7 @@ public record TeleportRequest(
 
         public TeleportRequest build() {
             return new TeleportRequest(
-                    Objects.requireNonNull(player, "player"),
+                    Objects.requireNonNull(playerId, "playerId"),
                     Objects.requireNonNull(target, "target"),
                     cause,
                     options,

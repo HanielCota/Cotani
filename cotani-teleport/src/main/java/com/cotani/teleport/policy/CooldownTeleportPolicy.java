@@ -19,7 +19,7 @@ public final class CooldownTeleportPolicy implements TeleportPolicy {
         if (!context.options().checkCooldown()) {
             return PolicyResult.allowed();
         }
-        if (cooldownService.isOnCooldown(context.player().getUniqueId(), context.cause())) {
+        if (cooldownService.isOnCooldown(context.playerId(), context.cause())) {
             return PolicyResult.denied(TeleportFailureReason.BLOCKED_BY_COOLDOWN, messages.blockedByCooldown());
         }
         return PolicyResult.allowed();

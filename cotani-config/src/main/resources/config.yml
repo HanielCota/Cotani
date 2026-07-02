@@ -1,0 +1,9 @@
+debug: false
+autosave: 5m
+
+storage:
+  type: SQLITE
+  file: database.db
+
+messages:
+  prefix: "<green>Cotani</green> <dark_gray>»</dark_gray>"

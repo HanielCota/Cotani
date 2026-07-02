@@ -7,6 +7,9 @@ plugins {
 description = "Cotani — storage abstraction and migrations"
 
 dependencies {
+    api(project(":task"))
+    api(project(":text"))
+
     compileOnlyApi(libs.paper.api)
     api(libs.jspecify)
     api(libs.hikaricp)

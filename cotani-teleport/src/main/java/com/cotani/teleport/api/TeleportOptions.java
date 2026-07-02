@@ -22,6 +22,46 @@ public record TeleportOptions(
         }
     }
 
+    public static TeleportOptions defaults() {
+        return builder().build();
+    }
+
+    public static TeleportOptions spawn() {
+        return builder()
+                .policies(PolicySettings.builder()
+                        .checkCombat(true)
+                        .checkCooldown(true)
+                        .build())
+                .feedback(FeedbackSettings.builder().sendMessages(true).build())
+                .build();
+    }
+
+    public static TeleportOptions admin() {
+        return builder()
+                .safety(SafetySettings.builder().safeLocation(false).build())
+                .policies(PolicySettings.builder()
+                        .checkCombat(false)
+                        .checkCooldown(false)
+                        .checkPermission(false)
+                        .checkRegion(false)
+                        .build())
+                .feedback(FeedbackSettings.builder().sendMessages(false).build())
+                .build();
+    }
+
+    public static TeleportOptions silent() {
+        return builder()
+                .feedback(FeedbackSettings.builder()
+                        .playEffects(false)
+                        .sendMessages(false)
+                        .build())
+                .build();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public boolean async() {
         return execution.async();
     }
@@ -74,46 +114,6 @@ public record TeleportOptions(
         return feedback.sendMessages();
     }
 
-    public static TeleportOptions defaults() {
-        return builder().build();
-    }
-
-    public static TeleportOptions spawn() {
-        return builder()
-                .policies(PolicySettings.builder()
-                        .checkCombat(true)
-                        .checkCooldown(true)
-                        .build())
-                .feedback(FeedbackSettings.builder().sendMessages(true).build())
-                .build();
-    }
-
-    public static TeleportOptions admin() {
-        return builder()
-                .safety(SafetySettings.builder().safeLocation(false).build())
-                .policies(PolicySettings.builder()
-                        .checkCombat(false)
-                        .checkCooldown(false)
-                        .checkPermission(false)
-                        .checkRegion(false)
-                        .build())
-                .feedback(FeedbackSettings.builder().sendMessages(false).build())
-                .build();
-    }
-
-    public static TeleportOptions silent() {
-        return builder()
-                .feedback(FeedbackSettings.builder()
-                        .playEffects(false)
-                        .sendMessages(false)
-                        .build())
-                .build();
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static final class Builder {
         private ExecutionSettings execution = ExecutionSettings.defaults();
         private SafetySettings safety = SafetySettings.defaults();
@@ -148,17 +148,20 @@ public record TeleportOptions(
         }
 
         public Builder async(boolean async) {
-            this.execution = ExecutionSettings.builder().async(async).build();
+            this.execution =
+                    ExecutionSettings.builder(this.execution).async(async).build();
             return this;
         }
 
         public Builder safeLocation(boolean safeLocation) {
-            this.safety = SafetySettings.builder().safeLocation(safeLocation).build();
+            this.safety = SafetySettings.builder(this.safety)
+                    .safeLocation(safeLocation)
+                    .build();
             return this;
         }
 
         public Builder safeLocationOptions(SafeLocationOptions safeLocationOptions) {
-            this.safety = SafetySettings.builder()
+            this.safety = SafetySettings.builder(this.safety)
                     .safeLocationOptions(safeLocationOptions)
                     .build();
             return this;
@@ -200,30 +203,35 @@ public record TeleportOptions(
         }
 
         public Builder preserveVelocity(boolean preserveVelocity) {
-            this.player =
-                    PlayerSettings.builder().preserveVelocity(preserveVelocity).build();
+            this.player = PlayerSettings.builder(this.player)
+                    .preserveVelocity(preserveVelocity)
+                    .build();
             return this;
         }
 
         public Builder dismount(boolean dismount) {
-            this.player = PlayerSettings.builder().dismount(dismount).build();
+            this.player = PlayerSettings.builder(this.player).dismount(dismount).build();
             return this;
         }
 
         public Builder closeInventory(boolean closeInventory) {
-            this.player =
-                    PlayerSettings.builder().closeInventory(closeInventory).build();
+            this.player = PlayerSettings.builder(this.player)
+                    .closeInventory(closeInventory)
+                    .build();
             return this;
         }
 
         public Builder playEffects(boolean playEffects) {
-            this.feedback = FeedbackSettings.builder().playEffects(playEffects).build();
+            this.feedback = FeedbackSettings.builder(this.feedback)
+                    .playEffects(playEffects)
+                    .build();
             return this;
         }
 
         public Builder sendMessages(boolean sendMessages) {
-            this.feedback =
-                    FeedbackSettings.builder().sendMessages(sendMessages).build();
+            this.feedback = FeedbackSettings.builder(this.feedback)
+                    .sendMessages(sendMessages)
+                    .build();
             return this;
         }
 

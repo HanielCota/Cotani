@@ -1,9 +1,11 @@
-package com.cotani.task.impl.scheduler;
+package com.cotani.task.scheduler;
 
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerOptions;
 import com.cotani.task.api.TaskExceptionHandler;
 import com.cotani.task.impl.exception.LoggerTaskExceptionHandler;
+import com.cotani.task.impl.scheduler.ModernPaperTaskScheduler;
+import com.cotani.task.impl.scheduler.PlatformSchedulerFactory;
 import com.cotani.task.metrics.DefaultTaskMetrics;
 import com.cotani.task.metrics.TaskMetrics;
 import com.cotani.task.persistence.NoopPersistentTaskStore;

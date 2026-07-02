@@ -21,6 +21,10 @@ public final class CotaniPostTeleportEvent extends Event {
         this.result = result;
     }
 
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
+    }
+
     public Player getPlayer() {
         return player;
     }
@@ -39,10 +43,6 @@ public final class CotaniPostTeleportEvent extends Event {
 
     @Override
     public HandlerList getHandlers() {
-        return HANDLERS;
-    }
-
-    public static HandlerList getHandlerList() {
         return HANDLERS;
     }
 }

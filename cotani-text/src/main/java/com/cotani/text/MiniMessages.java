@@ -21,9 +21,7 @@ public final class MiniMessages {
     private static final String TARGET_NULL_MESSAGE = "Parameter 'target' must not be null";
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
 
-    private MiniMessages() {
-        throw new AssertionError("utility class");
-    }
+    private MiniMessages() {}
 
     /**
      * Parses a MiniMessage string into a component using the default tag set.

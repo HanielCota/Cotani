@@ -6,7 +6,6 @@ import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskMetadata;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
 public final class TaskDispatcher {
@@ -31,8 +30,9 @@ public final class TaskDispatcher {
         switch (target) {
             case ExecutionTarget.Async() -> platformScheduler.runAsync(metadata, wrapped);
             case ExecutionTarget.Global() -> platformScheduler.runGlobal(metadata, wrapped);
-            case ExecutionTarget.Region(Location location) -> platformScheduler.runRegion(metadata, location, wrapped);
-            case ExecutionTarget.EntityTarget(Entity entity) -> dispatchEntity(metadata, entity, wrapped, future);
+            case ExecutionTarget.Region region -> platformScheduler.runRegion(metadata, region.location(), wrapped);
+            case ExecutionTarget.EntityTarget entityTarget ->
+                dispatchEntity(metadata, entityTarget.entity(), wrapped, future);
         }
     }
 

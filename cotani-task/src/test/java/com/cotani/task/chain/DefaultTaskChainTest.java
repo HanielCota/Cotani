@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.TaskChain;
@@ -14,13 +16,23 @@ import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class DefaultTaskChainTest {
 
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
+
+    @SuppressWarnings("unchecked")
+    @BeforeEach
+    void setUp() {
+        when(scheduler.asyncExecutor()).thenReturn(Runnable::run);
+        when(scheduler.chain(any(CompletionStage.class)))
+                .thenAnswer(invocation -> new DefaultTaskChain<>(invocation.getArgument(0), scheduler));
+    }
 
     @Test
     void onStartRunsImmediately() {
@@ -38,7 +50,7 @@ class DefaultTaskChainTest {
         DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture("value"), scheduler);
 
         chain.onComplete(() -> completed.set(true));
-        chain.future().get();
+        chain.toCompletionStage().toCompletableFuture().get();
 
         assertTrue(completed.get());
     }
@@ -51,7 +63,7 @@ class DefaultTaskChainTest {
 
         chain.onComplete(() -> completed.set(true));
 
-        assertFalse(chain.future().isCancelled());
+        assertFalse(chain.toCompletionStage().toCompletableFuture().isCancelled());
         assertTrue(completed.get());
     }
 
@@ -74,7 +86,10 @@ class DefaultTaskChainTest {
 
         ExecutionException exception = assertThrows(
                 ExecutionException.class,
-                () -> chain.timeout(Duration.ofMillis(10)).future().get());
+                () -> chain.timeout(Duration.ofMillis(10))
+                        .toCompletionStage()
+                        .toCompletableFuture()
+                        .get());
 
         assertTrue(exception.getCause() instanceof TaskTimeoutException);
     }
@@ -83,7 +98,10 @@ class DefaultTaskChainTest {
     void timeoutDoesNotAffectFastChain() throws Exception {
         DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture("value"), scheduler);
 
-        String result = chain.timeout(Duration.ofSeconds(1)).future().get();
+        String result = chain.timeout(Duration.ofSeconds(1))
+                .toCompletionStage()
+                .toCompletableFuture()
+                .get();
 
         assertTrue(result.equals("value"));
     }
@@ -93,7 +111,10 @@ class DefaultTaskChainTest {
         TaskChain<String> a = new DefaultTaskChain<>(CompletableFuture.completedFuture("a"), scheduler);
         TaskChain<String> b = new DefaultTaskChain<>(CompletableFuture.completedFuture("b"), scheduler);
 
-        List<String> result = TaskChain.allOf(scheduler, a, b).future().get();
+        List<String> result = TaskChain.allOf(scheduler, a, b)
+                .toCompletionStage()
+                .toCompletableFuture()
+                .get();
 
         assertEquals(2, result.size());
         assertEquals("a", result.getFirst());
@@ -105,7 +126,10 @@ class DefaultTaskChainTest {
         TaskChain<String> a = new DefaultTaskChain<>(CompletableFuture.completedFuture("a"), scheduler);
         TaskChain<String> b = new DefaultTaskChain<>(CompletableFuture.completedFuture("b"), scheduler);
 
-        String result = TaskChain.anyOf(scheduler, a, b).future().get();
+        String result = TaskChain.anyOf(scheduler, a, b)
+                .toCompletionStage()
+                .toCompletableFuture()
+                .get();
 
         assertTrue(result.equals("a") || result.equals("b"));
     }
@@ -119,7 +143,10 @@ class DefaultTaskChainTest {
     void filterKeepsMatchingValue() throws Exception {
         DefaultTaskChain<Integer> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture(10), scheduler);
 
-        Integer result = chain.filter(value -> value > 5).future().get();
+        Integer result = chain.filter(value -> value > 5)
+                .toCompletionStage()
+                .toCompletableFuture()
+                .get();
 
         assertEquals(10, result);
     }
@@ -130,7 +157,10 @@ class DefaultTaskChainTest {
 
         ExecutionException exception = assertThrows(
                 ExecutionException.class,
-                () -> chain.filter(value -> value > 5).future().get());
+                () -> chain.filter(value -> value > 5)
+                        .toCompletionStage()
+                        .toCompletableFuture()
+                        .get());
 
         assertTrue(exception.getCause() instanceof NoSuchElementException);
     }
@@ -141,7 +171,8 @@ class DefaultTaskChainTest {
 
         Integer result = chain.flatMap(
                         value -> new DefaultTaskChain<>(CompletableFuture.completedFuture(value * 3), scheduler))
-                .future()
+                .toCompletionStage()
+                .toCompletableFuture()
                 .get();
 
         assertEquals(6, result);

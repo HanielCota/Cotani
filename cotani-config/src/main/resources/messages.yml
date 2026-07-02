@@ -1,0 +1,6 @@
+prefix: "<green>Cotani</green> <dark_gray>»</dark_gray>"
+errors:
+  no-permission: "{prefix} <red>Você não tem permissão.</red>"
+  reload-failed: "{prefix} <red>Não foi possível recarregar a configuração.</red>"
+success:
+  reload: "{prefix} <green>Configuração recarregada.</green>"
