@@ -5,9 +5,6 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.RetryPolicy;
 import com.cotani.task.api.TaskChain;
 import com.cotani.task.exception.TaskTimeoutException;
-import org.bukkit.Location;
-import org.bukkit.entity.Entity;
-
 import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -20,6 +17,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 
 public final class DefaultTaskChain<T> implements TaskChain<T> {
 

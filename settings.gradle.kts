@@ -4,6 +4,7 @@ include(
     "cache",
     "config",
     "core",
+    "economy",
     "text",
     "item",
     "task",
@@ -15,6 +16,7 @@ include(
 project(":cache").projectDir = file("cotani-cache")
 project(":config").projectDir = file("cotani-config")
 project(":core").projectDir = file("cotani-core")
+project(":economy").projectDir = file("cotani-economy")
 project(":text").projectDir = file("cotani-text")
 project(":item").projectDir = file("cotani-item")
 project(":task").projectDir = file("cotani-task")
