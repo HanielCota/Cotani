@@ -1,12 +1,13 @@
 package br.com.cotani.storage.example;
 
 import br.com.cotani.storage.api.CotaniStorage;
-import br.com.cotani.storage.future.StorageFuture;
 import br.com.cotani.storage.query.EntityMapper;
 import br.com.cotani.storage.query.Row;
 import br.com.cotani.storage.repository.PlayerDataRepository;
 import java.sql.SQLException;
-import org.bukkit.entity.Player;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public final class UserRepository extends PlayerDataRepository<User> {
 
@@ -30,34 +31,30 @@ public final class UserRepository extends PlayerDataRepository<User> {
     }
 
     @Override
-    protected StorageFuture<User> create(Player player) {
-        User user = User.create(player);
-        return save(user).map(ignored -> user);
+    protected CompletionStage<User> create(UUID playerId, String name) {
+        User user = new User(playerId, name, 0L);
+        return save(user).thenApply(_ -> user);
     }
 
     @Override
-    public StorageFuture<Void> save(User user) {
+    public CompletionStage<Void> save(User user) {
         return table("users")
-            .upsert()
-            .value("unique_id", user.uniqueId())
-            .value("name", user.name())
-            .value("coins", user.coins())
-            .conflict("unique_id")
-            .update("name", "coins")
-            .execute();
+                .upsert()
+                .value("unique_id", user.uniqueId())
+                .value("name", user.name())
+                .value("coins", user.coins())
+                .conflict("unique_id")
+                .update("name", "coins")
+                .execute();
     }
 
-    public StorageFuture<Void> addCoins(Player player, long amount) {
-        return findOrCreate(player)
-            .map(user -> user.addCoins(amount))
-            .flatMap(this::save);
+    public CompletionStage<Void> addCoins(UUID playerId, String name, long amount) {
+        return findOrCreate(playerId, name)
+                .thenApply(user -> user.addCoins(amount))
+                .thenCompose(this::save);
     }
 
     private User map(Row row) throws SQLException {
-        return new User(
-            row.getUuid("unique_id"),
-            row.getString("name"),
-            row.getLong("coins")
-        );
+        return new User(row.getUuid("unique_id"), row.getString("name"), row.getLong("coins"));
     }
 }
