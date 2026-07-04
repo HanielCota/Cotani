@@ -1,12 +1,9 @@
 package com.cotani.teleport.impl;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import com.cotani.teleport.api.TeleportCause;
-import com.cotani.teleport.api.TeleportContext;
-import com.cotani.teleport.api.TeleportFailureReason;
-import com.cotani.teleport.api.TeleportOptions;
-import com.cotani.teleport.api.TeleportResult;
+import com.cotani.teleport.api.*;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
@@ -19,16 +16,6 @@ class TeleportResultMapperTest {
 
     private TeleportResultMapper mapper;
 
-    @BeforeEach
-    void setUp() {
-        var notifier = org.mockito.Mockito.mock(TeleportEventNotifier.class);
-        org.mockito.Mockito.when(notifier.fireFailure(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
-        org.mockito.Mockito.when(notifier.elapsedMillis(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(0L);
-        mapper = new TeleportResultMapper(notifier);
-    }
-
     private static TeleportContext createContext() {
         var location = org.mockito.Mockito.mock(Location.class);
         org.mockito.Mockito.when(location.clone()).thenReturn(location);
@@ -40,6 +27,16 @@ class TeleportResultMapperTest {
                 TeleportOptions.defaults(),
                 "test",
                 Instant.now());
+    }
+
+    @BeforeEach
+    void setUp() {
+        var notifier = org.mockito.Mockito.mock(TeleportEventNotifier.class);
+        org.mockito.Mockito.when(notifier.fireFailure(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        org.mockito.Mockito.when(notifier.elapsedMillis(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(0L);
+        mapper = new TeleportResultMapper(notifier);
     }
 
     @Test

@@ -9,13 +9,10 @@ description = "Cotani — economy module"
 dependencies {
     api(project(":core"))
     api(project(":task"))
-    api(project(":user"))
     api(project(":storage"))
-    api(project(":text"))
     api(project(":config"))
     api(libs.jspecify)
-
-    implementation(project(":cache"))
+    implementation(libs.caffeine)
 
     compileOnlyApi(libs.paper.api)
 

@@ -6,32 +6,10 @@ import com.cotani.teleport.api.SafetySettings;
 import com.cotani.teleport.api.TeleportOptions;
 import java.time.Duration;
 
-public final class TeleportOptionsFactory {
-
-    private final TeleportOptions spawn;
-    private final TeleportOptions admin;
-    private final TeleportOptions silent;
+public record TeleportOptionsFactory(TeleportOptions spawn, TeleportOptions admin, TeleportOptions silent) {
 
     public TeleportOptionsFactory() {
         this(defaultSpawn(), defaultAdmin(), defaultSilent());
-    }
-
-    public TeleportOptionsFactory(TeleportOptions spawn, TeleportOptions admin, TeleportOptions silent) {
-        this.spawn = spawn;
-        this.admin = admin;
-        this.silent = silent;
-    }
-
-    public TeleportOptions spawn() {
-        return spawn;
-    }
-
-    public TeleportOptions admin() {
-        return admin;
-    }
-
-    public TeleportOptions silent() {
-        return silent;
     }
 
     private static TeleportOptions defaultSpawn() {

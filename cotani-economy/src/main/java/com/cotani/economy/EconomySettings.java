@@ -2,6 +2,7 @@ package com.cotani.economy;
 
 import com.cotani.economy.currency.EconomyCurrency;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Objects;
 
 public record EconomySettings(
@@ -62,10 +63,10 @@ public record EconomySettings(
 
         return new EconomySettings(
                 currency,
-                BigDecimal.ZERO.setScale(currency.decimalPlaces()),
-                new BigDecimal("1000000000000").setScale(currency.decimalPlaces()),
-                new BigDecimal("100000000").setScale(currency.decimalPlaces()),
-                BigDecimal.ONE.setScale(currency.decimalPlaces()),
+                BigDecimal.ZERO.setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY),
+                new BigDecimal("1000000000000").setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY),
+                new BigDecimal("100000000").setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY),
+                BigDecimal.ONE.setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY),
                 30,
                 60);
     }

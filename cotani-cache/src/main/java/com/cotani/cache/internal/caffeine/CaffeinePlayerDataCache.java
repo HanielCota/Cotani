@@ -8,19 +8,19 @@ import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import org.bukkit.entity.Player;
 
+/**
+ * Thin adapter that delegates all operations to a {@link DataCache} keyed by {@link UUID}.
+ *
+ * @param <V> the player data type
+ */
 public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     private final DataCache<UUID, V> delegate;
-    private final CacheRepository<UUID, V> repository;
-    private final PlayerValueFactory<V> defaultValue;
-    private final ConcurrentHashMap<UUID, CompletionStage<V>> loading = new ConcurrentHashMap<>();
 
     public CaffeinePlayerDataCache(
             DataCache<UUID, V> delegate,
@@ -28,13 +28,14 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
             PlayerValueFactory<V> defaultValue,
             PaperTaskScheduler scheduler) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
-        this.repository = Objects.requireNonNull(repository, "repository");
-        this.defaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
+        Objects.requireNonNull(defaultValue, "defaultValue");
+        Objects.requireNonNull(repository, "repository");
         Objects.requireNonNull(scheduler, "scheduler");
     }
 
     @Override
     public V get(Player player) {
+        Objects.requireNonNull(player, "player");
         return get(player.getUniqueId());
     }
 
@@ -45,6 +46,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public Optional<V> find(Player player) {
+        Objects.requireNonNull(player, "player");
         return find(player.getUniqueId());
     }
 
@@ -55,45 +57,42 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public CompletionStage<V> getOrLoadAsync(UUID uniqueId) {
-        var existing = delegate.find(uniqueId);
-        if (existing.isPresent()) {
-            return CompletableFuture.completedFuture(existing.get());
-        }
-        return loadAsync(uniqueId);
+        return delegate.getOrLoad(uniqueId);
     }
 
     @Override
     public CompletionStage<V> loadAsync(UUID uniqueId) {
-        return loading.computeIfAbsent(uniqueId, this::loadInternalAsync);
+        return delegate.load(uniqueId);
     }
 
     @Override
     public CompletionStage<V> updateAsync(UUID uniqueId, UnaryOperator<V> updater) {
-        return delegate.update(uniqueId, updater).toCompletionStage();
+        return delegate.update(uniqueId, updater);
     }
 
     @Override
     public CompletionStage<V> mutateAsync(UUID uniqueId, Consumer<V> mutator) {
-        return delegate.mutate(uniqueId, mutator).toCompletionStage();
+        return delegate.mutate(uniqueId, mutator);
     }
 
     @Override
     public CompletionStage<Void> saveAsync(UUID uniqueId) {
-        return delegate.save(uniqueId).toCompletionStage();
+        return delegate.save(uniqueId);
     }
 
     @Override
     public CompletionStage<Void> saveDirty() {
-        return delegate.saveDirty().toCompletionStage();
+        return delegate.saveDirty();
     }
 
     @Override
     public CompletionStage<Void> saveAll() {
-        return delegate.saveAll().toCompletionStage();
+        return delegate.saveAll();
     }
 
     @Override
     public void unload(Player player) {
+        Objects.requireNonNull(player, "player");
         unload(player.getUniqueId());
     }
 
@@ -104,6 +103,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public boolean contains(Player player) {
+        Objects.requireNonNull(player, "player");
         return contains(player.getUniqueId());
     }
 
@@ -114,6 +114,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public void markDirty(Player player) {
+        Objects.requireNonNull(player, "player");
         markDirty(player.getUniqueId());
     }
 
@@ -140,19 +141,5 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
     @Override
     public void close() {
         delegate.close();
-    }
-
-    private CompletionStage<V> loadInternalAsync(UUID uniqueId) {
-        var future = repository
-                .find(uniqueId)
-                .toCompletionStage()
-                .thenApply(optional -> optional.orElseGet(() -> defaultValue.create(uniqueId)))
-                .thenApply(value -> {
-                    delegate.put(uniqueId, value);
-                    return value;
-                })
-                .whenComplete((_, _) -> loading.remove(uniqueId));
-
-        return future;
     }
 }

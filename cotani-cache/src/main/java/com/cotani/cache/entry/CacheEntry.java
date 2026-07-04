@@ -8,14 +8,15 @@ import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Wraps a cached value with dirty tracking and save timestamps.
+ *
+ * <p>All state is held in an {@link AtomicReference} for thread-safe updates.
+ * Mutating operations use optimistic CAS; reads are lock-free.
+ *
+ * @param <V> the value type
+ */
 public final class CacheEntry<V> {
-
-    private record EntryState<V>(
-            V value, boolean dirty, @Nullable Instant lastSavedAt) {
-        EntryState {
-            Objects.requireNonNull(value, "value");
-        }
-    }
 
     private final AtomicReference<EntryState<V>> state;
     private final Instant loadedAt;
@@ -29,48 +30,55 @@ public final class CacheEntry<V> {
         return currentState().value();
     }
 
-    public synchronized V update(UnaryOperator<V> updater) {
+    public V update(UnaryOperator<V> updater) {
         Objects.requireNonNull(updater, "updater");
 
-        var current = currentState();
-        var updated = Objects.requireNonNull(updater.apply(current.value()), "updated");
-        state.set(new EntryState<>(updated, true, current.lastSavedAt()));
-        return updated;
+        return state.updateAndGet(current -> {
+                    var updated = Objects.requireNonNull(updater.apply(current.value()), "updated");
+                    return new EntryState<>(updated, true, current.lastSavedAt());
+                })
+                .value();
     }
 
-    public synchronized V mutate(Consumer<V> mutator) {
+    public V mutate(Consumer<V> mutator) {
         Objects.requireNonNull(mutator, "mutator");
 
-        var current = currentState();
-        var value = current.value();
-        mutator.accept(value);
-        state.set(new EntryState<>(value, true, current.lastSavedAt()));
-        return value;
+        return state.updateAndGet(current -> {
+                    var value = current.value();
+                    mutator.accept(value);
+                    return new EntryState<>(value, true, current.lastSavedAt());
+                })
+                .value();
     }
 
-    public synchronized boolean dirty() {
+    public boolean dirty() {
         return currentState().dirty();
     }
 
-    public synchronized void markDirty() {
-        var current = currentState();
-        state.set(new EntryState<>(current.value(), true, current.lastSavedAt()));
+    public void markDirty() {
+        state.updateAndGet(current -> new EntryState<>(current.value(), true, current.lastSavedAt()));
     }
 
-    public synchronized void markSaved() {
-        var current = currentState();
-        state.set(new EntryState<>(current.value(), false, Instant.now()));
+    public void markSaved() {
+        state.updateAndGet(current -> new EntryState<>(current.value(), false, Instant.now()));
     }
 
     public Instant loadedAt() {
         return loadedAt;
     }
 
-    public synchronized Optional<Instant> lastSavedAt() {
+    public Optional<Instant> lastSavedAt() {
         return Optional.ofNullable(currentState().lastSavedAt());
     }
 
     private EntryState<V> currentState() {
         return Objects.requireNonNull(state.get(), "state");
+    }
+
+    private record EntryState<V>(
+            V value, boolean dirty, @Nullable Instant lastSavedAt) {
+        EntryState {
+            Objects.requireNonNull(value, "value");
+        }
     }
 }

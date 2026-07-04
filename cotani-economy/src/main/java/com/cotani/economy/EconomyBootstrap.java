@@ -16,17 +16,17 @@ import java.util.concurrent.Executors;
  *
  * <p>In Cotani's real bootstrap, wire this module through the existing service registry instead of using this factory directly.
  */
-public final class EconomyModule implements AutoCloseable {
+public final class EconomyBootstrap implements AutoCloseable {
 
     private final EconomyService service;
     private final Runnable closeAction;
 
-    private EconomyModule(EconomyService service, Runnable closeAction) {
+    private EconomyBootstrap(EconomyService service, Runnable closeAction) {
         this.service = Objects.requireNonNull(service, "service");
         this.closeAction = Objects.requireNonNull(closeAction, "closeAction");
     }
 
-    public static EconomyModule createDefault() {
+    public static EconomyBootstrap createDefault() {
         var executor = Executors.newVirtualThreadPerTaskExecutor();
         var currency = EconomyCurrency.coins();
         var settings = EconomySettings.defaultSettings(currency);
@@ -35,10 +35,10 @@ public final class EconomyModule implements AutoCloseable {
         var publisher = new NoopEconomyEventPublisher();
         var service = new DefaultEconomyService(settings, guard, store, store, publisher);
 
-        return new EconomyModule(service, executor::close);
+        return new EconomyBootstrap(service, executor::close);
     }
 
-    public static EconomyModule create(
+    public static EconomyBootstrap create(
             EconomySettings settings, EconomyEventPublisher eventPublisher, Executor executor) {
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(eventPublisher, "eventPublisher");
@@ -48,7 +48,7 @@ public final class EconomyModule implements AutoCloseable {
         var store = new InMemoryEconomyStore(executor, Clock.systemUTC(), settings);
         var service = new DefaultEconomyService(settings, guard, store, store, eventPublisher);
 
-        return new EconomyModule(service, () -> {});
+        return new EconomyBootstrap(service, () -> {});
     }
 
     public EconomyService service() {
@@ -58,5 +58,12 @@ public final class EconomyModule implements AutoCloseable {
     @Override
     public void close() {
         closeAction.run();
+        if (service instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception exception) {
+                throw new RuntimeException("Failed to close economy service", exception);
+            }
+        }
     }
 }

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
@@ -17,8 +16,7 @@ import org.junit.jupiter.api.Test;
 class UserCacheTest {
 
     private final UserRepository repository = mock(UserRepository.class);
-    private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
-    private final UserCache cache = new UserCache(repository, scheduler);
+    private final UserCache cache = new UserCache(repository);
 
     @Test
     void putAndFindReturnUser() {
@@ -91,11 +89,11 @@ class UserCacheTest {
         cache.put(SimpleCotaniUser.createNew(firstId, "A", 1L).withVersion(1L));
         cache.put(SimpleCotaniUser.createNew(secondId, "B", 1L).withVersion(2L));
 
-        when(repository.save(any(SimpleCotaniUser.class))).thenReturn(CompletableFuture.completedFuture(null));
+        when(repository.saveAll(anyList())).thenReturn(CompletableFuture.completedFuture(null));
 
         cache.saveAll().toCompletableFuture().join();
 
-        verify(repository, times(2)).save(any(SimpleCotaniUser.class));
+        verify(repository).saveAll(argThat(users -> users.size() == 2));
     }
 
     @Test

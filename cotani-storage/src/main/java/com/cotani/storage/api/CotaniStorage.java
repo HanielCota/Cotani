@@ -15,16 +15,13 @@ import com.cotani.storage.schema.Schema;
 import com.cotani.storage.serializer.ValueSerializerRegistry;
 import com.cotani.storage.transaction.TransactionManager;
 import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.util.CompletionStages;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -59,10 +56,10 @@ public final class CotaniStorage implements AutoCloseable {
             List<Class<? extends CotaniRepository>> repositoryTypes,
             PaperTaskScheduler scheduler,
             int queryTimeoutSeconds) {
-        this.plugin = plugin;
-        this.backend = backend;
-        this.migrations = List.copyOf(migrations);
-        this.repositoryTypes = List.copyOf(repositoryTypes);
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.backend = Objects.requireNonNull(backend, "backend");
+        this.migrations = List.copyOf(Objects.requireNonNull(migrations, "migrations"));
+        this.repositoryTypes = List.copyOf(Objects.requireNonNull(repositoryTypes, "repositoryTypes"));
         this.provider = new StorageProviderFactory().create(backend);
         var platformFactory =
                 Thread.ofPlatform().name("cotani-storage-", 0).daemon(true).factory();
@@ -70,7 +67,7 @@ public final class CotaniStorage implements AutoCloseable {
                 ? Executors.newThreadPerTaskExecutor(
                         Thread.ofVirtual().name("cotani-storage-vt-", 0).factory())
                 : Executors.newFixedThreadPool(threads, platformFactory);
-        this.scheduler = scheduler;
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.dialect = new DialectFactory().create(backend);
         this.executor = new QueryExecutor(provider, storageExecutor, serializers, queryTimeoutSeconds);
         this.schema = new Schema(executor, dialect);
@@ -187,7 +184,7 @@ public final class CotaniStorage implements AutoCloseable {
 
     private CompletionStage<Void> runMigrations() {
         if (migrations.isEmpty()) {
-            return CompletableFuture.completedStage(null);
+            return CompletionStages.completedVoid();
         }
         var runner = new MigrationRunner(executor, schema);
         for (var migration : migrations) {

@@ -6,121 +6,263 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-public record EconomyTransaction(
-        EconomyTransactionId id,
-        EconomyOperationId operationId,
-        EconomyTransactionType type,
-        @Nullable UUID sourceUserId,
-        @Nullable UUID targetUserId,
-        CurrencyId currencyId,
-        BigDecimal amount,
-        @Nullable BigDecimal sourceBalanceBefore,
-        @Nullable BigDecimal sourceBalanceAfter,
-        @Nullable BigDecimal targetBalanceBefore,
-        @Nullable BigDecimal targetBalanceAfter,
-        EconomyReason reason,
-        Instant createdAt) {
+public sealed interface EconomyTransaction
+        permits EconomyTransaction.Deposit,
+                EconomyTransaction.Withdraw,
+                EconomyTransaction.Set,
+                EconomyTransaction.Transfer {
 
-    public EconomyTransaction {
-        Objects.requireNonNull(id, "id");
-        Objects.requireNonNull(operationId, "operationId");
-        Objects.requireNonNull(type, "type");
-        Objects.requireNonNull(currencyId, "currencyId");
-        Objects.requireNonNull(amount, "amount");
-        Objects.requireNonNull(reason, "reason");
-        Objects.requireNonNull(createdAt, "createdAt");
-
-        if (amount.signum() <= 0) {
-            throw new IllegalArgumentException("Transaction amount must be positive.");
-        }
-    }
-
-    public Optional<UUID> source() {
-        return Optional.ofNullable(sourceUserId);
-    }
-
-    public Optional<UUID> target() {
-        return Optional.ofNullable(targetUserId);
-    }
-
-    public static EconomyTransaction deposit(
-            EconomyOperationId operationId,
-            UUID targetUserId,
-            CurrencyId currencyId,
+    static Deposit deposit(
+            EconomyOperationId opId,
+            UUID targetId,
+            CurrencyId currId,
             BigDecimal amount,
-            BigDecimal balanceBefore,
-            BigDecimal balanceAfter,
+            BigDecimal balBefore,
+            BigDecimal balAfter,
             EconomyReason reason,
             Instant now) {
-        return new EconomyTransaction(
+        return new Deposit(
+                EconomyTransactionId.random(), opId, targetId, currId, amount, balBefore, balAfter, reason, now);
+    }
+
+    static Withdraw withdraw(
+            EconomyOperationId opId,
+            UUID sourceId,
+            CurrencyId currId,
+            BigDecimal amount,
+            BigDecimal balBefore,
+            BigDecimal balAfter,
+            EconomyReason reason,
+            Instant now) {
+        return new Withdraw(
+                EconomyTransactionId.random(), opId, sourceId, currId, amount, balBefore, balAfter, reason, now);
+    }
+
+    static Set set(
+            EconomyOperationId opId,
+            UUID targetId,
+            CurrencyId currId,
+            BigDecimal amount,
+            BigDecimal balBefore,
+            BigDecimal balAfter,
+            EconomyReason reason,
+            Instant now) {
+        return new Set(EconomyTransactionId.random(), opId, targetId, currId, amount, balBefore, balAfter, reason, now);
+    }
+
+    static Transfer transfer(
+            EconomyOperationId opId,
+            UUID sourceId,
+            UUID targetId,
+            CurrencyId currId,
+            BigDecimal amount,
+            BigDecimal srcBalBefore,
+            BigDecimal srcBalAfter,
+            BigDecimal tgtBalBefore,
+            BigDecimal tgtBalAfter,
+            EconomyReason reason,
+            Instant now) {
+        return new Transfer(
                 EconomyTransactionId.random(),
-                operationId,
-                EconomyTransactionType.DEPOSIT,
-                null,
-                targetUserId,
-                currencyId,
+                opId,
+                sourceId,
+                targetId,
+                currId,
                 amount,
-                null,
-                null,
-                balanceBefore,
-                balanceAfter,
+                srcBalBefore,
+                srcBalAfter,
+                tgtBalBefore,
+                tgtBalAfter,
                 reason,
                 now);
     }
 
-    public static EconomyTransaction withdraw(
+    EconomyTransactionId id();
+
+    EconomyOperationId operationId();
+
+    EconomyTransactionType type();
+
+    CurrencyId currencyId();
+
+    BigDecimal amount();
+
+    EconomyReason reason();
+
+    Instant createdAt();
+
+    default Optional<UUID> source() {
+        return Optional.ofNullable(sourceUserId());
+    }
+
+    default Optional<UUID> target() {
+        return Optional.ofNullable(targetUserId());
+    }
+
+    default @Nullable UUID sourceUserId() {
+        return null;
+    }
+
+    default @Nullable UUID targetUserId() {
+        return null;
+    }
+
+    default @Nullable BigDecimal sourceBalanceBefore() {
+        return null;
+    }
+
+    default @Nullable BigDecimal sourceBalanceAfter() {
+        return null;
+    }
+
+    default @Nullable BigDecimal targetBalanceBefore() {
+        return null;
+    }
+
+    default @Nullable BigDecimal targetBalanceAfter() {
+        return null;
+    }
+
+    record Deposit(
+            EconomyTransactionId id,
+            EconomyOperationId operationId,
+            UUID targetUserId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            BigDecimal targetBalanceBefore,
+            BigDecimal targetBalanceAfter,
+            EconomyReason reason,
+            Instant createdAt)
+            implements EconomyTransaction {
+        public Deposit {
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(operationId);
+            Objects.requireNonNull(targetUserId);
+            Objects.requireNonNull(currencyId);
+            Objects.requireNonNull(amount);
+            Objects.requireNonNull(reason);
+            Objects.requireNonNull(createdAt);
+            if (amount.signum() <= 0) {
+                throw new IllegalArgumentException("Transaction amount must be positive.");
+            }
+        }
+
+        @Override
+        public EconomyTransactionType type() {
+            return EconomyTransactionType.DEPOSIT;
+        }
+
+        @Override
+        public @NonNull UUID targetUserId() {
+            return targetUserId;
+        }
+
+        @Override
+        public @NonNull BigDecimal targetBalanceBefore() {
+            return targetBalanceBefore;
+        }
+
+        @Override
+        public @NonNull BigDecimal targetBalanceAfter() {
+            return targetBalanceAfter;
+        }
+    }
+
+    record Withdraw(
+            EconomyTransactionId id,
             EconomyOperationId operationId,
             UUID sourceUserId,
             CurrencyId currencyId,
             BigDecimal amount,
-            BigDecimal balanceBefore,
-            BigDecimal balanceAfter,
+            BigDecimal sourceBalanceBefore,
+            BigDecimal sourceBalanceAfter,
             EconomyReason reason,
-            Instant now) {
-        return new EconomyTransaction(
-                EconomyTransactionId.random(),
-                operationId,
-                EconomyTransactionType.WITHDRAW,
-                sourceUserId,
-                null,
-                currencyId,
-                amount,
-                balanceBefore,
-                balanceAfter,
-                null,
-                null,
-                reason,
-                now);
+            Instant createdAt)
+            implements EconomyTransaction {
+        public Withdraw {
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(operationId);
+            Objects.requireNonNull(sourceUserId);
+            Objects.requireNonNull(currencyId);
+            Objects.requireNonNull(amount);
+            Objects.requireNonNull(reason);
+            Objects.requireNonNull(createdAt);
+            if (amount.signum() <= 0) {
+                throw new IllegalArgumentException("Transaction amount must be positive.");
+            }
+        }
+
+        @Override
+        public EconomyTransactionType type() {
+            return EconomyTransactionType.WITHDRAW;
+        }
+
+        @Override
+        public @NonNull UUID sourceUserId() {
+            return sourceUserId;
+        }
+
+        @Override
+        public @NonNull BigDecimal sourceBalanceBefore() {
+            return sourceBalanceBefore;
+        }
+
+        @Override
+        public @NonNull BigDecimal sourceBalanceAfter() {
+            return sourceBalanceAfter;
+        }
     }
 
-    public static EconomyTransaction set(
+    record Set(
+            EconomyTransactionId id,
             EconomyOperationId operationId,
             UUID targetUserId,
             CurrencyId currencyId,
             BigDecimal amount,
-            BigDecimal balanceBefore,
-            BigDecimal balanceAfter,
+            BigDecimal targetBalanceBefore,
+            BigDecimal targetBalanceAfter,
             EconomyReason reason,
-            Instant now) {
-        return new EconomyTransaction(
-                EconomyTransactionId.random(),
-                operationId,
-                EconomyTransactionType.SET,
-                null,
-                targetUserId,
-                currencyId,
-                amount,
-                null,
-                null,
-                balanceBefore,
-                balanceAfter,
-                reason,
-                now);
+            Instant createdAt)
+            implements EconomyTransaction {
+        public Set {
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(operationId);
+            Objects.requireNonNull(targetUserId);
+            Objects.requireNonNull(currencyId);
+            Objects.requireNonNull(amount);
+            Objects.requireNonNull(reason);
+            Objects.requireNonNull(createdAt);
+            if (amount.signum() <= 0) {
+                throw new IllegalArgumentException("Transaction amount must be positive.");
+            }
+        }
+
+        @Override
+        public EconomyTransactionType type() {
+            return EconomyTransactionType.SET;
+        }
+
+        @Override
+        public @NonNull UUID targetUserId() {
+            return targetUserId;
+        }
+
+        @Override
+        public @NonNull BigDecimal targetBalanceBefore() {
+            return targetBalanceBefore;
+        }
+
+        @Override
+        public @NonNull BigDecimal targetBalanceAfter() {
+            return targetBalanceAfter;
+        }
     }
 
-    public static EconomyTransaction transfer(
+    record Transfer(
+            EconomyTransactionId id,
             EconomyOperationId operationId,
             UUID sourceUserId,
             UUID targetUserId,
@@ -131,20 +273,55 @@ public record EconomyTransaction(
             BigDecimal targetBalanceBefore,
             BigDecimal targetBalanceAfter,
             EconomyReason reason,
-            Instant now) {
-        return new EconomyTransaction(
-                EconomyTransactionId.random(),
-                operationId,
-                EconomyTransactionType.TRANSFER,
-                sourceUserId,
-                targetUserId,
-                currencyId,
-                amount,
-                sourceBalanceBefore,
-                sourceBalanceAfter,
-                targetBalanceBefore,
-                targetBalanceAfter,
-                reason,
-                now);
+            Instant createdAt)
+            implements EconomyTransaction {
+        public Transfer {
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(operationId);
+            Objects.requireNonNull(sourceUserId);
+            Objects.requireNonNull(targetUserId);
+            Objects.requireNonNull(currencyId);
+            Objects.requireNonNull(amount);
+            Objects.requireNonNull(reason);
+            Objects.requireNonNull(createdAt);
+            if (amount.signum() <= 0) {
+                throw new IllegalArgumentException("Transaction amount must be positive.");
+            }
+        }
+
+        @Override
+        public EconomyTransactionType type() {
+            return EconomyTransactionType.TRANSFER;
+        }
+
+        @Override
+        public @NonNull UUID sourceUserId() {
+            return sourceUserId;
+        }
+
+        @Override
+        public @NonNull UUID targetUserId() {
+            return targetUserId;
+        }
+
+        @Override
+        public @NonNull BigDecimal sourceBalanceBefore() {
+            return sourceBalanceBefore;
+        }
+
+        @Override
+        public @NonNull BigDecimal sourceBalanceAfter() {
+            return sourceBalanceAfter;
+        }
+
+        @Override
+        public @NonNull BigDecimal targetBalanceBefore() {
+            return targetBalanceBefore;
+        }
+
+        @Override
+        public @NonNull BigDecimal targetBalanceAfter() {
+            return targetBalanceAfter;
+        }
     }
 }

@@ -31,6 +31,38 @@ public final class RecordConfigBinder implements ConfigBinder {
         this.validator = new ConfigValidator(serializers);
     }
 
+    private static String pathFor(RecordComponent component) {
+        ConfigPath configPath = component.getAnnotation(ConfigPath.class);
+        if (configPath != null) {
+            return configPath.value();
+        }
+        return toKebabCase(component.getName());
+    }
+
+    private static String toKebabCase(String input) {
+        return input.replaceAll("([a-z0-9])([A-Z])", "$1-$2")
+                .replaceAll("([A-Z]+)([A-Z][a-z])", "$1-$2")
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private static Class<?> genericArgument(Type type, int index) {
+        if (!(type instanceof ParameterizedType parameterizedType)) {
+            return Object.class;
+        }
+        var args = parameterizedType.getActualTypeArguments();
+        if (index < 0 || index >= args.length) {
+            return Object.class;
+        }
+        var argument = args[index];
+        if (argument instanceof Class<?> clazz) {
+            return clazz;
+        }
+        if (argument instanceof ParameterizedType nested) {
+            return (Class<?>) nested.getRawType();
+        }
+        return Object.class;
+    }
+
     @Override
     public <T> T bind(ConfigSection section, Class<T> type) {
         if (type.isRecord()) {
@@ -234,48 +266,11 @@ public final class RecordConfigBinder implements ConfigBinder {
         throw new ConfigException("Unknown config type " + requested + " for " + type.getName());
     }
 
-    private static String pathFor(RecordComponent component) {
-        ConfigPath configPath = component.getAnnotation(ConfigPath.class);
-        if (configPath != null) {
-            return configPath.value();
-        }
-        return toKebabCase(component.getName());
-    }
-
-    private static String toKebabCase(String input) {
-        return input.replaceAll("([a-z0-9])([A-Z])", "$1-$2")
-                .replaceAll("([A-Z]+)([A-Z][a-z])", "$1-$2")
-                .toLowerCase(Locale.ROOT);
-    }
-
-    private static Class<?> genericArgument(Type type, int index) {
-        if (!(type instanceof ParameterizedType parameterizedType)) {
-            return Object.class;
-        }
-        var args = parameterizedType.getActualTypeArguments();
-        if (index < 0 || index >= args.length) {
-            return Object.class;
-        }
-        var argument = args[index];
-        if (argument instanceof Class<?> clazz) {
-            return clazz;
-        }
-        if (argument instanceof ParameterizedType nested) {
-            return (Class<?>) nested.getRawType();
-        }
-        return Object.class;
-    }
-
-    private static final class InMemoryConfigSource implements ConfigSource {
-
-        private final Path path;
-        private final String rootPath;
-        private final Map<String, Object> values;
+    private record InMemoryConfigSource(Path path, String rootPath, Map<String, Object> values)
+            implements ConfigSource {
 
         private InMemoryConfigSource(String file, String rootPath, Map<String, Object> values) {
-            this.path = Path.of(file);
-            this.rootPath = rootPath;
-            this.values = Collections.unmodifiableMap(new LinkedHashMap<>(values));
+            this(Path.of(file), rootPath, Collections.unmodifiableMap(new LinkedHashMap<>(values)));
         }
 
         @Override

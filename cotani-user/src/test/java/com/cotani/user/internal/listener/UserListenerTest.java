@@ -1,6 +1,5 @@
 package com.cotani.user.internal.listener;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.cotani.task.api.PaperTaskScheduler;

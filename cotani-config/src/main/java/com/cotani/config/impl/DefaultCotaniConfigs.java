@@ -9,6 +9,7 @@ import com.cotani.config.serializer.ConfigSerializerRegistry;
 import com.cotani.config.source.BukkitYamlConfigSource;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.TaskChain;
+import com.cotani.task.util.VoidResult;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
@@ -99,7 +100,7 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
     public TaskChain<Void> reloadAsync() {
         return scheduler.supplyAsync(() -> {
             reload();
-            return null;
+            return VoidResult.nullValue();
         });
     }
 

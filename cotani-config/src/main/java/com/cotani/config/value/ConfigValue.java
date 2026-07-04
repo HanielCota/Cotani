@@ -16,11 +16,11 @@ public final class ConfigValue {
 
     public ConfigValue(
             String file, String path, @Nullable Object raw, boolean exists, ConfigSerializerRegistry serializers) {
-        this.file = file;
-        this.path = path;
+        this.file = Objects.requireNonNull(file, "file");
+        this.path = Objects.requireNonNull(path, "path");
         this.raw = raw;
         this.exists = exists;
-        this.serializers = serializers;
+        this.serializers = Objects.requireNonNull(serializers, "serializers");
     }
 
     public String file() {

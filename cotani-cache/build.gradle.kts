@@ -17,6 +17,8 @@ dependencies {
     errorprone(libs.errorprone.core)
     errorprone(libs.nullaway)
 
+    testImplementation(libs.paper.api)
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockito.core)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

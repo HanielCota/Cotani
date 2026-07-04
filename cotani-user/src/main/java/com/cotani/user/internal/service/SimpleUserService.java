@@ -1,5 +1,6 @@
 package com.cotani.user.internal.service;
 
+import com.cotani.task.util.CompletionStages;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.api.UserNotLoadedException;
 import com.cotani.user.internal.cache.UserCache;
@@ -58,7 +59,7 @@ public final class SimpleUserService implements InternalUserService {
         Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
 
         if (optionalUser.isEmpty()) {
-            return CompletableFuture.completedStage(null);
+            return CompletionStages.completedVoid();
         }
 
         SimpleCotaniUser user = optionalUser.get();
@@ -72,7 +73,7 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<Void> save(UUID uniqueId) {
         if (!cache.contains(uniqueId)) {
-            return CompletableFuture.completedStage(null);
+            return CompletionStages.completedVoid();
         }
 
         return cache.save(uniqueId);

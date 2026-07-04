@@ -7,6 +7,16 @@ import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import org.bukkit.entity.Player;
 
+/**
+ * Cache specialized for player data, indexed by {@link Player} or {@link UUID}.
+ *
+ * <p>Methods accepting {@link Player} are convenience overloads that delegate
+ * to the {@link UUID} variants. All async operations use {@link CompletionStage}.
+ *
+ * <p>Player arguments, UUIDs and values must not be {@code null}.
+ *
+ * @param <V> the player data type
+ */
 public interface PlayerDataCache<V> extends AutoCloseable {
 
     V get(Player player);

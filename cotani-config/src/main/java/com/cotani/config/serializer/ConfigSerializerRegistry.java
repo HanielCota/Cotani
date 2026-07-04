@@ -10,6 +10,12 @@ import org.jspecify.annotations.Nullable;
 public final class ConfigSerializerRegistry {
 
     private volatile Map<Class<?>, ConfigSerializer<?>> serializers = new LinkedHashMap<>();
+    private final ClassValue<Optional<ConfigSerializer<?>>> resolvedCache = new ClassValue<>() {
+        @Override
+        protected Optional<ConfigSerializer<?>> computeValue(Class<?> type) {
+            return Optional.ofNullable(resolve(type));
+        }
+    };
 
     public static ConfigSerializerRegistry defaults(Plugin plugin) {
         var registry = new ConfigSerializerRegistry();
@@ -32,24 +38,27 @@ public final class ConfigSerializerRegistry {
 
     public <T> void register(ConfigSerializer<T> serializer) {
         synchronized (this) {
-            var next = new LinkedHashMap<Class<?>, ConfigSerializer<?>>(serializers);
+            var next = new LinkedHashMap<>(serializers);
             next.put(serializer.type(), serializer);
             serializers = Collections.unmodifiableMap(next);
         }
     }
 
     public Optional<ConfigSerializer<?>> find(Class<?> type) {
-        Class<?> wrapped = wrap(type);
+        return resolvedCache.get(wrap(type));
+    }
+
+    private @Nullable ConfigSerializer<?> resolve(Class<?> wrapped) {
         ConfigSerializer<?> serializer = serializers.get(wrapped);
         if (serializer != null) {
-            return Optional.of(serializer);
+            return serializer;
         }
         for (var entry : serializers.entrySet()) {
             if (entry.getKey().isAssignableFrom(wrapped)) {
-                return Optional.of(entry.getValue());
+                return entry.getValue();
             }
         }
-        return Optional.empty();
+        return null;
     }
 
     @SuppressWarnings({"unchecked"})

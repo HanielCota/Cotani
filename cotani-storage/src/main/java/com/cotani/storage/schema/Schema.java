@@ -2,6 +2,7 @@ package com.cotani.storage.schema;
 
 import com.cotani.storage.dialect.SqlDialect;
 import com.cotani.storage.executor.QueryExecutor;
+import java.util.Objects;
 
 public final class Schema {
 
@@ -9,8 +10,8 @@ public final class Schema {
     private final SqlDialect dialect;
 
     public Schema(QueryExecutor executor, SqlDialect dialect) {
-        this.executor = executor;
-        this.dialect = dialect;
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.dialect = Objects.requireNonNull(dialect, "dialect");
     }
 
     public TableSchema table(String name) {

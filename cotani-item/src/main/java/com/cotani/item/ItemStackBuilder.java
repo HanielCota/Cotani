@@ -126,7 +126,10 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
     public final T lore(String... miniMessages) {
         Objects.requireNonNull(miniMessages, "Parameter 'miniMessages' must not be null");
-        var lines = Arrays.stream(miniMessages).map(MiniMessages::parse).toList();
+        var lines = new ArrayList<Component>(miniMessages.length);
+        for (var miniMessage : miniMessages) {
+            lines.add(MiniMessages.parse(miniMessage));
+        }
         return lore(lines);
     }
 

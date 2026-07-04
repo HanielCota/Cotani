@@ -4,6 +4,7 @@ import com.cotani.config.binder.ConfigBinder;
 import com.cotani.config.serializer.ConfigSerializerRegistry;
 import com.cotani.config.source.ConfigSource;
 import com.cotani.config.value.ConfigValue;
+import java.util.Objects;
 import java.util.Set;
 
 public final class ConfigSection {
@@ -16,11 +17,11 @@ public final class ConfigSection {
 
     public ConfigSection(
             String file, String path, ConfigSource source, ConfigSerializerRegistry serializers, ConfigBinder binder) {
-        this.file = file;
-        this.path = path;
-        this.source = source;
-        this.serializers = serializers;
-        this.binder = binder;
+        this.file = Objects.requireNonNull(file, "file");
+        this.path = Objects.requireNonNull(path, "path");
+        this.source = Objects.requireNonNull(source, "source");
+        this.serializers = Objects.requireNonNull(serializers, "serializers");
+        this.binder = Objects.requireNonNull(binder, "binder");
     }
 
     public String file() {

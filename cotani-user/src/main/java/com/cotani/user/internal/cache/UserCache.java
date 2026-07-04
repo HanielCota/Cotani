@@ -1,14 +1,10 @@
 package com.cotani.user.internal.cache;
 
-import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.util.CompletionStages;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,8 +19,8 @@ public final class UserCache {
     private final Map<UUID, SimpleCotaniUser> users = new ConcurrentHashMap<>();
     private final UserRepository repository;
 
-    public UserCache(UserRepository repository, PaperTaskScheduler scheduler) {
-        this.repository = repository;
+    public UserCache(UserRepository repository) {
+        this.repository = Objects.requireNonNull(repository, "repository");
     }
 
     public Optional<SimpleCotaniUser> findInternal(UUID uniqueId) {
@@ -36,10 +32,13 @@ public final class UserCache {
     }
 
     public void put(SimpleCotaniUser user) {
+        Objects.requireNonNull(user, "user");
         users.put(user.uniqueId(), user);
     }
 
     public boolean remove(UUID uniqueId, UUID expectedSessionId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(expectedSessionId, "expectedSessionId");
         SimpleCotaniUser current = users.get(uniqueId);
 
         if (current == null || !current.sessionId().equals(expectedSessionId)) {
@@ -62,43 +61,33 @@ public final class UserCache {
         return users.values();
     }
 
-    public void markDirty(UUID uniqueId) {
-        // no-op: this cache saves all loaded entries on request.
-    }
-
     public CompletionStage<Void> save(UUID uniqueId) {
         SimpleCotaniUser user = users.get(uniqueId);
 
         if (user == null) {
-            return CompletableFuture.completedStage(null);
+            return CompletionStages.completedVoid();
         }
 
-        return saveUser(user);
+        var updated = user.withIncrementedVersion();
+        return repository.save(updated).thenRun(() -> users.replace(uniqueId, user, updated));
     }
 
     public CompletionStage<Void> saveAll() {
-        var futures = users.values().stream().map(this::saveUser).toList();
-
-        if (futures.isEmpty()) {
-            return CompletableFuture.completedStage(null);
+        var snapshot = List.copyOf(users.values());
+        if (snapshot.isEmpty()) {
+            return CompletionStages.completedVoid();
         }
 
-        @SuppressWarnings("unchecked")
-        CompletableFuture<Void>[] array =
-                futures.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
-
-        return CompletableFuture.allOf(array).thenApply(_ -> null);
+        var updated =
+                snapshot.stream().map(SimpleCotaniUser::withIncrementedVersion).toList();
+        return repository.saveAll(updated).thenRun(() -> updateCacheAfterSave(snapshot, updated));
     }
 
-    private CompletionStage<Void> saveUser(SimpleCotaniUser user) {
-        var updated = user.withIncrementedVersion();
-
-        return repository.save(updated).thenRun(() -> {
-            SimpleCotaniUser current = users.get(user.uniqueId());
-
-            if (current != null && current.version() == user.version()) {
-                users.put(user.uniqueId(), updated);
-            }
-        });
+    private void updateCacheAfterSave(List<SimpleCotaniUser> originals, List<SimpleCotaniUser> updated) {
+        for (int i = 0; i < originals.size(); i++) {
+            SimpleCotaniUser original = originals.get(i);
+            SimpleCotaniUser next = updated.get(i);
+            users.replace(original.uniqueId(), original, next);
+        }
     }
 }

@@ -9,30 +9,31 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collections;
-import java.util.Set;
-import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 
+/**
+ * Single-connection SQLite provider.
+ *
+ * <p>SQLite WAL allows many readers but only one writer; sharing one connection avoids the cost of
+ * opening the database and applying PRAGMAs on every query. The PRAGMAs are applied once through
+ * the JDBC URL, so every returned connection is already configured.
+ */
 public final class SQLiteStorageProvider implements StorageProvider {
 
     private static final String PRAGMA_JOURNAL_MODE = "PRAGMA journal_mode = WAL";
-    private static final String PRAGMA_SYNCHRONOUS = "PRAGMA synchronous = NORMAL";
-    private static final String PRAGMA_FOREIGN_KEYS = "PRAGMA foreign_keys = ON";
-    private static final String PRAGMA_BUSY_TIMEOUT = "PRAGMA busy_timeout = 30000";
 
     private final SQLiteCredentials credentials;
-    private final AtomicBoolean started = new AtomicBoolean();
-    private final Set<Connection> openConnections =
-            Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+    private final AtomicReference<@Nullable Connection> connection = new AtomicReference<>();
 
     public SQLiteStorageProvider(SQLiteCredentials credentials) {
-        this.credentials = credentials;
+        this.credentials = Objects.requireNonNull(credentials, "credentials");
     }
 
     @Override
     public void start() {
-        if (!started.compareAndSet(false, true)) {
+        if (connection.get() != null) {
             return;
         }
         try {
@@ -41,58 +42,56 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 Files.createDirectories(parent);
             }
         } catch (IOException exception) {
-            started.set(false);
             throw new StorageException(new ConnectionError("Could not create SQLite directory.", exception));
         }
-        try (Connection opened = DriverManager.getConnection(credentials.jdbcUrl());
-                Statement statement = opened.createStatement()) {
-            statement.execute(PRAGMA_JOURNAL_MODE);
-            openConnections.add(opened);
+        try {
+            Connection opened = DriverManager.getConnection(configuredJdbcUrl());
+            try (Statement statement = opened.createStatement()) {
+                statement.execute(PRAGMA_JOURNAL_MODE);
+            }
+            if (!connection.compareAndSet(null, opened)) {
+                closeQuietly(opened);
+            }
         } catch (SQLException exception) {
-            started.set(false);
             throw new StorageException(new ConnectionError("Could not open SQLite connection.", exception));
         }
     }
 
     @Override
     public Connection connection() throws SQLException {
-        if (!started.get()) {
+        Connection current = connection.get();
+        if (current == null || current.isClosed()) {
             throw new StorageException(new ConnectionError("SQLite provider is not available.", null));
         }
-        Connection opened = DriverManager.getConnection(credentials.jdbcUrl());
-        try (Statement statement = opened.createStatement()) {
-            statement.execute(PRAGMA_SYNCHRONOUS);
-            statement.execute(PRAGMA_FOREIGN_KEYS);
-            statement.execute(PRAGMA_BUSY_TIMEOUT);
-        } catch (SQLException failure) {
-            closeQuietly(opened);
-            throw failure;
-        }
-        openConnections.add(opened);
-        return opened;
+        return current;
     }
 
     @Override
     public boolean available() {
-        return started.get();
+        Connection current = connection.get();
+        return current != null;
     }
 
     @Override
     public void close() {
-        if (!started.compareAndSet(true, false)) {
-            return;
-        }
-        synchronized (openConnections) {
-            for (Connection connection : openConnections) {
-                closeQuietly(connection);
-            }
-            openConnections.clear();
-        }
+        Connection current = connection.getAndSet(null);
+        closeQuietly(current);
     }
 
-    private void closeQuietly(Connection connection) {
+    private String configuredJdbcUrl() {
+        return credentials.jdbcUrl()
+                + "?busy_timeout=30000"
+                + "&foreign_keys=ON"
+                + "&journal_mode=WAL"
+                + "&synchronous=NORMAL";
+    }
+
+    private void closeQuietly(@Nullable Connection connection) {
+        if (connection == null) {
+            return;
+        }
         try {
-            if (connection != null && !connection.isClosed()) {
+            if (!connection.isClosed()) {
                 connection.close();
             }
         } catch (SQLException ignored) {

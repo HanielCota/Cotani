@@ -5,7 +5,6 @@ import java.util.Objects;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
 
 public final class BlockSafetyChecker {
@@ -27,9 +26,13 @@ public final class BlockSafetyChecker {
             return false;
         }
 
-        Block feet = location.getBlock();
-        Block head = feet.getRelative(0, 1, 0);
-        Block ground = feet.getRelative(0, -1, 0);
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
+
+        Block feet = world.getBlockAt(x, y, z);
+        Block head = world.getBlockAt(x, y + 1, z);
+        Block ground = world.getBlockAt(x, y - 1, z);
 
         if (!feet.isPassable() || !head.isPassable()) {
             return false;
@@ -44,14 +47,11 @@ public final class BlockSafetyChecker {
     }
 
     private static boolean isInsideWorldBorder(World world, Location location) {
-        WorldBorder border = world.getWorldBorder();
-        return border.isInside(location);
+        return world.getWorldBorder().isInside(location);
     }
 
     private static boolean isChunkLoaded(World world, Location location) {
-        int chunkX = location.getBlockX() >> 4;
-        int chunkZ = location.getBlockZ() >> 4;
-        return world.isChunkLoaded(chunkX, chunkZ);
+        return world.isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4);
     }
 
     private static boolean isOutsideBounds(World world, Location location) {
@@ -59,22 +59,12 @@ public final class BlockSafetyChecker {
         return y < world.getMinHeight() || y + 1 >= world.getMaxHeight();
     }
 
-    private static boolean isLiquid(Block... blocks) {
-        for (Block block : blocks) {
-            if (block.isLiquid()) {
-                return true;
-            }
-        }
-        return false;
+    private static boolean isLiquid(Block feet, Block head, Block ground) {
+        return feet.isLiquid() || head.isLiquid() || ground.isLiquid();
     }
 
-    private static boolean isHazard(Material... materials) {
-        for (Material material : materials) {
-            if (isHazardMaterial(material)) {
-                return true;
-            }
-        }
-        return false;
+    private static boolean isHazard(Material feet, Material head, Material ground) {
+        return isHazardMaterial(feet) || isHazardMaterial(head) || isHazardMaterial(ground);
     }
 
     private static boolean isHazardMaterial(Material material) {

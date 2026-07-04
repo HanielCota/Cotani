@@ -44,12 +44,14 @@ public final class ExamplePlugin extends JavaPlugin {
         UUID playerId = player.getUniqueId();
         String name = player.getName();
         users.addCoins(playerId, name, amount)
-                .whenCompleteAsync((ignored, error) -> {
-                    if (error != null) {
-                        getLogger().warning(error.getMessage());
-                        return;
-                    }
-                    player.sendMessage(Component.text("Coins adicionados.", NamedTextColor.GREEN));
-                }, storage.scheduler().globalExecutor());
+                .whenCompleteAsync(
+                        (ignored, error) -> {
+                            if (error != null) {
+                                getLogger().warning(error.getMessage());
+                                return;
+                            }
+                            player.sendMessage(Component.text("Coins adicionados.", NamedTextColor.GREEN));
+                        },
+                        storage.scheduler().globalExecutor());
     }
 }

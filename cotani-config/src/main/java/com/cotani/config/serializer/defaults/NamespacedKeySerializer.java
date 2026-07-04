@@ -3,6 +3,7 @@ package com.cotani.config.serializer.defaults;
 import com.cotani.config.exception.ConfigException;
 import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
+import java.util.Objects;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.Plugin;
 
@@ -11,7 +12,7 @@ public final class NamespacedKeySerializer implements ConfigSerializer<Namespace
     private final Plugin plugin;
 
     public NamespacedKeySerializer(Plugin plugin) {
-        this.plugin = plugin;
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
     }
 
     @Override

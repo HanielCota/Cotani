@@ -4,6 +4,7 @@ import java.time.Duration;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
+@SuppressWarnings("unused")
 public interface PlatformScheduler {
 
     SchedulerTask runAsync(TaskMetadata metadata, Runnable runnable);

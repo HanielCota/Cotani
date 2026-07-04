@@ -1,6 +1,7 @@
 package com.cotani.storage.query;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.cotani.storage.dialect.SQLiteDialect;
 import com.cotani.storage.executor.QueryExecutor;
@@ -9,6 +10,12 @@ import com.cotani.storage.serializer.ValueSerializerRegistry;
 import org.junit.jupiter.api.Test;
 
 class UpsertQueryTest {
+
+    private static QueryExecutor createExecutor() {
+        var provider = org.mockito.Mockito.mock(StorageProvider.class);
+        org.mockito.Mockito.when(provider.available()).thenReturn(true);
+        return new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
+    }
 
     @Test
     void executeAcceptsEmptyUpdates() {
@@ -35,11 +42,5 @@ class UpsertQueryTest {
         var query = new UpsertQuery("test", executor, dialect);
         query.value("id", 1).value("name", "hello").conflict("id").update("missing");
         assertThrows(IllegalArgumentException.class, () -> query.execute());
-    }
-
-    private static QueryExecutor createExecutor() {
-        var provider = org.mockito.Mockito.mock(StorageProvider.class);
-        org.mockito.Mockito.when(provider.available()).thenReturn(true);
-        return new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
     }
 }

@@ -7,6 +7,7 @@ import com.cotani.economy.exception.SameEconomyAccountTransferException;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -37,7 +38,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
                     amount, "amount cannot be greater than " + settings.maximumOperationAmount());
         }
 
-        return amount.setScale(decimalPlaces);
+        return amount.setScale(decimalPlaces, RoundingMode.UNNECESSARY);
     }
 
     @Override

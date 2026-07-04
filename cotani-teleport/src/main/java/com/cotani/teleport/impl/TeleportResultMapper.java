@@ -5,6 +5,7 @@ import com.cotani.teleport.api.TeleportFailureReason;
 import com.cotani.teleport.api.TeleportResult;
 import com.cotani.teleport.api.TeleportResults;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeoutException;
 import org.bukkit.Location;
@@ -13,11 +14,15 @@ public final class TeleportResultMapper {
     private final TeleportEventNotifier eventNotifier;
 
     public TeleportResultMapper(TeleportEventNotifier eventNotifier) {
-        this.eventNotifier = eventNotifier;
+        this.eventNotifier = Objects.requireNonNull(eventNotifier, "eventNotifier");
     }
 
     public CompletionStage<TeleportResult> mapSuccess(
             TeleportContext context, Location from, Location eventTarget, Instant startedAt) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(from, "from");
+        Objects.requireNonNull(eventTarget, "eventTarget");
+        Objects.requireNonNull(startedAt, "startedAt");
         TeleportResult.Success result =
                 TeleportResults.success(context, eventTarget, eventNotifier.elapsedMillis(startedAt));
         return eventNotifier
@@ -26,11 +31,14 @@ public final class TeleportResultMapper {
     }
 
     public CompletionStage<TeleportResult> mapTeleportFailure(TeleportContext context) {
+        Objects.requireNonNull(context, "context");
         TeleportResult.Failure failure = TeleportResults.failure(context, TeleportFailureReason.TELEPORT_FAILED);
         return eventNotifier.fireFailure(failure).thenApply(_ -> failure);
     }
 
     public CompletionStage<TeleportResult> mapException(TeleportContext context, Throwable error) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(error, "error");
         Throwable cause = error;
         while (cause instanceof java.util.concurrent.CompletionException
                 || cause instanceof java.util.concurrent.ExecutionException) {
@@ -41,10 +49,7 @@ public final class TeleportResultMapper {
             cause = nested;
         }
         TeleportFailureReason reason =
-                switch (cause) {
-                    case TimeoutException _ -> TeleportFailureReason.TIMEOUT;
-                    default -> TeleportFailureReason.UNKNOWN_ERROR;
-                };
+                cause instanceof TimeoutException ? TeleportFailureReason.TIMEOUT : TeleportFailureReason.UNKNOWN_ERROR;
         TeleportResult.Failure failure = TeleportResults.failure(context, reason, cause);
         return eventNotifier.fireFailure(failure).thenApply(_ -> failure);
     }

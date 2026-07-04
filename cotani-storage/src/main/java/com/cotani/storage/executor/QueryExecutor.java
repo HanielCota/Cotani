@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -49,36 +50,49 @@ public final class QueryExecutor {
         if (queryTimeoutSeconds < 0) {
             throw new IllegalArgumentException("queryTimeoutSeconds must not be negative, got " + queryTimeoutSeconds);
         }
-        this.provider = provider;
-        this.executor = executor;
-        this.serializers = serializers;
+        this.provider = Objects.requireNonNull(provider, "provider");
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.serializers = Objects.requireNonNull(serializers, "serializers");
         this.queryTimeoutSeconds = queryTimeoutSeconds;
         this.transactionConnection = transactionConnection;
     }
 
     public CompletionStage<Void> update(String sql, SqlConsumer<ParameterBinder> binder) {
+        Objects.requireNonNull(sql, "sql");
+        Objects.requireNonNull(binder, "binder");
         return CompletableFuture.runAsync(() -> runUpdate(sql, binder), executor);
     }
 
     public <T> CompletionStage<Optional<T>> queryOne(
             String sql, SqlConsumer<ParameterBinder> binder, EntityMapper<T> mapper) {
+        Objects.requireNonNull(sql, "sql");
+        Objects.requireNonNull(binder, "binder");
+        Objects.requireNonNull(mapper, "mapper");
         return CompletableFuture.supplyAsync(() -> runQueryOne(sql, binder, mapper), executor);
     }
 
     public <T> CompletionStage<List<T>> queryMany(
             String sql, SqlConsumer<ParameterBinder> binder, EntityMapper<T> mapper) {
+        Objects.requireNonNull(sql, "sql");
+        Objects.requireNonNull(binder, "binder");
+        Objects.requireNonNull(mapper, "mapper");
         return CompletableFuture.supplyAsync(() -> runQueryMany(sql, binder, mapper), executor);
     }
 
     public CompletionStage<Boolean> exists(String sql, SqlConsumer<ParameterBinder> binder) {
+        Objects.requireNonNull(sql, "sql");
+        Objects.requireNonNull(binder, "binder");
         return CompletableFuture.supplyAsync(() -> runExists(sql, binder), executor);
     }
 
     public CompletionStage<Void> batch(String sql, List<SqlConsumer<ParameterBinder>> binders) {
+        Objects.requireNonNull(sql, "sql");
+        Objects.requireNonNull(binders, "binders");
         return CompletableFuture.runAsync(() -> runBatch(sql, binders), executor);
     }
 
     public <T> CompletionStage<T> transaction(Function<QueryExecutor, CompletionStage<T>> operation) {
+        Objects.requireNonNull(operation, "operation");
         return CompletableFuture.supplyAsync(this::beginTransaction, executor).thenCompose(state -> {
             var transactional =
                     new QueryExecutor(provider, Runnable::run, serializers, queryTimeoutSeconds, state.connection);

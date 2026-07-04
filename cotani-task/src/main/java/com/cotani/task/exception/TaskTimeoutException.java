@@ -1,10 +1,12 @@
 package com.cotani.task.exception;
 
+import java.io.Serial;
 import java.time.Duration;
 import java.util.Objects;
 
 public class TaskTimeoutException extends RuntimeException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private final Duration timeout;

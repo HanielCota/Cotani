@@ -1,6 +1,7 @@
 package com.cotani.config.binder;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cotani.config.annotation.Default;
 import com.cotani.config.annotation.Range;
@@ -19,6 +20,13 @@ class RecordConfigBinderValidationTest {
 
     private final ConfigSerializerRegistry serializers = serializers();
     private final RecordConfigBinder binder = new RecordConfigBinder(serializers);
+
+    private static ConfigSerializerRegistry serializers() {
+        var registry = new ConfigSerializerRegistry();
+        registry.register(new IntegerSerializer());
+        registry.register(new StringSerializer());
+        return registry;
+    }
 
     @Test
     void validateUsesDefaultAsEffectiveValue() {
@@ -62,13 +70,6 @@ class RecordConfigBinderValidationTest {
 
     private ConfigSection section(Map<String, Object> values) {
         return new ConfigSection("test.yml", "", new MapConfigSource(values), serializers, binder);
-    }
-
-    private static ConfigSerializerRegistry serializers() {
-        var registry = new ConfigSerializerRegistry();
-        registry.register(new IntegerSerializer());
-        registry.register(new StringSerializer());
-        return registry;
     }
 
     private static final class MapConfigSource implements ConfigSource {

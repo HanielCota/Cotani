@@ -2,16 +2,9 @@ package com.cotani.task.scheduler;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-import com.cotani.task.api.PlatformScheduler;
-import com.cotani.task.api.SchedulerOptions;
-import com.cotani.task.api.SchedulerTask;
-import com.cotani.task.api.TaskExceptionHandler;
-import com.cotani.task.api.TaskMetadata;
+import com.cotani.task.api.*;
 import com.cotani.task.impl.scheduler.ModernPaperTaskScheduler;
 import com.cotani.task.metrics.TaskMetrics;
 import java.time.Duration;

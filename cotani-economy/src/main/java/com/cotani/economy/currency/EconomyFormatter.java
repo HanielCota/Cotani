@@ -10,24 +10,29 @@ import java.util.Objects;
 public final class EconomyFormatter {
 
     private final EconomyCurrency currency;
-    private final DecimalFormat decimalFormat;
+    private final Locale locale;
+    private final ThreadLocal<DecimalFormat> formatCache;
 
     public EconomyFormatter(EconomyCurrency currency, Locale locale) {
         this.currency = Objects.requireNonNull(currency, "currency");
-        Objects.requireNonNull(locale, "locale");
-
-        var symbols = DecimalFormatSymbols.getInstance(locale);
-        var pattern = currency.decimalPlaces() == 0 ? "#,##0" : "#,##0." + "0".repeat(currency.decimalPlaces());
-
-        decimalFormat = new DecimalFormat(pattern, symbols);
-        decimalFormat.setRoundingMode(RoundingMode.DOWN);
-        decimalFormat.setMinimumFractionDigits(currency.decimalPlaces());
-        decimalFormat.setMaximumFractionDigits(currency.decimalPlaces());
+        this.locale = Objects.requireNonNull(locale, "locale");
+        this.formatCache = ThreadLocal.withInitial(this::createFormat);
     }
 
     public String format(BigDecimal amount) {
         Objects.requireNonNull(amount, "amount");
 
-        return currency.symbol() + decimalFormat.format(amount);
+        return currency.symbol() + formatCache.get().format(amount);
+    }
+
+    private DecimalFormat createFormat() {
+        var symbols = DecimalFormatSymbols.getInstance(locale);
+        var pattern = currency.decimalPlaces() == 0 ? "#,##0" : "#,##0." + "0".repeat(currency.decimalPlaces());
+
+        var decimalFormat = new DecimalFormat(pattern, symbols);
+        decimalFormat.setRoundingMode(RoundingMode.DOWN);
+        decimalFormat.setMinimumFractionDigits(currency.decimalPlaces());
+        decimalFormat.setMaximumFractionDigits(currency.decimalPlaces());
+        return decimalFormat;
     }
 }

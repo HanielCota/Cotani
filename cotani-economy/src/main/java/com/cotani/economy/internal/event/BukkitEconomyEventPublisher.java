@@ -3,6 +3,7 @@ package com.cotani.economy.internal.event;
 import com.cotani.economy.event.EconomyEventPublisher;
 import com.cotani.economy.event.EconomyTransactionEvent;
 import com.cotani.economy.transaction.EconomyTransactionType;
+import java.util.Objects;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -20,6 +21,7 @@ public final class BukkitEconomyEventPublisher implements EconomyEventPublisher 
 
     @Override
     public void publish(EconomyTransactionEvent event) {
+        Objects.requireNonNull(event, "event");
         Bukkit.getPluginManager().callEvent(new BukkitEconomyTransactionEvent(event.transaction()));
     }
 
@@ -28,7 +30,11 @@ public final class BukkitEconomyEventPublisher implements EconomyEventPublisher 
         private final com.cotani.economy.transaction.EconomyTransaction transaction;
 
         public BukkitEconomyTransactionEvent(com.cotani.economy.transaction.EconomyTransaction transaction) {
-            this.transaction = transaction;
+            this.transaction = Objects.requireNonNull(transaction, "transaction");
+        }
+
+        public static HandlerList getHandlerList() {
+            return HANDLERS;
         }
 
         public com.cotani.economy.transaction.EconomyTransaction transaction() {
@@ -41,10 +47,6 @@ public final class BukkitEconomyEventPublisher implements EconomyEventPublisher 
 
         @Override
         public HandlerList getHandlers() {
-            return HANDLERS;
-        }
-
-        public static HandlerList getHandlerList() {
             return HANDLERS;
         }
     }

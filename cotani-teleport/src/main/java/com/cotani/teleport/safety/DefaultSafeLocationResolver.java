@@ -9,29 +9,19 @@ import java.util.concurrent.CompletableFuture;
 import org.bukkit.Location;
 import org.bukkit.World;
 
+/**
+ * Default safe-location resolver.
+ *
+ * <p>The search reuses a single mutable {@link Location} while scanning candidates to avoid allocating
+ * one object per iteration. World-border, height-bounds and chunk-loaded checks that do not change
+ * during the search are validated once before the loop.
+ */
 public final class DefaultSafeLocationResolver implements com.cotani.teleport.safety.SafeLocationResolver {
 
     private final PaperTaskScheduler scheduler;
 
     public DefaultSafeLocationResolver(PaperTaskScheduler scheduler) {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
-    }
-
-    private record SearchArea(int baseX, int baseY, int baseZ, int horizontal, int vertical, int direction) {}
-
-    @Override
-    public CompletableFuture<Optional<Location>> resolve(Location target, SafeLocationOptions options) {
-        Location cloned = target.clone();
-        World world = cloned.getWorld();
-        if (world == null) {
-            return CompletableFuture.completedFuture(Optional.empty());
-        }
-        int chunkX = cloned.getBlockX() >> 4;
-        int chunkZ = cloned.getBlockZ() >> 4;
-
-        return world.getChunkAtAsync(chunkX, chunkZ)
-                .thenCompose(_ -> scheduler.supply(
-                        ExecutionTarget.region(cloned), "safe-location-resolve", () -> resolveSync(cloned, options)));
     }
 
     private static Optional<Location> resolveSync(Location target, SafeLocationOptions options) {
@@ -50,24 +40,39 @@ public final class DefaultSafeLocationResolver implements com.cotani.teleport.sa
         int horizontal = Math.max(0, options.horizontalRadius());
         int vertical = Math.max(0, options.verticalRadius());
 
-        var up = new SearchArea(baseX, baseY, baseZ, horizontal, vertical, 1);
-        var down = new SearchArea(baseX, baseY, baseZ, horizontal, vertical, -1);
-        return search(world, target, options, up).or(() -> search(world, target, options, down));
+        Location candidate = new Location(world, 0, 0, 0, target.getYaw(), target.getPitch());
+
+        Optional<Location> up = search(world, candidate, baseX, baseY, baseZ, horizontal, vertical, 1, options);
+        if (up.isPresent()) {
+            return up;
+        }
+        return search(world, candidate, baseX, baseY, baseZ, horizontal, vertical, -1, options);
     }
 
     private static Optional<Location> search(
-            World world, Location target, SafeLocationOptions options, SearchArea area) {
-        Location candidate = new Location(world, 0, 0, 0);
-        candidate.setYaw(target.getYaw());
-        candidate.setPitch(target.getPitch());
+            World world,
+            Location candidate,
+            int baseX,
+            int baseY,
+            int baseZ,
+            int horizontal,
+            int vertical,
+            int direction,
+            SafeLocationOptions options) {
+        int startOffset = direction > 0 ? 0 : 1;
 
-        for (int yOffset = area.direction() > 0 ? 0 : 1; yOffset <= area.vertical(); yOffset++) {
-            int y = area.baseY() + (yOffset * area.direction());
-            for (int xOffset = -area.horizontal(); xOffset <= area.horizontal(); xOffset++) {
-                for (int zOffset = -area.horizontal(); zOffset <= area.horizontal(); zOffset++) {
-                    candidate.setX(area.baseX() + xOffset + 0.5);
+        for (int yOffset = startOffset; yOffset <= vertical; yOffset++) {
+            int y = baseY + (yOffset * direction);
+            if (y < world.getMinHeight() || y + 1 >= world.getMaxHeight()) {
+                continue;
+            }
+            for (int xOffset = -horizontal; xOffset <= horizontal; xOffset++) {
+                int x = baseX + xOffset;
+                for (int zOffset = -horizontal; zOffset <= horizontal; zOffset++) {
+                    int z = baseZ + zOffset;
+                    candidate.setX(x + 0.5);
                     candidate.setY(y);
-                    candidate.setZ(area.baseZ() + zOffset + 0.5);
+                    candidate.setZ(z + 0.5);
                     if (BlockSafetyChecker.isSafe(candidate, options)) {
                         return Optional.of(candidate.clone());
                     }
@@ -75,5 +80,20 @@ public final class DefaultSafeLocationResolver implements com.cotani.teleport.sa
             }
         }
         return Optional.empty();
+    }
+
+    @Override
+    public CompletableFuture<Optional<Location>> resolve(Location target, SafeLocationOptions options) {
+        Location cloned = target.clone();
+        World world = cloned.getWorld();
+        if (world == null) {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+        int chunkX = cloned.getBlockX() >> 4;
+        int chunkZ = cloned.getBlockZ() >> 4;
+
+        return world.getChunkAtAsync(chunkX, chunkZ)
+                .thenCompose(_ -> scheduler.supply(
+                        ExecutionTarget.region(cloned), "safe-location-resolve", () -> resolveSync(cloned, options)));
     }
 }

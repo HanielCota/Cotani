@@ -3,13 +3,14 @@ package com.cotani.config.serializer.defaults;
 import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
 import java.nio.file.Path;
+import java.util.Objects;
 
 public final class PathSerializer implements ConfigSerializer<Path> {
 
     private final Path baseFolder;
 
     public PathSerializer(Path baseFolder) {
-        this.baseFolder = baseFolder;
+        this.baseFolder = Objects.requireNonNull(baseFolder, "baseFolder");
     }
 
     @Override

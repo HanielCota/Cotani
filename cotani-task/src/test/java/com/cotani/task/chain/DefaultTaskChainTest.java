@@ -1,9 +1,6 @@
 package com.cotani.task.chain;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -16,7 +13,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,11 +22,10 @@ class DefaultTaskChainTest {
 
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
 
-    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() {
         when(scheduler.asyncExecutor()).thenReturn(Runnable::run);
-        when(scheduler.chain(any(CompletionStage.class)))
+        when(scheduler.chain(any()))
                 .thenAnswer(invocation -> new DefaultTaskChain<>(invocation.getArgument(0), scheduler));
     }
 

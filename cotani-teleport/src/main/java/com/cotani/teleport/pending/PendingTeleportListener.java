@@ -1,6 +1,7 @@
 package com.cotani.teleport.pending;
 
 import com.cotani.teleport.api.TeleportCancelReason;
+import java.util.Objects;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,7 +13,7 @@ public final class PendingTeleportListener implements Listener {
     private final DefaultPendingTeleportService pendingService;
 
     public PendingTeleportListener(DefaultPendingTeleportService pendingService) {
-        this.pendingService = pendingService;
+        this.pendingService = Objects.requireNonNull(pendingService, "pendingService");
     }
 
     @EventHandler(ignoreCancelled = true)

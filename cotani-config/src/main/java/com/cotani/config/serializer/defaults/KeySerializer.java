@@ -5,6 +5,7 @@ import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
 import net.kyori.adventure.key.Key;
 
+@SuppressWarnings("UnsubstitutedExpression")
 public final class KeySerializer implements ConfigSerializer<Key> {
 
     @Override

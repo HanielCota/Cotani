@@ -3,6 +3,7 @@ package com.cotani.teleport.impl;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.api.*;
+import com.cotani.teleport.event.CotaniPreTeleportEvent;
 import com.cotani.teleport.policy.PolicyResult;
 import com.cotani.teleport.policy.TeleportCooldownService;
 import com.cotani.teleport.policy.TeleportPolicyChain;
@@ -20,32 +21,33 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Paper-backed teleport service.
+ *
+ * <p>The pipeline is kept intentionally coarse-grained to avoid scheduler hop overhead: safe-location
+ * resolution runs on the region thread, then policy validation runs in a single entity task. If the
+ * policy allows the teleport, the pre-teleport event is fired synchronously on the same entity thread
+ * and the teleport is executed in one continuation.
+ */
+@SuppressWarnings("resource")
 public final class PaperTeleportService implements com.cotani.teleport.api.TeleportService {
 
     private final Dependencies deps;
 
     public PaperTeleportService(Dependencies deps) {
-        this.deps = deps;
+        this.deps = Objects.requireNonNull(deps, "deps");
     }
-
-    record Dependencies(
-            TeleportPolicyChain policyChain,
-            SafeLocationResolver safeLocationResolver,
-            TeleportEventNotifier eventNotifier,
-            TeleportResultMapper resultMapper,
-            TeleportCooldownService cooldownService,
-            PaperTaskScheduler scheduler,
-            Clock clock) {}
-
-    private record PreparedTeleport(
-            TeleportContext context, Location originalTarget, Optional<TeleportResult.Failure> initialFailure) {}
 
     @Override
     public CompletionStage<TeleportResult> teleport(TeleportRequest request) {
         Objects.requireNonNull(request, "request");
 
+        Location target = request.target();
+        ExecutionTarget startTarget =
+                target.getWorld() != null ? ExecutionTarget.region(target) : ExecutionTarget.global();
+
         return deps.scheduler()
-                .supply(ExecutionTarget.global(), "teleport-resolve", () -> prepare(request))
+                .supply(startTarget, "teleport-prepare", () -> prepare(request))
                 .thenCompose(this::resolveAndFinish);
     }
 
@@ -83,93 +85,75 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
     private CompletionStage<TeleportResult> resolveAndFinish(PreparedTeleport prepared) {
         TeleportContext context = prepared.context();
         Location originalTarget = prepared.originalTarget();
-        TeleportOptions options = context.options();
 
         if (prepared.initialFailure().isPresent()) {
             return notifyFailure(prepared.initialFailure().get());
         }
 
-        if (!options.safeLocation()) {
+        if (!context.options().safeLocation()) {
             return finishTeleport(context, originalTarget);
         }
 
         return deps.safeLocationResolver()
-                .resolve(originalTarget, options.safeLocationOptions())
+                .resolve(originalTarget, context.options().safeLocationOptions())
                 .thenCompose(targetResult -> targetResult
-                        .map(resolved -> returnToMainThread()
-                                .thenCompose(_ -> finishTeleport(context.withTarget(resolved), resolved)))
-                        .orElseGet(() -> returnToMainThread()
-                                .thenCompose(_ -> notifyFailure(
-                                        TeleportResults.failure(context, TeleportFailureReason.UNSAFE_LOCATION)))));
-    }
-
-    private CompletionStage<Void> returnToMainThread() {
-        return deps.scheduler().supply(ExecutionTarget.global(), "teleport-main-handoff", () -> null);
+                        .map(resolved -> finishTeleport(context.withTarget(resolved), resolved))
+                        .orElseGet(() -> notifyFailure(
+                                TeleportResults.failure(context, TeleportFailureReason.UNSAFE_LOCATION))));
     }
 
     private CompletionStage<TeleportResult> finishTeleport(TeleportContext context, Location resolvedTarget) {
-        Player player = resolvePlayer(context.playerId());
-        if (player == null) {
-            return CompletableFuture.completedFuture(
-                    TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
-        }
         return deps.scheduler()
-                .supply(ExecutionTarget.entity(player), "teleport-policy", () -> validatePolicies(context))
-                .thenCompose(denied ->
-                        denied.map(this::notifyFailure).orElseGet(() -> firePreTeleport(context, resolvedTarget)));
+                .supply(ExecutionTarget.entity(context.playerId()), "teleport-finish", () -> validateOrStart(context))
+                .thenCompose(result -> result.<CompletionStage<TeleportResult>>map(CompletableFuture::completedFuture)
+                        .orElseGet(() -> firePreTeleportAndExecute(context, resolvedTarget)));
     }
 
-    private Optional<TeleportResult.Failure> validatePolicies(TeleportContext context) {
+    private Optional<TeleportResult.Failure> validateOrStart(TeleportContext context) {
+        Player player = resolvePlayer(context.playerId());
+        if (player == null) {
+            return Optional.of(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
+        }
+
         PolicyResult policyResult = deps.policyChain().validate(context);
         if (!(policyResult instanceof PolicyResult.Denied denied)) {
             return Optional.empty();
         }
 
         if (context.options().sendMessages()) {
-            Player player = resolvePlayer(context.playerId());
-            if (player != null) {
-                player.sendMessage(denied.message());
-            }
+            player.sendMessage(denied.message());
         }
 
         return Optional.of(TeleportResults.failure(context, denied.reason()));
     }
 
-    private CompletionStage<TeleportResult> firePreTeleport(TeleportContext context, Location resolvedTarget) {
-        return deps.eventNotifier()
-                .firePreTeleport(context.playerId(), context.from(), resolvedTarget, context.cause(), context.source())
-                .thenCompose(preEvent -> {
-                    if (preEvent.isCancelled()) {
-                        return notifyFailure(
-                                TeleportResults.failure(context, TeleportFailureReason.CANCELLED_BY_EVENT));
-                    }
-
-                    Location eventTarget = Objects.requireNonNull(preEvent.getTo(), "preEvent.to")
-                            .clone();
-                    return executeTeleport(context, eventTarget);
-                });
-    }
-
-    private CompletionStage<TeleportResult> executeTeleport(TeleportContext context, Location eventTarget) {
+    private CompletionStage<TeleportResult> firePreTeleportAndExecute(
+            TeleportContext context, Location resolvedTarget) {
         Player player = resolvePlayer(context.playerId());
         if (player == null) {
             return CompletableFuture.completedFuture(
                     TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
         }
+
+        CotaniPreTeleportEvent event = deps.eventNotifier()
+                .firePreTeleportSync(player, context.from(), resolvedTarget, context.cause(), context.source());
+
+        if (event.isCancelled()) {
+            return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.CANCELLED_BY_EVENT));
+        }
+
+        Location eventTarget =
+                Objects.requireNonNull(event.getTo(), "preEvent.to").clone();
+        return executeTeleport(context, player, eventTarget);
+    }
+
+    private CompletionStage<TeleportResult> executeTeleport(
+            TeleportContext context, Player player, Location eventTarget) {
         TeleportOptions options = context.options();
         Instant startedAt = Instant.now(deps.clock());
 
-        return deps.scheduler()
-                .supply(ExecutionTarget.entity(player), "teleport-prepare", () -> {
-                    preparePlayer(player, options.player());
-                    return player.getVelocity();
-                })
-                .thenCompose(velocity -> runTeleport(player, context, eventTarget, velocity, startedAt));
-    }
-
-    private CompletionStage<TeleportResult> runTeleport(
-            Player player, TeleportContext context, Location eventTarget, Vector velocity, Instant startedAt) {
-        TeleportOptions options = context.options();
+        preparePlayer(player, options.player());
+        Vector velocity = player.getVelocity();
 
         CompletableFuture<Boolean> teleportFuture = startTeleport(player, eventTarget, options);
 
@@ -182,15 +166,10 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
 
                     applyCooldown(context);
 
-                    return deps.scheduler()
-                            .supply(ExecutionTarget.entity(player), "teleport-cleanup", () -> {
-                                if (options.preserveVelocity()) {
-                                    player.setVelocity(velocity);
-                                }
-                                return null;
-                            })
-                            .thenCompose(_ ->
-                                    deps.resultMapper().mapSuccess(context, context.from(), eventTarget, startedAt));
+                    if (options.preserveVelocity()) {
+                        player.setVelocity(velocity);
+                    }
+                    return deps.resultMapper().mapSuccess(context, context.from(), eventTarget, startedAt);
                 })
                 .exceptionallyCompose(error -> deps.resultMapper().mapException(context, error));
     }
@@ -199,10 +178,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
         if (options.async()) {
             return player.teleportAsync(eventTarget);
         }
-
-        return deps.scheduler()
-                .supply(ExecutionTarget.entity(player), "sync-teleport", () -> player.teleport(eventTarget))
-                .toCompletableFuture();
+        return CompletableFuture.completedFuture(player.teleport(eventTarget));
     }
 
     private CompletionStage<TeleportResult> notifyFailure(TeleportResult.Failure failure) {
@@ -228,4 +204,26 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
     private @Nullable Player resolvePlayer(UUID playerId) {
         return org.bukkit.Bukkit.getPlayer(playerId);
     }
+
+    record Dependencies(
+            TeleportPolicyChain policyChain,
+            SafeLocationResolver safeLocationResolver,
+            TeleportEventNotifier eventNotifier,
+            TeleportResultMapper resultMapper,
+            TeleportCooldownService cooldownService,
+            PaperTaskScheduler scheduler,
+            Clock clock) {
+        Dependencies {
+            Objects.requireNonNull(policyChain, "policyChain");
+            Objects.requireNonNull(safeLocationResolver, "safeLocationResolver");
+            Objects.requireNonNull(eventNotifier, "eventNotifier");
+            Objects.requireNonNull(resultMapper, "resultMapper");
+            Objects.requireNonNull(cooldownService, "cooldownService");
+            Objects.requireNonNull(scheduler, "scheduler");
+            Objects.requireNonNull(clock, "clock");
+        }
+    }
+
+    private record PreparedTeleport(
+            TeleportContext context, Location originalTarget, Optional<TeleportResult.Failure> initialFailure) {}
 }

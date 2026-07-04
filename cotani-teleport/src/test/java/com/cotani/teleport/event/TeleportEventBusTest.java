@@ -1,6 +1,6 @@
 package com.cotani.teleport.event;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.UUID;
@@ -17,6 +17,17 @@ class TeleportEventBusTest {
     private TeleportEventBus eventBus;
     private Entity entity;
 
+    private static Event createEvent() {
+        return new Event() {
+            private static final HandlerList HANDLERS = new HandlerList();
+
+            @Override
+            public HandlerList getHandlers() {
+                return HANDLERS;
+            }
+        };
+    }
+
     @BeforeEach
     void setUp() {
         var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
@@ -28,17 +39,6 @@ class TeleportEventBusTest {
         eventBus = new TeleportEventBus(scheduler);
         entity = org.mockito.Mockito.mock(Entity.class);
         org.mockito.Mockito.when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
-    }
-
-    private static Event createEvent() {
-        return new Event() {
-            private static final HandlerList HANDLERS = new HandlerList();
-
-            @Override
-            public HandlerList getHandlers() {
-                return HANDLERS;
-            }
-        };
     }
 
     @Test

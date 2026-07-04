@@ -1,6 +1,7 @@
 package com.cotani.storage.migration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.provider.StorageProvider;
@@ -15,20 +16,6 @@ class MigrationRunnerTest {
     private final QueryExecutor executor = createExecutor();
     private final Schema schema =
             new Schema(executor, org.mockito.Mockito.mock(com.cotani.storage.dialect.SqlDialect.class));
-
-    @Test
-    void rejectsDuplicateVersions() {
-        var runner = new MigrationRunner(executor, schema);
-        runner.add(migration(1, "first"));
-        assertThrows(IllegalArgumentException.class, () -> runner.add(migration(1, "duplicate")));
-    }
-
-    @Test
-    void acceptsDifferentVersions() {
-        var runner = new MigrationRunner(executor, schema);
-        runner.add(migration(1, "first"));
-        assertDoesNotThrow(() -> runner.add(migration(2, "second")));
-    }
 
     @SuppressWarnings("NullAway")
     private static Migration migration(int version, String description) {
@@ -53,5 +40,19 @@ class MigrationRunnerTest {
     private static QueryExecutor createExecutor() {
         var provider = org.mockito.Mockito.mock(StorageProvider.class);
         return new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
+    }
+
+    @Test
+    void rejectsDuplicateVersions() {
+        var runner = new MigrationRunner(executor, schema);
+        runner.add(migration(1, "first"));
+        assertThrows(IllegalArgumentException.class, () -> runner.add(migration(1, "duplicate")));
+    }
+
+    @Test
+    void acceptsDifferentVersions() {
+        var runner = new MigrationRunner(executor, schema);
+        runner.add(migration(1, "first"));
+        assertDoesNotThrow(() -> runner.add(migration(2, "second")));
     }
 }

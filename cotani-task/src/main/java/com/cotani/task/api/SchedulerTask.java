@@ -2,13 +2,13 @@ package com.cotani.task.api;
 
 public interface SchedulerTask {
 
-    boolean cancel();
-
-    boolean cancelled();
-
     static SchedulerTask noop() {
         return NoopSchedulerTask.INSTANCE;
     }
+
+    boolean cancel();
+
+    boolean cancelled();
 
     final class NoopSchedulerTask implements SchedulerTask {
 

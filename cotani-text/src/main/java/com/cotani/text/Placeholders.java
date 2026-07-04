@@ -22,6 +22,7 @@ import org.jspecify.annotations.NullMarked;
  * arguments to be supplied inside the MiniMessage tag itself (for example
  * {@code <no:'#.00'>} or {@code <date:'yyyy-MM-dd'>}). This mirrors the upstream Adventure API.
  */
+@SuppressWarnings("UnsubstitutedExpression")
 @NullMarked
 public final class Placeholders {
 

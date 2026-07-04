@@ -8,17 +8,17 @@ import org.junit.jupiter.api.Test;
 
 class ConfigAnnotationTargetTest {
 
+    private static void assertRecordComponentOnly(Class<?> annotationType) {
+        assertArrayEquals(
+                new ElementType[] {ElementType.RECORD_COMPONENT},
+                annotationType.getAnnotation(Target.class).value());
+    }
+
     @Test
     void pathAnnotationsTargetRecordComponentsOnly() {
         assertRecordComponentOnly(ConfigPath.class);
         assertRecordComponentOnly(Default.class);
         assertRecordComponentOnly(Range.class);
         assertRecordComponentOnly(Required.class);
-    }
-
-    private static void assertRecordComponentOnly(Class<?> annotationType) {
-        assertArrayEquals(
-                new ElementType[] {ElementType.RECORD_COMPONENT},
-                annotationType.getAnnotation(Target.class).value());
     }
 }

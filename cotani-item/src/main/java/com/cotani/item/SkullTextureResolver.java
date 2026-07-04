@@ -25,7 +25,7 @@ public final class SkullTextureResolver {
     private static final long DEFAULT_CACHE_EXPIRE_MINUTES = 60;
     private static final long DEFAULT_CACHE_MAXIMUM_SIZE = 1_000;
 
-    private static final Cache<String, String> PAYLOAD_CACHE = Caffeine.newBuilder()
+    private static final Cache<String, PlayerProfile> PROFILE_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(DEFAULT_CACHE_EXPIRE_MINUTES, TimeUnit.MINUTES)
             .maximumSize(DEFAULT_CACHE_MAXIMUM_SIZE)
             .build();
@@ -42,8 +42,7 @@ public final class SkullTextureResolver {
     public static PlayerProfile fromUrl(String textureUrl) {
         Objects.requireNonNull(textureUrl, "Parameter 'textureUrl' must not be null");
         var normalizedUrl = normalizeTextureUrl(textureUrl);
-        var payload = PAYLOAD_CACHE.get(normalizedUrl, SkullTextureResolver::toBase64Payload);
-        return fromBase64(payload);
+        return PROFILE_CACHE.get(normalizedUrl, SkullTextureResolver::createProfile);
     }
 
     public static PlayerProfile fromUrl(URI textureUri) {
@@ -52,7 +51,12 @@ public final class SkullTextureResolver {
     }
 
     public static void clearCache() {
-        PAYLOAD_CACHE.invalidateAll();
+        PROFILE_CACHE.invalidateAll();
+    }
+
+    private static PlayerProfile createProfile(String normalizedUrl) {
+        var payload = toBase64Payload(normalizedUrl);
+        return fromBase64(payload);
     }
 
     private static String toBase64Payload(String normalizedUrl) {

@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
+@SuppressWarnings("NullableProblems")
 public interface ConfigSource {
 
     Path path();

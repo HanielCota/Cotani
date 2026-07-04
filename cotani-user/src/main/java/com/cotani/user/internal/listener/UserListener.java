@@ -1,7 +1,9 @@
 package com.cotani.user.internal.listener;
 
 import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.util.VoidResult;
 import com.cotani.user.internal.service.InternalUserService;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
@@ -25,10 +27,10 @@ public final class UserListener implements Listener {
             InternalUserService userService,
             PaperTaskScheduler scheduler,
             Component loadFailureMessage) {
-        this.plugin = plugin;
-        this.userService = userService;
-        this.scheduler = scheduler;
-        this.loadFailureMessage = loadFailureMessage;
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.userService = Objects.requireNonNull(userService, "userService");
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this.loadFailureMessage = Objects.requireNonNull(loadFailureMessage, "loadFailureMessage");
     }
 
     @EventHandler
@@ -45,7 +47,7 @@ public final class UserListener implements Listener {
                     if (onlinePlayer == null || !onlinePlayer.isOnline()) {
                         var _ = userService.unload(uniqueId).exceptionally(throwable -> {
                             plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to unload user " + uniqueId);
-                            return null;
+                            return VoidResult.nullValue();
                         });
                     }
                 }))
@@ -60,7 +62,7 @@ public final class UserListener implements Listener {
                         }
                     });
 
-                    return null;
+                    return VoidResult.nullValue();
                 });
     }
 
@@ -70,7 +72,7 @@ public final class UserListener implements Listener {
 
         userService.unload(uniqueId).exceptionally(throwable -> {
             plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to unload user " + uniqueId);
-            return null;
+            return VoidResult.nullValue();
         });
     }
 }

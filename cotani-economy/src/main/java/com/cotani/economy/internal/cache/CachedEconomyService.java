@@ -7,124 +7,157 @@ import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
-import com.cotani.task.api.PaperTaskScheduler;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Cache decorador para {@link EconomyService}.
  *
- * <p>Apenas leituras de saldo (<code>balance</code> e <code<has</code>) são cacheadas. Operações de escrita
- * invalidam a entrada do usuário após o storage confirmar sucesso.
+ * <p>Apenas leituras de saldo (<code>balance</code> e <code>has</code>) são cacheadas. Operações de escrita
+ * invalidam a entrada do usuário após o storage confirmar sucesso. A implementação usa Caffeine para
+ * coalescer requisições concorrentes ao mesmo par (usuário, moeda) e limitar o tamanho do cache.
  */
 public final class CachedEconomyService implements EconomyService, AutoCloseable {
 
-    private final EconomyService delegate;
-    private final Duration balanceTtl;
-    private final ConcurrentHashMap<BalanceKey, CacheEntry> cache = new ConcurrentHashMap<>();
+    private static final long MAXIMUM_CACHE_SIZE = 10_000;
 
-    public CachedEconomyService(EconomyService delegate, PaperTaskScheduler scheduler, EconomySettings settings) {
+    private final EconomyService delegate;
+    private final EconomySettings settings;
+    private final AsyncLoadingCache<BalanceKey, EconomyBalance> cache;
+
+    public CachedEconomyService(
+            EconomyService delegate, com.cotani.task.api.PaperTaskScheduler scheduler, EconomySettings settings) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
         Objects.requireNonNull(scheduler, "scheduler");
-        this.balanceTtl = Duration.ofSeconds(settings.balanceCacheSeconds());
+        this.settings = Objects.requireNonNull(settings, "settings");
+        this.cache = Caffeine.newBuilder()
+                .maximumSize(MAXIMUM_CACHE_SIZE)
+                .expireAfterWrite(Duration.ofSeconds(settings.balanceCacheSeconds()))
+                .buildAsync((key, executor) -> loadBalance(key));
     }
 
     @Override
-    public CompletionStage<EconomyBalance> balance(UUID userId) {
+    public CompletableFuture<EconomyBalance> balance(UUID userId) {
         return balance(userId, defaultCurrency());
     }
 
     @Override
-    public CompletionStage<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
-        BalanceKey key = new BalanceKey(userId, currencyId);
-        CacheEntry entry = cache.get(key);
-        if (entry != null && !entry.expired()) {
-            return CompletableFuture.completedStage(entry.balance());
-        }
-
-        return delegate.balance(userId, currencyId).thenApply(balance -> {
-            cache.put(key, new CacheEntry(balance, now(), balanceTtl.toMillis()));
-            return balance;
-        });
+    public CompletableFuture<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
+        return cache.get(new BalanceKey(userId, currencyId)).toCompletableFuture();
     }
 
     @Override
-    public CompletionStage<Boolean> has(UUID userId, BigDecimal amount) {
+    public CompletableFuture<Boolean> has(UUID userId, BigDecimal amount) {
         return has(userId, defaultCurrency(), amount);
     }
 
     @Override
-    public CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
+    public CompletableFuture<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
         return balance(userId, currencyId).thenApply(balance -> balance.amount().compareTo(amount) >= 0);
     }
 
     @Override
-    public CompletionStage<EconomyTransaction> deposit(
-            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
-        return mutate(userId, delegate.deposit(userId, amount, reason, operationId));
-    }
-
-    @Override
-    public CompletionStage<EconomyTransaction> withdraw(
-            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
-        return mutate(userId, delegate.withdraw(userId, amount, reason, operationId));
-    }
-
-    @Override
-    public CompletionStage<EconomyTransaction> set(
-            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
-        return mutate(userId, delegate.set(userId, amount, reason, operationId));
-    }
-
-    @Override
-    public CompletionStage<EconomyTransaction> transfer(
-            UUID sourceUserId,
-            UUID targetUserId,
+    public CompletableFuture<EconomyTransaction> deposit(
+            UUID userId,
+            CurrencyId currencyId,
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        return delegate.transfer(sourceUserId, targetUserId, amount, reason, operationId)
+        return mutate(userId, delegate.deposit(userId, currencyId, amount, reason, operationId));
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> deposit(
+            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return deposit(userId, defaultCurrency(), amount, reason, operationId);
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> withdraw(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return mutate(userId, delegate.withdraw(userId, currencyId, amount, reason, operationId));
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> withdraw(
+            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return withdraw(userId, defaultCurrency(), amount, reason, operationId);
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> set(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return mutate(userId, delegate.set(userId, currencyId, amount, reason, operationId));
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> set(
+            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return set(userId, defaultCurrency(), amount, reason, operationId);
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> transfer(
+            UUID sourceUserId,
+            UUID targetUserId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return delegate.transfer(sourceUserId, targetUserId, currencyId, amount, reason, operationId)
                 .thenApply(transaction -> {
-                    invalidate(sourceUserId);
-                    invalidate(targetUserId);
+                    invalidate(sourceUserId, currencyId);
+                    invalidate(targetUserId, currencyId);
                     return transaction;
                 });
     }
 
     @Override
-    public void close() {
-        cache.clear();
+    public CompletableFuture<EconomyTransaction> transfer(
+            UUID sourceUserId,
+            UUID targetUserId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return transfer(sourceUserId, targetUserId, defaultCurrency(), amount, reason, operationId);
     }
 
-    private CompletionStage<EconomyTransaction> mutate(UUID userId, CompletionStage<EconomyTransaction> stage) {
-        return stage.thenApply(transaction -> {
-            invalidate(userId);
+    @Override
+    public void close() {
+        cache.synchronous().invalidateAll();
+    }
+
+    private CompletableFuture<EconomyBalance> loadBalance(BalanceKey key) {
+        return delegate.balance(key.userId(), key.currencyId()).toCompletableFuture();
+    }
+
+    private CompletableFuture<EconomyTransaction> mutate(UUID userId, CompletableFuture<EconomyTransaction> future) {
+        return future.thenApply(transaction -> {
+            invalidate(userId, transaction.currencyId());
             return transaction;
         });
     }
 
-    private void invalidate(UUID userId) {
-        cache.keySet().removeIf(key -> key.userId().equals(userId));
+    private void invalidate(UUID userId, CurrencyId currencyId) {
+        cache.synchronous().invalidate(new BalanceKey(userId, currencyId));
     }
 
     private CurrencyId defaultCurrency() {
-        return com.cotani.economy.currency.CurrencyId.of("coins");
-    }
-
-    private long now() {
-        return System.currentTimeMillis();
+        return settings.defaultCurrency().id();
     }
 
     private record BalanceKey(UUID userId, CurrencyId currencyId) {}
-
-    private record CacheEntry(EconomyBalance balance, long cachedAt, long ttlMillis) {
-        boolean expired() {
-            return System.currentTimeMillis() - cachedAt > ttlMillis;
-        }
-    }
 }

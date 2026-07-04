@@ -12,7 +12,8 @@ Good `AGENTS.md` files usually include:
 - forbidden patterns;
 - review expectations.
 
-Avoid putting every coding rule inside `AGENTS.md` when the same rules already exist in skills. Keep detailed guidance inside skills and keep `AGENTS.md` focused.
+Avoid putting every coding rule inside `AGENTS.md` when the same rules already exist in skills. Keep detailed guidance
+inside skills and keep `AGENTS.md` focused.
 
 Recommended split:
 

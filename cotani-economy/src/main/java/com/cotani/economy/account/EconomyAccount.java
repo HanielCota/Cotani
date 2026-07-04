@@ -26,6 +26,14 @@ public record EconomyAccount(
         return new EconomyAccount(userId, currencyId, startingBalance, now, now);
     }
 
+    private static void validatePositive(BigDecimal amount) {
+        Objects.requireNonNull(amount, "amount");
+
+        if (amount.signum() <= 0) {
+            throw new IllegalArgumentException("Amount must be positive.");
+        }
+    }
+
     public EconomyAccount deposit(BigDecimal amount, Instant now) {
         validatePositive(amount);
 
@@ -56,13 +64,5 @@ public record EconomyAccount(
         Objects.requireNonNull(now, "now");
 
         return new EconomyAccount(userId, currencyId, amount, createdAt, now);
-    }
-
-    private static void validatePositive(BigDecimal amount) {
-        Objects.requireNonNull(amount, "amount");
-
-        if (amount.signum() <= 0) {
-            throw new IllegalArgumentException("Amount must be positive.");
-        }
     }
 }

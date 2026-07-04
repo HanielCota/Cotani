@@ -1,6 +1,7 @@
 package com.cotani.storage.query;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.provider.StorageProvider;
@@ -8,6 +9,12 @@ import com.cotani.storage.serializer.ValueSerializerRegistry;
 import org.junit.jupiter.api.Test;
 
 class DeleteQueryTest {
+
+    private static QueryExecutor createExecutor() {
+        var provider = org.mockito.Mockito.mock(StorageProvider.class);
+        org.mockito.Mockito.when(provider.available()).thenReturn(true);
+        return new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
+    }
 
     @Test
     void executeRejectsMissingWhereWithoutAll() {
@@ -31,11 +38,5 @@ class DeleteQueryTest {
         var query = new DeleteQuery("test_table", executor);
         query.all();
         assertDoesNotThrow(() -> query.execute());
-    }
-
-    private static QueryExecutor createExecutor() {
-        var provider = org.mockito.Mockito.mock(StorageProvider.class);
-        org.mockito.Mockito.when(provider.available()).thenReturn(true);
-        return new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
     }
 }

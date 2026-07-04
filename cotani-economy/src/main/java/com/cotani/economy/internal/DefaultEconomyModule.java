@@ -16,10 +16,21 @@ import com.cotani.storage.api.CotaniStorage;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.time.Clock;
 import java.util.Objects;
-import java.util.Optional;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
 
+@SuppressWarnings("resource")
 public final class DefaultEconomyModule implements EconomyModule {
+
+    private final EconomyService service;
+    private final Cotani cotani;
+    private final boolean ownsCotani;
+
+    private DefaultEconomyModule(EconomyService service, Cotani cotani, boolean ownsCotani) {
+        this.service = Objects.requireNonNull(service, "service");
+        this.cotani = Objects.requireNonNull(cotani, "cotani");
+        this.ownsCotani = ownsCotani;
+    }
 
     public static DefaultEconomyModule create(EconomyModule.Context context) {
         Objects.requireNonNull(context, "context");
@@ -28,10 +39,6 @@ public final class DefaultEconomyModule implements EconomyModule {
         CotaniStorage storage = context.storage();
         PaperTaskScheduler scheduler = context.scheduler();
 
-        if (storage.backend() == null) {
-            throw new IllegalStateException("Economy module requires a configured storage backend.");
-        }
-
         EconomyConfiguration configuration = EconomyConfiguration.load(plugin, scheduler);
         EconomySettings settings = configuration.settings();
 
@@ -39,34 +46,39 @@ public final class DefaultEconomyModule implements EconomyModule {
         SqlEconomyStore store = new SqlEconomyStore(storage, clock, settings);
         DefaultEconomyGuard guard = new DefaultEconomyGuard(settings);
         EconomyEventPublisher bukkitPublisher = BukkitEconomyEventPublisher.create();
-        EconomyEventPublisher mainThreadPublisher = new MainThreadEconomyEventPublisher(scheduler, bukkitPublisher);
+        EconomyEventPublisher mainThreadPublisher =
+                new MainThreadEconomyEventPublisher(scheduler, bukkitPublisher, plugin.getLogger());
 
         DefaultEconomyService coreService =
                 new DefaultEconomyService(settings, guard, store, store, mainThreadPublisher);
         CachedEconomyService cachedService = new CachedEconomyService(coreService, scheduler, settings);
 
-        Cotani cotani = Optional.ofNullable(context.cotani())
-                .orElseGet(() -> Cotani.forPlugin(plugin).build());
+        Cotani cotani = resolveCotani(context.cotani(), plugin);
         cotani.register(cachedService);
 
-        return new DefaultEconomyModule(cachedService, cotani);
+        return new DefaultEconomyModule(cachedService, cotani, context.cotani() == null);
     }
 
-    private DefaultEconomyModule(EconomyService service, Cotani cotani) {
-        this.service = Objects.requireNonNull(service, "service");
-        this.cotani = Objects.requireNonNull(cotani, "cotani");
+    private static Cotani resolveCotani(@Nullable Cotani cotani, Plugin plugin) {
+        return cotani != null ? cotani : Cotani.forPlugin(plugin).build();
     }
-
-    private final EconomyService service;
-    private final Cotani cotani;
 
     @Override
-    public com.cotani.economy.EconomyService economyService() {
+    public EconomyService economyService() {
         return service;
     }
 
     @Override
     public void close() {
-        cotani.close();
+        if (service instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception exception) {
+                throw new RuntimeException("Failed to close economy service", exception);
+            }
+        }
+        if (ownsCotani) {
+            cotani.close();
+        }
     }
 }

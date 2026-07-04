@@ -7,6 +7,7 @@ import com.cotani.storage.provider.StorageProvider;
 import com.cotani.storage.serializer.ValueSerializerRegistry;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -31,9 +32,9 @@ public final class TransactionManager {
         if (queryTimeoutSeconds < 0) {
             throw new IllegalArgumentException("queryTimeoutSeconds must not be negative, got " + queryTimeoutSeconds);
         }
-        this.provider = provider;
-        this.executor = executor;
-        this.serializers = serializers;
+        this.provider = Objects.requireNonNull(provider, "provider");
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.serializers = Objects.requireNonNull(serializers, "serializers");
         this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
 

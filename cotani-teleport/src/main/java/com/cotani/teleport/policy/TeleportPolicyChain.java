@@ -1,14 +1,12 @@
 package com.cotani.teleport.policy;
 
 import com.cotani.teleport.api.TeleportContext;
-import java.util.Collection;
 import java.util.List;
 
-public final class TeleportPolicyChain {
-    private final List<TeleportPolicy> policies;
+public record TeleportPolicyChain(List<TeleportPolicy> policies) {
 
-    public TeleportPolicyChain(Collection<TeleportPolicy> policies) {
-        this.policies = List.copyOf(policies);
+    public TeleportPolicyChain {
+        policies = List.copyOf(policies);
     }
 
     public PolicyResult validate(TeleportContext context) {
@@ -19,9 +17,5 @@ public final class TeleportPolicyChain {
             }
         }
         return PolicyResult.allowed();
-    }
-
-    public List<TeleportPolicy> policies() {
-        return policies;
     }
 }

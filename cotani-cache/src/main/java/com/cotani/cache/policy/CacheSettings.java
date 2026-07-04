@@ -1,7 +1,21 @@
 package com.cotani.cache.policy;
 
 import java.time.Duration;
+import java.util.Objects;
 
+/**
+ * Immutable configuration for cache behavior.
+ *
+ * @param maximumSize       maximum number of entries
+ * @param expireAfterAccess duration after which an entry expires since last access
+ * @param expireAfterWrite  duration after which an entry expires since creation/update
+ * @param autosaveInterval  interval between automatic dirty saves
+ * @param loadOnJoin        whether to load data when a player joins
+ * @param saveOnQuit        whether to save data when a player quits
+ * @param unloadOnQuit      whether to unload data when a player quits
+ * @param saveOnEvict       whether to save dirty data when evicted
+ * @param recordStats       whether to record cache statistics
+ */
 public record CacheSettings(
         long maximumSize,
         Duration expireAfterAccess,
@@ -12,6 +26,16 @@ public record CacheSettings(
         boolean unloadOnQuit,
         boolean saveOnEvict,
         boolean recordStats) {
+
+    public CacheSettings {
+        Objects.requireNonNull(expireAfterAccess, "expireAfterAccess");
+        Objects.requireNonNull(expireAfterWrite, "expireAfterWrite");
+        Objects.requireNonNull(autosaveInterval, "autosaveInterval");
+    }
+
+    public static CacheSettingsBuilder builder() {
+        return new CacheSettingsBuilder();
+    }
 
     public static CacheSettings playerData() {
         return new CacheSettings(
@@ -33,6 +57,10 @@ public record CacheSettings(
                 50_000, Duration.ofMinutes(30), Duration.ZERO, Duration.ofMinutes(1), true, true, true, true, true);
     }
 
+    private static boolean isPositive(Duration duration) {
+        return !duration.isZero() && !duration.isNegative();
+    }
+
     public boolean autosaveEnabled() {
         return isPositive(autosaveInterval);
     }
@@ -43,9 +71,5 @@ public record CacheSettings(
 
     public boolean expireAfterWriteEnabled() {
         return isPositive(expireAfterWrite);
-    }
-
-    private static boolean isPositive(Duration duration) {
-        return duration != null && !duration.isZero() && !duration.isNegative();
     }
 }

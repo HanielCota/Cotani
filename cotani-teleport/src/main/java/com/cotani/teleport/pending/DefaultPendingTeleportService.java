@@ -4,6 +4,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.api.*;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,8 +18,8 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
     private final Map<UUID, PendingTeleportStateMachine> pendingByPlayer = new ConcurrentHashMap<>();
 
     public DefaultPendingTeleportService(TeleportService teleportService, PaperTaskScheduler scheduler) {
-        this.teleportService = teleportService;
-        this.scheduler = scheduler;
+        this.teleportService = Objects.requireNonNull(teleportService, "teleportService");
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
     }
 
     @Override
@@ -29,6 +30,12 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
             TeleportOptions options,
             TeleportCause cause,
             String source) {
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(delay, "delay");
+        Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(cause, "cause");
+        Objects.requireNonNull(source, "source");
         PendingTeleportData data = PendingTeleportData.create(playerId, target, delay, options, cause, source);
         PendingTeleportStateMachine pending = new PendingTeleportStateMachine(data);
 
@@ -52,6 +59,8 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
 
     @Override
     public boolean cancel(UUID playerId, TeleportCancelReason reason) {
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(reason, "reason");
         PendingTeleportStateMachine pending = pendingByPlayer.remove(playerId);
         return pending != null && pending.cancel(reason);
     }

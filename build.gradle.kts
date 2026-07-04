@@ -1,9 +1,4 @@
 import net.ltgt.gradle.errorprone.errorprone
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.TaskAction
 
 plugins {
     `java-library`
@@ -55,9 +50,9 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
         root.walkTopDown()
             .filter { file ->
                 file.isFile &&
-                    file.extension == "java" &&
-                    file.invariantSeparatorsPath.contains("/src/main/java/") &&
-                    file.invariantSeparatorsPath.contains("/api/")
+                        file.extension == "java" &&
+                        file.invariantSeparatorsPath.contains("/src/main/java/") &&
+                        file.invariantSeparatorsPath.contains("/api/")
             }
             .forEach { file ->
                 file.useLines { lines ->

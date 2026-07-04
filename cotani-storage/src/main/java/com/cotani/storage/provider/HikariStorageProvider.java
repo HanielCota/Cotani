@@ -7,6 +7,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
@@ -17,8 +18,8 @@ public final class HikariStorageProvider implements StorageProvider {
     private final AtomicReference<@Nullable HikariDataSource> dataSource = new AtomicReference<>();
 
     public HikariStorageProvider(String jdbcUrl, MySqlCredentials credentials) {
-        this.jdbcUrl = jdbcUrl;
-        this.credentials = credentials;
+        this.jdbcUrl = Objects.requireNonNull(jdbcUrl, "jdbcUrl");
+        this.credentials = Objects.requireNonNull(credentials, "credentials");
     }
 
     @Override

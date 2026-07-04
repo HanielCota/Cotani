@@ -3,8 +3,8 @@ package com.cotani;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -12,15 +12,13 @@ import org.jspecify.annotations.Nullable;
 @NullMarked
 public final class Cotani implements AutoCloseable {
 
-    private static final List<AutoCloseable> EMPTY = List.of();
-
     private final Plugin plugin;
-    private final AtomicReference<List<AutoCloseable>> closeables;
+    private final CopyOnWriteArrayList<AutoCloseable> closeables;
     private final AtomicBoolean closed;
 
     private Cotani(Plugin plugin, List<AutoCloseable> closeables) {
         this.plugin = plugin;
-        this.closeables = new AtomicReference<>(List.copyOf(closeables));
+        this.closeables = new CopyOnWriteArrayList<>(closeables);
         this.closed = new AtomicBoolean();
     }
 
@@ -51,13 +49,7 @@ public final class Cotani implements AutoCloseable {
             throw new IllegalStateException("Cotani is already closed");
         }
 
-        closeables.updateAndGet(current -> {
-            var next = new ArrayList<AutoCloseable>(current.size() + 1);
-            next.addAll(current);
-            next.add(closeable);
-            return List.copyOf(next);
-        });
-
+        closeables.add(closeable);
         return this;
     }
 
@@ -68,7 +60,7 @@ public final class Cotani implements AutoCloseable {
         }
 
         CotaniCloseException firstFailure = null;
-        var resources = closeables.getAndSet(EMPTY);
+        var resources = closeables;
 
         int index = resources.size();
         for (var closeable : resources.reversed()) {
@@ -83,6 +75,7 @@ public final class Cotani implements AutoCloseable {
                 firstFailure = mergeFailure(firstFailure, failure);
             }
         }
+        resources.clear();
 
         if (firstFailure != null) {
             throw firstFailure;

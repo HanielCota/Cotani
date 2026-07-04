@@ -1,9 +1,11 @@
 package com.cotani.economy.exception;
 
+import java.io.Serial;
 import java.util.UUID;
 
 public final class SameEconomyAccountTransferException extends EconomyException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     public SameEconomyAccountTransferException(UUID userId) {

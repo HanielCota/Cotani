@@ -7,6 +7,8 @@ import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.currency.EconomyCurrency;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
 public final class EconomyConfiguration implements AutoCloseable {
@@ -15,8 +17,8 @@ public final class EconomyConfiguration implements AutoCloseable {
     private final EconomySettings settings;
 
     private EconomyConfiguration(CotaniConfigs configs, EconomySettings settings) {
-        this.configs = configs;
-        this.settings = settings;
+        this.configs = Objects.requireNonNull(configs, "configs");
+        this.settings = Objects.requireNonNull(settings, "settings");
     }
 
     public static EconomyConfiguration load(Plugin plugin, PaperTaskScheduler scheduler) {
@@ -24,16 +26,8 @@ public final class EconomyConfiguration implements AutoCloseable {
                 .scheduler(scheduler)
                 .file("economy.yml")
                 .load();
+
         return new EconomyConfiguration(configs, loadSettings(configs.file("economy.yml")));
-    }
-
-    public EconomySettings settings() {
-        return settings;
-    }
-
-    @Override
-    public void close() {
-        configs.close();
     }
 
     private static EconomySettings loadSettings(CotaniConfig config) {
@@ -61,8 +55,18 @@ public final class EconomyConfiguration implements AutoCloseable {
 
     private static BigDecimal getBigDecimal(CotaniConfig config, String path, BigDecimal fallback, int scale) {
         if (!config.contains(path)) {
-            return fallback.setScale(scale);
+            return fallback.setScale(scale, RoundingMode.UNNECESSARY);
         }
-        return new BigDecimal(config.getString(path, fallback.toPlainString())).setScale(scale);
+        return new BigDecimal(config.getString(path, fallback.toPlainString()))
+                .setScale(scale, RoundingMode.UNNECESSARY);
+    }
+
+    public EconomySettings settings() {
+        return settings;
+    }
+
+    @Override
+    public void close() {
+        configs.close();
     }
 }

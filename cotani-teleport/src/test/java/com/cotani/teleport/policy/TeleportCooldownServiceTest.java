@@ -1,6 +1,7 @@
 package com.cotani.teleport.policy;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
@@ -17,34 +18,6 @@ class TeleportCooldownServiceTest {
 
     private final MutableClock clock = new MutableClock(Instant.ofEpochSecond(1000), ZoneId.of("UTC"));
     private TeleportCooldownService service;
-
-    private static final class MutableClock extends Clock {
-        private Instant instant;
-
-        @SuppressWarnings("UnusedVariable")
-        MutableClock(Instant instant, ZoneId zone) {
-            this.instant = instant;
-        }
-
-        @Override
-        public Instant instant() {
-            return instant;
-        }
-
-        void advance(Duration duration) {
-            instant = instant.plus(duration);
-        }
-
-        @Override
-        public ZoneId getZone() {
-            return ZoneId.of("UTC");
-        }
-
-        @Override
-        public Clock withZone(ZoneId zone) {
-            return this;
-        }
-    }
 
     @BeforeEach
     @SuppressWarnings("NullAway")
@@ -115,5 +88,33 @@ class TeleportCooldownServiceTest {
         service.put(id, TeleportCause.PLUGIN_INTERNAL, Duration.ofMinutes(5));
         assertTrue(service.isOnCooldown(id, TeleportCause.PLUGIN_INTERNAL));
         assertFalse(service.isOnCooldown(id, TeleportCause.UNKNOWN));
+    }
+
+    private static final class MutableClock extends Clock {
+        private Instant instant;
+
+        @SuppressWarnings("UnusedVariable")
+        MutableClock(Instant instant, ZoneId zone) {
+            this.instant = instant;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+
+        void advance(Duration duration) {
+            instant = instant.plus(duration);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneId.of("UTC");
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
     }
 }

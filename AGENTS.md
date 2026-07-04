@@ -2,7 +2,8 @@
 
 ## Project Context
 
-This is a Java project focused on clean architecture, modular APIs, async-safe execution and Paper/PaperSpigot plugin development.
+This is a Java project focused on clean architecture, modular APIs, async-safe execution and Paper/PaperSpigot plugin
+development.
 
 Prioritize:
 
@@ -22,9 +23,12 @@ Prefer small, safe changes over broad rewrites.
 Use the repository skills intentionally:
 
 - `java-engineering-standards`: general Java quality, null-safety, naming, SRP, records, `var`, organization.
-- `java-async-standards`: `CompletionStage`, `CompletableFuture`, executors, schedulers, cache async, database async, timeout, retry and sync/async boundaries.
-- `paper-plugin-architecture`: Paper/PaperSpigot lifecycle, listeners, commands, services, repositories, cache, config, messages and Bukkit/Paper main-thread safety.
-- `java-api-standards`: public APIs, module contracts, factories, builders, value objects, result types, exceptions, `Optional`, `CompletionStage` and API/impl separation.
+- `java-async-standards`: `CompletionStage`, `CompletableFuture`, executors, schedulers, cache async, database async,
+  timeout, retry and sync/async boundaries.
+- `paper-plugin-architecture`: Paper/PaperSpigot lifecycle, listeners, commands, services, repositories, cache, config,
+  messages and Bukkit/Paper main-thread safety.
+- `java-api-standards`: public APIs, module contracts, factories, builders, value objects, result types, exceptions,
+  `Optional`, `CompletionStage` and API/impl separation.
 
 When a task touches async code, always apply `java-async-standards`.
 
@@ -221,7 +225,8 @@ Common commands:
 ./gradlew build
 ```
 
-If a command is unavailable, fails because of environment setup, or is too broad for the change, explain what was run and what could not be verified.
+If a command is unavailable, fails because of environment setup, or is too broad for the change, explain what was run
+and what could not be verified.
 
 ## Refactoring Policy
 

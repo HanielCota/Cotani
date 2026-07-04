@@ -99,7 +99,7 @@ public final class CotaniStorageBuilder {
     }
 
     @SafeVarargs
-    @SuppressWarnings({"varargs", "unchecked"})
+    @SuppressWarnings({"varargs"})
     public final CotaniStorageBuilder repositories(Class<? extends CotaniRepository>... values) {
         Collections.addAll(repositories, values);
         return this;

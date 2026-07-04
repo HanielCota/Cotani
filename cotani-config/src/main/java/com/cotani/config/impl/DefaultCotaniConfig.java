@@ -11,6 +11,7 @@ import com.cotani.config.value.ConfigValue;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import net.kyori.adventure.text.Component;
 
@@ -23,10 +24,10 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     public DefaultCotaniConfig(
             String name, ConfigSource source, ConfigSerializerRegistry serializers, ConfigBinder binder) {
-        this.name = name;
-        this.source = source;
-        this.serializers = serializers;
-        this.binder = binder;
+        this.name = Objects.requireNonNull(name, "name");
+        this.source = Objects.requireNonNull(source, "source");
+        this.serializers = Objects.requireNonNull(serializers, "serializers");
+        this.binder = Objects.requireNonNull(binder, "binder");
     }
 
     @Override
@@ -73,7 +74,8 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     @Override
     public ConfigValue value(String path) {
-        return new ConfigValue(name, path, source.get(path), source.contains(path), serializers);
+        var entry = source.entry(path);
+        return new ConfigValue(name, path, entry.raw(), entry.exists(), serializers);
     }
 
     @Override
@@ -83,10 +85,11 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     @Override
     public Optional<String> optionalString(String path) {
-        if (!contains(path)) {
+        var entry = source.entry(path);
+        if (!entry.exists() || entry.raw() == null) {
             return Optional.empty();
         }
-        return Optional.of(value(path).asString());
+        return Optional.of(new ConfigValue(name, path, entry.raw(), true, serializers).asString());
     }
 
     @Override
@@ -126,10 +129,11 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     @Override
     public <T> T get(String path, Class<T> type, T fallback) {
-        if (!contains(path)) {
+        var entry = source.entry(path);
+        if (!entry.exists() || entry.raw() == null) {
             return fallback;
         }
-        return value(path).as(type);
+        return new ConfigValue(name, path, entry.raw(), true, serializers).as(type);
     }
 
     @Override

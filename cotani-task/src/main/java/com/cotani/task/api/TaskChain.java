@@ -22,30 +22,21 @@ public interface TaskChain<T> {
             return scheduler.chain(CompletableFuture.completedFuture(List.of()));
         }
 
-        List<CompletionStage<T>> stages =
-                Arrays.stream(chains).map(TaskChain::toCompletionStage).toList();
+        @SuppressWarnings("unchecked")
+        CompletableFuture<T>[] futures = Arrays.stream(chains)
+                .map(chain -> chain.toCompletionStage().toCompletableFuture())
+                .toArray(CompletableFuture[]::new);
 
-        CompletionStage<List<T>> all = stages.stream()
-                .reduce(
-                        CompletableFuture.completedFuture(List.of()),
-                        (acc, stage) -> acc.thenCombineAsync(
-                                stage,
-                                (list, value) -> {
-                                    var next = new ArrayList<T>(list.size() + 1);
-                                    next.addAll(list);
-                                    next.add(value);
-                                    return List.copyOf(next);
-                                },
-                                scheduler.asyncExecutor()),
-                        (left, right) -> left.thenCombineAsync(
-                                right,
-                                (l, r) -> {
-                                    var next = new ArrayList<T>(l.size() + r.size());
-                                    next.addAll(l);
-                                    next.addAll(r);
-                                    return List.copyOf(next);
-                                },
-                                scheduler.asyncExecutor()));
+        CompletionStage<List<T>> all = CompletableFuture.allOf(futures)
+                .thenApplyAsync(
+                        _ -> {
+                            var result = new ArrayList<T>(futures.length);
+                            for (var future : futures) {
+                                result.add(future.join());
+                            }
+                            return List.copyOf(result);
+                        },
+                        scheduler.asyncExecutor());
 
         return scheduler.chain(all);
     }

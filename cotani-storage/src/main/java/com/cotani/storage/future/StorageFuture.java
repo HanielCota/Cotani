@@ -33,6 +33,20 @@ public final class StorageFuture<T> {
         return new StorageFuture<>(CompletableFuture.failedFuture(error), scheduler);
     }
 
+    private static Throwable unwrap(Throwable throwable) {
+        if (throwable instanceof CompletionException completionException && completionException.getCause() != null) {
+            return completionException.getCause();
+        }
+        return throwable;
+    }
+
+    private static CompletionException asCompletionException(Throwable throwable) {
+        if (throwable instanceof CompletionException completionException) {
+            return completionException;
+        }
+        return new CompletionException(throwable);
+    }
+
     public PaperTaskScheduler scheduler() {
         return scheduler;
     }
@@ -124,19 +138,5 @@ public final class StorageFuture<T> {
             }
         });
         return this;
-    }
-
-    private static Throwable unwrap(Throwable throwable) {
-        if (throwable instanceof CompletionException completionException && completionException.getCause() != null) {
-            return completionException.getCause();
-        }
-        return throwable;
-    }
-
-    private static CompletionException asCompletionException(Throwable throwable) {
-        if (throwable instanceof CompletionException completionException) {
-            return completionException;
-        }
-        return new CompletionException(throwable);
     }
 }

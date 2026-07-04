@@ -44,16 +44,7 @@ public final class DefaultTaskBucket implements TaskBucket {
 
         RateLimiter limiter = limiterFor(bucketName);
 
-        return scheduler.async(taskName, () -> {
-            try {
-                limiter.acquire();
-                runnable.run();
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-
-                throw new RuntimeException("Interrupted while acquiring bucket permit", interrupted);
-            }
-        });
+        return scheduler.async(taskName, () -> runThrottled(limiter, runnable));
     }
 
     @Override
@@ -62,5 +53,18 @@ public final class DefaultTaskBucket implements TaskBucket {
 
         return limiters.computeIfAbsent(
                 bucketName, ignored -> new TokenBucketRateLimiter(defaultCapacity, defaultRefillPeriod));
+    }
+
+    private void runThrottled(RateLimiter limiter, Runnable runnable) {
+        if (limiter.tryAcquire()) {
+            runnable.run();
+            return;
+        }
+
+        Duration delay = limiter.retryDelay();
+        if (delay.isZero() || delay.isNegative()) {
+            delay = Duration.ofMillis(1);
+        }
+        scheduler.asyncLater(runnable, delay);
     }
 }

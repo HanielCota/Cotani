@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.Nullable;
@@ -15,8 +16,8 @@ public final class Row {
     private final ValueSerializerRegistry serializers;
 
     public Row(ResultSet resultSet, ValueSerializerRegistry serializers) {
-        this.resultSet = resultSet;
-        this.serializers = serializers;
+        this.resultSet = Objects.requireNonNull(resultSet, "resultSet");
+        this.serializers = Objects.requireNonNull(serializers, "serializers");
     }
 
     public String getString(String column) throws SQLException {

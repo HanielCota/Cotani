@@ -7,53 +7,65 @@ import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import java.math.BigDecimal;
 import java.util.UUID;
-import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Public economy API used by other Cotani modules.
  *
- * <p>The API is asynchronous by design. Callers must compose stages instead of blocking with join/get.
+ * <p>The API is asynchronous by design. Callers must compose futures instead of blocking.
  */
 public interface EconomyService {
 
-    CompletionStage<EconomyBalance> balance(UUID userId);
+    CompletableFuture<EconomyBalance> balance(UUID userId);
 
-    CompletionStage<EconomyBalance> balance(UUID userId, CurrencyId currencyId);
+    CompletableFuture<EconomyBalance> balance(UUID userId, CurrencyId currencyId);
 
-    CompletionStage<Boolean> has(UUID userId, BigDecimal amount);
+    CompletableFuture<Boolean> has(UUID userId, BigDecimal amount);
 
-    CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount);
+    CompletableFuture<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount);
 
-    CompletionStage<EconomyTransaction> deposit(
+    CompletableFuture<EconomyTransaction> deposit(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId);
+
+    CompletableFuture<EconomyTransaction> deposit(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId);
 
-    default CompletionStage<EconomyTransaction> deposit(UUID userId, BigDecimal amount, EconomyReason reason) {
-        return deposit(userId, amount, reason, EconomyOperationId.random());
-    }
+    CompletableFuture<EconomyTransaction> withdraw(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId);
 
-    CompletionStage<EconomyTransaction> withdraw(
+    CompletableFuture<EconomyTransaction> withdraw(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId);
 
-    default CompletionStage<EconomyTransaction> withdraw(UUID userId, BigDecimal amount, EconomyReason reason) {
-        return withdraw(userId, amount, reason, EconomyOperationId.random());
-    }
+    CompletableFuture<EconomyTransaction> set(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId);
 
-    CompletionStage<EconomyTransaction> set(
+    CompletableFuture<EconomyTransaction> set(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId);
 
-    default CompletionStage<EconomyTransaction> set(UUID userId, BigDecimal amount, EconomyReason reason) {
-        return set(userId, amount, reason, EconomyOperationId.random());
-    }
+    CompletableFuture<EconomyTransaction> transfer(
+            UUID sourceUserId,
+            UUID targetUserId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId);
 
-    CompletionStage<EconomyTransaction> transfer(
+    CompletableFuture<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId);
-
-    default CompletionStage<EconomyTransaction> transfer(
-            UUID sourceUserId, UUID targetUserId, BigDecimal amount, EconomyReason reason) {
-        return transfer(sourceUserId, targetUserId, amount, reason, EconomyOperationId.random());
-    }
 }

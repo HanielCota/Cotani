@@ -2,24 +2,20 @@ package com.cotani.storage.migration;
 
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.schema.Schema;
+import com.cotani.task.util.CompletionStages;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import java.util.concurrent.CompletionStage;
 
 public final class MigrationRunner {
 
     private static final String CREATE_MIGRATIONS_TABLE = """
-            CREATE TABLE IF NOT EXISTS cotani_migrations (
-                version INTEGER PRIMARY KEY,
-                description TEXT NOT NULL,
-                executed_at VARCHAR(64) NOT NULL
-            )
-            """;
+        CREATE TABLE IF NOT EXISTS cotani_migrations (
+            version INTEGER PRIMARY KEY,
+            description TEXT NOT NULL,
+            executed_at VARCHAR(64) NOT NULL
+        )
+        """;
 
     private final QueryExecutor executor;
     private final Schema schema;
@@ -27,11 +23,12 @@ public final class MigrationRunner {
     private final Set<Integer> versions = new HashSet<>();
 
     public MigrationRunner(QueryExecutor executor, Schema schema) {
-        this.executor = executor;
-        this.schema = schema;
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.schema = Objects.requireNonNull(schema, "schema");
     }
 
     public MigrationRunner add(Migration migration) {
+        Objects.requireNonNull(migration, "migration");
         if (!versions.add(migration.version())) {
             throw new IllegalArgumentException("Duplicate migration version: " + migration.version());
         }
@@ -47,7 +44,7 @@ public final class MigrationRunner {
     }
 
     private CompletionStage<Void> runAll(List<Migration> ordered) {
-        CompletionStage<Void> seed = CompletableFuture.completedStage(null);
+        CompletionStage<Void> seed = CompletionStages.completedVoid();
         for (var migration : ordered) {
             seed = seed.thenCompose(_ -> runOne(migration));
         }
@@ -61,7 +58,7 @@ public final class MigrationRunner {
                         row -> row.getInt("version"))
                 .thenCompose(existing -> {
                     if (existing.isPresent()) {
-                        return CompletableFuture.completedStage(null);
+                        return CompletionStages.completedVoid();
                     }
                     return executor.transaction(transactional -> {
                         var transactionalSchema = new Schema(transactional, schema.dialect());

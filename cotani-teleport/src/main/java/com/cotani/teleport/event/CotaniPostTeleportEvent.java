@@ -1,6 +1,7 @@
 package com.cotani.teleport.event;
 
 import com.cotani.teleport.api.TeleportResult;
+import java.util.Objects;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -15,10 +16,10 @@ public final class CotaniPostTeleportEvent extends Event {
     private final TeleportResult result;
 
     public CotaniPostTeleportEvent(Player player, Location from, Location to, TeleportResult result) {
-        this.player = player;
-        this.from = from.clone();
-        this.to = to.clone();
-        this.result = result;
+        this.player = Objects.requireNonNull(player, "player");
+        this.from = Objects.requireNonNull(from, "from").clone();
+        this.to = Objects.requireNonNull(to, "to").clone();
+        this.result = Objects.requireNonNull(result, "result");
     }
 
     public static HandlerList getHandlerList() {

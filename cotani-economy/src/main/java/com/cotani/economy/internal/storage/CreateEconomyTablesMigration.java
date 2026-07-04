@@ -28,7 +28,7 @@ public final class CreateEconomyTablesMigration implements Migration {
                 .createIfNotExists()
                 .thenCompose(_ -> schema.table("cotani_economy_transactions")
                         .id("transaction_id", ColumnType.UUID)
-                        .required("operation_id", ColumnType.UUID)
+                        .unique("operation_id", ColumnType.UUID)
                         .required("type", ColumnType.STRING)
                         .column("source_user_id", ColumnType.UUID)
                         .column("target_user_id", ColumnType.UUID)

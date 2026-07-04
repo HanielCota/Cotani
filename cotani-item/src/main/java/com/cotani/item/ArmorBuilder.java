@@ -2,7 +2,9 @@ package com.cotani.item;
 
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.ItemArmorTrim;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ArmorMeta;
@@ -14,19 +16,41 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public final class ArmorBuilder extends ItemStackBuilder<ArmorBuilder> {
 
+    private static final Set<Material> ARMOR_MATERIALS = EnumSet.noneOf(Material.class);
+    private static volatile boolean armorMaterialsResolved;
+
     private ArmorBuilder(Material material) {
         super(material);
     }
 
     public static ArmorBuilder of(Material material) {
         Objects.requireNonNull(material, "Parameter 'material' must not be null");
-        var preview = ItemStack.of(material);
 
-        if (!(preview.getItemMeta() instanceof ArmorMeta)) {
+        if (!isArmorMaterial(material)) {
             throw new IllegalArgumentException("Material must be armor: " + material);
         }
 
         return new ArmorBuilder(material);
+    }
+
+    private static boolean isArmorMaterial(Material material) {
+        if (armorMaterialsResolved) {
+            return ARMOR_MATERIALS.contains(material);
+        }
+
+        synchronized (ARMOR_MATERIALS) {
+            if (armorMaterialsResolved) {
+                return ARMOR_MATERIALS.contains(material);
+            }
+
+            for (var candidate : Material.values()) {
+                if (candidate.isItem() && ItemStack.of(candidate).getItemMeta() instanceof ArmorMeta) {
+                    ARMOR_MATERIALS.add(candidate);
+                }
+            }
+            armorMaterialsResolved = true;
+            return ARMOR_MATERIALS.contains(material);
+        }
     }
 
     @Override

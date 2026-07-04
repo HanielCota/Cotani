@@ -13,9 +13,10 @@ import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
 
 public final class DefaultEconomyService implements EconomyService {
 
@@ -39,25 +40,28 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletionStage<EconomyBalance> balance(UUID userId) {
+    public CompletableFuture<EconomyBalance> balance(UUID userId) {
         return balance(userId, settings.defaultCurrency().id());
     }
 
     @Override
-    public CompletionStage<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
+    public CompletableFuture<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
         guard.validateUserId(userId);
         guard.validateCurrencyId(currencyId);
 
-        return accountRepository.getOrCreate(userId, currencyId).thenApply(EconomyBalance::from);
+        return accountRepository
+                .getOrCreate(userId, currencyId)
+                .thenApply(EconomyBalance::from)
+                .toCompletableFuture();
     }
 
     @Override
-    public CompletionStage<Boolean> has(UUID userId, BigDecimal amount) {
+    public CompletableFuture<Boolean> has(UUID userId, BigDecimal amount) {
         return has(userId, settings.defaultCurrency().id(), amount);
     }
 
     @Override
-    public CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
+    public CompletableFuture<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
         guard.validateUserId(userId);
         guard.validateCurrencyId(currencyId);
 
@@ -67,68 +71,113 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     @Override
-    public CompletionStage<EconomyTransaction> deposit(
-            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+    public CompletableFuture<EconomyTransaction> deposit(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
         guard.validateUserId(userId);
+        guard.validateCurrencyId(currencyId);
         guard.validateReason(reason);
         guard.validateOperationId(operationId);
 
         var normalizedAmount = guard.normalizeAmount(amount);
-        var currencyId = settings.defaultCurrency().id();
 
         return accountRepository
                 .deposit(userId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+                .thenApply(this::publishAndReturn)
+                .toCompletableFuture();
     }
 
     @Override
-    public CompletionStage<EconomyTransaction> withdraw(
+    public CompletableFuture<EconomyTransaction> deposit(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return deposit(userId, settings.defaultCurrency().id(), amount, reason, operationId);
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> withdraw(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
         guard.validateUserId(userId);
+        guard.validateCurrencyId(currencyId);
         guard.validateReason(reason);
         guard.validateOperationId(operationId);
 
         var normalizedAmount = guard.normalizeAmount(amount);
-        var currencyId = settings.defaultCurrency().id();
 
         return accountRepository
                 .withdraw(userId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+                .thenApply(this::publishAndReturn)
+                .toCompletableFuture();
     }
 
     @Override
-    public CompletionStage<EconomyTransaction> set(
+    public CompletableFuture<EconomyTransaction> withdraw(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return withdraw(userId, settings.defaultCurrency().id(), amount, reason, operationId);
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> set(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
         guard.validateUserId(userId);
+        guard.validateCurrencyId(currencyId);
         guard.validateReason(reason);
         guard.validateOperationId(operationId);
         guard.validateBalanceAmount(amount);
 
-        var normalizedAmount = amount.setScale(settings.defaultCurrency().decimalPlaces());
-        var currencyId = settings.defaultCurrency().id();
+        var normalizedAmount = amount.setScale(settings.defaultCurrency().decimalPlaces(), RoundingMode.UNNECESSARY);
 
         return accountRepository
                 .set(userId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+                .thenApply(this::publishAndReturn)
+                .toCompletableFuture();
     }
 
     @Override
-    public CompletionStage<EconomyTransaction> transfer(
+    public CompletableFuture<EconomyTransaction> set(
+            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return set(userId, settings.defaultCurrency().id(), amount, reason, operationId);
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> transfer(
+            UUID sourceUserId,
+            UUID targetUserId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        guard.validateTransfer(sourceUserId, targetUserId, amount);
+        guard.validateCurrencyId(currencyId);
+        guard.validateReason(reason);
+        guard.validateOperationId(operationId);
+
+        var normalizedAmount = guard.normalizeAmount(amount);
+
+        return transferRepository
+                .transfer(sourceUserId, targetUserId, currencyId, normalizedAmount, reason, operationId)
+                .thenApply(this::publishAndReturn)
+                .toCompletableFuture();
+    }
+
+    @Override
+    public CompletableFuture<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        guard.validateTransfer(sourceUserId, targetUserId, amount);
-        guard.validateReason(reason);
-        guard.validateOperationId(operationId);
-
-        var normalizedAmount = guard.normalizeAmount(amount);
-        var currencyId = settings.defaultCurrency().id();
-
-        return transferRepository
-                .transfer(sourceUserId, targetUserId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+        return transfer(sourceUserId, targetUserId, settings.defaultCurrency().id(), amount, reason, operationId);
     }
 
     private EconomyTransaction publishAndReturn(EconomyTransaction transaction) {

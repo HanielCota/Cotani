@@ -1,8 +1,6 @@
 package com.cotani.task.throttle;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -19,6 +17,7 @@ class TokenBucketRateLimiterTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     void tryAcquireWithTimeoutWaitsForRefill() throws InterruptedException {
         RateLimiter limiter = new TokenBucketRateLimiter(1, Duration.ofMillis(50));
 

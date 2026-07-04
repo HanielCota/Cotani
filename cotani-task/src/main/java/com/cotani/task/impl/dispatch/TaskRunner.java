@@ -21,6 +21,10 @@ public final class TaskRunner {
         this.metrics = Objects.requireNonNull(metrics, "metrics");
     }
 
+    private static Duration elapsed(TaskContext context) {
+        return Duration.ofMillis(context.elapsedMillis());
+    }
+
     public Runnable wrap(TaskMetadata metadata, Runnable runnable) {
         Objects.requireNonNull(metadata, "metadata");
         Objects.requireNonNull(runnable, "runnable");
@@ -57,9 +61,5 @@ public final class TaskRunner {
             exceptionHandler.handle(context, exception);
             future.completeExceptionally(new CompletionException(exception));
         }
-    }
-
-    private static Duration elapsed(TaskContext context) {
-        return Duration.ofMillis(context.elapsedMillis());
     }
 }

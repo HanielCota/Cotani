@@ -2,14 +2,15 @@ package com.cotani.task.impl.executor;
 
 import com.cotani.task.api.TaskMetadata;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
+/**
+ * Async executor backed by either virtual threads or a fixed platform thread pool.
+ *
+ * <p>When virtual threads are enabled, concurrency is not artificially capped: virtual threads are
+ * cheap and the JDK schedules them on the available carrier threads. A fixed platform pool is used
+ * otherwise, with {@code maxConcurrent} threads.
+ */
 public final class VirtualThreadExecutor implements AutoCloseable {
 
     private static final String THREAD_NAME = "cotani-task-";
@@ -18,12 +19,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
 
     private final ExecutorService taskExecutor;
     private final ScheduledExecutorService delayedExecutor;
-    private final Semaphore semaphore;
-    private final int maxConcurrent;
-
-    public static VirtualThreadExecutor create(int maxConcurrent, boolean useVirtualThreads) {
-        return new VirtualThreadExecutor(maxConcurrent, useVirtualThreads);
-    }
+    private final boolean nameThreads;
 
     public VirtualThreadExecutor() {
         this(DEFAULT_MAX_CONCURRENT, true);
@@ -33,22 +29,40 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         this(maxConcurrent, true);
     }
 
-    private VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads) {
+    public VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads) {
         if (maxConcurrent <= 0) {
             throw new IllegalArgumentException("maxConcurrent must be positive");
         }
 
-        this.maxConcurrent = maxConcurrent;
-        this.semaphore = new Semaphore(maxConcurrent);
-        this.taskExecutor = createTaskExecutor(useVirtualThreads);
+        this.nameThreads = true;
+        this.taskExecutor = createTaskExecutor(maxConcurrent, useVirtualThreads);
         this.delayedExecutor = createDelayedExecutor();
+    }
+
+    public static VirtualThreadExecutor create(int maxConcurrent, boolean useVirtualThreads) {
+        return new VirtualThreadExecutor(maxConcurrent, useVirtualThreads);
+    }
+
+    private static ExecutorService createTaskExecutor(int maxConcurrent, boolean useVirtualThreads) {
+        if (useVirtualThreads) {
+            ThreadFactory factory = Thread.ofVirtual().name(THREAD_NAME, 0).factory();
+            return Executors.newThreadPerTaskExecutor(factory);
+        }
+
+        ThreadFactory factory = Thread.ofPlatform().name(THREAD_NAME).factory();
+        return Executors.newFixedThreadPool(maxConcurrent, factory);
+    }
+
+    private static ScheduledExecutorService createDelayedExecutor() {
+        ThreadFactory factory = Thread.ofPlatform().name(DELAYED_THREAD_NAME).factory();
+        return Executors.newSingleThreadScheduledExecutor(factory);
     }
 
     public Future<Void> submit(TaskMetadata metadata, Runnable runnable) {
         Objects.requireNonNull(metadata, "metadata");
         Objects.requireNonNull(runnable, "runnable");
 
-        return taskExecutor.submit(new NamedThrottledTask(metadata, runnable, semaphore), null);
+        return taskExecutor.submit(new NamedTask(metadata, runnable, nameThreads), null);
     }
 
     @SuppressWarnings("unchecked")
@@ -57,7 +71,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         Objects.requireNonNull(runnable, "runnable");
 
         return (Future<Void>) delayedExecutor.schedule(
-                new NamedThrottledTask(metadata, runnable, semaphore), delayMillis, TimeUnit.MILLISECONDS);
+                new NamedTask(metadata, runnable, nameThreads), delayMillis, TimeUnit.MILLISECONDS);
     }
 
     @SuppressWarnings("unchecked")
@@ -67,14 +81,10 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         Objects.requireNonNull(runnable, "runnable");
 
         return (Future<Void>) delayedExecutor.scheduleAtFixedRate(
-                new NamedThrottledTask(metadata, runnable, semaphore),
+                new NamedTask(metadata, runnable, nameThreads),
                 initialDelayMillis,
                 periodMillis,
                 TimeUnit.MILLISECONDS);
-    }
-
-    public int maxConcurrent() {
-        return maxConcurrent;
     }
 
     public boolean isShutdown() {
@@ -87,68 +97,28 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         shutdown(delayedExecutor);
     }
 
-    private static ExecutorService createTaskExecutor(boolean useVirtualThreads) {
-        if (useVirtualThreads) {
-            ThreadFactory factory = Thread.ofVirtual().name(THREAD_NAME, 0).factory();
-
-            return Executors.newThreadPerTaskExecutor(factory);
-        }
-
-        ThreadFactory factory = Thread.ofPlatform().name(THREAD_NAME).factory();
-
-        return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), factory);
-    }
-
-    private static ScheduledExecutorService createDelayedExecutor() {
-        ThreadFactory factory = Thread.ofPlatform().name(DELAYED_THREAD_NAME).factory();
-
-        return Executors.newSingleThreadScheduledExecutor(factory);
-    }
-
     private void shutdown(ExecutorService executor) {
-        executor.shutdownNow();
+        executor.shutdown();
 
         try {
             if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("Executor did not terminate within timeout");
+                executor.shutdownNow();
             }
         } catch (InterruptedException interrupted) {
+            executor.shutdownNow();
             Thread.currentThread().interrupt();
-
-            throw new IllegalStateException("Interrupted while waiting for executor shutdown", interrupted);
         }
     }
 
-    private static final class NamedThrottledTask implements Runnable {
-
-        private final TaskMetadata metadata;
-        private final Runnable delegate;
-        private final Semaphore semaphore;
-
-        NamedThrottledTask(TaskMetadata metadata, Runnable delegate, Semaphore semaphore) {
-            this.metadata = Objects.requireNonNull(metadata, "metadata");
-            this.delegate = Objects.requireNonNull(delegate, "delegate");
-            this.semaphore = Objects.requireNonNull(semaphore, "semaphore");
-        }
+    private record NamedTask(TaskMetadata metadata, Runnable delegate, boolean nameThread) implements Runnable {
 
         @Override
         public void run() {
-            try {
-                semaphore.acquire();
-
-                try {
-                    runNamed();
-                } finally {
-                    semaphore.release();
-                }
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-
-                throw new RuntimeException("Interrupted while waiting for execution permit", interrupted);
+            if (!nameThread) {
+                delegate.run();
+                return;
             }
-        }
 
-        private void runNamed() {
             Thread currentThread = Thread.currentThread();
             String originalName = currentThread.getName();
 

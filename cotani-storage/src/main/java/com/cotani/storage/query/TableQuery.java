@@ -2,6 +2,7 @@ package com.cotani.storage.query;
 
 import com.cotani.storage.dialect.SqlDialect;
 import com.cotani.storage.executor.QueryExecutor;
+import java.util.Objects;
 
 public final class TableQuery {
 
@@ -10,9 +11,9 @@ public final class TableQuery {
     private final SqlDialect dialect;
 
     public TableQuery(String table, QueryExecutor executor, SqlDialect dialect) {
-        this.table = table;
-        this.executor = executor;
-        this.dialect = dialect;
+        this.table = Objects.requireNonNull(table, "table");
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.dialect = Objects.requireNonNull(dialect, "dialect");
     }
 
     public SelectQuery select() {

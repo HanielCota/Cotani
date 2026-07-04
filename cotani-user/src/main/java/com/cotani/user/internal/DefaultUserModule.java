@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
@@ -40,6 +41,19 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
         return List.of(new CreateUsersTableMigration());
     }
 
+    private static void runAutoSave(SimpleUserService service, AtomicBoolean inProgress, Plugin plugin) {
+        if (!inProgress.compareAndSet(false, true)) {
+            return;
+        }
+
+        service.saveAll().whenComplete((_, throwable) -> {
+            inProgress.set(false);
+            if (throwable != null) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to auto-save users", throwable);
+            }
+        });
+    }
+
     public static DefaultUserModule create(
             Plugin plugin, CotaniStorage storage, PaperTaskScheduler scheduler, UserModuleOptions options) {
         Objects.requireNonNull(plugin, "plugin");
@@ -48,16 +62,14 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
         Objects.requireNonNull(options, "options");
 
         var repository = new StorageUserRepository(storage, new UserMapper());
-        var cache = new UserCache(repository, scheduler);
+        var cache = new UserCache(repository);
         var service = new SimpleUserService(cache, repository);
         var listener = new UserListener(plugin, service, scheduler, options.loadFailureMessage());
 
+        AtomicBoolean autoSaveInProgress = new AtomicBoolean(false);
         SchedulerTask autoSaveTask = options.autoSaveEnabled()
                 ? scheduler.asyncTimer(
-                        () -> service.saveAll().exceptionally(throwable -> {
-                            plugin.getLogger().log(Level.SEVERE, "Failed to auto-save users", throwable);
-                            return null;
-                        }),
+                        () -> runAutoSave(service, autoSaveInProgress, plugin),
                         options.autoSaveInterval(),
                         options.autoSaveInterval())
                 : SchedulerTask.noop();
@@ -75,26 +87,6 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
             cotani.close();
             throw new IllegalStateException("Could not initialize user module", failure);
         }
-    }
-
-    @Override
-    public UserService userService() {
-        return userService;
-    }
-
-    public InternalUserService internalUserService() {
-        return userService;
-    }
-
-    /**
-     * Closes the module and propagates any shutdown failure as {@link com.cotani.CotaniCloseException}.
-     *
-     * <p>Errors from the final save-and-clear step are logged and swallowed; cache is only cleared when
-     * the save succeeds.
-     */
-    @Override
-    public void close() {
-        cotani.close();
     }
 
     private static void saveAndClear(Plugin plugin, SimpleUserService service) {
@@ -120,5 +112,25 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
             Thread.currentThread().interrupt();
             plugin.getLogger().warning("Interrupted while waiting for user shutdown save.");
         }
+    }
+
+    @Override
+    public UserService userService() {
+        return userService;
+    }
+
+    public InternalUserService internalUserService() {
+        return userService;
+    }
+
+    /**
+     * Closes the module and propagates any shutdown failure as {@link com.cotani.CotaniCloseException}.
+     *
+     * <p>Errors from the final save-and-clear step are logged and swallowed; cache is only cleared when
+     * the save succeeds.
+     */
+    @Override
+    public void close() {
+        cotani.close();
     }
 }

@@ -1,6 +1,7 @@
 package com.cotani.teleport.event;
 
 import com.cotani.teleport.api.TeleportCause;
+import java.util.Objects;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -18,11 +19,11 @@ public final class CotaniPreTeleportEvent extends Event implements Cancellable {
     private boolean cancelled;
 
     public CotaniPreTeleportEvent(Player player, Location from, Location to, TeleportCause cause, String source) {
-        this.player = player;
-        this.from = from.clone();
-        this.to = to.clone();
-        this.cause = cause;
-        this.source = source;
+        this.player = Objects.requireNonNull(player, "player");
+        this.from = Objects.requireNonNull(from, "from").clone();
+        this.to = Objects.requireNonNull(to, "to").clone();
+        this.cause = Objects.requireNonNull(cause, "cause");
+        this.source = Objects.requireNonNull(source, "source");
     }
 
     public static HandlerList getHandlerList() {
@@ -42,7 +43,7 @@ public final class CotaniPreTeleportEvent extends Event implements Cancellable {
     }
 
     public void setTo(Location to) {
-        this.to = to.clone();
+        this.to = Objects.requireNonNull(to, "to").clone();
     }
 
     public TeleportCause getCause() {

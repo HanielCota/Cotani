@@ -3,14 +3,8 @@ package com.cotani.teleport.config;
 import com.cotani.config.CotaniConfig;
 import com.cotani.config.CotaniConfigs;
 import com.cotani.task.api.PaperTaskScheduler;
-import com.cotani.teleport.api.ExecutionSettings;
-import com.cotani.teleport.api.FeedbackSettings;
-import com.cotani.teleport.api.PlayerSettings;
-import com.cotani.teleport.api.PolicySettings;
-import com.cotani.teleport.api.SafeLocationOptions;
-import com.cotani.teleport.api.SafetySettings;
-import com.cotani.teleport.api.TeleportMessages;
-import com.cotani.teleport.api.TeleportOptions;
+import com.cotani.teleport.api.*;
+import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
 public final class TeleportConfiguration implements AutoCloseable {
@@ -20,9 +14,9 @@ public final class TeleportConfiguration implements AutoCloseable {
     private final TeleportOptionsFactory options;
 
     private TeleportConfiguration(CotaniConfigs configs, TeleportMessages messages, TeleportOptionsFactory options) {
-        this.configs = configs;
-        this.messages = messages;
-        this.options = options;
+        this.configs = Objects.requireNonNull(configs, "configs");
+        this.messages = Objects.requireNonNull(messages, "messages");
+        this.options = Objects.requireNonNull(options, "options");
     }
 
     public static TeleportConfiguration load(Plugin plugin, PaperTaskScheduler scheduler) {
@@ -33,19 +27,6 @@ public final class TeleportConfiguration implements AutoCloseable {
                 .load();
         return new TeleportConfiguration(
                 configs, loadMessages(configs.file("messages.yml")), loadOptions(configs.file("config.yml")));
-    }
-
-    public TeleportMessages messages() {
-        return messages;
-    }
-
-    public TeleportOptionsFactory options() {
-        return options;
-    }
-
-    @Override
-    public void close() {
-        configs.close();
     }
 
     private static TeleportMessages loadMessages(CotaniConfig config) {
@@ -102,5 +83,18 @@ public final class TeleportConfiguration implements AutoCloseable {
                         config.getBoolean(path + ".feedback.send-messages", fallback.sendMessages())))
                 .timeout(config.getDuration(path + ".timeout", fallback.timeout()))
                 .build();
+    }
+
+    public TeleportMessages messages() {
+        return messages;
+    }
+
+    public TeleportOptionsFactory options() {
+        return options;
+    }
+
+    @Override
+    public void close() {
+        configs.close();
     }
 }

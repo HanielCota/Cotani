@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 public final class ValueSerializerRegistry {
 
     private final Map<Class<?>, ValueSerializer<?>> serializers = new ConcurrentHashMap<>();
+    private final Map<Class<?>, ValueSerializer<?>> resolvedCache = new ConcurrentHashMap<>();
 
     public ValueSerializerRegistry() {
         register(new UuidSerializer());
@@ -22,13 +23,10 @@ public final class ValueSerializerRegistry {
 
     public <T> void register(ValueSerializer<T> serializer) {
         serializers.put(serializer.type(), serializer);
+        resolvedCache.clear();
     }
 
-    public @Nullable Object serialize(Object value) {
-        if (value == null) {
-            return null;
-        }
-
+    public Object serialize(Object value) {
         var serializer = findSerializer(value.getClass());
         if (serializer == null) {
             return value;
@@ -37,11 +35,7 @@ public final class ValueSerializerRegistry {
         return serializer.serialize(value);
     }
 
-    public <T> @Nullable T deserialize(Object value, Class<T> type) {
-        if (value == null) {
-            return null;
-        }
-
+    public <T> T deserialize(Object value, Class<T> type) {
         ValueSerializer<T> serializer = findSerializer(type);
         if (serializer == null) {
             return type.cast(value);
@@ -52,18 +46,53 @@ public final class ValueSerializerRegistry {
 
     @SuppressWarnings("unchecked")
     private <T> @Nullable ValueSerializer<T> findSerializer(Class<?> type) {
+        ValueSerializer<?> cached = resolvedCache.get(type);
+        if (cached != null) {
+            return (ValueSerializer<T>) cached;
+        }
+
+        ValueSerializer<?> resolved = resolveSerializer(type);
+        if (resolved != null) {
+            resolvedCache.put(type, resolved);
+            return (ValueSerializer<T>) resolved;
+        }
+
+        resolvedCache.put(type, NullSerializer.INSTANCE);
+        return null;
+    }
+
+    private @Nullable ValueSerializer<?> resolveSerializer(Class<?> type) {
         var exact = serializers.get(type);
         if (exact != null) {
-            return (ValueSerializer<T>) exact;
+            return exact;
         }
 
         for (var serializer : serializers.values()) {
             if (serializer.type().isAssignableFrom(type)) {
-                return (ValueSerializer<T>) serializer;
+                return serializer;
             }
         }
 
         return null;
+    }
+
+    private static final class NullSerializer implements ValueSerializer<Object> {
+        static final NullSerializer INSTANCE = new NullSerializer();
+
+        @Override
+        public Class<Object> type() {
+            return Object.class;
+        }
+
+        @Override
+        public Object serialize(Object value) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Object deserialize(Object value) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class UuidSerializer implements ValueSerializer<UUID> {

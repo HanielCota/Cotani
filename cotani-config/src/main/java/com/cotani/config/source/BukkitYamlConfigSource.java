@@ -5,10 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -28,9 +25,9 @@ public final class BukkitYamlConfigSource implements ConfigSource {
 
     public BukkitYamlConfigSource(
             Plugin plugin, String resourceName, Path path, boolean createMissing, boolean copyDefaults) {
-        this.plugin = plugin;
-        this.resourceName = resourceName;
-        this.path = path;
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.resourceName = Objects.requireNonNull(resourceName, "resourceName");
+        this.path = Objects.requireNonNull(path, "path");
         this.createMissing = createMissing;
         this.copyDefaults = copyDefaults;
     }
@@ -208,37 +205,45 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     }
 
     private void loadDefaultsWhenNeeded() {
-        if (!copyDefaults) {
+        if (!copyDefaults || defaultsApplied) {
             return;
         }
-        if (defaultsApplied) {
+
+        YamlConfiguration defaults = loadDefaultsResource();
+        if (defaults == null) {
+            defaultsApplied = true;
             return;
         }
+
         lock.writeLock().lock();
         try {
             if (defaultsApplied) {
                 return;
             }
-            try (InputStream input = plugin.getResource(resourceName)) {
-                if (input == null) {
-                    defaultsApplied = true;
-                    return;
-                }
-                var defaults = YamlConfiguration.loadConfiguration(
-                        new java.io.InputStreamReader(input, java.nio.charset.StandardCharsets.UTF_8));
-                var beforeKeys = yaml.getKeys(true).size();
-                yaml.setDefaults(defaults);
-                yaml.options().copyDefaults(true);
-                defaultsApplied = true;
-                var addedKeys = yaml.getKeys(true).size() - beforeKeys;
-                if (addedKeys > 0 && createMissing) {
-                    yaml.save(path.toFile());
-                }
-            } catch (IOException exception) {
-                throw new ConfigException("Could not load defaults for " + resourceName, exception);
+            var beforeKeys = yaml.getKeys(true).size();
+            yaml.setDefaults(defaults);
+            yaml.options().copyDefaults(true);
+            defaultsApplied = true;
+            var addedKeys = yaml.getKeys(true).size() - beforeKeys;
+            if (addedKeys > 0 && createMissing) {
+                yaml.save(path.toFile());
             }
+        } catch (IOException exception) {
+            throw new ConfigException("Could not save defaults for " + resourceName, exception);
         } finally {
             lock.writeLock().unlock();
+        }
+    }
+
+    private @Nullable YamlConfiguration loadDefaultsResource() {
+        try (InputStream input = plugin.getResource(resourceName)) {
+            if (input == null) {
+                return null;
+            }
+            return YamlConfiguration.loadConfiguration(
+                    new java.io.InputStreamReader(input, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (IOException exception) {
+            throw new ConfigException("Could not load defaults for " + resourceName, exception);
         }
     }
 }

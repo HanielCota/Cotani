@@ -1,8 +1,6 @@
 package com.cotani.task.executor;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.TaskMetadata;

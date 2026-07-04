@@ -1,6 +1,9 @@
 package com.cotani.economy.internal.storage;
 
-import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.account.EconomyAccount;
+import com.cotani.economy.currency.CurrencyId;
+import com.cotani.economy.exception.DuplicateEconomyOperationException;
+import com.cotani.economy.transaction.*;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.query.Row;
@@ -18,9 +21,8 @@ final class EconomyStorageMappers {
 
     private EconomyStorageMappers() {}
 
-    static com.cotani.economy.account.EconomyAccount accountFromRow(
-            UUID userId, com.cotani.economy.currency.CurrencyId currencyId, Row row) throws SQLException {
-        return new com.cotani.economy.account.EconomyAccount(
+    static EconomyAccount accountFromRow(UUID userId, CurrencyId currencyId, Row row) throws SQLException {
+        return new EconomyAccount(
                 userId,
                 currencyId,
                 new BigDecimal(requireString(row, "balance")),
@@ -29,23 +31,66 @@ final class EconomyStorageMappers {
     }
 
     static EconomyTransaction transactionFromRow(Row row) throws SQLException {
-        return new EconomyTransaction(
-                new com.cotani.economy.transaction.EconomyTransactionId(requireUuid(row, "transaction_id")),
-                new com.cotani.economy.transaction.EconomyOperationId(requireUuid(row, "operation_id")),
-                com.cotani.economy.transaction.EconomyTransactionType.valueOf(requireString(row, "type")),
-                row.getUuid("source_user_id"),
-                row.getUuid("target_user_id"),
-                com.cotani.economy.currency.CurrencyId.of(requireString(row, "currency_id")),
-                new BigDecimal(requireString(row, "amount")),
-                stringOrNull(row, "source_balance_before"),
-                stringOrNull(row, "source_balance_after"),
-                stringOrNull(row, "target_balance_before"),
-                stringOrNull(row, "target_balance_after"),
-                new com.cotani.economy.transaction.EconomyReason(
-                        requireString(row, "reason_key"),
-                        requireString(row, "reason_source"),
-                        row.getUuid("reason_actor_user_id")),
-                requireInstant(row, "created_at"));
+        EconomyTransactionId id = new EconomyTransactionId(requireUuid(row, "transaction_id"));
+        EconomyOperationId operationId = new EconomyOperationId(requireUuid(row, "operation_id"));
+        EconomyTransactionType type = EconomyTransactionType.valueOf(requireString(row, "type"));
+        CurrencyId currencyId = CurrencyId.of(requireString(row, "currency_id"));
+        BigDecimal amount = new BigDecimal(requireString(row, "amount"));
+        EconomyReason reason = new EconomyReason(
+                requireString(row, "reason_key"),
+                requireString(row, "reason_source"),
+                row.getUuid("reason_actor_user_id"));
+        Instant createdAt = requireInstant(row, "created_at");
+
+        return switch (type) {
+            case DEPOSIT ->
+                new EconomyTransaction.Deposit(
+                        id,
+                        operationId,
+                        requireUuid(row, "target_user_id"),
+                        currencyId,
+                        amount,
+                        Objects.requireNonNull(stringOrNull(row, "target_balance_before")),
+                        Objects.requireNonNull(stringOrNull(row, "target_balance_after")),
+                        reason,
+                        createdAt);
+            case WITHDRAW ->
+                new EconomyTransaction.Withdraw(
+                        id,
+                        operationId,
+                        requireUuid(row, "source_user_id"),
+                        currencyId,
+                        amount,
+                        Objects.requireNonNull(stringOrNull(row, "source_balance_before")),
+                        Objects.requireNonNull(stringOrNull(row, "source_balance_after")),
+                        reason,
+                        createdAt);
+            case SET ->
+                new EconomyTransaction.Set(
+                        id,
+                        operationId,
+                        requireUuid(row, "target_user_id"),
+                        currencyId,
+                        amount,
+                        Objects.requireNonNull(stringOrNull(row, "target_balance_before")),
+                        Objects.requireNonNull(stringOrNull(row, "target_balance_after")),
+                        reason,
+                        createdAt);
+            case TRANSFER ->
+                new EconomyTransaction.Transfer(
+                        id,
+                        operationId,
+                        requireUuid(row, "source_user_id"),
+                        requireUuid(row, "target_user_id"),
+                        currencyId,
+                        amount,
+                        Objects.requireNonNull(stringOrNull(row, "source_balance_before")),
+                        Objects.requireNonNull(stringOrNull(row, "source_balance_after")),
+                        Objects.requireNonNull(stringOrNull(row, "target_balance_before")),
+                        Objects.requireNonNull(stringOrNull(row, "target_balance_after")),
+                        reason,
+                        createdAt);
+        };
     }
 
     static CompletionStage<Void> insertTransaction(
@@ -100,8 +145,7 @@ final class EconomyStorageMappers {
                                     .toLowerCase(Locale.ROOT)
                                     .contains("unique")) {
                         return java.util.concurrent.CompletableFuture.failedFuture(
-                                new com.cotani.economy.exception.DuplicateEconomyOperationException(
-                                        transaction.operationId()));
+                                new DuplicateEconomyOperationException(transaction.operationId()));
                     }
                     return java.util.concurrent.CompletableFuture.failedFuture(error);
                 });

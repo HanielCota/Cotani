@@ -11,6 +11,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+/**
+ * Bukkit listener that loads player data on join and saves/unloads on quit.
+ *
+ * <p>Behavior is controlled by {@link CacheSettings} lifecycle flags.
+ *
+ * @param <V> the player data type
+ */
 public final class PlayerDataCacheListener<V> implements Listener {
 
     private final PlayerDataCache<V> cache;
@@ -44,16 +51,14 @@ public final class PlayerDataCacheListener<V> implements Listener {
 
         cache.saveAsync(playerId).thenRun(() -> unloadIfNeeded(playerId)).whenComplete((_, error) -> {
             if (error != null) {
-                logger.log(Level.SEVERE, "Could not save player cache entry for " + playerId, error);
+                logger.log(Level.SEVERE, error, () -> "Could not save player cache entry for " + playerId);
             }
         });
     }
 
     private void unloadIfNeeded(UUID playerId) {
-        if (!settings.unloadOnQuit()) {
-            return;
+        if (settings.unloadOnQuit()) {
+            cache.unload(playerId);
         }
-
-        cache.unload(playerId);
     }
 }

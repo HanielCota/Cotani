@@ -56,6 +56,14 @@ public final class RetryPolicy {
                 .build();
     }
 
+    private static double validateJitter(double jitter) {
+        if (jitter < MIN_JITTER || jitter > MAX_JITTER) {
+            throw new IllegalArgumentException("Jitter must be between " + MIN_JITTER + " and " + MAX_JITTER);
+        }
+
+        return jitter;
+    }
+
     public boolean shouldRetry(int attempt, Throwable throwable) {
         if (attempt >= maxAttempts) {
             return false;
@@ -119,14 +127,6 @@ public final class RetryPolicy {
 
     public Predicate<Throwable> retryIf() {
         return retryable;
-    }
-
-    private static double validateJitter(double jitter) {
-        if (jitter < MIN_JITTER || jitter > MAX_JITTER) {
-            throw new IllegalArgumentException("Jitter must be between " + MIN_JITTER + " and " + MAX_JITTER);
-        }
-
-        return jitter;
     }
 
     public static final class Builder {

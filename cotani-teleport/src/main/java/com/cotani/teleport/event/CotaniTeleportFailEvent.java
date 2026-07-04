@@ -1,6 +1,7 @@
 package com.cotani.teleport.event;
 
 import com.cotani.teleport.api.TeleportResult;
+import java.util.Objects;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -12,8 +13,8 @@ public final class CotaniTeleportFailEvent extends Event {
     private final TeleportResult.Failure failure;
 
     public CotaniTeleportFailEvent(Player player, TeleportResult.Failure failure) {
-        this.player = player;
-        this.failure = failure;
+        this.player = Objects.requireNonNull(player, "player");
+        this.failure = Objects.requireNonNull(failure, "failure");
     }
 
     public static HandlerList getHandlerList() {
