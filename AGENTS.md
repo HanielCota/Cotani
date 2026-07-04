@@ -244,6 +244,91 @@ Do not introduce dependencies unless justified.
 
 Do not change formatting-only across unrelated files.
 
+## Using Cotani Modules
+
+When generating or modifying code that consumes Cotani APIs, follow these module-specific patterns.
+
+### General rules
+
+1. Prefer `CompletionStage` over `CompletableFuture` in public APIs; use `CompletableFuture` only when the upstream API requires it.
+2. Capture immutable identifiers (`UUID`, value objects) before leaving the main thread.
+3. Return to the main thread through `PaperTaskScheduler` or `TaskChain` before touching Bukkit/Paper objects.
+4. Never expose mutable internal collections; return `List.copyOf`, `Set.copyOf` or `Map.copyOf`.
+5. Never return `null` from public methods; use `Optional` for expected absence.
+6. Use constructor injection; do not use `JavaPlugin` as a service locator.
+7. Close resources created during startup via `Cotani.forPlugin(...)`.
+
+### cotani-task
+
+- Create the scheduler once in the plugin `onEnable`: `PaperTaskScheduler scheduler = SchedulerFactory.create(plugin);`.
+- Use `TaskChain` for async→global/region/entity transitions instead of manual `Bukkit.getScheduler()` calls.
+- Apply `timeout(...)` and `retry(...)` only to idempotent operations.
+- Use named tasks (`async("name", ...)`) to improve metrics and debugging.
+- Do not call `future.join()` or `future.get()` to extract results.
+
+### cotani-cache
+
+- Implement `CacheRepository<K, V>` for persistence; never access Bukkit/Paper APIs from its methods.
+- Use `updateAsync` for immutable values and `mutateAsync` for mutable values.
+- Always call `cache.close()` on shutdown; dirty entries are saved automatically.
+- Prefer `PlayerDataCache` for player-bound data; use `DataCache` for generic key-value pairs.
+- Avoid `cache.get()` on a key that is not loaded; use `getOrLoadAsync` or `find`.
+
+### cotani-config
+
+- Represent configuration as `record`s with `@Default`, `@Required`, `@Range` and `@ConfigPath`.
+- Validate on load and report issues instead of silently falling back.
+- Use `reloadAsync()` and rebind configs inside the completion stage.
+- Do not mutate bound config records; reload and rebind when values change.
+
+### cotani-storage
+
+- Start storage asynchronously: `storage.startAsync().thenAccept(...)`. Do not call `.join()`.
+- Keep repositories in the `repository` package and extend `CotaniRepository`.
+- Use `TransactionManager` for operations that touch multiple rows/tables.
+- Never call `QueryExecutor` or repository methods from the main thread directly; compose through `CompletionStage`.
+- Register migrations in creation order; do not skip versions.
+
+### cotani-user
+
+- Resolve users through `UserService` (`findAsync`, `getOrThrowAsync`) instead of calling `Bukkit.getOfflinePlayer` in async flows.
+- Do not store live `Player` references in services; store `UUID` and re-resolve on the main thread when needed.
+
+### cotani-economy
+
+- Always pass an `EconomyOperationId` for idempotency; generate it before calling the service.
+- Use `EconomyReason` to tag the cause of transactions.
+- Handle domain exceptions (`InsufficientFundsException`, `InvalidAmountException`, etc.) in the async pipeline.
+- Do not manipulate balances directly; route every change through `EconomyService`.
+
+### cotani-teleport
+
+- Use `TeleportRequest.builder()` and explicit `TeleportOptions` for every teleport.
+- Provide real `CombatAdapter` and `RegionProtectionAdapter` integrations; do not rely on the noop defaults in production.
+- Handle both `TeleportResult.Success` and `TeleportResult.Failure` in the completion stage.
+- Prefer `CotaniTeleports.create(...)` over the deprecated static `CotaniTeleport` facade.
+
+## Anti-patterns by module
+
+| Module | Do not | Do instead |
+|--------|--------|------------|
+| task | `future.join()` / `future.get()` | compose with `thenApply` / `thenCompose` |
+| task | `Bukkit.getScheduler().runTask(...)` manually | use `scheduler.global(...)` or `TaskChain` |
+| cache | `cache.get(player)` before load | `getOrLoadAsync(...)` |
+| cache | manual dirty checks | rely on `markDirty` / autosave |
+| config | mutable config classes | immutable `record`s |
+| config | sync file reload on main thread | `reloadAsync()` |
+| storage | call `.start()` synchronously | `startAsync()` |
+| storage | raw `Statement`/`ResultSet` in services | use `TableQuery` / repositories |
+| user | store `Player` in async flows | store `UUID`, resolve on main thread |
+| economy | reuse the same `EconomyOperationId` for different operations | one unique id per logical operation |
+| teleport | call `player.teleport(...)` directly | use `TeleportService.teleport(...)` |
+| teleport | ignore `TeleportResult.Failure` | handle failure reason and notify player |
+
+## Agent Cookbook
+
+See [`docs/ai/cotani-cookbook.md`](docs/ai/cotani-cookbook.md) for copy-paste recipes covering common plugin scenarios (player data cache, economy command, teleport command, config reload, etc.).
+
 ## Review Output
 
 When reviewing code, structure the response as:
