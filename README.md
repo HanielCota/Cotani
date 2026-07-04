@@ -1,5 +1,17 @@
 # Cotani
 
+```text
+                  _______________
+             _.-''               ``-._
+          .-'     ___         ___     `-.
+        ,'       /   \       /   \       `.
+       /       ||     ||   ||     ||       \
+ _____/________||_____||___||_____||________\_____
+|    ____      |                   |      ____    |
+|___/    \_____|___________________|_____/    \___|
+     \____/                               \____/
+```
+
 > Biblioteca modular para desenvolvimento de plugins **Paper/Spigot** em Java, com foco em arquitetura limpa, execução assíncrona segura e APIs previsíveis.
 
 [![Build](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/build.yml?logo=github&label=build)](https://github.com/HanielCota/Cotani/actions)
