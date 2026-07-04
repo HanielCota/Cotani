@@ -1,18 +1,22 @@
 # cotani-config
 
-Módulo de configuração moderno para plugins Paper.
+Módulo de configuração moderno para plugins Paper. Suporta YAML, binding para `record`, validação, serializers extensíveis e reload assíncrono.
 
-## Objetivos
+## Responsabilidade
 
-- YAML simples para plugins Minecraft.
-- Binding para `record`.
-- Configs imutáveis no uso.
-- Reload assíncrono.
-- Validação com erros claros.
-- Serializers extensíveis.
-- Integração com Adventure `Component` e MiniMessage.
-- Código organizado por responsabilidade.
-- Fluxo baseado em early return.
+- Ler e escrever arquivos YAML de forma tipada.
+- Fazer binding automático de configurações para `record`s Java.
+- Validar valores com anotações (`@Default`, `@Required`, `@Range`, etc.).
+- Suportar reload assíncrono via `TaskChain`.
+- Permitir serializers customizados para tipos de domínio.
+
+## Stack
+
+- Java 21+
+- Paper API (Bukkit YAML)
+- Adventure `Component` / MiniMessage
+- JSpecify
+- `cotani-core`, `cotani-task`, `cotani-text`
 
 ## Uso básico
 
@@ -30,58 +34,130 @@ PluginSettings settings = configs.file("config.yml")
 
 ```java
 public record PluginSettings(
-    @Default("false")
-    boolean debug,
-
-    @Default("5m")
-    Duration autosave,
-
+    @Default("false") boolean debug,
+    @Default("5m") Duration autosave,
     MessageSettings messages
-) {
-}
+) {}
 
 public record MessageSettings(
     @Default("<green>Cotani</green> <dark_gray>»</dark_gray>")
     Component prefix
-) {
-}
+) {}
 ```
 
 ## Reload assíncrono
 
 ```java
 configs.reloadAsync()
-    .thenEntity(player, unused -> {
+    .thenRun(() -> {
         this.settings = configs.file("config.yml").bindOrThrow(PluginSettings.class);
-        player.sendMessage(Component.text("Config recarregada.", NamedTextColor.GREEN));
+        // atualize estado seguro
     })
-    .onFailureEntity(player, error -> {
-        player.sendMessage(Component.text("Erro ao recarregar config.", NamedTextColor.RED));
+    .toCompletionStage()
+    .whenComplete((_, error) -> {
+        if (error != null) {
+            plugin.getLogger().log(Level.SEVERE, "Falha ao recarregar config", error);
+        }
     });
+```
+
+## Validação
+
+```java
+ValidationResult result = configs.file("config.yml").validate(PluginSettings.class);
+if (!result.valid()) {
+    for (ConfigIssue issue : result.issues()) {
+        plugin.getLogger().warning(issue.path() + ": " + issue.message());
+    }
+}
 ```
 
 ## Anotações
 
-- `@Default("valor")`
-- `@Required`
-- `@Range(min = 1, max = 6)`
-- `@ConfigPath("custom-path")`
-- `@ConfigType("MYSQL")`
+| Anotação | Descrição |
+|----------|-----------|
+| `@Default("valor")` | Valor padrão quando a chave está ausente. |
+| `@Required` | Campo obrigatório. |
+| `@Range(min = 1, max = 6)` | Valida intervalo numérico. |
+| `@ConfigPath("custom-path")` | Mapeia para um caminho YAML diferente. |
+| `@ConfigType("MYSQL")` | Seleciona implementação de `sealed interface`. |
 
 ## Tipos suportados por padrão
 
-- `String`
-- `int`, `long`, `double`, `float`, `boolean`
-- `Duration`
-- `Path`
-- `UUID`
-- `Component`
-- `Material`
-- `Sound`
-- `NamespacedKey`
-- `Key`
+- `String`, `int`, `long`, `double`, `float`, `boolean`
+- `Duration`, `Path`, `UUID`
+- `Component` (MiniMessage)
+- `Material`, `Sound`, `NamespacedKey`, `Key`
 - `Enum`
-- `List<T>`
-- `Map<String, T>`
+- `List<T>`, `Map<String, T>`
 - `record`
 - `sealed interface` com `@ConfigType`
+
+## API pública
+
+| Classe/Interface | Descrição |
+|------------------|-----------|
+| `CotaniConfigs` | Fachada para gerenciar múltiplos arquivos de config. |
+| `CotaniConfig` | Acesso a um arquivo YAML específico. |
+| `CotaniConfigsBuilder` | Builder fluente. |
+| `RecordConfigBinder` / `ConfigBinder` | Binding de records para config. |
+| `ConfigSerializer` / `ConfigSerializerRegistry` | Serializers customizados. |
+| `ConfigValue` / `ConfigSection` | Acesso dinâmico a valores e seções. |
+| `ValidationResult` / `ConfigIssue` / `ConfigValidator` | Validação de configurações. |
+| `ConfigException` / `ConfigValidationException` | Exceções. |
+
+## Estrutura de pacotes
+
+```text
+com.cotani.config
+├── CotaniConfigs.java
+├── CotaniConfig.java
+├── CotaniConfigsBuilder.java
+├── impl
+│   ├── DefaultCotaniConfigs.java
+│   └── DefaultCotaniConfig.java
+├── binder
+│   ├── ConfigBinder.java
+│   └── RecordConfigBinder.java
+├── serializer
+│   ├── ConfigSerializer.java
+│   ├── ConfigSerializerRegistry.java
+│   └── defaults
+│       ├── ComponentSerializer.java
+│       ├── DurationSerializer.java
+│       ├── MaterialSerializer.java
+│       └── ...
+├── validation
+│   ├── ConfigValidator.java
+│   ├── ValidationResult.java
+│   └── ConfigIssue.java
+├── value
+│   └── ConfigValue.java
+├── section
+│   └── ConfigSection.java
+├── source
+│   ├── ConfigSource.java
+│   └── BukkitYamlConfigSource.java
+├── annotation
+│   ├── Default.java
+│   ├── Required.java
+│   ├── Range.java
+│   ├── ConfigPath.java
+│   └── ConfigType.java
+└── exception
+    ├── ConfigException.java
+    └── ConfigValidationException.java
+```
+
+## Dependência Gradle
+
+```kotlin
+dependencies {
+    api(project(":config"))
+}
+```
+
+## Integração
+
+- Usa `cotani-text` para parsing de `Component`.
+- Usa `cotani-task` para reload assíncrono.
