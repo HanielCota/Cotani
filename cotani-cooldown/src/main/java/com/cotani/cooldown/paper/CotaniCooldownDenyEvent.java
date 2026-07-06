@@ -1,6 +1,6 @@
 package com.cotani.cooldown.paper;
 
-import com.cotani.cooldown.CooldownKey;
+import com.cotani.cooldown.api.CooldownKey;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;

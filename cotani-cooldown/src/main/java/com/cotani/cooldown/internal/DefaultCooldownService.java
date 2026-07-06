@@ -1,5 +1,6 @@
-package com.cotani.cooldown;
+package com.cotani.cooldown.internal;
 
+import com.cotani.cooldown.api.*;
 import java.time.Clock;
 import java.util.Objects;
 

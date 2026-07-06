@@ -1,3 +1,3 @@
-package com.cotani.cooldown;
+package com.cotani.cooldown.api;
 
 public record GlobalCooldownTarget() implements CooldownTarget {}

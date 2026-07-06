@@ -1,4 +1,4 @@
-package com.cotani.cooldown;
+package com.cotani.cooldown.api;
 
 public enum CooldownState {
     ALLOWED,

@@ -1,11 +1,11 @@
 package com.cotani.cooldown.cache;
 
 import com.cotani.cache.api.PlayerDataCache;
-import com.cotani.cooldown.CooldownEntry;
-import com.cotani.cooldown.CooldownKey;
-import com.cotani.cooldown.CooldownResult;
-import com.cotani.cooldown.CooldownStore;
-import com.cotani.cooldown.UserCooldownTarget;
+import com.cotani.cooldown.api.CooldownEntry;
+import com.cotani.cooldown.api.CooldownKey;
+import com.cotani.cooldown.api.CooldownResult;
+import com.cotani.cooldown.api.CooldownStore;
+import com.cotani.cooldown.api.UserCooldownTarget;
 import com.cotani.cooldown.paper.CotaniCooldownDenyEvent;
 import com.cotani.cooldown.paper.CotaniCooldownStartEvent;
 import java.time.Clock;

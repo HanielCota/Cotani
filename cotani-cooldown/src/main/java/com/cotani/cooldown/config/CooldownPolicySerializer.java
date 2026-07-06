@@ -2,7 +2,7 @@ package com.cotani.cooldown.config;
 
 import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
-import com.cotani.cooldown.CooldownPolicy;
+import com.cotani.cooldown.api.CooldownPolicy;
 import java.time.Duration;
 import java.util.Objects;
 import org.jspecify.annotations.NullMarked;

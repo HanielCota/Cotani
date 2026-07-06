@@ -1,10 +1,10 @@
 package com.cotani.cooldown.cache;
 
 import com.cotani.cache.repository.CacheRepository;
-import com.cotani.cooldown.CooldownAction;
-import com.cotani.cooldown.CooldownEntry;
-import com.cotani.cooldown.CooldownKey;
-import com.cotani.cooldown.CooldownTargets;
+import com.cotani.cooldown.api.CooldownAction;
+import com.cotani.cooldown.api.CooldownEntry;
+import com.cotani.cooldown.api.CooldownKey;
+import com.cotani.cooldown.api.CooldownTargets;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.query.SqlConsumer;

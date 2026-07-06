@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 import com.cotani.cache.api.PlayerDataCache;
+import com.cotani.cooldown.api.*;
 import com.cotani.cooldown.cache.CacheCooldownStore;
 import com.cotani.cooldown.cache.PlayerCooldowns;
+import com.cotani.cooldown.internal.*;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

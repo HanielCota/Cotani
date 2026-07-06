@@ -1,6 +1,6 @@
 package com.cotani.cooldown.cache;
 
-import com.cotani.cooldown.CooldownEntry;
+import com.cotani.cooldown.api.CooldownEntry;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;

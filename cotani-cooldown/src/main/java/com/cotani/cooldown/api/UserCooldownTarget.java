@@ -1,4 +1,4 @@
-package com.cotani.cooldown;
+package com.cotani.cooldown.api;
 
 import java.util.Objects;
 import java.util.UUID;
