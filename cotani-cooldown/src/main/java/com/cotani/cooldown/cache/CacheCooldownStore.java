@@ -92,27 +92,49 @@ public final class CacheCooldownStore implements CooldownStore {
 
         CooldownResult result;
         if (key.target() instanceof UserCooldownTarget(UUID userId)) {
-            PlayerCooldowns playerCooldowns = playerCache.get(userId);
-            Instant now = clock.instant();
-            CooldownEntry current =
-                    playerCooldowns.activeCooldowns().get(key.action().value());
+            Optional<PlayerCooldowns> optional = playerCache.find(userId);
+            if (optional.isPresent()) {
+                PlayerCooldowns playerCooldowns = optional.get();
+                Instant now = clock.instant();
+                CooldownEntry current =
+                        playerCooldowns.activeCooldowns().get(key.action().value());
 
-            if (current != null && !current.expired(clock)) {
-                result = CooldownResult.denied(key, current.remaining(clock), current.expiresAt());
+                if (current != null && !current.expired(now)) {
+                    result = CooldownResult.denied(key, current.remaining(now), current.expiresAt());
+                } else {
+                    Instant expiresAt = now.plus(duration);
+                    CooldownEntry created = new CooldownEntry(key, now, expiresAt);
+                    playerCooldowns.activeCooldowns().put(key.action().value(), created);
+                    playerCache.markDirty(userId);
+                    result = CooldownResult.allowed(key);
+                }
             } else {
-                Instant expiresAt = now.plus(duration);
-                CooldownEntry created = new CooldownEntry(key, now, expiresAt);
-                playerCooldowns.activeCooldowns().put(key.action().value(), created);
-                playerCache.markDirty(userId);
-                result = CooldownResult.allowed(key);
+                Instant now = clock.instant();
+                AtomicReference<CooldownResult> resultReference = new AtomicReference<>();
+
+                nonPlayerEntries.compute(key, (ignored, current) -> {
+                    if (current != null && !current.expired(now)) {
+                        resultReference.set(CooldownResult.denied(key, current.remaining(now), current.expiresAt()));
+
+                        return current;
+                    }
+
+                    Instant expiresAt = now.plus(duration);
+                    CooldownEntry created = new CooldownEntry(key, now, expiresAt);
+                    resultReference.set(CooldownResult.allowed(key));
+
+                    return created;
+                });
+
+                result = Objects.requireNonNull(resultReference.get());
             }
         } else {
             Instant now = clock.instant();
             AtomicReference<CooldownResult> resultReference = new AtomicReference<>();
 
             nonPlayerEntries.compute(key, (ignored, current) -> {
-                if (current != null && !current.expired(clock)) {
-                    resultReference.set(CooldownResult.denied(key, current.remaining(clock), current.expiresAt()));
+                if (current != null && !current.expired(now)) {
+                    resultReference.set(CooldownResult.denied(key, current.remaining(now), current.expiresAt()));
 
                     return current;
                 }
