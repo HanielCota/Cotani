@@ -57,13 +57,14 @@ public final class DefaultCooldownOperation implements CooldownOperation {
         }
 
         CooldownEntry entry = optionalEntry.get();
+        Instant now = clock.instant();
 
-        if (entry.expired(clock)) {
+        if (entry.expired(now)) {
             store.remove(key);
             return CooldownResult.allowed(key);
         }
 
-        return CooldownResult.denied(key, entry.remaining(clock), entry.expiresAt());
+        return CooldownResult.denied(key, entry.remaining(now), entry.expiresAt());
     }
 
     @Override

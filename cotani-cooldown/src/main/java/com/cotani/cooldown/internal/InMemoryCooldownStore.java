@@ -40,7 +40,8 @@ public final class InMemoryCooldownStore implements CooldownStore {
     public void removeExpired(Clock clock) {
         Objects.requireNonNull(clock, "clock cannot be null");
 
-        entries.entrySet().removeIf(entry -> entry.getValue().expired(clock));
+        Instant now = clock.instant();
+        entries.entrySet().removeIf(entry -> entry.getValue().expired(now));
     }
 
     @Override

@@ -75,7 +75,8 @@ public final class CacheCooldownStore implements CooldownStore {
     @Override
     public void removeExpired(Clock clock) {
         Objects.requireNonNull(clock, "clock");
-        nonPlayerEntries.entrySet().removeIf(entry -> entry.getValue().expired(clock));
+        Instant now = clock.instant();
+        nonPlayerEntries.entrySet().removeIf(entry -> entry.getValue().expired(now));
     }
 
     @Override

@@ -46,8 +46,12 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
                             expiresAt);
                 })
                 .thenApply(entries -> {
+                    Instant now = Instant.now();
                     Map<String, CooldownEntry> map = new ConcurrentHashMap<>();
                     for (CooldownEntry entry : entries) {
+                        if (entry.expired(now)) {
+                            continue;
+                        }
                         map.put(entry.key().action().value(), entry);
                     }
                     return Optional.of(new PlayerCooldowns(playerId, map));
@@ -66,8 +70,12 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
 
             return tx.update(deleteSql, binder -> binder.string(playerId.toString()))
                     .thenCompose(_ -> {
+                        Instant now = Instant.now();
                         List<SqlConsumer<ParameterBinder>> binders = new ArrayList<>();
                         for (CooldownEntry entry : value.activeCooldowns().values()) {
+                            if (entry.expired(now)) {
+                                continue;
+                            }
                             binders.add(binder -> {
                                 String cooldownId = "USER:" + playerId + ":"
                                         + entry.key().action().value();

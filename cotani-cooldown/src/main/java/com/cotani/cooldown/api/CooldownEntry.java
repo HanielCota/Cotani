@@ -17,19 +17,31 @@ public record CooldownEntry(CooldownKey key, Instant startedAt, Instant expiresA
         }
     }
 
+    public boolean expired(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        return !expiresAt.isAfter(now);
+    }
+
     public boolean expired(Clock clock) {
         Objects.requireNonNull(clock, "clock cannot be null");
 
-        return !expiresAt.isAfter(clock.instant());
+        return expired(clock.instant());
+    }
+
+    public Duration remaining(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        if (expired(now)) {
+            return Duration.ZERO;
+        }
+
+        return Duration.between(now, expiresAt);
     }
 
     public Duration remaining(Clock clock) {
         Objects.requireNonNull(clock, "clock cannot be null");
 
-        if (expired(clock)) {
-            return Duration.ZERO;
-        }
-
-        return Duration.between(clock.instant(), expiresAt);
+        return remaining(clock.instant());
     }
 }
