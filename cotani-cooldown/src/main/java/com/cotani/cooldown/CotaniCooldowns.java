@@ -4,8 +4,9 @@ import com.cotani.cache.api.PlayerDataCache;
 import com.cotani.cooldown.api.CooldownService;
 import com.cotani.cooldown.cache.PlayerCooldowns;
 import com.cotani.cooldown.internal.DefaultCooldownService;
-import java.util.Objects;
 import org.jspecify.annotations.NullMarked;
+
+import java.util.Objects;
 
 @NullMarked
 public final class CotaniCooldowns {

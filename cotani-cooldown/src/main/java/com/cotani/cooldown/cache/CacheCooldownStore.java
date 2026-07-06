@@ -1,11 +1,7 @@
 package com.cotani.cooldown.cache;
 
 import com.cotani.cache.api.PlayerDataCache;
-import com.cotani.cooldown.api.CooldownEntry;
-import com.cotani.cooldown.api.CooldownKey;
-import com.cotani.cooldown.api.CooldownResult;
-import com.cotani.cooldown.api.CooldownStore;
-import com.cotani.cooldown.api.UserCooldownTarget;
+import com.cotani.cooldown.api.*;
 import com.cotani.cooldown.paper.CotaniCooldownDenyEvent;
 import com.cotani.cooldown.paper.CotaniCooldownStartEvent;
 import java.time.Clock;
@@ -13,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,13 +30,10 @@ public final class CacheCooldownStore implements CooldownStore {
     public Optional<CooldownEntry> find(CooldownKey key) {
         Objects.requireNonNull(key, "key");
 
-        if (key.target() instanceof UserCooldownTarget userTarget) {
-            Optional<PlayerCooldowns> optional = playerCache.find(userTarget.userId());
-            if (optional.isPresent()) {
-                return Optional.ofNullable(
-                        optional.get().activeCooldowns().get(key.action().value()));
-            }
-            return Optional.empty();
+        if (key.target() instanceof UserCooldownTarget(UUID userId)) {
+            Optional<PlayerCooldowns> optional = playerCache.find(userId);
+            return optional.map(playerCooldowns ->
+                    playerCooldowns.activeCooldowns().get(key.action().value()));
         }
 
         return Optional.ofNullable(nonPlayerEntries.get(key));
@@ -50,11 +44,11 @@ public final class CacheCooldownStore implements CooldownStore {
         Objects.requireNonNull(entry, "entry");
 
         CooldownKey key = entry.key();
-        if (key.target() instanceof UserCooldownTarget userTarget) {
-            Optional<PlayerCooldowns> optional = playerCache.find(userTarget.userId());
+        if (key.target() instanceof UserCooldownTarget(UUID userId)) {
+            Optional<PlayerCooldowns> optional = playerCache.find(userId);
             if (optional.isPresent()) {
                 optional.get().activeCooldowns().put(key.action().value(), entry);
-                playerCache.markDirty(userTarget.userId());
+                playerCache.markDirty(userId);
             }
             return;
         }
@@ -66,11 +60,11 @@ public final class CacheCooldownStore implements CooldownStore {
     public void remove(CooldownKey key) {
         Objects.requireNonNull(key, "key");
 
-        if (key.target() instanceof UserCooldownTarget userTarget) {
-            Optional<PlayerCooldowns> optional = playerCache.find(userTarget.userId());
+        if (key.target() instanceof UserCooldownTarget(UUID userId)) {
+            Optional<PlayerCooldowns> optional = playerCache.find(userId);
             if (optional.isPresent()) {
                 if (optional.get().activeCooldowns().remove(key.action().value()) != null) {
-                    playerCache.markDirty(userTarget.userId());
+                    playerCache.markDirty(userId);
                 }
             }
             return;
@@ -97,8 +91,8 @@ public final class CacheCooldownStore implements CooldownStore {
         Objects.requireNonNull(clock, "clock");
 
         CooldownResult result;
-        if (key.target() instanceof UserCooldownTarget userTarget) {
-            PlayerCooldowns playerCooldowns = playerCache.get(userTarget.userId());
+        if (key.target() instanceof UserCooldownTarget(UUID userId)) {
+            PlayerCooldowns playerCooldowns = playerCache.get(userId);
             Instant now = clock.instant();
             CooldownEntry current =
                     playerCooldowns.activeCooldowns().get(key.action().value());
@@ -109,7 +103,7 @@ public final class CacheCooldownStore implements CooldownStore {
                 Instant expiresAt = now.plus(duration);
                 CooldownEntry created = new CooldownEntry(key, now, expiresAt);
                 playerCooldowns.activeCooldowns().put(key.action().value(), created);
-                playerCache.markDirty(userTarget.userId());
+                playerCache.markDirty(userId);
                 result = CooldownResult.allowed(key);
             }
         } else {

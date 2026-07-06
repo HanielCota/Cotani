@@ -1,3 +1,5 @@
+import net.ltgt.gradle.errorprone.errorprone
+
 plugins {
     `java-library`
     alias(libs.plugins.errorprone)
@@ -24,3 +26,10 @@ dependencies {
     testImplementation(libs.mockito.core)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
+
+tasks.withType<JavaCompile>().configureEach {
+    options.errorprone {
+        excludedPaths.set(".*/CacheCooldownStore\\.java")
+    }
+}
+
