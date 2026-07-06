@@ -1,16 +1,8 @@
 # Cotani
 
-```text
-                  _______________
-             _.-''               ``-._
-          .-'     ___         ___     `-.
-        ,'       /   \       /   \       `.
-       /       ||     ||   ||     ||       \
- _____/________||_____||___||_____||________\_____
-|    ____      |                   |      ____    |
-|___/    \_____|___________________|_____/    \___|
-     \____/                               \____/
-```
+<p align="center">
+  <img src="logo.png" alt="Cotani logo" width="320">
+</p>
 
 > Biblioteca modular para desenvolvimento de plugins **Paper/Spigot** em Java, com foco em arquitetura limpa, execução assíncrona segura e APIs previsíveis.
 

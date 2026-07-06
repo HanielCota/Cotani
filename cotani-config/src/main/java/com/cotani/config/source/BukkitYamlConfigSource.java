@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -20,7 +21,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     private final Path path;
     private final boolean createMissing;
     private final boolean copyDefaults;
-    private volatile boolean defaultsApplied;
+    private final AtomicBoolean defaultsApplied = new AtomicBoolean(false);
     private YamlConfiguration yaml = new YamlConfiguration();
 
     public BukkitYamlConfigSource(
@@ -170,7 +171,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     }
 
     private @Nullable ConfigurationSection sectionAt(String path) {
-        if (path == null || path.isBlank()) {
+        if (path.isBlank()) {
             return yaml;
         }
         return yaml.getConfigurationSection(path);
@@ -205,25 +206,25 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     }
 
     private void loadDefaultsWhenNeeded() {
-        if (!copyDefaults || defaultsApplied) {
+        if (!copyDefaults || defaultsApplied.get()) {
             return;
         }
 
         YamlConfiguration defaults = loadDefaultsResource();
         if (defaults == null) {
-            defaultsApplied = true;
+            defaultsApplied.set(true);
             return;
         }
 
         lock.writeLock().lock();
         try {
-            if (defaultsApplied) {
+            if (defaultsApplied.get()) {
                 return;
             }
             var beforeKeys = yaml.getKeys(true).size();
             yaml.setDefaults(defaults);
             yaml.options().copyDefaults(true);
-            defaultsApplied = true;
+            defaultsApplied.set(true);
             var addedKeys = yaml.getKeys(true).size() - beforeKeys;
             if (addedKeys > 0 && createMissing) {
                 yaml.save(path.toFile());

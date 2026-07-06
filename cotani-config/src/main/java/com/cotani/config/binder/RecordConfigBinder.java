@@ -359,7 +359,7 @@ public final class RecordConfigBinder implements ConfigBinder {
         }
 
         private String relativePath(String requestedPath) {
-            if (requestedPath == null || requestedPath.isBlank()) {
+            if (requestedPath.isBlank()) {
                 return "";
             }
             if (requestedPath.equals(rootPath)) {

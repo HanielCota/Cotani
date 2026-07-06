@@ -12,7 +12,7 @@ public final class PendingTeleportStateMachine {
     private final PendingTeleportData data;
     private final AtomicReference<PendingTeleportState> state = new AtomicReference<>(PendingTeleportState.WAITING);
     private final AtomicReference<@Nullable TeleportCancelReason> cancelReason = new AtomicReference<>();
-    private volatile SchedulerTask task = SchedulerTask.noop();
+    private final AtomicReference<SchedulerTask> task = new AtomicReference<>(SchedulerTask.noop());
 
     public PendingTeleportStateMachine(PendingTeleportData data) {
         this.data = data;
@@ -31,7 +31,7 @@ public final class PendingTeleportStateMachine {
     }
 
     public void attachTask(SchedulerTask task) {
-        this.task = task;
+        this.task.set(Objects.requireNonNull(task, "task"));
         if (state.get() != PendingTeleportState.WAITING) {
             task.cancel();
         }
@@ -50,7 +50,7 @@ public final class PendingTeleportStateMachine {
         boolean changed = state.compareAndSet(PendingTeleportState.WAITING, PendingTeleportState.CANCELLED);
         if (changed) {
             cancelReason.set(reason);
-            task.cancel();
+            Objects.requireNonNull(task.get()).cancel();
         }
         return changed;
     }
@@ -60,7 +60,7 @@ public final class PendingTeleportStateMachine {
         boolean changed = state.compareAndSet(PendingTeleportState.EXECUTING, PendingTeleportState.CANCELLED);
         if (changed) {
             cancelReason.set(reason);
-            task.cancel();
+            Objects.requireNonNull(task.get()).cancel();
         }
         return changed;
     }

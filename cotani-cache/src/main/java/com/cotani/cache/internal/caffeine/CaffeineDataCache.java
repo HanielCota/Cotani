@@ -13,7 +13,6 @@ import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.util.CompletionStages;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import java.util.Map;
 import java.util.Objects;
@@ -210,14 +209,9 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     }
 
     private AsyncLoadingCache<K, CacheEntry<V>> createCache(CacheSettings settings) {
-        var builder = Caffeine.newBuilder()
-                .maximumSize(settings.maximumSize())
-                .removalListener(new RemovalListener<K, CacheEntry<V>>() {
-                    @Override
-                    public void onRemoval(@Nullable K key, @Nullable CacheEntry<V> entry, RemovalCause cause) {
-                        CaffeineDataCache.this.onRemoval(key, entry);
-                    }
-                });
+        var builder = Caffeine.newBuilder().maximumSize(settings.maximumSize()).removalListener((RemovalListener<
+                        K, CacheEntry<V>>)
+                (key, entry, cause) -> CaffeineDataCache.this.onRemoval(key, entry));
 
         if (settings.expireAfterAccessEnabled()) {
             builder.expireAfterAccess(settings.expireAfterAccess());

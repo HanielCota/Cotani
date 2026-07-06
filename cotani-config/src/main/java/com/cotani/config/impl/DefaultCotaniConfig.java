@@ -57,18 +57,11 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     @Override
     public void set(String path, Object value) {
-        if (value == null) {
-            source.set(path, null);
-            return;
-        }
         source.set(path, serializers.serialize(value));
     }
 
     @Override
     public void setIfMissing(String path, Object value) {
-        if (value == null) {
-            return;
-        }
         source.setIfMissing(path, serializers.serialize(value));
     }
 

@@ -15,7 +15,6 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.Nullable;
 
 final class EconomyStorageMappers {
 
@@ -163,11 +162,8 @@ final class EconomyStorageMappers {
         return Objects.requireNonNull(row.getInstant(column), column);
     }
 
-    private static @Nullable BigDecimal stringOrNull(Row row, String column) throws SQLException {
+    private static BigDecimal stringOrNull(Row row, String column) throws SQLException {
         String raw = row.getString(column);
-        if (raw == null) {
-            return null;
-        }
         return new BigDecimal(raw);
     }
 }

@@ -35,7 +35,7 @@ public final class CotaniConfigsBuilder {
     }
 
     public CotaniConfigsBuilder file(String name) {
-        if (name == null || name.isBlank()) {
+        if (name.isBlank()) {
             throw new IllegalArgumentException("file name must not be null or blank");
         }
         if (files.contains(name)) {

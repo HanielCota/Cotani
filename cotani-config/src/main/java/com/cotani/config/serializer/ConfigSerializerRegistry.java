@@ -4,12 +4,14 @@ import com.cotani.config.exception.ConfigException;
 import com.cotani.config.serializer.defaults.*;
 import com.cotani.config.value.ConfigValue;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 public final class ConfigSerializerRegistry {
 
-    private volatile Map<Class<?>, ConfigSerializer<?>> serializers = new LinkedHashMap<>();
+    private final AtomicReference<Map<Class<?>, ConfigSerializer<?>>> serializers =
+            new AtomicReference<>(new LinkedHashMap<>());
     private final ClassValue<Optional<ConfigSerializer<?>>> resolvedCache = new ClassValue<>() {
         @Override
         protected Optional<ConfigSerializer<?>> computeValue(Class<?> type) {
@@ -38,9 +40,9 @@ public final class ConfigSerializerRegistry {
 
     public <T> void register(ConfigSerializer<T> serializer) {
         synchronized (this) {
-            var next = new LinkedHashMap<>(serializers);
+            var next = new LinkedHashMap<>(Objects.requireNonNull(serializers.get()));
             next.put(serializer.type(), serializer);
-            serializers = Collections.unmodifiableMap(next);
+            serializers.set(Collections.unmodifiableMap(next));
         }
     }
 
@@ -49,11 +51,12 @@ public final class ConfigSerializerRegistry {
     }
 
     private @Nullable ConfigSerializer<?> resolve(Class<?> wrapped) {
-        ConfigSerializer<?> serializer = serializers.get(wrapped);
+        var currentSerializers = Objects.requireNonNull(serializers.get());
+        ConfigSerializer<?> serializer = currentSerializers.get(wrapped);
         if (serializer != null) {
             return serializer;
         }
-        for (var entry : serializers.entrySet()) {
+        for (var entry : currentSerializers.entrySet()) {
             if (entry.getKey().isAssignableFrom(wrapped)) {
                 return entry.getValue();
             }

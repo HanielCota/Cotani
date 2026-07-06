@@ -1,13 +1,15 @@
 package com.cotani.teleport.api;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings("DeprecatedIsStillUsed")
 public final class CotaniTeleport {
 
-    private static volatile @Nullable TeleportService teleportService;
-    private static volatile @Nullable PendingTeleportService pendingTeleportService;
+    private static final AtomicReference<@Nullable TeleportService> teleportService = new AtomicReference<>();
+    private static final AtomicReference<@Nullable PendingTeleportService> pendingTeleportService =
+            new AtomicReference<>();
 
     private CotaniTeleport() {}
 
@@ -18,12 +20,12 @@ public final class CotaniTeleport {
     public static void init(TeleportService teleports, PendingTeleportService pendingTeleports) {
         Objects.requireNonNull(teleports, "teleports");
         Objects.requireNonNull(pendingTeleports, "pendingTeleports");
-        if (teleportService != null || pendingTeleportService != null) {
+        if (teleportService.get() != null || pendingTeleportService.get() != null) {
             throw new IllegalStateException(
                     "CotaniTeleport is already initialized; call shutdown() before re-initializing.");
         }
-        teleportService = teleports;
-        pendingTeleportService = pendingTeleports;
+        teleportService.set(teleports);
+        pendingTeleportService.set(pendingTeleports);
     }
 
     /**
@@ -31,7 +33,7 @@ public final class CotaniTeleport {
      */
     @Deprecated(since = "1.0")
     public static TeleportService teleports() {
-        TeleportService service = teleportService;
+        TeleportService service = teleportService.get();
         if (service == null) {
             throw new IllegalStateException("CotaniTeleport ainda não foi inicializado.");
         }
@@ -43,7 +45,7 @@ public final class CotaniTeleport {
      */
     @Deprecated(since = "1.0")
     public static PendingTeleportService pendingTeleports() {
-        PendingTeleportService service = pendingTeleportService;
+        PendingTeleportService service = pendingTeleportService.get();
         if (service == null) {
             throw new IllegalStateException("CotaniTeleport ainda não foi inicializado.");
         }
@@ -55,7 +57,7 @@ public final class CotaniTeleport {
      */
     @Deprecated(since = "1.0")
     public static boolean initialized() {
-        return teleportService != null && pendingTeleportService != null;
+        return teleportService.get() != null && pendingTeleportService.get() != null;
     }
 
     /**
@@ -63,7 +65,7 @@ public final class CotaniTeleport {
      */
     @Deprecated(since = "1.0")
     public static void shutdown() {
-        teleportService = null;
-        pendingTeleportService = null;
+        teleportService.set(null);
+        pendingTeleportService.set(null);
     }
 }

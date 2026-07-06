@@ -7,7 +7,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 import java.util.Objects;
 
-public final class EconomyFormatter {
+public final class EconomyFormatter implements AutoCloseable {
 
     private final EconomyCurrency currency;
     private final Locale locale;
@@ -23,6 +23,15 @@ public final class EconomyFormatter {
         Objects.requireNonNull(amount, "amount");
 
         return currency.symbol() + formatCache.get().format(amount);
+    }
+
+    public void remove() {
+        formatCache.remove();
+    }
+
+    @Override
+    public void close() {
+        remove();
     }
 
     private DecimalFormat createFormat() {

@@ -11,7 +11,6 @@ import java.util.concurrent.CompletionStage;
  * <p>All operations complete immediately with empty or null results.
  * Useful for caches that only need in-memory storage.
  */
-@SuppressWarnings("unused")
 public final class NoopCacheRepository<K, V> implements CacheRepository<K, V> {
 
     @Override

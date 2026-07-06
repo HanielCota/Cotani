@@ -55,10 +55,10 @@ public final class ConfigSection {
     }
 
     private String join(String childPath) {
-        if (path == null || path.isBlank()) {
+        if (path.isBlank()) {
             return childPath;
         }
-        if (childPath == null || childPath.isBlank()) {
+        if (childPath.isBlank()) {
             return path;
         }
         return path + "." + childPath;
