@@ -31,9 +31,9 @@ public final class CacheCooldownStore implements CooldownStore {
         Objects.requireNonNull(key, "key");
 
         if (key.target() instanceof UserCooldownTarget(UUID userId)) {
-            Optional<PlayerCooldowns> optional = playerCache.find(userId);
-            return optional.map(playerCooldowns ->
-                    playerCooldowns.activeCooldowns().get(key.action().value()));
+            return playerCache
+                    .find(userId)
+                    .map(pc -> pc.activeCooldowns().get(key.action().value()));
         }
 
         return Optional.ofNullable(nonPlayerEntries.get(key));
@@ -62,10 +62,9 @@ public final class CacheCooldownStore implements CooldownStore {
 
         if (key.target() instanceof UserCooldownTarget(UUID userId)) {
             Optional<PlayerCooldowns> optional = playerCache.find(userId);
-            if (optional.isPresent()) {
-                if (optional.get().activeCooldowns().remove(key.action().value()) != null) {
-                    playerCache.markDirty(userId);
-                }
+            if (optional.isPresent()
+                    && optional.get().activeCooldowns().remove(key.action().value()) != null) {
+                playerCache.markDirty(userId);
             }
             return;
         }
