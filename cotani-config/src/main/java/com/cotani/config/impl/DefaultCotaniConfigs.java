@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import org.bukkit.plugin.Plugin;
 
 public final class DefaultCotaniConfigs implements CotaniConfigs {
@@ -79,16 +80,12 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
             try {
                 config.reload();
             } catch (RuntimeException exception) {
-                plugin.getLogger()
-                        .log(
-                                java.util.logging.Level.SEVERE,
-                                exception,
-                                () -> "Could not reload config " + config.name());
+                plugin.getLogger().log(Level.SEVERE, exception, () -> "Could not reload config " + config.name());
                 if (firstFailure == null) {
                     firstFailure = new ConfigException("Could not reload config " + config.name(), exception);
-                } else {
-                    firstFailure.addSuppressed(exception);
+                    continue;
                 }
+                firstFailure.addSuppressed(exception);
             }
         }
         if (firstFailure != null) {

@@ -1,5 +1,6 @@
 package com.cotani.storage.security;
 
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -91,7 +92,7 @@ public final class Identifiers {
             throw new IllegalArgumentException("Invalid SQL identifier: " + identifier);
         }
 
-        if (SQL_KEYWORDS.contains(identifier.toLowerCase(java.util.Locale.ROOT))) {
+        if (SQL_KEYWORDS.contains(identifier.toLowerCase(Locale.ROOT))) {
             throw new IllegalArgumentException("Identifier must not be a SQL keyword: " + identifier);
         }
 

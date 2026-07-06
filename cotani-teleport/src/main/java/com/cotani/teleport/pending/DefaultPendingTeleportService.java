@@ -40,10 +40,8 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         PendingTeleportStateMachine pending = new PendingTeleportStateMachine(data);
 
         PendingTeleportStateMachine previous = pendingByPlayer.put(playerId, pending);
-        if (previous != null) {
-            if (!previous.cancel(TeleportCancelReason.REPLACED)) {
-                previous.cancelExecution(TeleportCancelReason.REPLACED);
-            }
+        if (previous != null && !previous.cancel(TeleportCancelReason.REPLACED)) {
+            previous.cancelExecution(TeleportCancelReason.REPLACED);
         }
 
         Player player = Bukkit.getPlayer(playerId);

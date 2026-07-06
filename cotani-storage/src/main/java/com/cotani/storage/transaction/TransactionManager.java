@@ -66,16 +66,16 @@ public final class TransactionManager {
         try (Connection connection = state.connection) {
             if (error != null) {
                 rollback(connection, error);
-            } else {
-                connection.commit();
+                return;
             }
+            connection.commit();
         } catch (SQLException failure) {
             var wrapped = new StorageException(new TransactionError("Could not finish transaction.", failure));
             if (error != null) {
                 error.addSuppressed(wrapped);
-            } else {
-                throw wrapped;
+                return;
             }
+            throw wrapped;
         } finally {
             restoreAutoCommit(state.connection, state.previousAutoCommit);
         }

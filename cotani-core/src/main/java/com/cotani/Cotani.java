@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -69,9 +70,7 @@ public final class Cotani implements AutoCloseable {
                 closeable.close();
             } catch (Exception failure) {
                 plugin.getLogger()
-                        .log(java.util.logging.Level.SEVERE, "Failed to close resource #{0}: {1}", new Object[] {
-                            index, closeable
-                        });
+                        .log(Level.SEVERE, "Failed to close resource #{0}: {1}", new Object[] {index, closeable});
                 firstFailure = mergeFailure(firstFailure, failure);
             }
         }

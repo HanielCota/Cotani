@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -202,7 +203,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
     }
 
     private @Nullable Player resolvePlayer(UUID playerId) {
-        return org.bukkit.Bukkit.getPlayer(playerId);
+        return Bukkit.getPlayer(playerId);
     }
 
     record Dependencies(

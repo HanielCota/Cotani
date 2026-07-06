@@ -218,7 +218,7 @@ public final class QueryExecutor {
     }
 
     private void runBatchInExistingTransaction(String sql, List<SqlConsumer<ParameterBinder>> binders) {
-        Connection connection = java.util.Objects.requireNonNull(transactionConnection, "transactionConnection");
+        Connection connection = Objects.requireNonNull(transactionConnection, "transactionConnection");
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setQueryTimeout(queryTimeoutSeconds);
             int count = 0;
@@ -256,17 +256,17 @@ public final class QueryExecutor {
         try (Connection connection = state.connection) {
             if (error != null) {
                 rollback(connection, error);
-            } else {
-                connection.commit();
+                return;
             }
+            connection.commit();
         } catch (SQLException failure) {
             var wrapped = new StorageException(
                     new com.cotani.storage.error.TransactionError("Could not finish transaction.", failure));
             if (error != null) {
                 error.addSuppressed(wrapped);
-            } else {
-                throw wrapped;
+                return;
             }
+            throw wrapped;
         } finally {
             restoreAutoCommit(state.connection, state.previousAutoCommit);
         }

@@ -98,9 +98,10 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
                 .whenComplete((_, throwable) -> {
                     if (throwable != null) {
                         plugin.getLogger().log(Level.SEVERE, "Failed to save users on shutdown", throwable);
-                    } else {
-                        service.clearCache();
+                        latch.countDown();
+                        return;
                     }
+                    service.clearCache();
                     latch.countDown();
                 });
 

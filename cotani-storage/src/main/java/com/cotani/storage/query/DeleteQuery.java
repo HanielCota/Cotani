@@ -4,6 +4,7 @@ import com.cotani.storage.error.QueryError;
 import com.cotani.storage.error.StorageException;
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.security.Identifiers;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -71,7 +72,7 @@ public final class DeleteQuery {
         }
     }
 
-    private void bind(ParameterBinder binder) throws java.sql.SQLException {
+    private void bind(ParameterBinder binder) throws SQLException {
         for (var condition : conditions) {
             binder.set(condition.value());
         }

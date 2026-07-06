@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 final class EconomyStorageMappers {
@@ -49,8 +51,8 @@ final class EconomyStorageMappers {
                         requireUuid(row, "target_user_id"),
                         currencyId,
                         amount,
-                        Objects.requireNonNull(stringOrNull(row, "target_balance_before")),
-                        Objects.requireNonNull(stringOrNull(row, "target_balance_after")),
+                        requireBigDecimal(row, "target_balance_before"),
+                        requireBigDecimal(row, "target_balance_after"),
                         reason,
                         createdAt);
             case WITHDRAW ->
@@ -60,8 +62,8 @@ final class EconomyStorageMappers {
                         requireUuid(row, "source_user_id"),
                         currencyId,
                         amount,
-                        Objects.requireNonNull(stringOrNull(row, "source_balance_before")),
-                        Objects.requireNonNull(stringOrNull(row, "source_balance_after")),
+                        requireBigDecimal(row, "source_balance_before"),
+                        requireBigDecimal(row, "source_balance_after"),
                         reason,
                         createdAt);
             case SET ->
@@ -71,8 +73,8 @@ final class EconomyStorageMappers {
                         requireUuid(row, "target_user_id"),
                         currencyId,
                         amount,
-                        Objects.requireNonNull(stringOrNull(row, "target_balance_before")),
-                        Objects.requireNonNull(stringOrNull(row, "target_balance_after")),
+                        requireBigDecimal(row, "target_balance_before"),
+                        requireBigDecimal(row, "target_balance_after"),
                         reason,
                         createdAt);
             case TRANSFER ->
@@ -83,10 +85,10 @@ final class EconomyStorageMappers {
                         requireUuid(row, "target_user_id"),
                         currencyId,
                         amount,
-                        Objects.requireNonNull(stringOrNull(row, "source_balance_before")),
-                        Objects.requireNonNull(stringOrNull(row, "source_balance_after")),
-                        Objects.requireNonNull(stringOrNull(row, "target_balance_before")),
-                        Objects.requireNonNull(stringOrNull(row, "target_balance_after")),
+                        requireBigDecimal(row, "source_balance_before"),
+                        requireBigDecimal(row, "source_balance_after"),
+                        requireBigDecimal(row, "target_balance_before"),
+                        requireBigDecimal(row, "target_balance_after"),
                         reason,
                         createdAt);
         };
@@ -134,19 +136,19 @@ final class EconomyStorageMappers {
                 })
                 .exceptionallyCompose(error -> {
                     Throwable cause = error;
-                    while (cause instanceof java.util.concurrent.CompletionException && cause.getCause() != null) {
+                    while (cause instanceof CompletionException && cause.getCause() != null) {
                         cause = cause.getCause();
                     }
-                    if (cause instanceof java.sql.SQLException sqlException
+                    if (cause instanceof SQLException sqlException
                             && sqlException.getMessage() != null
                             && sqlException
                                     .getMessage()
                                     .toLowerCase(Locale.ROOT)
                                     .contains("unique")) {
-                        return java.util.concurrent.CompletableFuture.failedFuture(
+                        return CompletableFuture.failedFuture(
                                 new DuplicateEconomyOperationException(transaction.operationId()));
                     }
-                    return java.util.concurrent.CompletableFuture.failedFuture(error);
+                    return CompletableFuture.failedFuture(error);
                 });
     }
 
@@ -162,8 +164,8 @@ final class EconomyStorageMappers {
         return Objects.requireNonNull(row.getInstant(column), column);
     }
 
-    private static BigDecimal stringOrNull(Row row, String column) throws SQLException {
-        String raw = row.getString(column);
+    private static BigDecimal requireBigDecimal(Row row, String column) throws SQLException {
+        String raw = Objects.requireNonNull(row.getString(column), column);
         return new BigDecimal(raw);
     }
 }

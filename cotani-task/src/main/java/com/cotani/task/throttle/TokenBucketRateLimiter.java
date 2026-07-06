@@ -39,15 +39,6 @@ public final class TokenBucketRateLimiter implements RateLimiter {
     }
 
     @Override
-    @SuppressWarnings({"removal", "BusyWait"})
-    public void acquire() throws InterruptedException {
-        while (!tryAcquire()) {
-            long sleepMillis = Math.max(1, refillPeriodNanos / 1_000_000);
-            Thread.sleep(sleepMillis);
-        }
-    }
-
-    @Override
     public boolean tryAcquire() {
         long now = System.nanoTime();
 
@@ -56,9 +47,10 @@ public final class TokenBucketRateLimiter implements RateLimiter {
             State next = refilled(current, now);
 
             if (next.nanotokens < NANOTOKENS_PER_TOKEN) {
-                state.compareAndSet(current, next);
-
-                return false;
+                if (state.compareAndSet(current, next)) {
+                    return false;
+                }
+                continue;
             }
 
             State afterAcquire = new State(next.nanotokens - NANOTOKENS_PER_TOKEN, next.lastRefillNanos);
@@ -67,25 +59,6 @@ public final class TokenBucketRateLimiter implements RateLimiter {
                 return true;
             }
         }
-    }
-
-    @Override
-    @SuppressWarnings({"removal", "BusyWait"})
-    public boolean tryAcquire(Duration timeout) throws InterruptedException {
-        Objects.requireNonNull(timeout, "timeout");
-
-        long deadline = System.nanoTime() + timeout.toNanos();
-        long sleepMillis = Math.max(1, refillPeriodNanos / 1_000_000);
-
-        while (System.nanoTime() < deadline) {
-            if (tryAcquire()) {
-                return true;
-            }
-
-            Thread.sleep(sleepMillis);
-        }
-
-        return false;
     }
 
     @Override

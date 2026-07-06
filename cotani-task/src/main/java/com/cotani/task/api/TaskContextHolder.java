@@ -8,7 +8,7 @@ public final class TaskContextHolder {
 
     private TaskContextHolder() {}
 
-    public static Optional<TaskContext> current() {
+    public static Optional<TaskContext> find() {
         if (CURRENT.isBound()) {
             return Optional.of(CURRENT.get());
         }

@@ -17,17 +17,6 @@ class TokenBucketRateLimiterTest {
     }
 
     @Test
-    @SuppressWarnings("removal")
-    void tryAcquireWithTimeoutWaitsForRefill() throws InterruptedException {
-        RateLimiter limiter = new TokenBucketRateLimiter(1, Duration.ofMillis(50));
-
-        assertTrue(limiter.tryAcquire());
-        assertFalse(limiter.tryAcquire());
-
-        assertTrue(limiter.tryAcquire(Duration.ofMillis(200)));
-    }
-
-    @Test
     void rejectsZeroCapacity() {
         assertThrows(IllegalArgumentException.class, () -> new TokenBucketRateLimiter(0, Duration.ofSeconds(1)));
     }

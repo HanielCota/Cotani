@@ -3,6 +3,7 @@ package com.cotani.storage.query;
 import com.cotani.storage.dialect.SqlDialect;
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.security.Identifiers;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,7 +79,7 @@ public final class UpsertQuery {
         return cachedSql;
     }
 
-    private void bind(ParameterBinder binder) throws java.sql.SQLException {
+    private void bind(ParameterBinder binder) throws SQLException {
         for (var value : values.values()) {
             binder.set(value);
         }

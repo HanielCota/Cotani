@@ -1,12 +1,13 @@
 package com.cotani.teleport.api;
 
+import org.bukkit.Location;
 import org.jspecify.annotations.Nullable;
 
 public final class TeleportResults {
     private TeleportResults() {}
 
     public static TeleportResult.Success success(
-            TeleportContext context, org.bukkit.Location resolvedTarget, long durationMillis) {
+            TeleportContext context, Location resolvedTarget, long durationMillis) {
         return new TeleportResult.Success(
                 context.playerId(), context.from().clone(), resolvedTarget.clone(), durationMillis);
     }

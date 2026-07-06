@@ -14,6 +14,7 @@ import com.cotani.task.api.SchedulerTask;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,8 +35,7 @@ class CaffeinePlayerDataCacheTest {
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
-        when(scheduler.asyncExecutor())
-                .thenReturn(CompletableFuture.delayedExecutor(0, java.util.concurrent.TimeUnit.MILLISECONDS));
+        when(scheduler.asyncExecutor()).thenReturn(CompletableFuture.delayedExecutor(0, TimeUnit.MILLISECONDS));
         when(scheduler.asyncTimer(any(), any(), any())).thenReturn(SchedulerTask.noop());
     }
 

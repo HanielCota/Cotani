@@ -16,7 +16,7 @@ public final class UserMapper {
         }
 
         String username = row.getString("username");
-        if (username == null || username.isBlank()) {
+        if (username.isBlank()) {
             username = fallbackUsername == null || fallbackUsername.isBlank() ? "unknown" : fallbackUsername;
         }
 

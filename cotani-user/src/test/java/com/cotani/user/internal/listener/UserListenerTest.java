@@ -6,6 +6,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.user.internal.service.InternalUserService;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -26,7 +27,7 @@ class UserListenerTest {
     private final UserListener listener = new UserListener(plugin, userService, scheduler, failureMessage);
 
     {
-        when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getLogger(UserListenerTest.class.getName()));
+        when(plugin.getLogger()).thenReturn(Logger.getLogger(UserListenerTest.class.getName()));
     }
 
     @Test

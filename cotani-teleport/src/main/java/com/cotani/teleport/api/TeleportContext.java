@@ -1,5 +1,6 @@
 package com.cotani.teleport.api;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.Location;
@@ -11,7 +12,7 @@ public record TeleportContext(
         TeleportCause cause,
         TeleportOptions options,
         String source,
-        java.time.Instant createdAt) {
+        Instant createdAt) {
     public TeleportContext {
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(from, "from");

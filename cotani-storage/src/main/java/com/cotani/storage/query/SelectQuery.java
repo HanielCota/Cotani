@@ -2,6 +2,7 @@ package com.cotani.storage.query;
 
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.security.Identifiers;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -114,7 +115,7 @@ public final class SelectQuery {
         builder.append(" LIMIT ").append(limit);
     }
 
-    private void bind(ParameterBinder binder) throws java.sql.SQLException {
+    private void bind(ParameterBinder binder) throws SQLException {
         for (var condition : conditions) {
             binder.set(condition.value());
         }

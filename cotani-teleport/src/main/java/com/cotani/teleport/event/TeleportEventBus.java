@@ -5,6 +5,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.util.VoidResult;
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
 
@@ -40,6 +41,6 @@ public final class TeleportEventBus {
 
     public void call(Event event) {
         Objects.requireNonNull(event, "event");
-        org.bukkit.Bukkit.getPluginManager().callEvent(event);
+        Bukkit.getPluginManager().callEvent(event);
     }
 }

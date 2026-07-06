@@ -23,3 +23,7 @@ run/
 *.class
 *.log
 test_file.txt
+index.html
+script.js
+styles.css
+

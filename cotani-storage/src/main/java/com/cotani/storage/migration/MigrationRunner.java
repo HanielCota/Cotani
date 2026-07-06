@@ -1,8 +1,10 @@
 package com.cotani.storage.migration;
 
 import com.cotani.storage.executor.QueryExecutor;
+import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.schema.Schema;
 import com.cotani.task.util.CompletionStages;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletionStage;
@@ -75,8 +77,7 @@ public final class MigrationRunner {
                 binder -> bindMigration(binder, migration));
     }
 
-    private void bindMigration(com.cotani.storage.query.ParameterBinder binder, Migration migration)
-            throws java.sql.SQLException {
+    private void bindMigration(ParameterBinder binder, Migration migration) throws SQLException {
         binder.set(migration.version());
         binder.set(migration.description());
         binder.set(Instant.now());

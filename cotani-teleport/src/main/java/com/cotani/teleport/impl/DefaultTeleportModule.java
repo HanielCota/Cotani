@@ -18,6 +18,8 @@ import com.cotani.teleport.safety.DefaultSafeLocationResolver;
 import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.jspecify.annotations.Nullable;
@@ -103,7 +105,7 @@ public final class DefaultTeleportModule implements TeleportModule {
         Objects.requireNonNull(scheduler, "scheduler");
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(options, "options");
-        @Nullable Cotani cotani = null;
+        Cotani cotani = null;
         try {
             Clock clock = Clock.systemUTC();
 
@@ -146,23 +148,22 @@ public final class DefaultTeleportModule implements TeleportModule {
             return new DefaultTeleportModule(
                     cotani, scheduler, teleportService, pendingTeleportService, cooldownService, options);
         } catch (RuntimeException failure) {
-            if (cotani == null) {
-                if (configuration != null) {
-                    try {
-                        configuration.close();
-                    } catch (Exception closeFailure) {
-                        failure.addSuppressed(closeFailure);
-                    }
-                }
-            } else {
+            if (cotani != null) {
                 cotani.close();
+            }
+            if (cotani == null && configuration != null) {
+                try {
+                    configuration.close();
+                } catch (Exception closeFailure) {
+                    failure.addSuppressed(closeFailure);
+                }
             }
             throw new IllegalStateException("Could not initialize teleport module", failure);
         }
     }
 
-    private static void unregisterListener(org.bukkit.event.Listener listener) {
-        org.bukkit.event.HandlerList.unregisterAll(listener);
+    private static void unregisterListener(Listener listener) {
+        HandlerList.unregisterAll(listener);
     }
 
     @Override

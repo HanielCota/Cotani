@@ -3,6 +3,7 @@ package com.cotani.storage.config;
 import com.cotani.storage.backend.*;
 import com.cotani.storage.security.Paths;
 import com.cotani.storage.type.StorageKind;
+import java.time.Duration;
 import java.util.Locale;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -53,9 +54,9 @@ public final class StorageConfigReader {
         var useSsl = config.getBoolean(prefix + "use-ssl", true);
         var poolSize = config.getInt(prefix + "pool-size", 10);
         var minimumIdle = config.getInt(prefix + "minimum-idle", 2);
-        var connectionTimeout = java.time.Duration.ofMillis(config.getLong(prefix + "connection-timeout", 10_000L));
-        var idleTimeout = java.time.Duration.ofMillis(config.getLong(prefix + "idle-timeout", 60_000L));
-        var maxLifetime = java.time.Duration.ofMillis(config.getLong(prefix + "max-lifetime", 1_800_000L));
+        var connectionTimeout = Duration.ofMillis(config.getLong(prefix + "connection-timeout", 10_000L));
+        var idleTimeout = Duration.ofMillis(config.getLong(prefix + "idle-timeout", 60_000L));
+        var maxLifetime = Duration.ofMillis(config.getLong(prefix + "max-lifetime", 1_800_000L));
 
         return new MySqlCredentials(
                 host,

@@ -1,6 +1,7 @@
 package com.cotani.config.source;
 
 import com.cotani.config.exception.ConfigException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -9,6 +10,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
@@ -49,9 +51,9 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         var loaded = new YamlConfiguration();
         try {
             loaded.load(path.toFile());
-        } catch (java.io.FileNotFoundException ignored) {
+        } catch (FileNotFoundException ignored) {
             // file was not created (createMissing=false); leave empty config
-        } catch (IOException | org.bukkit.configuration.InvalidConfigurationException exception) {
+        } catch (IOException | InvalidConfigurationException exception) {
             throw new ConfigException("Could not parse config file " + path + ": " + exception.getMessage(), exception);
         }
         lock.writeLock().lock();

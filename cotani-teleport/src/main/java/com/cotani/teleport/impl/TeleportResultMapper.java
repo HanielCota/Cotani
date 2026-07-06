@@ -6,7 +6,9 @@ import com.cotani.teleport.api.TeleportResult;
 import com.cotani.teleport.api.TeleportResults;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.bukkit.Location;
 
@@ -40,8 +42,7 @@ public final class TeleportResultMapper {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(error, "error");
         Throwable cause = error;
-        while (cause instanceof java.util.concurrent.CompletionException
-                || cause instanceof java.util.concurrent.ExecutionException) {
+        while (cause instanceof CompletionException || cause instanceof ExecutionException) {
             var nested = cause.getCause();
             if (nested == null) {
                 break;

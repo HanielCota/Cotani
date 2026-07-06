@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.function.Supplier;
 
 /**
  * In-memory economy store backed by {@link ConcurrentHashMap}.
@@ -244,14 +245,13 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         return locks.computeIfAbsent(key, _ -> new Object());
     }
 
-    private <T> T withLock(EconomyAccountKey key, java.util.function.Supplier<T> action) {
+    private <T> T withLock(EconomyAccountKey key, Supplier<T> action) {
         synchronized (lockFor(key)) {
             return action.get();
         }
     }
 
-    private <T> T withBothLocks(
-            EconomyAccountKey first, EconomyAccountKey second, java.util.function.Supplier<T> action) {
+    private <T> T withBothLocks(EconomyAccountKey first, EconomyAccountKey second, Supplier<T> action) {
         if (first.equals(second)) {
             return withLock(first, action);
         }

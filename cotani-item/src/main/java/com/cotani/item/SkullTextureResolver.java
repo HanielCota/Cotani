@@ -94,9 +94,9 @@ public final class SkullTextureResolver {
                 default -> {
                     if (c < 0x20) {
                         sb.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        sb.append(c);
+                        break;
                     }
+                    sb.append(c);
                 }
             }
         }

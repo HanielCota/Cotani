@@ -29,6 +29,7 @@ import java.util.function.UnaryOperator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -67,7 +68,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         this.autosaveTask = startAutosave(settings);
     }
 
-    private static CompletionStage<Void> allOf(java.util.stream.Stream<? extends CompletionStage<Void>> stages) {
+    private static CompletionStage<Void> allOf(Stream<? extends CompletionStage<Void>> stages) {
         var array = stages.map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
         return array.length == 0 ? CompletionStages.completedVoid() : CompletableFuture.allOf(array);
     }

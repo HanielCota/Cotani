@@ -2,6 +2,7 @@ package com.cotani.task.throttle;
 
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.TaskChain;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -41,15 +42,15 @@ public final class TaskThrottler {
                 });
     }
 
-    @SuppressWarnings({"serial"})
     private static final class RateLimitRejectedException extends RuntimeException {
-        private final java.time.Duration retryDelay;
+        private static final long serialVersionUID = 1L;
+        private final Duration retryDelay;
 
-        RateLimitRejectedException(java.time.Duration retryDelay) {
+        RateLimitRejectedException(Duration retryDelay) {
             this.retryDelay = retryDelay;
         }
 
-        java.time.Duration retryDelay() {
+        Duration retryDelay() {
             return retryDelay;
         }
     }
