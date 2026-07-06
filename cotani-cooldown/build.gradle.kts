@@ -4,13 +4,15 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
-description = "Cotani — modern teleport module for Paper"
+description = "Cotani — basic cooldown module"
 
 dependencies {
     api(project(":core"))
     api(project(":task"))
-    api(project(":cooldown"))
-    implementation(project(":config"))
+    api(project(":cache"))
+    api(project(":storage"))
+    api(project(":config"))
+
     compileOnlyApi(libs.paper.api)
     api(libs.jspecify)
 
@@ -21,11 +23,4 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.core)
     testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-tasks.processResources {
-    val projectVersion = project.version.toString()
-    filesMatching("plugin.yml") {
-        expand("version" to projectVersion)
-    }
 }
