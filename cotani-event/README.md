@@ -1,37 +1,16 @@
 # cotani-event
 
-Módulo de eventos interno da API Cotani.
+A lightweight, reflection-free Java Event Bus for asynchronous and synchronous event dispatching, prioritizations, and priority listeners.
 
-## Objetivo
-
-Este módulo fornece um Event Bus Java puro para comunicação entre módulos, sem dependência de Bukkit, comandos ou menus.
-
-## Exemplo
+## Usage
 
 ```java
 EventBus eventBus = DefaultEventBus.createDefault();
 
-EventSubscription subscription = eventBus.subscribe(UserLoadedEvent.class, event -> {
+EventSubscription sub = eventBus.subscribe(UserLoadedEvent.class, event -> {
     System.out.println("User loaded: " + event.userId());
 });
 
-eventBus.publish(new UserLoadedEvent(UUID.randomUUID()));
-subscription.unsubscribe();
+eventBus.publish(new UserLoadedEvent(userId));
+sub.unsubscribe();
 ```
-
-## Princípios
-
-- Java puro
-- SRP
-- Sem reflection
-- Sem Bukkit
-- Síncrono por padrão
-- Async explícito via `publishAsync`
-- Listeners com prioridade
-- Suporte a eventos canceláveis
-- Tratamento explícito de exception
-- Thread-safe
-
-## Java
-
-Recomendado: Java 17+
