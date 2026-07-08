@@ -1,9 +1,5 @@
 # Cotani
 
-<p align="center">
-  <img src="logo.png" alt="Cotani Logo" width="250px"/>
-</p>
-
 A modular, async-safe library for modern Paper/PaperSpigot plugin development in Java.
 
 ---
