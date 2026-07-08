@@ -11,7 +11,8 @@ include(
     "teleport",
     "storage",
     "user",
-    "cooldown"
+    "cooldown",
+    "event"
 )
 
 project(":cache").projectDir = file("cotani-cache")
@@ -25,3 +26,4 @@ project(":teleport").projectDir = file("cotani-teleport")
 project(":storage").projectDir = file("cotani-storage")
 project(":user").projectDir = file("cotani-user")
 project(":cooldown").projectDir = file("cotani-cooldown")
+project(":event").projectDir = file("cotani-event")

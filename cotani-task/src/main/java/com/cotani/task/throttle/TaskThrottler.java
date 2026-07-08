@@ -33,13 +33,27 @@ public final class TaskThrottler {
                 })
                 .toCompletionStage()
                 .exceptionallyCompose(error -> {
-                    if (error instanceof RateLimitRejectedException rejected) {
+                    Throwable cause = unwrap(error);
+                    if (cause instanceof RateLimitRejectedException rejected) {
                         return scheduler
                                 .delayAsync(rejected.retryDelay())
                                 .thenCompose(_ -> throttleStage(supplier, limiter));
                     }
                     return CompletableFuture.failedStage(error);
                 });
+    }
+
+    private static Throwable unwrap(Throwable throwable) {
+        Throwable current = throwable;
+        while (current instanceof java.util.concurrent.CompletionException
+                || current instanceof java.util.concurrent.ExecutionException) {
+            Throwable cause = current.getCause();
+            if (cause == null || cause.equals(current)) {
+                break;
+            }
+            current = cause;
+        }
+        return current;
     }
 
     private static final class RateLimitRejectedException extends RuntimeException {

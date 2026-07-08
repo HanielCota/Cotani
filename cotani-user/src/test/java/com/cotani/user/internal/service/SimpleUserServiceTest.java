@@ -11,6 +11,7 @@ import com.cotani.user.internal.repository.UserRepository;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("NullAway")
@@ -120,6 +121,7 @@ class SimpleUserServiceTest {
     void getOrThrowAsyncThrowsWhenAbsent() {
         UUID uniqueId = UUID.randomUUID();
         when(cache.find(uniqueId)).thenReturn(Optional.empty());
+        when(repository.findByUniqueId(uniqueId)).thenReturn(CompletableFuture.completedFuture(Optional.empty()));
 
         var exception = assertThrows(
                 java.util.concurrent.CompletionException.class,
@@ -134,5 +136,64 @@ class SimpleUserServiceTest {
         when(cache.contains(uniqueId)).thenReturn(true);
 
         assertTrue(service.isLoadedAsync(uniqueId).toCompletableFuture().join());
+    }
+
+    @Test
+    void findAsyncFallsBackToRepositoryWhenCacheMiss() {
+        UUID uniqueId = UUID.randomUUID();
+        SimpleCotaniUser user = SimpleCotaniUser.createNew(uniqueId, "Steve", 1L);
+        when(cache.find(uniqueId)).thenReturn(Optional.empty());
+        when(repository.findByUniqueId(uniqueId)).thenReturn(CompletableFuture.completedFuture(Optional.of(user)));
+
+        Optional<CotaniUser> result =
+                service.findAsync(uniqueId).toCompletableFuture().join();
+
+        assertTrue(result.isPresent());
+        assertEquals(user.uniqueId(), result.get().uniqueId());
+        verify(repository).findByUniqueId(uniqueId);
+    }
+
+    @Test
+    void loadUsesCacheHit() {
+        UUID uniqueId = UUID.randomUUID();
+        SimpleCotaniUser user = SimpleCotaniUser.createNew(uniqueId, "Steve", 1L);
+        when(cache.findInternal(uniqueId)).thenReturn(Optional.of(user));
+
+        SimpleCotaniUser result =
+                service.load(uniqueId, "NewName").toCompletableFuture().join();
+
+        assertEquals(uniqueId, result.uniqueId());
+        assertEquals("NewName", result.username());
+        verify(cache).put(result);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void findAsyncUsesOngoingLoad() {
+        UUID uniqueId = UUID.randomUUID();
+        SimpleCotaniUser user = SimpleCotaniUser.createNew(uniqueId, "Steve", 1L);
+
+        CompletableFuture<Optional<SimpleCotaniUser>> repositoryFuture = new CompletableFuture<>();
+        when(repository.find(uniqueId, "Steve")).thenReturn(repositoryFuture);
+        when(cache.findInternal(uniqueId)).thenReturn(Optional.empty());
+        when(cache.find(uniqueId)).thenReturn(Optional.empty());
+
+        // Trigger load but keep it unresolved
+        service.load(uniqueId, "Steve");
+
+        // Call findAsync - it should return a stage that completes when repositoryFuture completes
+        CompletionStage<Optional<CotaniUser>> findFuture = service.findAsync(uniqueId);
+
+        assertFalse(findFuture.toCompletableFuture().isDone());
+
+        // Resolve repositoryFuture
+        repositoryFuture.complete(Optional.of(user));
+
+        Optional<CotaniUser> result = findFuture.toCompletableFuture().join();
+        assertTrue(result.isPresent());
+        assertEquals(user.uniqueId(), result.get().uniqueId());
+
+        // Verify that findByUniqueId was NOT called since it used the ongoing load
+        verify(repository, never()).findByUniqueId(uniqueId);
     }
 }

@@ -1,5 +1,6 @@
 package com.cotani.storage.api;
 
+import com.cotani.storage.backend.SQLiteBackend;
 import com.cotani.storage.backend.StorageBackend;
 import com.cotani.storage.config.StorageConfigReader;
 import com.cotani.storage.dialect.DialectFactory;
@@ -63,10 +64,13 @@ public final class CotaniStorage implements AutoCloseable {
         this.provider = new StorageProviderFactory().create(backend);
         var platformFactory =
                 Thread.ofPlatform().name("cotani-storage-", 0).daemon(true).factory();
-        this.storageExecutor = useVirtualThreads
-                ? Executors.newThreadPerTaskExecutor(
-                        Thread.ofVirtual().name("cotani-storage-vt-", 0).factory())
-                : Executors.newFixedThreadPool(threads, platformFactory);
+        var isSQLite = backend instanceof SQLiteBackend;
+        this.storageExecutor = isSQLite
+                ? Executors.newSingleThreadExecutor(platformFactory)
+                : (useVirtualThreads
+                        ? Executors.newThreadPerTaskExecutor(
+                                Thread.ofVirtual().name("cotani-storage-vt-", 0).factory())
+                        : Executors.newFixedThreadPool(threads, platformFactory));
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.dialect = new DialectFactory().create(backend);
         this.executor = new QueryExecutor(provider, storageExecutor, serializers, queryTimeoutSeconds);

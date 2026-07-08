@@ -120,6 +120,7 @@ public final class RecordConfigBinder implements ConfigBinder {
                 componentList.add(components[index]);
             }
             var constructor = type.getDeclaredConstructor(parameterTypes);
+            constructor.setAccessible(true);
             return new RecordBindingPlan<>(type, constructor, List.copyOf(componentList));
         } catch (ReflectiveOperationException exception) {
             throw new ConfigException("Could not create binding plan for " + type.getName(), exception);

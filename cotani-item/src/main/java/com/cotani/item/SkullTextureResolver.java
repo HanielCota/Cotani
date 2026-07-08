@@ -34,7 +34,8 @@ public final class SkullTextureResolver {
 
     public static PlayerProfile fromBase64(String base64) {
         Objects.requireNonNull(base64, "Parameter 'base64' must not be null");
-        var profile = Bukkit.createProfile(UUID.randomUUID());
+        var uuid = UUID.nameUUIDFromBytes(base64.getBytes(StandardCharsets.UTF_8));
+        var profile = Bukkit.createProfile(uuid);
         profile.setProperty(new ProfileProperty(TEXTURES_PROPERTY, base64));
         return profile;
     }

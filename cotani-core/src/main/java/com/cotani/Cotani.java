@@ -54,6 +54,13 @@ public final class Cotani implements AutoCloseable {
         return this;
     }
 
+    public Cotani deregister(AutoCloseable closeable) {
+        Objects.requireNonNull(closeable, "Parameter 'closeable' must not be null");
+
+        closeables.remove(closeable);
+        return this;
+    }
+
     @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {

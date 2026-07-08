@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.title.Title;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class AudienceMessagesTest {
@@ -71,12 +73,44 @@ class AudienceMessagesTest {
         assertEquals(Component.text("Footer", NamedTextColor.GREEN), audience.lastPlayerListFooter);
     }
 
+    @Test
+    void sendsTitle() {
+        var audience = new CapturingAudience();
+
+        AudienceMessages.sendTitle(audience, "<red>Title", "<yellow>Subtitle");
+
+        assertNotNull(audience.lastTitle);
+        assertEquals(Component.text("Title", NamedTextColor.RED), audience.lastTitle.title());
+        assertEquals(Component.text("Subtitle", NamedTextColor.YELLOW), audience.lastTitle.subtitle());
+    }
+
+    @Test
+    void sendsTitleWithDuration() {
+        var audience = new CapturingAudience();
+        var fadeIn = java.time.Duration.ofSeconds(1);
+        var stay = java.time.Duration.ofSeconds(2);
+        var fadeOut = java.time.Duration.ofSeconds(3);
+
+        AudienceMessages.sendTitle(audience, "<red>Title", "<yellow>Subtitle", fadeIn, stay, fadeOut);
+
+        assertNotNull(audience.lastTitle);
+        assertEquals(Component.text("Title", NamedTextColor.RED), audience.lastTitle.title());
+        assertEquals(Component.text("Subtitle", NamedTextColor.YELLOW), audience.lastTitle.subtitle());
+        assertNotNull(audience.lastTitle.times());
+        assertEquals(fadeIn, audience.lastTitle.times().fadeIn());
+        assertEquals(stay, audience.lastTitle.times().stay());
+        assertEquals(fadeOut, audience.lastTitle.times().fadeOut());
+    }
+
     private static final class CapturingAudience implements Audience {
 
         Component lastMessage = Component.empty();
         Component lastActionBar = Component.empty();
         Component lastPlayerListHeader = Component.empty();
         Component lastPlayerListFooter = Component.empty();
+
+        @Nullable
+        Title lastTitle;
 
         @Override
         public void sendMessage(Component message) {
@@ -102,6 +136,11 @@ class AudienceMessagesTest {
         public void sendPlayerListHeaderAndFooter(Component header, Component footer) {
             lastPlayerListHeader = header;
             lastPlayerListFooter = footer;
+        }
+
+        @Override
+        public void showTitle(net.kyori.adventure.title.Title title) {
+            lastTitle = title;
         }
     }
 }

@@ -68,6 +68,18 @@ class RecordConfigBinderValidationTest {
         assertTrue(result.issues().getFirst().message().contains("@Range can only be used with numeric components"));
     }
 
+    @Test
+    void validateSupportsPrivateNestedRecords() {
+        var section = section(Map.of("message", "hello"));
+        var result = binder.validate(section, PrivateConfigRecord.class);
+        assertTrue(result.isValid(), result::format);
+
+        var bound = binder.bind(section, PrivateConfigRecord.class);
+        assertEquals("hello", bound.message());
+    }
+
+    private record PrivateConfigRecord(@Required String message) {}
+
     private ConfigSection section(Map<String, Object> values) {
         return new ConfigSection("test.yml", "", new MapConfigSource(values), serializers, binder);
     }

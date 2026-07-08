@@ -1,5 +1,7 @@
 package com.cotani.text;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
@@ -124,5 +126,43 @@ public final class MiniMessages {
         Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
 
         return ComponentSerializers.MINIMESSAGE.stripTags(input, resolvers);
+    }
+
+    /**
+     * Parses a collection of MiniMessage strings into a list of components using the default tag set.
+     *
+     * @param inputs the collection of MiniMessage strings
+     * @return the list of parsed components
+     */
+    public static List<Component> parseList(Collection<String> inputs) {
+        Objects.requireNonNull(inputs, "Parameter 'inputs' must not be null");
+
+        return inputs.stream().map(MiniMessages::parse).toList();
+    }
+
+    /**
+     * Parses a collection of MiniMessage strings into a list of components, replacing the given placeholders.
+     *
+     * @param inputs the collection of MiniMessage strings
+     * @param resolvers the tag resolvers to apply
+     * @return the list of parsed components
+     */
+    public static List<Component> parseList(Collection<String> inputs, TagResolver... resolvers) {
+        Objects.requireNonNull(inputs, "Parameter 'inputs' must not be null");
+        Objects.requireNonNull(resolvers, "Parameter 'resolvers' must not be null");
+
+        return inputs.stream().map(input -> parse(input, resolvers)).toList();
+    }
+
+    /**
+     * Serializes a collection of components into a list of MiniMessage strings.
+     *
+     * @param components the collection of components to serialize
+     * @return the list of MiniMessage representations
+     */
+    public static List<String> serializeList(Collection<Component> components) {
+        Objects.requireNonNull(components, "Parameter 'components' must not be null");
+
+        return components.stream().map(MiniMessages::serialize).toList();
     }
 }

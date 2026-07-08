@@ -5,5 +5,6 @@ public enum TeleportCancelReason {
     DAMAGED,
     QUIT,
     REPLACED,
-    EXECUTION_FAILED
+    EXECUTION_FAILED,
+    COMBAT
 }

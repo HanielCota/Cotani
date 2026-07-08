@@ -1,5 +1,6 @@
 package com.cotani.text;
 
+import java.time.Duration;
 import java.util.Objects;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -86,6 +87,58 @@ public final class AudienceMessages {
 
         audience.sendPlayerListHeaderAndFooter(
                 MiniMessages.parse(header, resolvers), MiniMessages.parse(footer, resolvers));
+    }
+
+    /**
+     * Sends a MiniMessage title and subtitle to the audience.
+     *
+     * @param audience the audience to receive the title
+     * @param titleMiniMessage the title MiniMessage string
+     * @param subtitleMiniMessage the subtitle MiniMessage string
+     * @param resolvers optional placeholders to apply
+     */
+    public static void sendTitle(
+            Audience audience, String titleMiniMessage, String subtitleMiniMessage, TagResolver... resolvers) {
+        Objects.requireNonNull(audience, AUDIENCE_NULL_MESSAGE);
+        Objects.requireNonNull(titleMiniMessage, "Parameter 'titleMiniMessage' must not be null");
+        Objects.requireNonNull(subtitleMiniMessage, "Parameter 'subtitleMiniMessage' must not be null");
+        Objects.requireNonNull(resolvers, RESOLVERS_NULL_MESSAGE);
+
+        audience.showTitle(net.kyori.adventure.title.Title.title(
+                MiniMessages.parse(titleMiniMessage, resolvers), MiniMessages.parse(subtitleMiniMessage, resolvers)));
+    }
+
+    /**
+     * Sends a MiniMessage title and subtitle to the audience with custom times.
+     *
+     * @param audience the audience to receive the title
+     * @param titleMiniMessage the title MiniMessage string
+     * @param subtitleMiniMessage the subtitle MiniMessage string
+     * @param fadeIn the fade in duration
+     * @param stay the stay duration
+     * @param fadeOut the fade out duration
+     * @param resolvers optional placeholders to apply
+     */
+    public static void sendTitle(
+            Audience audience,
+            String titleMiniMessage,
+            String subtitleMiniMessage,
+            Duration fadeIn,
+            Duration stay,
+            Duration fadeOut,
+            TagResolver... resolvers) {
+        Objects.requireNonNull(audience, AUDIENCE_NULL_MESSAGE);
+        Objects.requireNonNull(titleMiniMessage, "Parameter 'titleMiniMessage' must not be null");
+        Objects.requireNonNull(subtitleMiniMessage, "Parameter 'subtitleMiniMessage' must not be null");
+        Objects.requireNonNull(fadeIn, "Parameter 'fadeIn' must not be null");
+        Objects.requireNonNull(stay, "Parameter 'stay' must not be null");
+        Objects.requireNonNull(fadeOut, "Parameter 'fadeOut' must not be null");
+        Objects.requireNonNull(resolvers, RESOLVERS_NULL_MESSAGE);
+
+        audience.showTitle(net.kyori.adventure.title.Title.title(
+                MiniMessages.parse(titleMiniMessage, resolvers),
+                MiniMessages.parse(subtitleMiniMessage, resolvers),
+                net.kyori.adventure.title.Title.Times.times(fadeIn, stay, fadeOut)));
     }
 
     private static void validate(Audience audience, String miniMessage, TagResolver[] resolvers) {

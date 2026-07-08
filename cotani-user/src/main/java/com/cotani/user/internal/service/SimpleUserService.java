@@ -11,11 +11,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public final class SimpleUserService implements InternalUserService {
 
     private final UserCache cache;
     private final UserRepository repository;
+    private final ConcurrentMap<UUID, CompletionStage<SimpleCotaniUser>> loadingUsers = new ConcurrentHashMap<>();
 
     public SimpleUserService(UserCache cache, UserRepository repository) {
         this.cache = Objects.requireNonNull(cache, "cache");
@@ -24,7 +27,18 @@ public final class SimpleUserService implements InternalUserService {
 
     @Override
     public CompletionStage<Optional<CotaniUser>> findAsync(UUID uniqueId) {
-        return CompletableFuture.completedStage(cache.find(uniqueId));
+        Objects.requireNonNull(uniqueId, "uniqueId");
+        Optional<CotaniUser> cached = cache.find(uniqueId);
+        if (cached.isPresent()) {
+            return CompletableFuture.completedStage(cached);
+        }
+
+        CompletionStage<SimpleCotaniUser> ongoing = loadingUsers.get(uniqueId);
+        if (ongoing != null) {
+            return ongoing.thenApply(Optional::of);
+        }
+
+        return repository.findByUniqueId(uniqueId).thenApply(optional -> optional.map(CotaniUser.class::cast));
     }
 
     @Override
@@ -35,6 +49,7 @@ public final class SimpleUserService implements InternalUserService {
 
     @Override
     public CompletionStage<Boolean> isLoadedAsync(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return CompletableFuture.completedStage(cache.contains(uniqueId));
     }
 
@@ -43,15 +58,41 @@ public final class SimpleUserService implements InternalUserService {
         Objects.requireNonNull(uniqueId, "uniqueId");
         Objects.requireNonNull(username, "username");
 
-        long now = System.currentTimeMillis();
-
-        return repository.find(uniqueId, username).thenApply(optionalUser -> {
-            SimpleCotaniUser loaded = optionalUser.orElseGet(() -> SimpleCotaniUser.createNew(uniqueId, username, now));
-            SimpleCotaniUser updated = loaded.withUsername(username).withLastJoinAt(now);
-
+        Optional<SimpleCotaniUser> cached = cache.findInternal(uniqueId);
+        if (cached.isPresent()) {
+            SimpleCotaniUser user = cached.get();
+            long now = System.currentTimeMillis();
+            SimpleCotaniUser updated = user.withUsername(username).withLastJoinAt(now);
             cache.put(updated);
-            return updated;
-        });
+            return CompletableFuture.completedStage(updated);
+        }
+
+        CompletableFuture<SimpleCotaniUser> loadFuture = new CompletableFuture<>();
+        CompletionStage<SimpleCotaniUser> ongoing = loadingUsers.putIfAbsent(uniqueId, loadFuture);
+        if (ongoing != null) {
+            return ongoing;
+        }
+
+        long now = System.currentTimeMillis();
+        repository
+                .find(uniqueId, username)
+                .thenApply(optionalUser -> {
+                    SimpleCotaniUser loaded =
+                            optionalUser.orElseGet(() -> SimpleCotaniUser.createNew(uniqueId, username, now));
+                    SimpleCotaniUser updated = loaded.withUsername(username).withLastJoinAt(now);
+                    cache.put(updated);
+                    return updated;
+                })
+                .whenComplete((result, throwable) -> {
+                    loadingUsers.remove(uniqueId);
+                    if (throwable != null) {
+                        loadFuture.completeExceptionally(throwable);
+                    } else {
+                        loadFuture.complete(result);
+                    }
+                });
+
+        return loadFuture;
     }
 
     @Override

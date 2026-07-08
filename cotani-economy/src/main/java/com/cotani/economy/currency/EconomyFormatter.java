@@ -10,38 +10,35 @@ import java.util.Objects;
 public final class EconomyFormatter implements AutoCloseable {
 
     private final EconomyCurrency currency;
-    private final Locale locale;
-    private final ThreadLocal<DecimalFormat> formatCache;
+    private final DecimalFormat decimalFormat;
 
     public EconomyFormatter(EconomyCurrency currency, Locale locale) {
         this.currency = Objects.requireNonNull(currency, "currency");
-        this.locale = Objects.requireNonNull(locale, "locale");
-        this.formatCache = ThreadLocal.withInitial(this::createFormat);
+        Objects.requireNonNull(locale, "locale");
+
+        var symbols = DecimalFormatSymbols.getInstance(locale);
+        var pattern = currency.decimalPlaces() == 0 ? "#,##0" : "#,##0." + "0".repeat(currency.decimalPlaces());
+
+        this.decimalFormat = new DecimalFormat(pattern, symbols);
+        this.decimalFormat.setRoundingMode(RoundingMode.DOWN);
+        this.decimalFormat.setMinimumFractionDigits(currency.decimalPlaces());
+        this.decimalFormat.setMaximumFractionDigits(currency.decimalPlaces());
     }
 
     public String format(BigDecimal amount) {
         Objects.requireNonNull(amount, "amount");
 
-        return currency.symbol() + formatCache.get().format(amount);
+        synchronized (decimalFormat) {
+            return currency.symbol() + decimalFormat.format(amount);
+        }
     }
 
     public void remove() {
-        formatCache.remove();
+        // no-op, kept for backward compatibility
     }
 
     @Override
     public void close() {
-        remove();
-    }
-
-    private DecimalFormat createFormat() {
-        var symbols = DecimalFormatSymbols.getInstance(locale);
-        var pattern = currency.decimalPlaces() == 0 ? "#,##0" : "#,##0." + "0".repeat(currency.decimalPlaces());
-
-        var decimalFormat = new DecimalFormat(pattern, symbols);
-        decimalFormat.setRoundingMode(RoundingMode.DOWN);
-        decimalFormat.setMinimumFractionDigits(currency.decimalPlaces());
-        decimalFormat.setMaximumFractionDigits(currency.decimalPlaces());
-        return decimalFormat;
+        // no-op, kept for backward compatibility
     }
 }

@@ -198,4 +198,17 @@ class CotaniTest {
         assertEquals(1, thrown.getSuppressed().length);
         assertNotEquals(thrown.getCause(), thrown.getSuppressed()[0]);
     }
+
+    @Test
+    void deregisterRemovesResource() {
+        var plugin = pluginWithLogger();
+        var closed = new AtomicBoolean();
+        AutoCloseable resource = () -> closed.set(true);
+        var cotani = Cotani.forPlugin(plugin).with(resource).build();
+
+        cotani.deregister(resource);
+        cotani.close();
+
+        assertFalse(closed.get());
+    }
 }

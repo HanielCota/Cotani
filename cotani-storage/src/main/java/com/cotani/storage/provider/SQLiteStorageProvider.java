@@ -25,6 +25,7 @@ public final class SQLiteStorageProvider implements StorageProvider {
     private static final String PRAGMA_JOURNAL_MODE = "PRAGMA journal_mode = WAL";
 
     private final SQLiteCredentials credentials;
+    private final AtomicReference<@Nullable Connection> realConnection = new AtomicReference<>();
     private final AtomicReference<@Nullable Connection> connection = new AtomicReference<>();
 
     public SQLiteStorageProvider(SQLiteCredentials credentials) {
@@ -49,7 +50,20 @@ public final class SQLiteStorageProvider implements StorageProvider {
             try (Statement statement = opened.createStatement()) {
                 statement.execute(PRAGMA_JOURNAL_MODE);
             }
-            if (!connection.compareAndSet(null, opened)) {
+            Connection proxy = (Connection) java.lang.reflect.Proxy.newProxyInstance(
+                    Connection.class.getClassLoader(), new Class<?>[] {Connection.class}, (p, method, args) -> {
+                        if (method.getName().equals("close")) {
+                            return null;
+                        }
+                        try {
+                            return method.invoke(opened, args);
+                        } catch (java.lang.reflect.InvocationTargetException e) {
+                            throw e.getCause();
+                        }
+                    });
+            if (connection.compareAndSet(null, proxy)) {
+                realConnection.set(opened);
+            } else {
                 closeQuietly(opened);
             }
         } catch (SQLException exception) {
@@ -74,8 +88,9 @@ public final class SQLiteStorageProvider implements StorageProvider {
 
     @Override
     public void close() {
-        Connection current = connection.getAndSet(null);
-        closeQuietly(current);
+        Connection real = realConnection.getAndSet(null);
+        connection.set(null);
+        closeQuietly(real);
     }
 
     private String configuredJdbcUrl() {

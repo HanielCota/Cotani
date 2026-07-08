@@ -56,4 +56,17 @@ class MiniMessagesTest {
 
         assertEquals(Component.text("Hello", NamedTextColor.GREEN), component);
     }
+
+    @Test
+    void parsesAndSerializesList() {
+        var inputs = java.util.List.of("<green>Hello", "<red>World");
+        var components = MiniMessages.parseList(inputs);
+
+        assertEquals(2, components.size());
+        assertEquals(Component.text("Hello", NamedTextColor.GREEN), components.get(0));
+        assertEquals(Component.text("World", NamedTextColor.RED), components.get(1));
+
+        var serialized = MiniMessages.serializeList(components);
+        assertEquals(inputs, serialized);
+    }
 }
