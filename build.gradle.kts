@@ -1,4 +1,6 @@
 import net.ltgt.gradle.errorprone.errorprone
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     `java-library`
@@ -109,12 +111,27 @@ allprojects {
 
 subprojects {
     pluginManager.withPlugin("java-library") {
+        apply(plugin = "maven-publish")
+
         configure<JavaPluginExtension> {
             toolchain {
                 languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
             }
             withSourcesJar()
             withJavadocJar()
+        }
+
+        configure<PublishingExtension> {
+            publications {
+                create<MavenPublication>("mavenJava") {
+                    from(components["java"])
+                    artifactId = "cotani-${project.name}"
+                    pom {
+                        name.set("cotani-${project.name}")
+                        description.set(project.description ?: "Cotani — ${project.name} module")
+                    }
+                }
+            }
         }
 
         tasks.withType<JavaCompile>().configureEach {
