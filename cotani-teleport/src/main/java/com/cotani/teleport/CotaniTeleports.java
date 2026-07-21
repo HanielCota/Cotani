@@ -12,6 +12,12 @@ public final class CotaniTeleports {
 
     private CotaniTeleports() {}
 
+    /**
+     * @deprecated For tests only. Production must supply real adapters via
+     * {@link #create(Plugin, CombatAdapter, RegionProtectionAdapter, PaperTaskScheduler)}.
+     * The no-argument-style adapter overload silently uses noop combat/region adapters.
+     */
+    @Deprecated
     public static TeleportModule create(Plugin plugin, PaperTaskScheduler scheduler) {
         return DefaultTeleportModule.create(plugin, scheduler);
     }

@@ -1,6 +1,8 @@
 package com.cotani.task.impl.executor;
 
+import com.cotani.task.api.SchedulerOptions;
 import com.cotani.task.api.TaskMetadata;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.*;
 
@@ -20,6 +22,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     private final ExecutorService taskExecutor;
     private final ScheduledExecutorService delayedExecutor;
     private final boolean nameThreads;
+    private final Duration shutdownTimeout;
 
     public VirtualThreadExecutor() {
         this(DEFAULT_MAX_CONCURRENT, true);
@@ -30,17 +33,26 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     }
 
     public VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads) {
+        this(maxConcurrent, useVirtualThreads, Duration.ofSeconds(5));
+    }
+
+    public VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads, Duration shutdownTimeout) {
         if (maxConcurrent <= 0) {
             throw new IllegalArgumentException("maxConcurrent must be positive");
         }
 
         this.nameThreads = true;
+        this.shutdownTimeout = Objects.requireNonNull(shutdownTimeout, "shutdownTimeout");
         this.taskExecutor = createTaskExecutor(maxConcurrent, useVirtualThreads);
         this.delayedExecutor = createDelayedExecutor();
     }
 
     public static VirtualThreadExecutor create(int maxConcurrent, boolean useVirtualThreads) {
         return new VirtualThreadExecutor(maxConcurrent, useVirtualThreads);
+    }
+
+    public static VirtualThreadExecutor create(int maxConcurrent, boolean useVirtualThreads, SchedulerOptions options) {
+        return new VirtualThreadExecutor(maxConcurrent, useVirtualThreads, options.defaultShutdownTimeout());
     }
 
     private static ExecutorService createTaskExecutor(int maxConcurrent, boolean useVirtualThreads) {
@@ -101,7 +113,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         executor.shutdown();
 
         try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
                 executor.shutdownNow();
             }
         } catch (InterruptedException interrupted) {

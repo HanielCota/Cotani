@@ -103,27 +103,27 @@ public sealed interface EconomyTransaction
     }
 
     default @Nullable UUID sourceUserId() {
-        return null;
+        throw new UnsupportedOperationException("This transaction type does not have a source user.");
     }
 
     default @Nullable UUID targetUserId() {
-        return null;
+        throw new UnsupportedOperationException("This transaction type does not have a target user.");
     }
 
     default @Nullable BigDecimal sourceBalanceBefore() {
-        return null;
+        throw new UnsupportedOperationException("This transaction type does not have a source balance.");
     }
 
     default @Nullable BigDecimal sourceBalanceAfter() {
-        return null;
+        throw new UnsupportedOperationException("This transaction type does not have a source balance.");
     }
 
     default @Nullable BigDecimal targetBalanceBefore() {
-        return null;
+        throw new UnsupportedOperationException("This transaction type does not have a target balance.");
     }
 
     default @Nullable BigDecimal targetBalanceAfter() {
-        return null;
+        throw new UnsupportedOperationException("This transaction type does not have a target balance.");
     }
 
     record Deposit(
@@ -143,6 +143,8 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(targetUserId);
             Objects.requireNonNull(currencyId);
             Objects.requireNonNull(amount);
+            Objects.requireNonNull(targetBalanceBefore);
+            Objects.requireNonNull(targetBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
             if (amount.signum() <= 0) {
@@ -153,6 +155,11 @@ public sealed interface EconomyTransaction
         @Override
         public EconomyTransactionType type() {
             return EconomyTransactionType.DEPOSIT;
+        }
+
+        @Override
+        public Optional<UUID> source() {
+            return Optional.empty();
         }
 
         @Override
@@ -188,6 +195,8 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(sourceUserId);
             Objects.requireNonNull(currencyId);
             Objects.requireNonNull(amount);
+            Objects.requireNonNull(sourceBalanceBefore);
+            Objects.requireNonNull(sourceBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
             if (amount.signum() <= 0) {
@@ -198,6 +207,11 @@ public sealed interface EconomyTransaction
         @Override
         public EconomyTransactionType type() {
             return EconomyTransactionType.WITHDRAW;
+        }
+
+        @Override
+        public Optional<UUID> target() {
+            return Optional.empty();
         }
 
         @Override
@@ -233,6 +247,8 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(targetUserId);
             Objects.requireNonNull(currencyId);
             Objects.requireNonNull(amount);
+            Objects.requireNonNull(targetBalanceBefore);
+            Objects.requireNonNull(targetBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
             if (amount.signum() <= 0) {
@@ -243,6 +259,11 @@ public sealed interface EconomyTransaction
         @Override
         public EconomyTransactionType type() {
             return EconomyTransactionType.SET;
+        }
+
+        @Override
+        public Optional<UUID> source() {
+            return Optional.empty();
         }
 
         @Override
@@ -282,6 +303,10 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(targetUserId);
             Objects.requireNonNull(currencyId);
             Objects.requireNonNull(amount);
+            Objects.requireNonNull(sourceBalanceBefore);
+            Objects.requireNonNull(sourceBalanceAfter);
+            Objects.requireNonNull(targetBalanceBefore);
+            Objects.requireNonNull(targetBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
             if (amount.signum() <= 0) {

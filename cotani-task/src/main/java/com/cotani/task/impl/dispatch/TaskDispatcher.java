@@ -2,11 +2,9 @@ package com.cotani.task.impl.dispatch;
 
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PlatformScheduler;
-import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskMetadata;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import org.bukkit.entity.Entity;
 
 public final class TaskDispatcher {
 
@@ -30,18 +28,10 @@ public final class TaskDispatcher {
         switch (target) {
             case ExecutionTarget.Async() -> platformScheduler.runAsync(metadata, wrapped);
             case ExecutionTarget.Global() -> platformScheduler.runGlobal(metadata, wrapped);
-            case ExecutionTarget.Region region -> platformScheduler.runRegion(metadata, region.location(), wrapped);
+            case ExecutionTarget.Region region ->
+                platformScheduler.runRegion(metadata, region.worldId(), region.chunkX(), region.chunkZ(), wrapped);
             case ExecutionTarget.EntityTarget entityTarget ->
-                dispatchEntity(metadata, entityTarget.entity(), wrapped, future);
-        }
-    }
-
-    private <T> void dispatchEntity(
-            TaskMetadata metadata, Entity entity, Runnable wrapped, CompletableFuture<T> future) {
-        var task = platformScheduler.runEntity(metadata, entity, wrapped, () -> retire(future));
-
-        if (Objects.equals(task, SchedulerTask.noop())) {
-            retire(future);
+                platformScheduler.runEntity(metadata, entityTarget.entityId(), wrapped, () -> retire(future));
         }
     }
 

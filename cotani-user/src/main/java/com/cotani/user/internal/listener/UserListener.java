@@ -5,6 +5,7 @@ import com.cotani.task.util.VoidResult;
 import com.cotani.user.internal.service.InternalUserService;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -41,24 +42,40 @@ public final class UserListener implements Listener {
 
         userService
                 .load(uniqueId, username)
+                .toCompletableFuture()
+                .orTimeout(10, TimeUnit.SECONDS)
                 .thenAccept(user -> scheduler.global("user-load-complete", () -> {
-                    Player onlinePlayer = Bukkit.getPlayer(uniqueId);
+                    try {
+                        Player onlinePlayer = Bukkit.getPlayer(uniqueId);
 
-                    if (onlinePlayer == null || !onlinePlayer.isOnline()) {
-                        var _ = userService.unload(uniqueId).exceptionally(throwable -> {
-                            plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to unload user " + uniqueId);
-                            return VoidResult.nullValue();
-                        });
+                        if (onlinePlayer == null || !onlinePlayer.isOnline()) {
+                            var _ = userService.unload(uniqueId).exceptionally(throwable -> {
+                                plugin.getLogger()
+                                        .log(Level.SEVERE, throwable, () -> "Failed to unload user " + uniqueId);
+                                return VoidResult.nullValue();
+                            });
+                        }
+                    } catch (RuntimeException exception) {
+                        plugin.getLogger()
+                                .log(Level.SEVERE, exception, () -> "Error in user-load-complete task for " + uniqueId);
                     }
                 }))
                 .exceptionally(throwable -> {
                     plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to load user " + uniqueId);
 
                     scheduler.global("user-load-failed", () -> {
-                        Player onlinePlayer = Bukkit.getPlayer(uniqueId);
+                        try {
+                            Player onlinePlayer = Bukkit.getPlayer(uniqueId);
 
-                        if (onlinePlayer != null && onlinePlayer.isOnline()) {
-                            onlinePlayer.kick(loadFailureMessage);
+                            if (onlinePlayer != null && onlinePlayer.isOnline()) {
+                                onlinePlayer.kick(loadFailureMessage);
+                            }
+                        } catch (RuntimeException exception) {
+                            plugin.getLogger()
+                                    .log(
+                                            Level.SEVERE,
+                                            exception,
+                                            () -> "Error in user-load-failed task for " + uniqueId);
                         }
                     });
 
@@ -70,9 +87,13 @@ public final class UserListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         UUID uniqueId = event.getPlayer().getUniqueId();
 
-        userService.unload(uniqueId).exceptionally(throwable -> {
-            plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to unload user " + uniqueId);
-            return VoidResult.nullValue();
-        });
+        userService
+                .unload(uniqueId)
+                .toCompletableFuture()
+                .orTimeout(10, TimeUnit.SECONDS)
+                .exceptionally(throwable -> {
+                    plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to unload user " + uniqueId);
+                    return VoidResult.nullValue();
+                });
     }
 }

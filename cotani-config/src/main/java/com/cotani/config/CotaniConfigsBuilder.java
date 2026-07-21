@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
@@ -55,6 +56,12 @@ public final class CotaniConfigsBuilder {
         return this;
     }
 
+    /**
+     * Loads and reloads the registered configs synchronously.
+     *
+     * <p>The configs are guaranteed to be loaded when this method returns, but the caller thread is
+     * blocked during file I/O. Prefer {@link #loadAsync()} for non-blocking bootstrap.
+     */
     public CotaniConfigs load() {
         PaperTaskScheduler resolvedScheduler = requireScheduler();
         ConfigSerializerRegistry registry = ConfigSerializerRegistry.defaults(plugin);
@@ -63,6 +70,20 @@ public final class CotaniConfigsBuilder {
         files.forEach(configs::register);
         configs.reload();
         return configs;
+    }
+
+    /**
+     * Loads and reloads the registered configs asynchronously.
+     *
+     * <p>The returned stage completes when all config files have been loaded and bound.
+     */
+    public CompletionStage<CotaniConfigs> loadAsync() {
+        PaperTaskScheduler resolvedScheduler = requireScheduler();
+        ConfigSerializerRegistry registry = ConfigSerializerRegistry.defaults(plugin);
+        DefaultCotaniConfigs configs =
+                new DefaultCotaniConfigs(plugin, folder, resolvedScheduler, registry, createMissingFiles, copyDefaults);
+        files.forEach(configs::register);
+        return configs.reloadAsync().toCompletionStage().thenApply(_ -> configs);
     }
 
     private PaperTaskScheduler requireScheduler() {

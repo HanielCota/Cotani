@@ -13,6 +13,7 @@ import java.time.Clock;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
@@ -33,6 +34,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             new ConcurrentHashMap<>();
     private final ConcurrentLinkedDeque<EconomyTransaction> transactions = new ConcurrentLinkedDeque<>();
     private final ConcurrentMap<EconomyAccountKey, Object> locks = new ConcurrentHashMap<>();
+    private final Set<EconomyOperationId> inFlightOperations = ConcurrentHashMap.newKeySet();
+    private final Object operationLock = new Object();
 
     public InMemoryEconomyStore(Executor executor, Clock clock, EconomySettings settings) {
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -61,7 +64,6 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         return CompletableFuture.supplyAsync(
                 () -> withLock(key, () -> {
                     assertOperationIsNew(operationId);
-
                     var now = clock.instant();
                     var account = getOrCreateLocked(key);
                     var updatedAccount = account.deposit(amount, now);
@@ -96,7 +98,6 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         return CompletableFuture.supplyAsync(
                 () -> withLock(key, () -> {
                     assertOperationIsNew(operationId);
-
                     var now = clock.instant();
                     var account = getOrCreateLocked(key);
                     var updatedAccount = account.withdraw(amount, now);
@@ -130,7 +131,6 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         return CompletableFuture.supplyAsync(
                 () -> withLock(key, () -> {
                     assertOperationIsNew(operationId);
-
                     var now = clock.instant();
                     var account = getOrCreateLocked(key);
                     var updatedAccount = account.setBalance(amount, now);
@@ -168,7 +168,6 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         return CompletableFuture.supplyAsync(
                 () -> withBothLocks(sourceKey, targetKey, () -> {
                     assertOperationIsNew(operationId);
-
                     var now = clock.instant();
                     var sourceAccount = getOrCreateLocked(sourceKey);
                     var targetAccount = getOrCreateLocked(targetKey);
@@ -223,13 +222,24 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
     private void assertOperationIsNew(EconomyOperationId operationId) {
         Objects.requireNonNull(operationId, "operationId");
 
-        if (transactionsByOperation.containsKey(operationId)) {
-            throw new DuplicateEconomyOperationException(operationId);
+        synchronized (operationLock) {
+            if (transactionsByOperation.containsKey(operationId)) {
+                throw new DuplicateEconomyOperationException(operationId);
+            }
+            if (!inFlightOperations.add(operationId)) {
+                throw new DuplicateEconomyOperationException(operationId);
+            }
         }
     }
 
     private void saveTransactionLocked(EconomyTransaction transaction) {
-        transactionsByOperation.put(transaction.operationId(), transaction);
+        synchronized (operationLock) {
+            inFlightOperations.remove(transaction.operationId());
+            EconomyTransaction previous = transactionsByOperation.putIfAbsent(transaction.operationId(), transaction);
+            if (previous != null) {
+                throw new DuplicateEconomyOperationException(transaction.operationId());
+            }
+        }
         transactions.add(transaction);
     }
 

@@ -14,6 +14,8 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
 
+    private static final SkullTextureResolver TEXTURE_RESOLVER = new SkullTextureResolver();
+
     private SkullBuilder() {
         super(Material.PLAYER_HEAD);
     }
@@ -48,15 +50,15 @@ public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
     }
 
     public SkullBuilder texture(String base64) {
-        return profile(SkullTextureResolver.fromBase64(base64));
+        return profile(TEXTURE_RESOLVER.fromBase64(base64));
     }
 
     public SkullBuilder textureUrl(String textureUrl) {
-        return profile(SkullTextureResolver.fromUrl(textureUrl));
+        return profile(TEXTURE_RESOLVER.fromUrl(textureUrl));
     }
 
     public SkullBuilder textureUrl(URI textureUri) {
-        return profile(SkullTextureResolver.fromUrl(textureUri));
+        return profile(TEXTURE_RESOLVER.fromUrl(textureUri));
     }
 
     public SkullBuilder noteBlockSound(NamespacedKey soundKey) {

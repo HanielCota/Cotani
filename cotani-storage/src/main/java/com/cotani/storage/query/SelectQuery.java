@@ -56,6 +56,9 @@ public final class SelectQuery {
     }
 
     public SelectQuery limit(int value) {
+        if (value <= 0) {
+            throw new IllegalArgumentException("limit must be positive, got " + value);
+        }
         this.limit = value;
         cachedSql = null;
         return this;

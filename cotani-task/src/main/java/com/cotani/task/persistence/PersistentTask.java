@@ -14,5 +14,11 @@ public record PersistentTask(UUID id, String taskName, Instant scheduledAt, Dura
         Objects.requireNonNull(scheduledAt, "scheduledAt");
         Objects.requireNonNull(delay, "delay");
         Objects.requireNonNull(payload, "payload");
+        payload = payload.clone();
+    }
+
+    @Override
+    public byte[] payload() {
+        return payload.clone();
     }
 }

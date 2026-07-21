@@ -3,8 +3,6 @@ package com.cotani.teleport.policy;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.cotani.task.api.PaperTaskScheduler;
-import com.cotani.task.api.SchedulerTask;
 import com.cotani.teleport.api.TeleportCause;
 import java.time.Clock;
 import java.time.Duration;
@@ -20,13 +18,8 @@ class TeleportCooldownServiceTest {
     private TeleportCooldownService service;
 
     @BeforeEach
-    @SuppressWarnings("NullAway")
     void setUp() {
-        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
-        org.mockito.Mockito.when(scheduler.asyncTimer(
-                        org.mockito.Mockito.any(), org.mockito.Mockito.any(), org.mockito.Mockito.any()))
-                .thenReturn(SchedulerTask.noop());
-        service = new TeleportCooldownService(clock, scheduler);
+        service = new TeleportCooldownService(clock);
     }
 
     @Test

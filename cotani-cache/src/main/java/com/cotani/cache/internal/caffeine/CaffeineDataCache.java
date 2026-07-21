@@ -20,7 +20,10 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -51,7 +54,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     private final PaperTaskScheduler scheduler;
     private final CacheSettings settings;
     private final SchedulerTask autosaveTask;
-    private final ConcurrentHashMap<K, V> pendingSaves = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<K, PendingSave<V>> pendingSaves = new ConcurrentHashMap<>();
     private final AtomicInteger dirtyCount = new AtomicInteger(0);
     private final AtomicBoolean autosaveInProgress = new AtomicBoolean(false);
 
@@ -99,17 +102,19 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public CompletionStage<V> update(K key, UnaryOperator<V> updater) {
         var entry = getRequiredEntry(key);
-        var updated = entry.update(updater);
-        dirtyCount.incrementAndGet();
-        return CompletableFuture.completedFuture(updated);
+        if (entry.update(updater)) {
+            dirtyCount.incrementAndGet();
+        }
+        return CompletableFuture.completedFuture(entry.value());
     }
 
     @Override
     public CompletionStage<V> mutate(K key, Consumer<V> mutator) {
         var entry = getRequiredEntry(key);
-        var mutated = entry.mutate(mutator);
-        dirtyCount.incrementAndGet();
-        return CompletableFuture.completedFuture(mutated);
+        if (entry.mutate(mutator)) {
+            dirtyCount.incrementAndGet();
+        }
+        return CompletableFuture.completedFuture(entry.value());
     }
 
     @Override
@@ -120,13 +125,18 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public CompletionStage<Void> save(K key) {
         return Optional.ofNullable(cache.synchronous().getIfPresent(key))
-                .map(entry -> Objects.requireNonNull(
-                                repository.save(key, entry.value()), "repository.save returned null")
-                        .thenRun(entry::markSaved)
-                        .thenRun(dirtyCount::decrementAndGet)
-                        .exceptionallyCompose(error -> {
-                            throw new CacheSaveException("Could not save cache entry: " + key, error);
-                        }))
+                .map(entry -> {
+                    long versionAtStart = entry.version();
+                    return Objects.requireNonNull(repository.save(key, entry.value()), "repository.save returned null")
+                            .thenRun(() -> {
+                                if (entry.markSavedIfVersionMatches(versionAtStart)) {
+                                    dirtyCount.decrementAndGet();
+                                }
+                            })
+                            .exceptionallyCompose(error -> {
+                                throw new CacheSaveException("Could not save cache entry: " + key, error);
+                            });
+                })
                 .orElseGet(CompletionStages::completedVoid);
     }
 
@@ -157,8 +167,9 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public void markDirty(K key) {
-        getRequiredEntry(key).markDirty();
-        dirtyCount.incrementAndGet();
+        if (getRequiredEntry(key).markDirty()) {
+            dirtyCount.incrementAndGet();
+        }
     }
 
     @Override
@@ -202,7 +213,19 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public void close() {
         cancelAutosave();
-        closeAsync().toCompletableFuture().join();
+        try {
+            closeAsync().toCompletableFuture().get(30, TimeUnit.SECONDS);
+        } catch (TimeoutException timeout) {
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Cache close timed out after 30s; some dirty entries may not have been persisted: "
+                            + dirtyCount.get() + " dirty entries remain");
+        } catch (ExecutionException error) {
+            LOGGER.log(Level.SEVERE, "Cache close failed", error.getCause());
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            LOGGER.log(Level.SEVERE, "Cache close was interrupted; dirty entries may not have been persisted");
+        }
     }
 
     private void cancelAutosave() {
@@ -269,14 +292,18 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             return;
         }
 
-        Objects.requireNonNull(repository.save(key, entry.value()), "repository.save returned null")
+        long versionAtStart = entry.version();
+        V value = entry.value();
+        Objects.requireNonNull(repository.save(key, value), "repository.save returned null")
                 .whenComplete((_, error) -> {
                     if (error != null) {
                         LOGGER.log(
                                 Level.SEVERE,
                                 error,
                                 () -> "Could not save evicted cache entry: " + key + ". Queuing for retry.");
-                        pendingSaves.put(key, entry.value());
+                        pendingSaves.put(key, new PendingSave<>(value, versionAtStart));
+                    } else if (entry.markSavedIfVersionMatches(versionAtStart)) {
+                        dirtyCount.decrementAndGet();
                     }
                 });
     }
@@ -287,17 +314,39 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         }
 
         var entries = Map.copyOf(pendingSaves);
-        pendingSaves.clear();
+        return allOf(entries.entrySet().stream().map(e -> savePendingEntry(e.getKey(), e.getValue())));
+    }
 
-        return allOf(entries.entrySet().stream()
-                .map(e -> Objects.requireNonNull(
-                                repository.save(e.getKey(), e.getValue()), "repository.save returned null")
-                        .toCompletableFuture()));
+    private CompletionStage<Void> savePendingEntry(K key, PendingSave<V> pending) {
+        return Objects.requireNonNull(repository.save(key, pending.value()), "repository.save returned null")
+                .thenRun(() -> {
+                    pendingSaves.remove(key, pending);
+                    CacheEntry<V> entry = cache.synchronous().getIfPresent(key);
+                    if (entry != null && entry.version() == pending.version()) {
+                        entry.markSaved();
+                        dirtyCount.decrementAndGet();
+                    }
+                })
+                .exceptionallyCompose(error -> {
+                    LOGGER.log(
+                            Level.SEVERE,
+                            error,
+                            () -> "Could not save pending cache entry: " + key + ". Re-queueing for retry.");
+                    return CompletableFuture.failedFuture(
+                            new CacheSaveException("Could not save pending cache entry: " + key, error));
+                })
+                .toCompletableFuture();
     }
 
     private CacheEntry<V> getRequiredEntry(K key) {
         return Optional.ofNullable(cache.synchronous().getIfPresent(key))
                 .orElseThrow(() -> new CacheException(
                         "Cache entry is not loaded: " + key + ". Use getOrLoad(key) or load(key) first."));
+    }
+
+    private record PendingSave<V>(V value, long version) {
+        PendingSave {
+            Objects.requireNonNull(value, "value");
+        }
     }
 }

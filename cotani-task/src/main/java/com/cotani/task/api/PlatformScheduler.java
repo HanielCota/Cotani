@@ -1,6 +1,7 @@
 package com.cotani.task.api;
 
 import java.time.Duration;
+import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
@@ -26,6 +27,20 @@ public interface PlatformScheduler {
     SchedulerTask runRegionTimer(
             TaskMetadata metadata, Location location, Runnable runnable, Duration initialDelay, Duration period);
 
+    SchedulerTask runRegion(TaskMetadata metadata, UUID worldId, int chunkX, int chunkZ, Runnable runnable);
+
+    SchedulerTask runRegionLater(
+            TaskMetadata metadata, UUID worldId, int chunkX, int chunkZ, Runnable runnable, Duration delay);
+
+    SchedulerTask runRegionTimer(
+            TaskMetadata metadata,
+            UUID worldId,
+            int chunkX,
+            int chunkZ,
+            Runnable runnable,
+            Duration initialDelay,
+            Duration period);
+
     SchedulerTask runEntity(TaskMetadata metadata, Entity entity, Runnable runnable, Runnable retired);
 
     SchedulerTask runEntityLater(
@@ -34,6 +49,19 @@ public interface PlatformScheduler {
     SchedulerTask runEntityTimer(
             TaskMetadata metadata,
             Entity entity,
+            Runnable runnable,
+            Runnable retired,
+            Duration initialDelay,
+            Duration period);
+
+    SchedulerTask runEntity(TaskMetadata metadata, UUID entityId, Runnable runnable, Runnable retired);
+
+    SchedulerTask runEntityLater(
+            TaskMetadata metadata, UUID entityId, Runnable runnable, Runnable retired, Duration delay);
+
+    SchedulerTask runEntityTimer(
+            TaskMetadata metadata,
+            UUID entityId,
             Runnable runnable,
             Runnable retired,
             Duration initialDelay,

@@ -57,6 +57,12 @@ public sealed interface ExecutionTarget
             Objects.requireNonNull(worldId, "worldId");
         }
 
+        /**
+         * Resolves this region to a {@link Location} using {@link Bukkit#getWorld(UUID)}.
+         *
+         * <p>This must only be called from the server main thread. Do not call it from async
+         * continuations or task bodies.
+         */
         public Location location() {
             World world = Bukkit.getWorld(worldId);
             if (world == null) {
@@ -71,6 +77,12 @@ public sealed interface ExecutionTarget
             Objects.requireNonNull(entityId, "entityId");
         }
 
+        /**
+         * Resolves this target to a live {@link Entity} using {@link Bukkit#getEntity(UUID)}.
+         *
+         * <p>This must only be called from the server main thread or the entity's own thread. Do not
+         * call it from async continuations or task bodies.
+         */
         public Entity entity() {
             Entity resolved = Bukkit.getEntity(entityId);
             if (resolved == null) {

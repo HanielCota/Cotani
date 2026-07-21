@@ -4,7 +4,6 @@ import com.cotani.cooldown.CotaniCooldowns;
 import com.cotani.cooldown.api.CooldownAction;
 import com.cotani.cooldown.api.CooldownService;
 import com.cotani.cooldown.api.CooldownTargets;
-import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.api.TeleportCause;
 import java.time.Clock;
 import java.time.Duration;
@@ -22,7 +21,7 @@ public final class TeleportCooldownService implements AutoCloseable {
         this.cooldownService = Objects.requireNonNull(cooldownService, "cooldownService");
     }
 
-    public TeleportCooldownService(Clock clock, PaperTaskScheduler scheduler) {
+    public TeleportCooldownService(Clock clock) {
         this.cooldownService = CotaniCooldowns.inMemory(Objects.requireNonNull(clock, "clock"));
     }
 

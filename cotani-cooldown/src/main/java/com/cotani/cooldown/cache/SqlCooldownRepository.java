@@ -35,27 +35,27 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
 
         var sql =
                 "SELECT action_name, started_at, expires_at FROM cotani_cooldowns WHERE target_type = 'USER' AND target_id = ?";
-        return storage.executor()
-                .queryMany(sql, binder -> binder.string(playerId.toString()), row -> {
-                    String action = row.getString("action_name");
-                    Instant startedAt = Objects.requireNonNull(row.getInstant("started_at"));
-                    Instant expiresAt = Objects.requireNonNull(row.getInstant("expires_at"));
-                    return new CooldownEntry(
-                            new CooldownKey(CooldownTargets.user(playerId), CooldownAction.of(action)),
-                            startedAt,
-                            expiresAt);
-                })
-                .thenApply(entries -> {
-                    Instant now = Instant.now();
-                    Map<String, CooldownEntry> map = new ConcurrentHashMap<>();
-                    for (CooldownEntry entry : entries) {
-                        if (entry.expired(now)) {
-                            continue;
-                        }
-                        map.put(entry.key().action().value(), entry);
-                    }
-                    return Optional.of(new PlayerCooldowns(playerId, map));
-                });
+        return storage.transactions()
+                .run(tx -> tx.queryMany(sql, binder -> binder.string(playerId.toString()), row -> {
+                            String action = row.getString("action_name");
+                            Instant startedAt = Objects.requireNonNull(row.getInstant("started_at"));
+                            Instant expiresAt = Objects.requireNonNull(row.getInstant("expires_at"));
+                            return new CooldownEntry(
+                                    new CooldownKey(CooldownTargets.user(playerId), CooldownAction.of(action)),
+                                    startedAt,
+                                    expiresAt);
+                        })
+                        .thenApply(entries -> {
+                            Instant now = Instant.now();
+                            Map<String, CooldownEntry> map = new ConcurrentHashMap<>();
+                            for (CooldownEntry entry : entries) {
+                                if (entry.expired(now)) {
+                                    continue;
+                                }
+                                map.put(entry.key().action().value(), entry);
+                            }
+                            return Optional.of(new PlayerCooldowns(playerId, map));
+                        }));
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(value, "value");
 
-        return storage.executor().transaction(tx -> {
+        return storage.transactions().run(tx -> {
             var deleteSql = "DELETE FROM cotani_cooldowns WHERE target_type = 'USER' AND target_id = ?";
             var insertSql =
                     "INSERT INTO cotani_cooldowns (cooldown_id, target_type, target_id, action_name, started_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)";
@@ -100,6 +100,6 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
         Objects.requireNonNull(playerId, "playerId");
 
         var sql = "DELETE FROM cotani_cooldowns WHERE target_type = 'USER' AND target_id = ?";
-        return storage.executor().update(sql, binder -> binder.string(playerId.toString()));
+        return storage.transactions().run(tx -> tx.update(sql, binder -> binder.string(playerId.toString())));
     }
 }

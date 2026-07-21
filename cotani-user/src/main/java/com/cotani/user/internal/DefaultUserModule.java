@@ -16,7 +16,7 @@ import com.cotani.user.internal.service.InternalUserService;
 import com.cotani.user.internal.service.SimpleUserService;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -64,6 +64,19 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
         var repository = new StorageUserRepository(storage, new UserMapper());
         var cache = new UserCache(repository);
         var service = new SimpleUserService(cache, repository);
+        return createWithService(plugin, scheduler, options, service);
+    }
+
+    /**
+     * Package-private entry point for tests that need to inject a mock {@link SimpleUserService}.
+     */
+    static DefaultUserModule createWithService(
+            Plugin plugin, PaperTaskScheduler scheduler, UserModuleOptions options, SimpleUserService service) {
+        Objects.requireNonNull(plugin, "plugin");
+        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(service, "service");
+
         var listener = new UserListener(plugin, service, scheduler, options.loadFailureMessage());
 
         AtomicBoolean autoSaveInProgress = new AtomicBoolean(false);
@@ -77,7 +90,7 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
         Cotani cotani = Cotani.forPlugin(plugin)
                 .with(() -> HandlerList.unregisterAll(listener))
                 .with(autoSaveTask::cancel)
-                .with(() -> saveAndClear(plugin, service))
+                .withAsync(() -> saveAndClear(plugin, service))
                 .build();
 
         try {
@@ -89,30 +102,17 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
         }
     }
 
-    private static void saveAndClear(Plugin plugin, SimpleUserService service) {
-        CountDownLatch latch = new CountDownLatch(1);
-
-        var _ = service.saveAll()
+    private static CompletionStage<Void> saveAndClear(Plugin plugin, SimpleUserService service) {
+        return service.saveAll()
                 .toCompletableFuture()
                 .orTimeout(10, TimeUnit.SECONDS)
                 .whenComplete((_, throwable) -> {
                     if (throwable != null) {
                         plugin.getLogger().log(Level.SEVERE, "Failed to save users on shutdown", throwable);
-                        latch.countDown();
                         return;
                     }
                     service.clearCache();
-                    latch.countDown();
                 });
-
-        try {
-            if (!latch.await(15, TimeUnit.SECONDS)) {
-                plugin.getLogger().warning("Timed out waiting for user shutdown save.");
-            }
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-            plugin.getLogger().warning("Interrupted while waiting for user shutdown save.");
-        }
     }
 
     @Override

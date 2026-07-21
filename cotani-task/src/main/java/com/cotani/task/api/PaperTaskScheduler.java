@@ -9,7 +9,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.bukkit.Location;
@@ -99,9 +98,7 @@ public interface PaperTaskScheduler extends AutoCloseable {
 
         CompletableFuture<Void> future = new CompletableFuture<>();
         SchedulerTask pending = asyncLater("scheduler-delay", () -> future.complete(null), duration);
-        var _ = future.whenCompleteAsync(
-                (_, _) -> pending.cancel(),
-                CompletableFuture.delayedExecutor(duration.toMillis(), TimeUnit.MILLISECONDS));
+        var _ = future.whenComplete((_, _) -> pending.cancel());
         return future;
     }
 

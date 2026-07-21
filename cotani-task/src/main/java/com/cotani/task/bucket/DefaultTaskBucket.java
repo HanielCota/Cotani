@@ -8,6 +8,8 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 
 public final class DefaultTaskBucket implements TaskBucket {
 
@@ -43,8 +45,17 @@ public final class DefaultTaskBucket implements TaskBucket {
         Objects.requireNonNull(runnable, "runnable");
 
         RateLimiter limiter = limiterFor(bucketName);
+        AtomicReference<@Nullable SchedulerTask> rescheduled = new AtomicReference<>();
 
-        return scheduler.async(taskName, () -> runThrottled(limiter, runnable));
+        SchedulerTask immediate = scheduler.async(taskName, () -> {
+            SchedulerTask later = runThrottled(limiter, runnable);
+
+            if (later != null) {
+                rescheduled.set(later);
+            }
+        });
+
+        return new CompositeSchedulerTask(immediate, rescheduled);
     }
 
     @Override
@@ -55,16 +66,16 @@ public final class DefaultTaskBucket implements TaskBucket {
                 bucketName, ignored -> new TokenBucketRateLimiter(defaultCapacity, defaultRefillPeriod));
     }
 
-    private void runThrottled(RateLimiter limiter, Runnable runnable) {
+    private SchedulerTask runThrottled(RateLimiter limiter, Runnable runnable) {
         if (limiter.tryAcquire()) {
             runnable.run();
-            return;
+            return SchedulerTask.noop();
         }
 
         Duration delay = limiter.retryDelay();
         if (delay.isZero() || delay.isNegative()) {
             delay = Duration.ofMillis(1);
         }
-        scheduler.asyncLater(runnable, delay);
+        return scheduler.asyncLater(runnable, delay);
     }
 }

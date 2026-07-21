@@ -47,6 +47,13 @@ public final class DefaultTeleportModule implements TeleportModule {
         this.options = options;
     }
 
+    /**
+     * @deprecated For tests only. Production must supply real adapters via
+     * {@link #create(Plugin, CombatAdapter, RegionProtectionAdapter, PaperTaskScheduler)}.
+     * This overload silently uses noop combat/region adapters.
+     */
+    @Deprecated
+    @SuppressWarnings("InlineMeSuggester")
     public static DefaultTeleportModule create(Plugin plugin, PaperTaskScheduler scheduler) {
         return create(plugin, CombatAdapter.noop(), RegionProtectionAdapter.noop(), scheduler);
     }
@@ -109,7 +116,7 @@ public final class DefaultTeleportModule implements TeleportModule {
         try {
             Clock clock = Clock.systemUTC();
 
-            TeleportCooldownService cooldownService = new TeleportCooldownService(clock, scheduler);
+            TeleportCooldownService cooldownService = new TeleportCooldownService(clock);
 
             TeleportPolicyChain policyChain = new TeleportPolicyChain(List.of(
                     new PermissionTeleportPolicy("cotani.teleport.use", messages),
@@ -121,7 +128,7 @@ public final class DefaultTeleportModule implements TeleportModule {
             TeleportEventNotifier eventNotifier = new TeleportEventNotifier(eventBus, clock);
             TeleportResultMapper resultMapper = new TeleportResultMapper(eventNotifier);
 
-            TeleportService teleportService = new PaperTeleportService(new PaperTeleportService.Dependencies(
+            TeleportService teleportService = new PaperTeleportService(PaperTeleportService.Dependencies.create(
                     policyChain,
                     new DefaultSafeLocationResolver(scheduler),
                     eventNotifier,

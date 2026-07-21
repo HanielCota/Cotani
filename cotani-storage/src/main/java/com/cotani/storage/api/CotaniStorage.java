@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
@@ -31,7 +32,7 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public final class CotaniStorage implements AutoCloseable {
 
-    private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(5);
 
     private final Plugin plugin;
     private final StorageBackend backend;
@@ -96,10 +97,6 @@ public final class CotaniStorage implements AutoCloseable {
         return fromConfig(plugin, config, path).scheduler(scheduler);
     }
 
-    public CompletionStage<CotaniStorage> start() {
-        return startAsync();
-    }
-
     public CompletionStage<CotaniStorage> startAsync() {
         if (!started.compareAndSet(false, true)) {
             return CompletableFuture.completedFuture(this);
@@ -112,11 +109,13 @@ public final class CotaniStorage implements AutoCloseable {
                         },
                         storageExecutor)
                 .thenCompose(storage -> runMigrations().thenApply(_ -> storage))
-                .exceptionallyCompose(error -> {
-                    shutdownExecutor();
-                    started.set(false);
-                    return CompletableFuture.failedFuture(error);
-                });
+                .exceptionallyCompose(error -> CompletableFuture.runAsync(
+                                () -> {
+                                    shutdownExecutor();
+                                    started.set(false);
+                                },
+                                scheduler.asyncExecutor())
+                        .thenCompose(_ -> CompletableFuture.failedFuture(error)));
     }
 
     public Plugin plugin() {
@@ -129,10 +128,6 @@ public final class CotaniStorage implements AutoCloseable {
 
     public PaperTaskScheduler scheduler() {
         return scheduler;
-    }
-
-    public QueryExecutor executor() {
-        return executor;
     }
 
     public SqlDialect dialect() {
@@ -163,12 +158,20 @@ public final class CotaniStorage implements AutoCloseable {
 
     @Override
     public void close() {
+        if (Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("CotaniStorage.close() blocks; call closeAsync() off the main thread.");
+        }
         shutdownExecutor();
         provider.close();
     }
 
     public CompletionStage<Void> closeAsync() {
-        return CompletableFuture.runAsync(this::close, scheduler.asyncExecutor());
+        return CompletableFuture.runAsync(
+                () -> {
+                    shutdownExecutor();
+                    provider.close();
+                },
+                scheduler.asyncExecutor());
     }
 
     private void registerRepositories() {

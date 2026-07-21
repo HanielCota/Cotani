@@ -15,6 +15,9 @@ import org.bukkit.World;
  * <p>The search reuses a single mutable {@link Location} while scanning candidates to avoid allocating
  * one object per iteration. World-border, height-bounds and chunk-loaded checks that do not change
  * during the search are validated once before the loop.
+ *
+ * <p>To respect Folia region affinity, the horizontal search is clamped to the chunk of the target
+ * location. Callers that need a wider search must schedule multiple region tasks.
  */
 public final class DefaultSafeLocationResolver implements com.cotani.teleport.safety.SafeLocationResolver {
 
@@ -40,13 +43,44 @@ public final class DefaultSafeLocationResolver implements com.cotani.teleport.sa
         int horizontal = Math.max(0, options.horizontalRadius());
         int vertical = Math.max(0, options.verticalRadius());
 
+        int chunkMinX = (baseX >> 4) << 4;
+        int chunkMaxX = chunkMinX + 15;
+        int chunkMinZ = (baseZ >> 4) << 4;
+        int chunkMaxZ = chunkMinZ + 15;
+
         Location candidate = new Location(world, 0, 0, 0, target.getYaw(), target.getPitch());
 
-        Optional<Location> up = search(world, candidate, baseX, baseY, baseZ, horizontal, vertical, 1, options);
+        Optional<Location> up = search(
+                world,
+                candidate,
+                baseX,
+                baseY,
+                baseZ,
+                horizontal,
+                vertical,
+                1,
+                chunkMinX,
+                chunkMaxX,
+                chunkMinZ,
+                chunkMaxZ,
+                options);
         if (up.isPresent()) {
             return up;
         }
-        return search(world, candidate, baseX, baseY, baseZ, horizontal, vertical, -1, options);
+        return search(
+                world,
+                candidate,
+                baseX,
+                baseY,
+                baseZ,
+                horizontal,
+                vertical,
+                -1,
+                chunkMinX,
+                chunkMaxX,
+                chunkMinZ,
+                chunkMaxZ,
+                options);
     }
 
     private static Optional<Location> search(
@@ -58,6 +92,10 @@ public final class DefaultSafeLocationResolver implements com.cotani.teleport.sa
             int horizontal,
             int vertical,
             int direction,
+            int chunkMinX,
+            int chunkMaxX,
+            int chunkMinZ,
+            int chunkMaxZ,
             SafeLocationOptions options) {
         int startOffset = direction > 0 ? 0 : 1;
 
@@ -66,10 +104,12 @@ public final class DefaultSafeLocationResolver implements com.cotani.teleport.sa
             if (y < world.getMinHeight() || y + 1 >= world.getMaxHeight()) {
                 continue;
             }
-            for (int xOffset = -horizontal; xOffset <= horizontal; xOffset++) {
-                int x = baseX + xOffset;
-                for (int zOffset = -horizontal; zOffset <= horizontal; zOffset++) {
-                    int z = baseZ + zOffset;
+            int minX = Math.max(chunkMinX, baseX - horizontal);
+            int maxX = Math.min(chunkMaxX, baseX + horizontal);
+            int minZ = Math.max(chunkMinZ, baseZ - horizontal);
+            int maxZ = Math.min(chunkMaxZ, baseZ + horizontal);
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) {
                     candidate.setX(x + 0.5);
                     candidate.setY(y);
                     candidate.setZ(z + 0.5);

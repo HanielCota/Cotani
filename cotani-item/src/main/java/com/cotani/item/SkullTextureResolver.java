@@ -15,7 +15,7 @@ import org.bukkit.Bukkit;
 import org.jspecify.annotations.NullMarked;
 
 @NullMarked
-public final class SkullTextureResolver {
+public final class SkullTextureResolver implements AutoCloseable {
 
     private static final String TEXTURES_PROPERTY = "textures";
     private static final String TEXTURES_DOMAIN = "https://textures.minecraft.net/texture/";
@@ -25,39 +25,57 @@ public final class SkullTextureResolver {
     private static final long DEFAULT_CACHE_EXPIRE_MINUTES = 60;
     private static final long DEFAULT_CACHE_MAXIMUM_SIZE = 1_000;
 
-    private static final Cache<String, PlayerProfile> PROFILE_CACHE = Caffeine.newBuilder()
-            .expireAfterWrite(DEFAULT_CACHE_EXPIRE_MINUTES, TimeUnit.MINUTES)
-            .maximumSize(DEFAULT_CACHE_MAXIMUM_SIZE)
-            .build();
+    private final Cache<String, PlayerProfile> profileCache;
 
-    private SkullTextureResolver() {}
-
-    public static PlayerProfile fromBase64(String base64) {
-        Objects.requireNonNull(base64, "Parameter 'base64' must not be null");
-        var uuid = UUID.nameUUIDFromBytes(base64.getBytes(StandardCharsets.UTF_8));
-        var profile = Bukkit.createProfile(uuid);
-        profile.setProperty(new ProfileProperty(TEXTURES_PROPERTY, base64));
-        return profile;
+    public SkullTextureResolver() {
+        this(buildDefaultCache());
     }
 
-    public static PlayerProfile fromUrl(String textureUrl) {
+    public SkullTextureResolver(Cache<String, PlayerProfile> profileCache) {
+        this.profileCache = Objects.requireNonNull(profileCache, "profileCache");
+    }
+
+    public PlayerProfile fromBase64(String base64) {
+        Objects.requireNonNull(base64, "Parameter 'base64' must not be null");
+        return buildProfile(base64);
+    }
+
+    public PlayerProfile fromUrl(String textureUrl) {
         Objects.requireNonNull(textureUrl, "Parameter 'textureUrl' must not be null");
         var normalizedUrl = normalizeTextureUrl(textureUrl);
-        return PROFILE_CACHE.get(normalizedUrl, SkullTextureResolver::createProfile);
+        return profileCache.get(normalizedUrl, SkullTextureResolver::createProfile);
     }
 
-    public static PlayerProfile fromUrl(URI textureUri) {
+    public PlayerProfile fromUrl(URI textureUri) {
         Objects.requireNonNull(textureUri, "Parameter 'textureUri' must not be null");
         return fromUrl(textureUri.toString());
     }
 
-    public static void clearCache() {
-        PROFILE_CACHE.invalidateAll();
+    public void clearCache() {
+        profileCache.invalidateAll();
+    }
+
+    @Override
+    public void close() {
+        clearCache();
+    }
+
+    private static Cache<String, PlayerProfile> buildDefaultCache() {
+        return Caffeine.newBuilder()
+                .expireAfterWrite(DEFAULT_CACHE_EXPIRE_MINUTES, TimeUnit.MINUTES)
+                .maximumSize(DEFAULT_CACHE_MAXIMUM_SIZE)
+                .build();
     }
 
     private static PlayerProfile createProfile(String normalizedUrl) {
-        var payload = toBase64Payload(normalizedUrl);
-        return fromBase64(payload);
+        return buildProfile(toBase64Payload(normalizedUrl));
+    }
+
+    private static PlayerProfile buildProfile(String base64) {
+        var uuid = UUID.nameUUIDFromBytes(base64.getBytes(StandardCharsets.UTF_8));
+        var profile = Bukkit.createProfile(uuid);
+        profile.setProperty(new ProfileProperty(TEXTURES_PROPERTY, base64));
+        return profile;
     }
 
     private static String toBase64Payload(String normalizedUrl) {

@@ -77,6 +77,6 @@ public final class StorageUserRepository implements UserRepository {
         List<SqlConsumer<ParameterBinder>> binders =
                 users.stream().map(StorageUserRepository::bindUser).toList();
 
-        return storage.executor().batch(sql, binders);
+        return storage.transactions().run(tx -> tx.batch(sql, binders));
     }
 }

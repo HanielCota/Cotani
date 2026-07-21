@@ -16,7 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -43,12 +42,8 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
     public CompletionStage<TeleportResult> teleport(TeleportRequest request) {
         Objects.requireNonNull(request, "request");
 
-        Location target = request.target();
-        ExecutionTarget startTarget =
-                target.getWorld() != null ? ExecutionTarget.region(target) : ExecutionTarget.global();
-
         return deps.scheduler()
-                .supply(startTarget, "teleport-prepare", () -> prepare(request))
+                .supply(ExecutionTarget.entity(request.playerId()), "teleport-prepare", () -> prepare(request))
                 .thenCompose(this::resolveAndFinish);
     }
 
@@ -80,7 +75,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
                 options,
                 request.source(),
                 Instant.now(deps.clock()));
-        return new PreparedTeleport(context, originalTarget, TeleportValidator.validateInitial(context));
+        return new PreparedTeleport(context, originalTarget, TeleportValidator.validateInitial(context, player));
     }
 
     private CompletionStage<TeleportResult> resolveAndFinish(PreparedTeleport prepared) {
@@ -145,41 +140,69 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
 
         Location eventTarget =
                 Objects.requireNonNull(event.getTo(), "preEvent.to").clone();
-        return executeTeleport(context, player, eventTarget);
+        return executeTeleport(context, eventTarget);
     }
 
-    private CompletionStage<TeleportResult> executeTeleport(
-            TeleportContext context, Player player, Location eventTarget) {
+    private CompletionStage<TeleportResult> executeTeleport(TeleportContext context, Location eventTarget) {
         TeleportOptions options = context.options();
         Instant startedAt = Instant.now(deps.clock());
 
-        preparePlayer(player, options.player());
-        Vector velocity = player.getVelocity();
+        return flatten(deps.scheduler().supply(ExecutionTarget.entity(context.playerId()), "teleport-execute", () -> {
+            Player player = resolvePlayer(context.playerId());
+            if (player == null) {
+                return CompletableFuture.completedFuture(
+                        TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
+            }
 
-        CompletableFuture<Boolean> teleportFuture = startTeleport(player, eventTarget, options);
+            preparePlayer(player, options.player());
+            Vector velocity = player.getVelocity().clone();
 
-        return teleportFuture
-                .orTimeout(options.timeout().toMillis(), TimeUnit.MILLISECONDS)
-                .thenCompose(success -> {
-                    if (!success) {
-                        return deps.resultMapper().mapTeleportFailure(context);
-                    }
+            if (options.async()) {
+                return player.teleportAsync(eventTarget)
+                        .orTimeout(options.timeout().toMillis(), TimeUnit.MILLISECONDS)
+                        .thenCompose(success -> flatten(deps.scheduler()
+                                .supply(
+                                        ExecutionTarget.entity(context.playerId()),
+                                        "teleport-complete",
+                                        () -> completeTeleport(context, eventTarget, velocity, success, startedAt))))
+                        .exceptionallyCompose(error -> flatten(deps.scheduler()
+                                .supply(
+                                        ExecutionTarget.entity(context.playerId()),
+                                        "teleport-exception",
+                                        () -> deps.resultMapper().mapException(context, error))));
+            }
 
-                    applyCooldown(context);
-
-                    if (options.preserveVelocity()) {
-                        player.setVelocity(velocity);
-                    }
-                    return deps.resultMapper().mapSuccess(context, context.from(), eventTarget, startedAt);
-                })
-                .exceptionallyCompose(error -> deps.resultMapper().mapException(context, error));
+            boolean success = player.teleport(eventTarget);
+            return completeTeleport(context, eventTarget, velocity, success, startedAt);
+        }));
     }
 
-    private CompletableFuture<Boolean> startTeleport(Player player, Location eventTarget, TeleportOptions options) {
-        if (options.async()) {
-            return player.teleportAsync(eventTarget);
+    private static <T> CompletionStage<T> flatten(CompletionStage<? extends CompletionStage<T>> nested) {
+        return nested.thenCompose(stage -> stage);
+    }
+
+    private CompletionStage<TeleportResult> completeTeleport(
+            TeleportContext context, Location eventTarget, Vector velocity, boolean success, Instant startedAt) {
+        if (!success) {
+            return deps.resultMapper().mapTeleportFailure(context);
         }
-        return CompletableFuture.completedFuture(player.teleport(eventTarget));
+
+        Player player = resolvePlayer(context.playerId());
+        if (player == null) {
+            return CompletableFuture.completedFuture(
+                    TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
+        }
+
+        if (context.options().preserveVelocity()) {
+            player.setVelocity(velocity);
+        }
+
+        if (context.options().checkCooldown()) {
+            deps.cooldownService()
+                    .put(context.playerId(), context.cause(), context.options().cooldownDuration());
+        }
+
+        return deps.resultMapper().mapSuccess(context, context.from(), eventTarget, startedAt);
     }
 
     private CompletionStage<TeleportResult> notifyFailure(TeleportResult.Failure failure) {
@@ -195,15 +218,8 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
         }
     }
 
-    private void applyCooldown(TeleportContext context) {
-        TeleportOptions options = context.options();
-        if (options.checkCooldown()) {
-            deps.cooldownService().put(context.playerId(), context.cause(), options.cooldownDuration());
-        }
-    }
-
     private @Nullable Player resolvePlayer(UUID playerId) {
-        return Bukkit.getPlayer(playerId);
+        return deps.playerResolver().resolve(playerId);
     }
 
     record Dependencies(
@@ -213,7 +229,8 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
             TeleportResultMapper resultMapper,
             TeleportCooldownService cooldownService,
             PaperTaskScheduler scheduler,
-            Clock clock) {
+            Clock clock,
+            PlayerResolver playerResolver) {
         Dependencies {
             Objects.requireNonNull(policyChain, "policyChain");
             Objects.requireNonNull(safeLocationResolver, "safeLocationResolver");
@@ -222,6 +239,26 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
             Objects.requireNonNull(cooldownService, "cooldownService");
             Objects.requireNonNull(scheduler, "scheduler");
             Objects.requireNonNull(clock, "clock");
+            Objects.requireNonNull(playerResolver, "playerResolver");
+        }
+
+        static Dependencies create(
+                TeleportPolicyChain policyChain,
+                SafeLocationResolver safeLocationResolver,
+                TeleportEventNotifier eventNotifier,
+                TeleportResultMapper resultMapper,
+                TeleportCooldownService cooldownService,
+                PaperTaskScheduler scheduler,
+                Clock clock) {
+            return new Dependencies(
+                    policyChain,
+                    safeLocationResolver,
+                    eventNotifier,
+                    resultMapper,
+                    cooldownService,
+                    scheduler,
+                    clock,
+                    PlayerResolver.bukkit());
         }
     }
 

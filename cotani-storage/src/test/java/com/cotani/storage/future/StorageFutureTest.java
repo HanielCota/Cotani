@@ -7,8 +7,13 @@ import com.cotani.storage.error.StorageException;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("deprecation")
 class StorageFutureTest {
 
     @Test
@@ -76,9 +81,110 @@ class StorageFutureTest {
     }
 
     @Test
+    @SuppressWarnings("NullAway")
+    void rawIsDefensive() {
+        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
+        var source = new CompletableFuture<String>();
+        var future = new StorageFuture<>(source, scheduler);
+
+        var raw = future.raw();
+        assertTrue(raw.complete("manual"));
+        assertFalse(source.isDone());
+    }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void constructorRejectsNullFuture() {
+        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
+        assertThrows(
+                NullPointerException.class, () -> new StorageFuture<>((CompletableFuture<String>) null, scheduler));
+    }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void constructorRejectsNullScheduler() {
+        assertThrows(
+                NullPointerException.class,
+                () -> new StorageFuture<>(CompletableFuture.completedFuture("value"), null));
+    }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void mapRejectsNullMapper() {
+        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
+        var future = StorageFuture.completed("value", scheduler);
+        assertThrows(NullPointerException.class, () -> future.map(null));
+    }
+
+    @Test
     void toCompletionStageMatchesRawValue() {
         var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
         var future = StorageFuture.completed("hello", scheduler);
         assertEquals("hello", future.toCompletionStage().toCompletableFuture().join());
+    }
+
+    @Test
+    void thenAsyncSchedulesOnAsyncExecutor() {
+        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
+        org.mockito.Mockito.when(scheduler.async(org.mockito.Mockito.any())).thenAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        });
+        var future = StorageFuture.completed("value", scheduler);
+        var received = new AtomicReference<String>();
+
+        future.thenAsync(received::set);
+
+        assertEquals("value", received.get());
+    }
+
+    @Test
+    void thenGlobalSchedulesOnGlobalExecutor() {
+        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
+        org.mockito.Mockito.when(scheduler.global(org.mockito.Mockito.any())).thenAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        });
+        var future = StorageFuture.completed("value", scheduler);
+        var received = new AtomicReference<String>();
+
+        future.thenGlobal(received::set);
+
+        assertEquals("value", received.get());
+    }
+
+    @Test
+    void thenEntitySchedulesOnEntityExecutor() {
+        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
+        Entity entity = org.mockito.Mockito.mock(Entity.class);
+        org.mockito.Mockito.when(scheduler.entity(org.mockito.Mockito.eq(entity), org.mockito.Mockito.any()))
+                .thenAnswer(invocation -> {
+                    ((Runnable) invocation.getArgument(1)).run();
+                    return null;
+                });
+        var future = StorageFuture.completed("value", scheduler);
+        var received = new AtomicReference<String>();
+
+        future.thenEntity(entity, received::set);
+
+        assertEquals("value", received.get());
+    }
+
+    @Test
+    void thenRegionSchedulesOnRegionExecutor() {
+        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
+        World world = org.mockito.Mockito.mock(World.class);
+        var location = new Location(world, 10, 64, 10);
+        org.mockito.Mockito.when(scheduler.region(org.mockito.Mockito.eq(location), org.mockito.Mockito.any()))
+                .thenAnswer(invocation -> {
+                    ((Runnable) invocation.getArgument(1)).run();
+                    return null;
+                });
+        var future = StorageFuture.completed("value", scheduler);
+        var received = new AtomicReference<String>();
+
+        future.thenRegion(location, received::set);
+
+        assertEquals("value", received.get());
     }
 }

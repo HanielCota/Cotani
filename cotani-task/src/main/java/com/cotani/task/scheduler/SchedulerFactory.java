@@ -61,8 +61,7 @@ public final class SchedulerFactory {
         Objects.requireNonNull(metrics, "metrics");
         Objects.requireNonNull(persistentTaskStore, "persistentTaskStore");
 
-        var platformScheduler = PlatformSchedulerFactory.create(
-                plugin, options.maxConcurrentVirtualThreads(), options.useVirtualThreads());
+        var platformScheduler = PlatformSchedulerFactory.create(plugin, options);
 
         return new ModernPaperTaskScheduler(platformScheduler, exceptionHandler, options, metrics, persistentTaskStore);
     }

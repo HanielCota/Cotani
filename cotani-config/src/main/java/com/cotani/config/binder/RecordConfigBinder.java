@@ -280,10 +280,10 @@ public final class RecordConfigBinder implements ConfigBinder {
         }
 
         @Override
-        public void load() {}
+        public void load() { /* TODO document why this method is empty */ }
 
         @Override
-        public void save() {}
+        public void save() { /* TODO document why this method is empty */ }
 
         @Override
         public boolean contains(String path) {

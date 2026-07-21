@@ -10,6 +10,13 @@ import org.bukkit.event.HandlerList;
 
 /**
  * Publishes economy events as Bukkit events.
+ *
+ * <p><b>Contract:</b> {@link #publish(EconomyTransactionEvent)} must be invoked from the server main
+ * thread. Bukkit event dispatch ({@code PluginManager#callEvent}) is not thread-safe, so calling this
+ * method from any other thread throws {@link IllegalStateException}.
+ *
+ * @apiNote Always publish from the main thread. If you are on an async thread, hand the event back to the
+ *     main thread (for example via {@code PaperTaskScheduler#global}) before calling {@code publish}.
  */
 public final class BukkitEconomyEventPublisher implements EconomyEventPublisher {
 
@@ -22,6 +29,10 @@ public final class BukkitEconomyEventPublisher implements EconomyEventPublisher 
     @Override
     public void publish(EconomyTransactionEvent event) {
         Objects.requireNonNull(event, "event");
+        if (!Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException(
+                    "BukkitEconomyEventPublisher.publish must be called from the server main thread");
+        }
         Bukkit.getPluginManager().callEvent(new BukkitEconomyTransactionEvent(event.transaction()));
     }
 

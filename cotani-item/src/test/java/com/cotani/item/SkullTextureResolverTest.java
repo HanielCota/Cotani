@@ -26,11 +26,18 @@ class SkullTextureResolverTest {
     }
 
     @Test
-    void isFinalUtilityClass() throws NoSuchMethodException {
+    void isFinalAndConstructable() throws NoSuchMethodException {
         assertTrue(Modifier.isFinal(SkullTextureResolver.class.getModifiers()));
 
-        var constructor = SkullTextureResolver.class.getDeclaredConstructor();
-        assertTrue(Modifier.isPrivate(constructor.getModifiers()));
+        var noArg = SkullTextureResolver.class.getDeclaredConstructor();
+        assertTrue(Modifier.isPublic(noArg.getModifiers()));
+
+        assertTrue(Modifier.isPublic(SkullTextureResolver.class
+                .getDeclaredConstructor(com.github.benmanes.caffeine.cache.Cache.class)
+                .getModifiers()));
+
+        assertTrue(AutoCloseable.class.isAssignableFrom(SkullTextureResolver.class));
+        SkullTextureResolver.class.getMethod("close");
     }
 
     @Test

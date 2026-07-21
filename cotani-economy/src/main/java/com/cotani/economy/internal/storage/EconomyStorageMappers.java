@@ -5,8 +5,8 @@ import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.transaction.*;
 import com.cotani.storage.api.CotaniStorage;
-import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.query.Row;
+import com.cotani.storage.transaction.TransactionContext;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -95,7 +95,7 @@ final class EconomyStorageMappers {
     }
 
     static CompletionStage<Void> insertTransaction(
-            QueryExecutor tx, CotaniStorage storage, EconomyTransaction transaction) {
+            TransactionContext tx, CotaniStorage storage, EconomyTransaction transaction) {
         String sql = storage.dialect()
                 .upsert(
                         "cotani_economy_transactions",

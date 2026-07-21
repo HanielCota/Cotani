@@ -7,7 +7,6 @@ import com.cotani.event.api.EventPriority;
 import com.cotani.event.dispatcher.DefaultEventDispatcher;
 import com.cotani.event.dispatcher.EventDispatcher;
 import com.cotani.event.exception.EventExceptionHandler;
-import com.cotani.event.exception.LoggingEventExceptionHandler;
 import com.cotani.event.registry.DefaultEventRegistry;
 import com.cotani.event.registry.EventRegistry;
 import com.cotani.event.subscription.DefaultEventSubscription;
@@ -16,7 +15,6 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 
 public final class DefaultEventBus implements EventBus {
 
@@ -30,15 +28,12 @@ public final class DefaultEventBus implements EventBus {
         this.asyncExecutor = Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
     }
 
-    public static DefaultEventBus createDefault() {
-        return createDefault(LoggingEventExceptionHandler.usingJavaLogger());
-    }
-
-    public static DefaultEventBus createDefault(EventExceptionHandler exceptionHandler) {
+    public static DefaultEventBus create(EventExceptionHandler exceptionHandler, Executor asyncExecutor) {
         Objects.requireNonNull(exceptionHandler, "exceptionHandler cannot be null");
+        Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
 
         return new DefaultEventBus(
-                new DefaultEventRegistry(), new DefaultEventDispatcher(exceptionHandler), ForkJoinPool.commonPool());
+                new DefaultEventRegistry(), new DefaultEventDispatcher(exceptionHandler), asyncExecutor);
     }
 
     @Override

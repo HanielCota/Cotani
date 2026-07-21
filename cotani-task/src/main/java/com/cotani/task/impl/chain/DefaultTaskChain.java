@@ -5,6 +5,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.RetryPolicy;
 import com.cotani.task.api.TaskChain;
 import com.cotani.task.exception.TaskTimeoutException;
+import com.cotani.task.util.VoidResult;
 import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -172,9 +173,27 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     public TaskChain<T> onStart(Runnable action) {
         Objects.requireNonNull(action, "action");
 
-        action.run();
+        CompletableFuture<T> started = scheduler
+                .supplyAsync("chain-on-start", () -> {
+                    action.run();
 
-        return this;
+                    return VoidResult.nullValue();
+                })
+                .toCompletionStage()
+                .thenCompose(ignored -> future)
+                .toCompletableFuture();
+
+        Supplier<CompletableFuture<T>> factory = () -> scheduler
+                .supplyAsync("chain-on-start", () -> {
+                    action.run();
+
+                    return VoidResult.nullValue();
+                })
+                .toCompletionStage()
+                .thenCompose(ignored -> futureFactory.get())
+                .toCompletableFuture();
+
+        return new DefaultTaskChain<>(started, scheduler, factory);
     }
 
     @Override

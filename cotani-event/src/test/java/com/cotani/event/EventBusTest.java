@@ -9,6 +9,7 @@ import com.cotani.event.api.EventBus;
 import com.cotani.event.api.EventPriority;
 import com.cotani.event.bus.DefaultEventBus;
 import com.cotani.event.cancellable.AbstractCancellableEvent;
+import com.cotani.event.exception.LoggingEventExceptionHandler;
 import com.cotani.event.subscription.CompositeEventSubscription;
 import com.cotani.event.subscription.EventSubscription;
 import java.util.UUID;
@@ -20,7 +21,7 @@ final class EventBusTest {
 
     @Test
     void testPublishAndSubscribe() {
-        EventBus eventBus = DefaultEventBus.createDefault();
+        EventBus eventBus = DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), Runnable::run);
         AtomicBoolean called = new AtomicBoolean(false);
         UUID userId = UUID.randomUUID();
 
@@ -35,7 +36,7 @@ final class EventBusTest {
 
     @Test
     void testPublishAsync() {
-        EventBus eventBus = DefaultEventBus.createDefault();
+        EventBus eventBus = DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), Runnable::run);
         AtomicBoolean called = new AtomicBoolean(false);
         UUID userId = UUID.randomUUID();
 
@@ -51,7 +52,7 @@ final class EventBusTest {
 
     @Test
     void testIgnoreCancelled() {
-        EventBus eventBus = DefaultEventBus.createDefault();
+        EventBus eventBus = DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), Runnable::run);
         AtomicBoolean defaultCalled = new AtomicBoolean(false);
         AtomicBoolean ignoreCalled = new AtomicBoolean(false);
 
@@ -80,7 +81,7 @@ final class EventBusTest {
 
     @Test
     void testCompositeEventSubscription() {
-        EventBus eventBus = DefaultEventBus.createDefault();
+        EventBus eventBus = DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), Runnable::run);
         AtomicInteger counter = new AtomicInteger(0);
 
         try (CompositeEventSubscription composite = new CompositeEventSubscription()) {
@@ -106,7 +107,7 @@ final class EventBusTest {
 
     @Test
     void testRegistryCachingAndInvalidation() {
-        EventBus eventBus = DefaultEventBus.createDefault();
+        EventBus eventBus = DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), Runnable::run);
         AtomicInteger counter = new AtomicInteger(0);
 
         // 1. First publish - cache should be filled

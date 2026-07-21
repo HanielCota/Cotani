@@ -5,15 +5,14 @@ import com.cotani.teleport.api.TeleportFailureReason;
 import com.cotani.teleport.api.TeleportResult;
 import com.cotani.teleport.api.TeleportResults;
 import java.util.Optional;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.Nullable;
 
 public final class TeleportValidator {
     private TeleportValidator() {}
 
-    public static Optional<TeleportResult.Failure> validateInitial(TeleportContext context) {
-        Player player = Bukkit.getPlayer(context.playerId());
+    public static Optional<TeleportResult.Failure> validateInitial(TeleportContext context, @Nullable Player player) {
         if (player == null || !player.isOnline()) {
             return Optional.of(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
         }

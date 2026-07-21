@@ -1,11 +1,14 @@
 package com.cotani.cooldown.internal;
 
 import com.cotani.cooldown.api.*;
+import com.cotani.cooldown.paper.CotaniCooldownDenyEvent;
+import com.cotani.cooldown.paper.CotaniCooldownStartEvent;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import org.bukkit.Bukkit;
 import org.jspecify.annotations.Nullable;
 
 public final class DefaultCooldownOperation implements CooldownOperation {
@@ -97,7 +100,26 @@ public final class DefaultCooldownOperation implements CooldownOperation {
     public CooldownResult checkAndStart() {
         ensureDuration();
 
-        return store.checkAndStart(key(), Objects.requireNonNull(duration), clock);
+        CooldownResult result = store.checkAndStart(key(), Objects.requireNonNull(duration), clock);
+
+        fireEvents(result);
+
+        return result;
+    }
+
+    private void fireEvents(CooldownResult result) {
+        if (Bukkit.getServer() == null || !Bukkit.isPrimaryThread()) {
+            return;
+        }
+
+        CooldownKey key = result.key();
+        if (result.denied()) {
+            Bukkit.getPluginManager()
+                    .callEvent(new CotaniCooldownDenyEvent(
+                            key, result.remaining(), Objects.requireNonNull(result.expiresAt())));
+        } else {
+            Bukkit.getPluginManager().callEvent(new CotaniCooldownStartEvent(key, Objects.requireNonNull(duration)));
+        }
     }
 
     @Override

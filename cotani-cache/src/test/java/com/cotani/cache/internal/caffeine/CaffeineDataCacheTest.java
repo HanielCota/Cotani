@@ -14,6 +14,8 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -312,5 +314,142 @@ class CaffeineDataCacheTest {
 
         assertEquals(0, cache.size());
         verify(repository).save("key", "value");
+    }
+
+    @Test
+    void oldSaveDoesNotClearNewerUpdate() {
+        CompletableFuture<Void> firstSave = new CompletableFuture<>();
+        CompletableFuture<Void> secondSave = new CompletableFuture<>();
+        when(repository.save(anyString(), anyString())).thenReturn(firstSave).thenReturn(secondSave);
+
+        DataCache<String, String> cache = createCache(CacheSettings.staticData());
+        cache.put("key", "value");
+        cache.markDirty("key");
+
+        var pendingFirst = cache.save("key").toCompletableFuture();
+        assertFalse(pendingFirst.isDone());
+
+        cache.update("key", value -> value + "-updated");
+
+        firstSave.complete(null);
+        pendingFirst.join();
+
+        var pendingSecond = cache.save("key").toCompletableFuture();
+        assertFalse(pendingSecond.isDone());
+        verify(repository, times(2)).save(anyString(), anyString());
+
+        secondSave.complete(null);
+        pendingSecond.join();
+    }
+
+    @Test
+    void repeatedUpdatesDoNotInflateDirtyCount() {
+        when(repository.save(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
+
+        DataCache<String, String> cache = createCache(CacheSettings.staticData());
+        cache.put("key", "value");
+
+        cache.update("key", value -> value + "-1").toCompletableFuture().join();
+        cache.update("key", value -> value + "-2").toCompletableFuture().join();
+        cache.update("key", value -> value + value + "-3").toCompletableFuture().join();
+
+        assertEquals(1, cache.dirtyCount());
+
+        cache.save("key").toCompletableFuture().join();
+
+        assertEquals(0, cache.dirtyCount());
+    }
+
+    @Test
+    void failedEvictSaveIsRetriedOnClose() {
+        CompletableFuture<Void> failedEvictSave = new CompletableFuture<>();
+        CompletableFuture<Void> successfulRetry = CompletableFuture.completedFuture(null);
+        when(repository.save(anyString(), anyString()))
+                .thenReturn(failedEvictSave)
+                .thenReturn(successfulRetry);
+
+        DataCache<String, String> cache = createCache(CacheSettings.highActivity());
+        cache.put("key", "value");
+        cache.markDirty("key");
+
+        cache.unload("key");
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        }
+        failedEvictSave.completeExceptionally(new RuntimeException("boom"));
+
+        cache.closeAsync().toCompletableFuture().join();
+
+        verify(repository, times(2)).save("key", "value");
+    }
+
+    @Test
+    void repeatedMarkDirtyDoesNotInflateDirtyCount() {
+        DataCache<String, String> cache = createCache(CacheSettings.staticData());
+        cache.put("key", "value");
+
+        cache.markDirty("key");
+        cache.markDirty("key");
+        cache.markDirty("key");
+
+        assertEquals(1, cache.dirtyCount());
+    }
+
+    @Test
+    void oldSaveDoesNotClearNewerMarkDirty() {
+        CompletableFuture<Void> save = new CompletableFuture<>();
+        when(repository.save(anyString(), anyString())).thenReturn(save);
+
+        DataCache<String, String> cache = createCache(CacheSettings.staticData());
+        cache.put("key", "value");
+        cache.markDirty("key");
+
+        var pending = cache.save("key").toCompletableFuture();
+        assertFalse(pending.isDone());
+
+        cache.markDirty("key");
+
+        save.complete(null);
+        pending.join();
+
+        assertTrue(cache.dirtyCount() > 0);
+        assertTrue(cache.find("key").isPresent());
+    }
+
+    @Test
+    void concurrentUpdatesPreserveDirtyCount() throws InterruptedException {
+        DataCache<String, String> cache = createCache(CacheSettings.staticData());
+        cache.put("key", "value");
+
+        int threads = 8;
+        int updatesPerThread = 100;
+        var latch = new CountDownLatch(threads);
+        var executor = Executors.newFixedThreadPool(threads);
+
+        try {
+            for (int i = 0; i < threads; i++) {
+                final int suffix = i;
+                var _ = executor.submit(() -> {
+                    try {
+                        for (int j = 0; j < updatesPerThread; j++) {
+                            cache.update("key", value -> value + suffix)
+                                    .toCompletableFuture()
+                                    .join();
+                        }
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+
+            assertTrue(latch.await(5, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdown();
+        }
+
+        assertEquals(1, cache.dirtyCount());
+        assertTrue(cache.find("key").isPresent());
     }
 }

@@ -22,13 +22,20 @@ class CacheEntryTest {
     }
 
     @Test
-    void updateReturnsUpdatedValue() {
+    void updateReturnsBecameDirty() {
         CacheEntry<String> entry = new CacheEntry<>("old");
 
-        String updated = entry.update(v -> v + "-new");
-
-        assertEquals("old-new", updated);
+        assertTrue(entry.update(v -> v + "-new"));
         assertEquals("old-new", entry.value());
+    }
+
+    @Test
+    void updateOnAlreadyDirtyEntryDoesNotReportBecameDirty() {
+        CacheEntry<String> entry = new CacheEntry<>("value");
+        entry.markDirty();
+
+        assertFalse(entry.update(v -> v + "-new"));
+        assertTrue(entry.dirty());
     }
 
     @Test
@@ -46,13 +53,20 @@ class CacheEntryTest {
     }
 
     @Test
-    void mutateReturnsSameReference() {
+    void mutateReturnsBecameDirty() {
         CacheEntry<StringBuilder> entry = new CacheEntry<>(new StringBuilder("hello"));
 
-        StringBuilder mutated = entry.mutate(sb -> sb.append(" world"));
-
-        assertEquals("hello world", mutated.toString());
+        assertTrue(entry.mutate(sb -> sb.append(" world")));
         assertEquals("hello world", entry.value().toString());
+    }
+
+    @Test
+    void mutateOnAlreadyDirtyEntryDoesNotReportBecameDirty() {
+        CacheEntry<StringBuilder> entry = new CacheEntry<>(new StringBuilder("hello"));
+        entry.markDirty();
+
+        assertFalse(entry.mutate(sb -> sb.append(" world")));
+        assertTrue(entry.dirty());
     }
 
     @Test
@@ -70,11 +84,19 @@ class CacheEntryTest {
     }
 
     @Test
-    void markDirtySetsDirtyFlag() {
+    void markDirtySetsDirtyFlagAndReturnsBecameDirty() {
         CacheEntry<String> entry = new CacheEntry<>("value");
 
+        assertTrue(entry.markDirty());
+        assertTrue(entry.dirty());
+    }
+
+    @Test
+    void markDirtyOnAlreadyDirtyEntryDoesNotReportBecameDirty() {
+        CacheEntry<String> entry = new CacheEntry<>("value");
         entry.markDirty();
 
+        assertFalse(entry.markDirty());
         assertTrue(entry.dirty());
     }
 
@@ -140,10 +162,52 @@ class CacheEntryTest {
     void dirtyFlagSurvivesMultipleUpdates() {
         CacheEntry<String> entry = new CacheEntry<>("a");
 
-        entry.update(v -> v + "b");
-        entry.update(v -> v + "c");
+        assertTrue(entry.update(v -> v + "b"));
+        assertFalse(entry.update(v -> v + "c"));
 
         assertTrue(entry.dirty());
         assertEquals("abc", entry.value());
+    }
+
+    @Test
+    void versionIncrementsOnUpdateAndMarkDirty() {
+        CacheEntry<String> entry = new CacheEntry<>("value");
+
+        assertEquals(0L, entry.version());
+
+        entry.update(v -> v + "-1");
+        assertEquals(1L, entry.version());
+
+        entry.markDirty();
+        assertEquals(2L, entry.version());
+    }
+
+    @Test
+    void markSavedIfVersionMatchesClearsDirtyWhenVersionMatches() {
+        CacheEntry<String> entry = new CacheEntry<>("value");
+        entry.markDirty();
+        long versionAtStart = entry.version();
+
+        assertTrue(entry.markSavedIfVersionMatches(versionAtStart));
+        assertFalse(entry.dirty());
+    }
+
+    @Test
+    void markSavedIfVersionMatchesReturnsFalseWhenVersionChanged() {
+        CacheEntry<String> entry = new CacheEntry<>("value");
+        entry.markDirty();
+        long versionAtStart = entry.version();
+
+        entry.update(v -> v + "-new");
+
+        assertFalse(entry.markSavedIfVersionMatches(versionAtStart));
+        assertTrue(entry.dirty());
+    }
+
+    @Test
+    void markSavedIfVersionMatchesReturnsFalseWhenAlreadyClean() {
+        CacheEntry<String> entry = new CacheEntry<>("value");
+
+        assertFalse(entry.markSavedIfVersionMatches(entry.version()));
     }
 }

@@ -13,7 +13,6 @@ import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import com.cotani.economy.transaction.EconomyTransactionId;
-import com.cotani.task.api.PaperTaskScheduler;
 import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -31,10 +30,10 @@ class CachedEconomyServiceTest {
     void balanceReturnsCachedValueWithoutCallingDelegate() {
         var delegate = Mockito.mock(EconomyService.class);
         when(delegate.balance(USER_ID, CURRENCY)).thenReturn(CompletableFuture.completedFuture(BALANCE));
-        var cache = new CachedEconomyService(delegate, Mockito.mock(PaperTaskScheduler.class), SETTINGS);
+        var cache = new CachedEconomyService(delegate, Runnable::run, SETTINGS);
 
-        var first = cache.balance(USER_ID, CURRENCY).join();
-        var second = cache.balance(USER_ID, CURRENCY).join();
+        var first = cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
+        var second = cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
 
         assertEquals(first, second);
         verify(delegate, times(1)).balance(USER_ID, CURRENCY);
@@ -61,12 +60,13 @@ class CachedEconomyServiceTest {
                         any(EconomyReason.class),
                         any(EconomyOperationId.class)))
                 .thenReturn(CompletableFuture.completedFuture(transaction));
-        var cache = new CachedEconomyService(delegate, Mockito.mock(PaperTaskScheduler.class), SETTINGS);
+        var cache = new CachedEconomyService(delegate, Runnable::run, SETTINGS);
 
-        cache.balance(USER_ID, CURRENCY).join();
+        cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
         cache.deposit(USER_ID, BigDecimal.TEN, EconomyReason.system("test"), EconomyOperationId.random())
+                .toCompletableFuture()
                 .join();
-        cache.balance(USER_ID, CURRENCY).join();
+        cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
 
         verify(delegate, times(2)).balance(USER_ID, CURRENCY);
     }
@@ -75,9 +75,9 @@ class CachedEconomyServiceTest {
     void hasUsesConfiguredDefaultCurrency() {
         var delegate = Mockito.mock(EconomyService.class);
         when(delegate.balance(USER_ID, CURRENCY)).thenReturn(CompletableFuture.completedFuture(BALANCE));
-        var cache = new CachedEconomyService(delegate, Mockito.mock(PaperTaskScheduler.class), SETTINGS);
+        var cache = new CachedEconomyService(delegate, Runnable::run, SETTINGS);
 
-        var has = cache.has(USER_ID, BigDecimal.TEN).join();
+        var has = cache.has(USER_ID, BigDecimal.TEN).toCompletableFuture().join();
 
         assertTrue(has);
         verify(delegate).balance(USER_ID, CURRENCY);
@@ -87,11 +87,11 @@ class CachedEconomyServiceTest {
     void closeClearsCache() {
         var delegate = Mockito.mock(EconomyService.class);
         when(delegate.balance(USER_ID, CURRENCY)).thenReturn(CompletableFuture.completedFuture(BALANCE));
-        var cache = new CachedEconomyService(delegate, Mockito.mock(PaperTaskScheduler.class), SETTINGS);
+        var cache = new CachedEconomyService(delegate, Runnable::run, SETTINGS);
 
-        cache.balance(USER_ID, CURRENCY).join();
+        cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
         cache.close();
-        cache.balance(USER_ID, CURRENCY).join();
+        cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
 
         verify(delegate, times(2)).balance(USER_ID, CURRENCY);
     }

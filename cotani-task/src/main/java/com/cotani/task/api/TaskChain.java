@@ -32,7 +32,7 @@ public interface TaskChain<T> {
                         _ -> {
                             var result = new ArrayList<T>(futures.length);
                             for (var future : futures) {
-                                result.add(future.join());
+                                result.add(future.getNow(null));
                             }
                             return List.copyOf(result);
                         },

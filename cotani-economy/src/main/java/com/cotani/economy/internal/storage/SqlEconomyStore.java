@@ -10,8 +10,8 @@ import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import com.cotani.storage.api.CotaniStorage;
-import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.query.Row;
+import com.cotani.storage.transaction.TransactionContext;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.Clock;
@@ -50,7 +50,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(userId, "userId");
         Objects.requireNonNull(currencyId, "currencyId");
 
-        return storage.executor().transaction(tx -> getOrCreateLocked(tx, userId, currencyId));
+        return storage.transactions().run(tx -> getOrCreateLocked(tx, userId, currencyId));
     }
 
     @Override
@@ -67,8 +67,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, "operationId");
 
         Instant now = clock.instant();
-        return storage.executor()
-                .transaction(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
+        return storage.transactions()
+                .run(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.deposit(amount, now);
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.deposit(
@@ -93,8 +93,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, "operationId");
 
         Instant now = clock.instant();
-        return storage.executor()
-                .transaction(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
+        return storage.transactions()
+                .run(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.withdraw(amount, now);
                     EconomyTransaction transaction = EconomyTransaction.withdraw(
                             operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
@@ -118,8 +118,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, "operationId");
 
         Instant now = clock.instant();
-        return storage.executor()
-                .transaction(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
+        return storage.transactions()
+                .run(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.setBalance(amount, now);
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.set(
@@ -150,8 +150,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         UUID secondId = firstId.equals(sourceUserId) ? targetUserId : sourceUserId;
 
         Instant now = clock.instant();
-        return storage.executor()
-                .transaction(tx -> getOrCreateLocked(tx, firstId, currencyId)
+        return storage.transactions()
+                .run(tx -> getOrCreateLocked(tx, firstId, currencyId)
                         .thenCompose(firstAccount -> getOrCreateLocked(tx, secondId, currencyId)
                                 .thenCompose(secondAccount -> {
                                     EconomyAccount source = firstId.equals(sourceUserId) ? firstAccount : secondAccount;
@@ -181,18 +181,22 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                                 })));
     }
 
-    private CompletionStage<EconomyAccount> getOrCreateLocked(QueryExecutor tx, UUID userId, CurrencyId currencyId) {
+    private CompletionStage<EconomyAccount> getOrCreateLocked(
+            TransactionContext tx, UUID userId, CurrencyId currencyId) {
         return findLocked(tx, userId, currencyId)
                 .thenCompose(found -> found.map(CompletableFuture::completedStage)
                         .orElseGet(() -> {
                             Instant now = clock.instant();
                             EconomyAccount created =
                                     EconomyAccount.create(userId, currencyId, settings.startingBalance(), now);
-                            return insertAccount(tx, created).thenApply(_ -> created);
+                            return insertAccountDoNothing(tx, created)
+                                    .thenCompose(_ -> findLocked(tx, userId, currencyId))
+                                    .thenApply(reloaded -> reloaded.orElse(created));
                         }));
     }
 
-    private CompletionStage<Optional<EconomyAccount>> findLocked(QueryExecutor tx, UUID userId, CurrencyId currencyId) {
+    private CompletionStage<Optional<EconomyAccount>> findLocked(
+            TransactionContext tx, UUID userId, CurrencyId currencyId) {
         String sql =
                 "SELECT balance, created_at, updated_at FROM cotani_economy_accounts WHERE user_id = ? AND currency_id"
                         + " = ?";
@@ -208,7 +212,23 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                 row -> accountFromRow(userId, currencyId, row));
     }
 
-    private CompletionStage<Void> insertAccount(QueryExecutor tx, EconomyAccount account) {
+    private CompletionStage<Void> insertAccountDoNothing(TransactionContext tx, EconomyAccount account) {
+        String sql = storage.dialect()
+                .upsert(
+                        "cotani_economy_accounts",
+                        List.of("user_id", "currency_id", "balance", "created_at", "updated_at"),
+                        List.of("user_id", "currency_id"),
+                        List.of());
+        return tx.update(sql, binder -> {
+            binder.set(account.userId());
+            binder.set(account.currencyId().value());
+            binder.set(account.balance().toPlainString());
+            binder.set(account.createdAt().toString());
+            binder.set(account.updatedAt().toString());
+        });
+    }
+
+    private CompletionStage<Void> insertAccount(TransactionContext tx, EconomyAccount account) {
         String sql = storage.dialect()
                 .upsert(
                         "cotani_economy_accounts",
@@ -224,11 +244,11 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         });
     }
 
-    private CompletionStage<Void> upsertAccount(QueryExecutor tx, EconomyAccount account) {
+    private CompletionStage<Void> upsertAccount(TransactionContext tx, EconomyAccount account) {
         return insertAccount(tx, account);
     }
 
-    private CompletionStage<Void> insertTransaction(QueryExecutor tx, EconomyTransaction transaction) {
+    private CompletionStage<Void> insertTransaction(TransactionContext tx, EconomyTransaction transaction) {
         return EconomyStorageMappers.insertTransaction(tx, storage, transaction);
     }
 

@@ -51,7 +51,7 @@ public final class DefaultEconomyModule implements EconomyModule {
 
         DefaultEconomyService coreService =
                 new DefaultEconomyService(settings, guard, store, store, mainThreadPublisher);
-        CachedEconomyService cachedService = new CachedEconomyService(coreService, scheduler, settings);
+        CachedEconomyService cachedService = new CachedEconomyService(coreService, scheduler.asyncExecutor(), settings);
 
         Cotani cotani = resolveCotani(context.cotani(), plugin);
         cotani.register(cachedService);

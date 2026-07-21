@@ -5,12 +5,16 @@ import com.cotani.storage.security.Paths;
 import com.cotani.storage.type.StorageKind;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.Objects;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 
 public final class StorageConfigReader {
 
     public StorageBackend read(Plugin plugin, FileConfiguration config, String path) {
+        Objects.requireNonNull(plugin, "plugin");
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(path, "path");
         var typeName = config.getString(path + ".type", "SQLITE");
         var kind = StorageKind.valueOf(typeName.toUpperCase(Locale.ROOT));
         return switch (kind) {

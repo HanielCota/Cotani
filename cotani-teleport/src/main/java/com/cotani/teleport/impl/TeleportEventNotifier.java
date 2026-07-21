@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -32,7 +33,10 @@ public final class TeleportEventNotifier {
         Objects.requireNonNull(resolvedTarget, "resolvedTarget");
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(source, "source");
-        Player player = resolvePlayer(playerId);
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         CotaniPreTeleportEvent event = new CotaniPreTeleportEvent(player, from, resolvedTarget, cause, source);
         return eventBus.callAsync(event, player).thenApply(_ -> event);
     }
@@ -54,25 +58,23 @@ public final class TeleportEventNotifier {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(eventTarget, "eventTarget");
         Objects.requireNonNull(result, "result");
-        Player player = resolvePlayer(playerId);
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return eventBus.callAsync(new CotaniPostTeleportEvent(player, from, eventTarget, result), player);
     }
 
     public CompletionStage<Void> fireFailure(TeleportResult.Failure failure) {
         Objects.requireNonNull(failure, "failure");
-        Player player = resolvePlayer(failure.playerId());
+        Player player = Bukkit.getPlayer(failure.playerId());
+        if (player == null) {
+            return CompletableFuture.completedFuture(null);
+        }
         return eventBus.callAsync(new CotaniTeleportFailEvent(player, failure), player);
     }
 
     public long elapsedMillis(Instant startedAt) {
         return Duration.between(startedAt, Instant.now(clock)).toMillis();
-    }
-
-    private Player resolvePlayer(UUID playerId) {
-        Player player = Bukkit.getPlayer(playerId);
-        if (player == null) {
-            throw new IllegalStateException("Player is not online: " + playerId);
-        }
-        return player;
     }
 }

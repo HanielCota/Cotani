@@ -8,11 +8,15 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 public final class DefaultPendingTeleportService implements PendingTeleportService, AutoCloseable {
+    private static final Logger LOGGER = Logger.getLogger(DefaultPendingTeleportService.class.getName());
+
     private final TeleportService teleportService;
     private final PaperTaskScheduler scheduler;
     private final Map<UUID, PendingTeleportStateMachine> pendingByPlayer = new ConcurrentHashMap<>();
@@ -103,6 +107,11 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         var _ = teleportService.teleport(request).whenComplete((result, error) -> {
             pendingByPlayer.remove(data.playerId(), pending);
             if (error != null) {
+                LOGGER.log(
+                        Level.WARNING,
+                        error,
+                        () -> "Pending teleport execution failed. playerId=" + data.playerId() + " requestId="
+                                + data.id());
                 pending.cancelExecution(TeleportCancelReason.EXECUTION_FAILED);
                 return;
             }

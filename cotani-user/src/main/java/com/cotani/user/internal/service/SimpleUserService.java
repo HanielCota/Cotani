@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 public final class SimpleUserService implements InternalUserService {
 
@@ -38,7 +39,11 @@ public final class SimpleUserService implements InternalUserService {
             return ongoing.thenApply(Optional::of);
         }
 
-        return repository.findByUniqueId(uniqueId).thenApply(optional -> optional.map(CotaniUser.class::cast));
+        return repository
+                .findByUniqueId(uniqueId)
+                .toCompletableFuture()
+                .orTimeout(10, TimeUnit.SECONDS)
+                .thenApply(optional -> optional.map(CotaniUser.class::cast));
     }
 
     @Override
@@ -74,8 +79,10 @@ public final class SimpleUserService implements InternalUserService {
         }
 
         long now = System.currentTimeMillis();
-        repository
+        var _ = repository
                 .find(uniqueId, username)
+                .toCompletableFuture()
+                .orTimeout(10, TimeUnit.SECONDS)
                 .thenApply(optionalUser -> {
                     SimpleCotaniUser loaded =
                             optionalUser.orElseGet(() -> SimpleCotaniUser.createNew(uniqueId, username, now));

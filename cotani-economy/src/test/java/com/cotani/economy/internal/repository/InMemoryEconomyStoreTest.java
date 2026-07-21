@@ -14,7 +14,10 @@ import java.time.Clock;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class InMemoryEconomyStoreTest {
@@ -169,5 +172,82 @@ class InMemoryEconomyStoreTest {
                 MaximumBalanceExceededException.class,
                 store.deposit(userId, SETTINGS.defaultCurrency().id(), amount, REASON, EconomyOperationId.random())
                         .toCompletableFuture());
+    }
+
+    @Test
+    void failedOperationIdCannotBeReused() {
+        var store = newStore();
+        var userId = UUID.randomUUID();
+        var operationId = EconomyOperationId.random();
+
+        assertCause(
+                InsufficientFundsException.class,
+                store.withdraw(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
+                        .toCompletableFuture());
+
+        assertCause(
+                DuplicateEconomyOperationException.class,
+                store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
+                        .toCompletableFuture());
+    }
+
+    @Test
+    void duplicateOperationIdIsRejected() {
+        var store = newStore();
+        var userId = UUID.randomUUID();
+        var operationId = EconomyOperationId.random();
+
+        store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
+                .toCompletableFuture()
+                .join();
+
+        assertCause(
+                DuplicateEconomyOperationException.class,
+                store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
+                        .toCompletableFuture());
+    }
+
+    @Test
+    void concurrentDuplicateOperationIdExecutesOnlyOnce() throws InterruptedException {
+        var store = newStore();
+        var userId = UUID.randomUUID();
+        var operationId = EconomyOperationId.random();
+        var startLatch = new CountDownLatch(1);
+        var doneLatch = new CountDownLatch(2);
+        var successes = new AtomicInteger(0);
+        var failures = new AtomicInteger(0);
+
+        for (int i = 0; i < 2; i++) {
+            var _ = Executors.newVirtualThreadPerTaskExecutor().submit(() -> {
+                try {
+                    startLatch.await(5, TimeUnit.SECONDS);
+                    store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
+                            .toCompletableFuture()
+                            .join();
+                    successes.incrementAndGet();
+                } catch (CompletionException exception) {
+                    if (exception.getCause() instanceof DuplicateEconomyOperationException) {
+                        failures.incrementAndGet();
+                    } else {
+                        throw exception;
+                    }
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(5, TimeUnit.SECONDS));
+
+        assertEquals(1, successes.get());
+        assertEquals(1, failures.get());
+
+        var account = store.getOrCreate(userId, SETTINGS.defaultCurrency().id())
+                .toCompletableFuture()
+                .join();
+        assertEquals(0, account.balance().compareTo(SETTINGS.startingBalance().add(BigDecimal.ONE)));
     }
 }

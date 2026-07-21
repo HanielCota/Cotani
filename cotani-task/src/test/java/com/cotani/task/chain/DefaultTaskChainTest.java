@@ -15,6 +15,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,11 +31,19 @@ class DefaultTaskChainTest {
     }
 
     @Test
-    void onStartRunsImmediately() {
+    void onStartRunsAtChainStart() throws Exception {
         AtomicBoolean started = new AtomicBoolean(false);
         DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture("value"), scheduler);
 
-        chain.onStart(() -> started.set(true));
+        when(scheduler.supplyAsync(any(), any())).thenAnswer(invocation -> {
+            var supplier = invocation.<Supplier<Object>>getArgument(1);
+            return new DefaultTaskChain<>(CompletableFuture.completedFuture(supplier.get()), scheduler);
+        });
+
+        chain.onStart(() -> started.set(true))
+                .toCompletionStage()
+                .toCompletableFuture()
+                .get();
 
         assertTrue(started.get());
     }

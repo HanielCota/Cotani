@@ -47,6 +47,9 @@ public final class ValueSerializerRegistry {
     @SuppressWarnings("unchecked")
     private <T> @Nullable ValueSerializer<T> findSerializer(Class<?> type) {
         ValueSerializer<?> cached = resolvedCache.get(type);
+        if (cached == NullSerializer.INSTANCE) {
+            return null;
+        }
         if (cached != null) {
             return (ValueSerializer<T>) cached;
         }

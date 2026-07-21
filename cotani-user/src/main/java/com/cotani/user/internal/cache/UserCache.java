@@ -58,18 +58,21 @@ public final class UserCache {
     }
 
     public Collection<SimpleCotaniUser> allInternal() {
-        return users.values();
+        return List.copyOf(users.values());
     }
 
     public CompletionStage<Void> save(UUID uniqueId) {
-        SimpleCotaniUser user = users.get(uniqueId);
-
-        if (user == null) {
+        SimpleCotaniUser original = users.get(uniqueId);
+        if (original == null) {
             return CompletionStages.completedVoid();
         }
 
-        var updated = user.withIncrementedVersion();
-        return repository.save(updated).thenRun(() -> users.replace(uniqueId, user, updated));
+        var updated = original.withIncrementedVersion();
+        if (!users.replace(uniqueId, original, updated)) {
+            return CompletionStages.completedVoid();
+        }
+
+        return repository.save(updated);
     }
 
     public CompletionStage<Void> saveAll() {
@@ -78,16 +81,18 @@ public final class UserCache {
             return CompletionStages.completedVoid();
         }
 
-        var updated =
-                snapshot.stream().map(SimpleCotaniUser::withIncrementedVersion).toList();
-        return repository.saveAll(updated).thenRun(() -> updateCacheAfterSave(snapshot, updated));
-    }
-
-    private void updateCacheAfterSave(List<SimpleCotaniUser> originals, List<SimpleCotaniUser> updated) {
-        for (int i = 0; i < originals.size(); i++) {
-            SimpleCotaniUser original = originals.get(i);
-            SimpleCotaniUser next = updated.get(i);
-            users.replace(original.uniqueId(), original, next);
+        var updated = new ArrayList<SimpleCotaniUser>(snapshot.size());
+        for (SimpleCotaniUser original : snapshot) {
+            var next = original.withIncrementedVersion();
+            if (users.replace(original.uniqueId(), original, next)) {
+                updated.add(next);
+            }
         }
+
+        if (updated.isEmpty()) {
+            return CompletionStages.completedVoid();
+        }
+
+        return repository.saveAll(updated);
     }
 }

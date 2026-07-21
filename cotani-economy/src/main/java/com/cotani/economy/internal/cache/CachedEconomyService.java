@@ -14,6 +14,8 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 
 /**
  * Cache decorador para {@link EconomyService}.
@@ -21,6 +23,9 @@ import java.util.concurrent.CompletableFuture;
  * <p>Apenas leituras de saldo (<code>balance</code> e <code>has</code>) são cacheadas. Operações de escrita
  * invalidam a entrada do usuário após o storage confirmar sucesso. A implementação usa Caffeine para
  * coalescer requisições concorrentes ao mesmo par (usuário, moeda) e limitar o tamanho do cache.
+ *
+ * <p>O carregem assíncrono do Caffeine usa o {@link Executor} explícito recebido no construtor, em vez do
+ * {@code ForkJoinPool.commonPool()} padrão, para manter o isolamento dos pools do plugin.
  */
 public final class CachedEconomyService implements EconomyService, AutoCloseable {
 
@@ -30,39 +35,39 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
     private final EconomySettings settings;
     private final AsyncLoadingCache<BalanceKey, EconomyBalance> cache;
 
-    public CachedEconomyService(
-            EconomyService delegate, com.cotani.task.api.PaperTaskScheduler scheduler, EconomySettings settings) {
+    public CachedEconomyService(EconomyService delegate, Executor executor, EconomySettings settings) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
-        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(executor, "executor");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.cache = Caffeine.newBuilder()
                 .maximumSize(MAXIMUM_CACHE_SIZE)
                 .expireAfterWrite(Duration.ofSeconds(settings.balanceCacheSeconds()))
-                .buildAsync((key, executor) -> loadBalance(key));
+                .executor(executor)
+                .buildAsync((key, ignored) -> loadBalance(key));
     }
 
     @Override
-    public CompletableFuture<EconomyBalance> balance(UUID userId) {
+    public CompletionStage<EconomyBalance> balance(UUID userId) {
         return balance(userId, defaultCurrency());
     }
 
     @Override
-    public CompletableFuture<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
-        return cache.get(new BalanceKey(userId, currencyId)).toCompletableFuture();
+    public CompletionStage<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
+        return cache.get(new BalanceKey(userId, currencyId));
     }
 
     @Override
-    public CompletableFuture<Boolean> has(UUID userId, BigDecimal amount) {
+    public CompletionStage<Boolean> has(UUID userId, BigDecimal amount) {
         return has(userId, defaultCurrency(), amount);
     }
 
     @Override
-    public CompletableFuture<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
+    public CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
         return balance(userId, currencyId).thenApply(balance -> balance.amount().compareTo(amount) >= 0);
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> deposit(
+    public CompletionStage<EconomyTransaction> deposit(
             UUID userId,
             CurrencyId currencyId,
             BigDecimal amount,
@@ -72,13 +77,13 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> deposit(
+    public CompletionStage<EconomyTransaction> deposit(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
         return deposit(userId, defaultCurrency(), amount, reason, operationId);
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> withdraw(
+    public CompletionStage<EconomyTransaction> withdraw(
             UUID userId,
             CurrencyId currencyId,
             BigDecimal amount,
@@ -88,13 +93,13 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> withdraw(
+    public CompletionStage<EconomyTransaction> withdraw(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
         return withdraw(userId, defaultCurrency(), amount, reason, operationId);
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> set(
+    public CompletionStage<EconomyTransaction> set(
             UUID userId,
             CurrencyId currencyId,
             BigDecimal amount,
@@ -104,13 +109,13 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> set(
+    public CompletionStage<EconomyTransaction> set(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
         return set(userId, defaultCurrency(), amount, reason, operationId);
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> transfer(
+    public CompletionStage<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,
             CurrencyId currencyId,
@@ -126,7 +131,7 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
     }
 
     @Override
-    public CompletableFuture<EconomyTransaction> transfer(
+    public CompletionStage<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,
             BigDecimal amount,
@@ -137,14 +142,14 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
 
     @Override
     public void close() {
-        cache.synchronous().invalidateAll();
+        cache.asMap().clear();
     }
 
     private CompletableFuture<EconomyBalance> loadBalance(BalanceKey key) {
         return delegate.balance(key.userId(), key.currencyId()).toCompletableFuture();
     }
 
-    private CompletableFuture<EconomyTransaction> mutate(UUID userId, CompletableFuture<EconomyTransaction> future) {
+    private CompletionStage<EconomyTransaction> mutate(UUID userId, CompletionStage<EconomyTransaction> future) {
         return future.thenApply(transaction -> {
             invalidate(userId, transaction.currencyId());
             return transaction;
@@ -152,7 +157,7 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
     }
 
     private void invalidate(UUID userId, CurrencyId currencyId) {
-        cache.synchronous().invalidate(new BalanceKey(userId, currencyId));
+        cache.asMap().remove(new BalanceKey(userId, currencyId));
     }
 
     private CurrencyId defaultCurrency() {

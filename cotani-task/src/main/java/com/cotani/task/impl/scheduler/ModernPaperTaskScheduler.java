@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.bukkit.Location;
@@ -144,9 +145,8 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     public SchedulerTask region(String name, UUID worldId, int chunkX, int chunkZ, Runnable runnable) {
         var target = ExecutionTarget.region(worldId, chunkX, chunkZ);
         var metadata = metadata(name, target);
-        var location = ((ExecutionTarget.Region) target).location();
 
-        return platformScheduler.runRegion(metadata, location, taskRunner.wrap(metadata, runnable));
+        return platformScheduler.runRegion(metadata, worldId, chunkX, chunkZ, taskRunner.wrap(metadata, runnable));
     }
 
     @Override
@@ -197,10 +197,12 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     public SchedulerTask entity(String name, UUID entityId, Runnable runnable) {
         var target = ExecutionTarget.entity(entityId);
         var metadata = metadata(name, target);
-        var entity = ((ExecutionTarget.EntityTarget) target).entity();
 
         return platformScheduler.runEntity(
-                metadata, entity, taskRunner.wrap(metadata, runnable), () -> taskErrorReporter.handleRetired(metadata));
+                metadata,
+                entityId,
+                taskRunner.wrap(metadata, runnable),
+                () -> taskErrorReporter.handleRetired(metadata));
     }
 
     @Override
@@ -245,26 +247,24 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         Objects.requireNonNull(runnable, "runnable");
         Objects.requireNonNull(quietPeriod, "quietPeriod");
 
-        final SchedulerTask[] taskHolder = new SchedulerTask[1];
-        SchedulerTask previous = pendingDebounces.remove(name);
-
         var metadata = metadata("debounce-" + name, ExecutionTarget.async());
+        AtomicReference<SchedulerTask> taskRef = new AtomicReference<>();
         SchedulerTask task = platformScheduler.runAsyncLater(
                 metadata,
                 taskRunner.wrap(metadata, () -> {
-                    pendingDebounces.remove(name, taskHolder[0]);
+                    pendingDebounces.remove(name, taskRef.get());
                     runnable.run();
                 }),
                 quietPeriod);
-        taskHolder[0] = task;
+        taskRef.set(task);
 
-        SchedulerTask stale = pendingDebounces.put(name, task);
-        if (stale != null && !stale.equals(previous)) {
-            stale.cancel();
-        }
-        if (previous != null) {
-            previous.cancel();
-        }
+        pendingDebounces.compute(name, (ignored, current) -> {
+            if (current != null) {
+                current.cancel();
+            }
+
+            return task;
+        });
 
         return task;
     }
@@ -280,13 +280,23 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         var lazyTask = new LazySchedulerTask();
 
         SchedulerTask saveTask = async("persist-save-" + name, () -> {
-            persistentTaskStore.save(task);
+            SchedulerTask execTask;
 
-            if (lazyTask.cancelled()) {
+            try {
+                persistentTaskStore.save(task);
+            } catch (Throwable failure) {
+                lazyTask.failSetup(failure);
+
                 return;
             }
 
-            SchedulerTask execTask = asyncLater(
+            if (lazyTask.cancelled()) {
+                lazyTask.completeSetup(SchedulerTask.noop());
+
+                return;
+            }
+
+            execTask = asyncLater(
                     "persist-run-" + name,
                     () -> {
                         try {
@@ -298,6 +308,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
                     delay);
 
             lazyTask.setDelegate(execTask);
+            lazyTask.completeSetup(execTask);
         });
 
         lazyTask.setSetupTask(saveTask);

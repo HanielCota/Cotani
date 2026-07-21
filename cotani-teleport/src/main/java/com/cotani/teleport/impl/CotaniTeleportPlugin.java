@@ -12,9 +12,12 @@ public final class CotaniTeleportPlugin extends JavaPlugin {
     private @Nullable TeleportModule module;
 
     @Override
+    @SuppressWarnings("deprecation")
     public void onEnable() {
         PaperTaskScheduler createdScheduler = SchedulerFactory.create(this);
         try {
+            // NOTE: real CombatAdapter/RegionProtectionAdapter must be wired here for production use.
+            // The 2-arg create(...) uses noop adapters and is deprecated/test-only.
             module = CotaniTeleports.create(this, createdScheduler);
             scheduler = createdScheduler;
         } catch (RuntimeException failure) {
