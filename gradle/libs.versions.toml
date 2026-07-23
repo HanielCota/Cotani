@@ -11,7 +11,7 @@ mariadb = "3.5.3"
 mockito = "5.17.0"
 mysql = "9.3.0"
 nullaway = "0.13.8"
-paper = "26.2.build.40-alpha"
+paper = "26.2-rc-2.build.9-alpha"
 spotless = "8.7.0"
 sqlite = "3.53.2.1"
 
