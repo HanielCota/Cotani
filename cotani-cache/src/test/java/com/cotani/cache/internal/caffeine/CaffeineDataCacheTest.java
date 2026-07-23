@@ -452,4 +452,24 @@ class CaffeineDataCacheTest {
         assertEquals(1, cache.dirtyCount());
         assertTrue(cache.find("key").isPresent());
     }
+
+    @Test
+    void putOverwritingDirtyEntryDecrementsDirtyCount() {
+        DataCache<String, String> cache = createCache(CacheSettings.staticData());
+        cache.put("key", "old");
+        cache.markDirty("key");
+        assertEquals(1, cache.dirtyCount());
+
+        cache.put("key", "new");
+
+        assertEquals(0, cache.dirtyCount());
+        assertEquals("new", cache.get("key"));
+    }
+
+    @Test
+    void putNullKeyOrValueThrows() {
+        DataCache<String, String> cache = createCache();
+        assertThrows(NullPointerException.class, () -> cache.put(null, "val"));
+        assertThrows(NullPointerException.class, () -> cache.put("key", null));
+    }
 }

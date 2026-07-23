@@ -49,10 +49,11 @@ public final class PlayerDataCacheListener<V> implements Listener {
             return;
         }
 
-        cache.saveAsync(playerId).thenRun(() -> unloadIfNeeded(playerId)).whenComplete((_, error) -> {
+        cache.saveAsync(playerId).whenComplete((_, error) -> {
             if (error != null) {
                 logger.log(Level.SEVERE, error, () -> "Could not save player cache entry for " + playerId);
             }
+            unloadIfNeeded(playerId);
         });
     }
 

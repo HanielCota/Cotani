@@ -119,6 +119,12 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public void put(K key, V value) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(value, "value");
+        CacheEntry<V> previous = cache.synchronous().getIfPresent(key);
+        if (previous != null && previous.dirty()) {
+            dirtyCount.decrementAndGet();
+        }
         cache.synchronous().put(key, new CacheEntry<>(value));
     }
 
@@ -279,7 +285,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             return;
         }
 
-        saveDirty().whenComplete((_, error) -> {
+        saveDirty().thenCompose(_ -> savePending()).whenComplete((_, error) -> {
             autosaveInProgress.set(false);
             if (error != null) {
                 LOGGER.log(Level.SEVERE, "Could not auto-save dirty cache entries", error);
