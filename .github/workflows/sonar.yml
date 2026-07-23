@@ -42,7 +42,13 @@ jobs:
         run: ./gradlew compileJava compileTestJava
 
       - name: SonarQube Cloud Scan
+        if: ${{ secrets.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Skip Scan Notice (Missing SONAR_TOKEN)
+        if: ${{ secrets.SONAR_TOKEN == '' }}
+        run: |
+          echo "::warning title=SONAR_TOKEN Missing::SonarQube Cloud scan skipped because SONAR_TOKEN secret is not set in GitHub Secrets. Please add SONAR_TOKEN under Repository Settings > Secrets > Actions."
