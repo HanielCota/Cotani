@@ -1,29 +1,35 @@
-.agents/
+# Gradle
 .gradle/
 build/
+**/build/
 
-# IntelliJ IDEA
+# Build Outputs
+bin/
+**/bin/
+out/
+**/out/
+
+# IDE / Editor Files
 .idea/
 *.iml
 *.ipr
 *.iws
-
-# Eclipse
+.vscode/
 .settings/
 .project
 .classpath
+*.factorypath
 
-# VS Code
-.vscode/
+# Operating System
+.DS_Store
+Thumbs.db
+desktop.ini
 
-# Misc
-bin/
-out/
-run/
-*.class
+# Logs & Dumps
 *.log
-test_file.txt
-index.html
-script.js
-styles.css
+*.hprof
 
+# Agent & Local Scratch
+.agents/
+scratch/
+*.tmp
