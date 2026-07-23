@@ -25,6 +25,7 @@ import org.jspecify.annotations.Nullable;
 public final class QueryExecutor {
 
     private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
+    private static final String BINDER_PARAM = "binder";
 
     private final StorageProvider provider;
     private final Executor executor;
@@ -59,14 +60,14 @@ public final class QueryExecutor {
 
     public CompletionStage<Void> update(String sql, SqlConsumer<ParameterBinder> binder) {
         Objects.requireNonNull(sql, "sql");
-        Objects.requireNonNull(binder, "binder");
+        Objects.requireNonNull(binder, BINDER_PARAM);
         return CompletableFuture.runAsync(() -> runUpdate(sql, binder), executor);
     }
 
     public <T> CompletionStage<Optional<T>> queryOne(
             String sql, SqlConsumer<ParameterBinder> binder, EntityMapper<T> mapper) {
         Objects.requireNonNull(sql, "sql");
-        Objects.requireNonNull(binder, "binder");
+        Objects.requireNonNull(binder, BINDER_PARAM);
         Objects.requireNonNull(mapper, "mapper");
         return CompletableFuture.supplyAsync(() -> runQueryOne(sql, binder, mapper), executor);
     }
@@ -74,14 +75,14 @@ public final class QueryExecutor {
     public <T> CompletionStage<List<T>> queryMany(
             String sql, SqlConsumer<ParameterBinder> binder, EntityMapper<T> mapper) {
         Objects.requireNonNull(sql, "sql");
-        Objects.requireNonNull(binder, "binder");
+        Objects.requireNonNull(binder, BINDER_PARAM);
         Objects.requireNonNull(mapper, "mapper");
         return CompletableFuture.supplyAsync(() -> runQueryMany(sql, binder, mapper), executor);
     }
 
     public CompletionStage<Boolean> exists(String sql, SqlConsumer<ParameterBinder> binder) {
         Objects.requireNonNull(sql, "sql");
-        Objects.requireNonNull(binder, "binder");
+        Objects.requireNonNull(binder, BINDER_PARAM);
         return CompletableFuture.supplyAsync(() -> runExists(sql, binder), executor);
     }
 
@@ -179,41 +180,48 @@ public final class QueryExecutor {
         try (Connection connection = provider.connection()) {
             var previousAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setQueryTimeout(queryTimeoutSeconds);
-                int count = 0;
-                for (var item : binders) {
-                    item.accept(new ParameterBinder(statement, serializers));
-                    statement.addBatch();
-                    count++;
-                    if (count % 1000 == 0) {
-                        statement.executeBatch();
-                    }
-                }
-                if (count % 1000 != 0) {
-                    statement.executeBatch();
-                }
-                connection.commit();
+            try {
+                executeBatchWork(connection, sql, binders);
             } catch (SQLException | RuntimeException failure) {
-                try {
-                    connection.rollback();
-                } catch (SQLException rollbackFailure) {
-                    failure.addSuppressed(rollbackFailure);
-                }
+                safeRollback(connection, failure);
                 if (failure instanceof SQLException sqlException) {
                     throw new StorageException(new QueryError("Could not execute batch query.", sqlException));
                 }
                 throw new StorageException(
                         new com.cotani.storage.error.MappingError("Could not bind batch parameters.", failure));
             } finally {
-                try {
-                    connection.setAutoCommit(previousAutoCommit);
-                } catch (SQLException ignored) {
-                    // best-effort restore; connection is about to be closed by try-with-resources
-                }
+                restoreAutoCommit(connection, previousAutoCommit);
             }
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not acquire connection for batch.", exception));
+        }
+    }
+
+    private void executeBatchWork(Connection connection, String sql, List<SqlConsumer<ParameterBinder>> binders)
+            throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(queryTimeoutSeconds);
+            int count = 0;
+            for (var item : binders) {
+                item.accept(new ParameterBinder(statement, serializers));
+                statement.addBatch();
+                count++;
+                if (count % 1000 == 0) {
+                    statement.executeBatch();
+                }
+            }
+            if (count % 1000 != 0) {
+                statement.executeBatch();
+            }
+            connection.commit();
+        }
+    }
+
+    private void safeRollback(Connection connection, Exception failure) {
+        try {
+            connection.rollback();
+        } catch (SQLException rollbackFailure) {
+            failure.addSuppressed(rollbackFailure);
         }
     }
 

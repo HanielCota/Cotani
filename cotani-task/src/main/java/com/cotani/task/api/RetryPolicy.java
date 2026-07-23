@@ -78,7 +78,7 @@ public final class RetryPolicy {
 
     public long delayMillisForAttempt(int attempt) {
         long baseMillis = baseDelay.toMillis();
-        long exponential = (long) (baseMillis * Math.pow(multiplier, attempt - 1));
+        long exponential = (long) (baseMillis * Math.pow(multiplier, (double) attempt - 1.0));
 
         if (jitter == MIN_JITTER) {
             return Math.max(0, exponential);

@@ -11,6 +11,8 @@ import org.jspecify.annotations.Nullable;
 
 public final class ParameterBinder {
 
+    private static final String VALUE_PARAM = "value";
+
     private final PreparedStatement statement;
     private final ValueSerializerRegistry serializers;
     private int index = 1;
@@ -34,14 +36,14 @@ public final class ParameterBinder {
     }
 
     public ParameterBinder string(String value) throws SQLException {
-        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(value, VALUE_PARAM);
         statement.setString(index, value);
         index++;
         return this;
     }
 
     public ParameterBinder uuid(UUID value) throws SQLException {
-        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(value, VALUE_PARAM);
         statement.setString(index, value.toString());
         index++;
         return this;
@@ -60,14 +62,14 @@ public final class ParameterBinder {
     }
 
     public ParameterBinder instant(Instant value) throws SQLException {
-        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(value, VALUE_PARAM);
         statement.setString(index, value.toString());
         index++;
         return this;
     }
 
     public ParameterBinder duration(Duration value) throws SQLException {
-        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(value, VALUE_PARAM);
         statement.setLong(index, value.toMillis());
         index++;
         return this;

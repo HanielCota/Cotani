@@ -17,6 +17,8 @@ import java.util.concurrent.TimeUnit;
 
 public final class SimpleUserService implements InternalUserService {
 
+    private static final String UNIQUE_ID_PARAM = "uniqueId";
+
     private final UserCache cache;
     private final UserRepository repository;
     private final ConcurrentMap<UUID, CompletionStage<SimpleCotaniUser>> loadingUsers = new ConcurrentHashMap<>();
@@ -28,7 +30,7 @@ public final class SimpleUserService implements InternalUserService {
 
     @Override
     public CompletionStage<Optional<CotaniUser>> findAsync(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Optional<CotaniUser> cached = cache.find(uniqueId);
         if (cached.isPresent()) {
             return CompletableFuture.completedStage(cached);
@@ -54,13 +56,13 @@ public final class SimpleUserService implements InternalUserService {
 
     @Override
     public CompletionStage<Boolean> isLoadedAsync(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return CompletableFuture.completedStage(cache.contains(uniqueId));
     }
 
     @Override
     public CompletionStage<SimpleCotaniUser> load(UUID uniqueId, String username) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(username, "username");
 
         Optional<SimpleCotaniUser> cached = cache.findInternal(uniqueId);

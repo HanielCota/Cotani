@@ -47,6 +47,7 @@ import org.jspecify.annotations.Nullable;
 public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     private static final Logger LOGGER = Logger.getLogger(CaffeineDataCache.class.getName());
+    private static final String REPOSITORY_SAVE_NULL_MSG = "repository.save returned null";
 
     private final AsyncLoadingCache<K, CacheEntry<V>> cache;
     private final CacheRepository<K, V> repository;
@@ -133,7 +134,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         return Optional.ofNullable(cache.synchronous().getIfPresent(key))
                 .map(entry -> {
                     long versionAtStart = entry.version();
-                    return Objects.requireNonNull(repository.save(key, entry.value()), "repository.save returned null")
+                    return Objects.requireNonNull(repository.save(key, entry.value()), REPOSITORY_SAVE_NULL_MSG)
                             .thenRun(() -> {
                                 if (entry.markSavedIfVersionMatches(versionAtStart)) {
                                     dirtyCount.decrementAndGet();
@@ -300,7 +301,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
         long versionAtStart = entry.version();
         V value = entry.value();
-        Objects.requireNonNull(repository.save(key, value), "repository.save returned null")
+        Objects.requireNonNull(repository.save(key, value), REPOSITORY_SAVE_NULL_MSG)
                 .whenComplete((_, error) -> {
                     if (error != null) {
                         LOGGER.log(
@@ -324,7 +325,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     }
 
     private CompletionStage<Void> savePendingEntry(K key, PendingSave<V> pending) {
-        return Objects.requireNonNull(repository.save(key, pending.value()), "repository.save returned null")
+        return Objects.requireNonNull(repository.save(key, pending.value()), REPOSITORY_SAVE_NULL_MSG)
                 .thenRun(() -> {
                     pendingSaves.remove(key, pending);
                     CacheEntry<V> entry = cache.synchronous().getIfPresent(key);

@@ -159,7 +159,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     }
 
     @Override
-    public List<?> list(String path) {
+    public List<Object> list(String path) {
         lock.readLock().lock();
         try {
             Object value = yaml.get(path);

@@ -66,17 +66,24 @@ public final class CotaniStorage implements AutoCloseable {
         var platformFactory =
                 Thread.ofPlatform().name("cotani-storage-", 0).daemon(true).factory();
         var isSQLite = backend instanceof SQLiteBackend;
-        this.storageExecutor = isSQLite
-                ? Executors.newSingleThreadExecutor(platformFactory)
-                : (useVirtualThreads
-                        ? Executors.newThreadPerTaskExecutor(
-                                Thread.ofVirtual().name("cotani-storage-vt-", 0).factory())
-                        : Executors.newFixedThreadPool(threads, platformFactory));
+        this.storageExecutor = createStorageExecutor(isSQLite, useVirtualThreads, threads, platformFactory);
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.dialect = new DialectFactory().create(backend);
         this.executor = new QueryExecutor(provider, storageExecutor, serializers, queryTimeoutSeconds);
         this.schema = new Schema(executor, dialect);
         this.transactions = new TransactionManager(provider, storageExecutor, serializers, queryTimeoutSeconds);
+    }
+
+    private static ExecutorService createStorageExecutor(
+            boolean isSQLite, boolean useVirtualThreads, int threads, ThreadFactory platformFactory) {
+        if (isSQLite) {
+            return Executors.newSingleThreadExecutor(platformFactory);
+        }
+        if (useVirtualThreads) {
+            return Executors.newThreadPerTaskExecutor(
+                    Thread.ofVirtual().name("cotani-storage-vt-", 0).factory());
+        }
+        return Executors.newFixedThreadPool(threads, platformFactory);
     }
 
     public static CotaniStorageBuilder create(Plugin plugin) {

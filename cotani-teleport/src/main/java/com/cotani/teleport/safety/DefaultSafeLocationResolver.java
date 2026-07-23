@@ -50,64 +50,44 @@ public final class DefaultSafeLocationResolver implements com.cotani.teleport.sa
 
         Location candidate = new Location(world, 0, 0, 0, target.getYaw(), target.getPitch());
 
-        Optional<Location> up = search(
-                world,
-                candidate,
-                baseX,
-                baseY,
-                baseZ,
-                horizontal,
-                vertical,
-                1,
-                chunkMinX,
-                chunkMaxX,
-                chunkMinZ,
-                chunkMaxZ,
-                options);
+        SearchBounds bounds = new SearchBounds(
+                baseX, baseY, baseZ, horizontal, vertical, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ);
+
+        Optional<Location> up = search(world, candidate, bounds, 1, options);
         if (up.isPresent()) {
             return up;
         }
-        return search(
-                world,
-                candidate,
-                baseX,
-                baseY,
-                baseZ,
-                horizontal,
-                vertical,
-                -1,
-                chunkMinX,
-                chunkMaxX,
-                chunkMinZ,
-                chunkMaxZ,
-                options);
+        return search(world, candidate, bounds, -1, options);
     }
 
-    private static Optional<Location> search(
-            World world,
-            Location candidate,
+    private record SearchBounds(
             int baseX,
             int baseY,
             int baseZ,
             int horizontal,
             int vertical,
-            int direction,
             int chunkMinX,
             int chunkMaxX,
             int chunkMinZ,
-            int chunkMaxZ,
+            int chunkMaxZ) {}
+
+    private static Optional<Location> search(
+            World world,
+            Location candidate,
+            SearchBounds bounds,
+            int direction,
             SafeLocationOptions options) {
         int startOffset = direction > 0 ? 0 : 1;
 
-        for (int yOffset = startOffset; yOffset <= vertical; yOffset++) {
-            int y = baseY + (yOffset * direction);
+        for (int yOffset = startOffset; yOffset <= bounds.vertical(); yOffset++) {
+            int y = bounds.baseY() + (yOffset * direction);
             if (y < world.getMinHeight() || y + 1 >= world.getMaxHeight()) {
                 continue;
             }
-            int minX = Math.max(chunkMinX, baseX - horizontal);
-            int maxX = Math.min(chunkMaxX, baseX + horizontal);
-            int minZ = Math.max(chunkMinZ, baseZ - horizontal);
-            int maxZ = Math.min(chunkMaxZ, baseZ + horizontal);
+            int minX = Math.max(bounds.chunkMinX(), bounds.baseX() - bounds.horizontal());
+            int maxX = Math.min(bounds.chunkMaxX(), bounds.baseX() + bounds.horizontal());
+            int minZ = Math.max(bounds.chunkMinZ(), bounds.baseZ() - bounds.horizontal());
+            int maxZ = Math.min(bounds.chunkMaxZ(), bounds.baseZ() + bounds.horizontal());
             for (int x = minX; x <= maxX; x++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     candidate.setX(x + 0.5);

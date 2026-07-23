@@ -17,6 +17,20 @@ public final class ConfigSerializerRegistry {
         protected Optional<ConfigSerializer<?>> computeValue(Class<?> type) {
             return Optional.ofNullable(resolve(type));
         }
+
+        private @Nullable ConfigSerializer<?> resolve(Class<?> wrapped) {
+            var currentSerializers = Objects.requireNonNull(serializers.get());
+            ConfigSerializer<?> serializer = currentSerializers.get(wrapped);
+            if (serializer != null) {
+                return serializer;
+            }
+            for (var entry : currentSerializers.entrySet()) {
+                if (entry.getKey().isAssignableFrom(wrapped)) {
+                    return entry.getValue();
+                }
+            }
+            return null;
+        }
     };
 
     public static ConfigSerializerRegistry defaults(Plugin plugin) {
@@ -48,20 +62,6 @@ public final class ConfigSerializerRegistry {
 
     public Optional<ConfigSerializer<?>> find(Class<?> type) {
         return resolvedCache.get(wrap(type));
-    }
-
-    private @Nullable ConfigSerializer<?> resolve(Class<?> wrapped) {
-        var currentSerializers = Objects.requireNonNull(serializers.get());
-        ConfigSerializer<?> serializer = currentSerializers.get(wrapped);
-        if (serializer != null) {
-            return serializer;
-        }
-        for (var entry : currentSerializers.entrySet()) {
-            if (entry.getKey().isAssignableFrom(wrapped)) {
-                return entry.getValue();
-            }
-        }
-        return null;
     }
 
     @SuppressWarnings({"unchecked"})

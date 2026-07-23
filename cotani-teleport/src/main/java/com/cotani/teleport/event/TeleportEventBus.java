@@ -10,6 +10,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
 
 public final class TeleportEventBus {
+    private static final String EVENT_PARAM = "event";
+
     private final PaperTaskScheduler scheduler;
 
     public TeleportEventBus(PaperTaskScheduler scheduler) {
@@ -17,7 +19,7 @@ public final class TeleportEventBus {
     }
 
     public CompletionStage<Void> callAsync(Event event, Entity owner) {
-        Objects.requireNonNull(event, "event");
+        Objects.requireNonNull(event, EVENT_PARAM);
         Objects.requireNonNull(owner, "owner");
         return scheduler.supply(ExecutionTarget.entity(owner), "teleport-event", () -> {
             call(event);
@@ -26,7 +28,7 @@ public final class TeleportEventBus {
     }
 
     public CompletionStage<Void> callAsync(Event event) {
-        Objects.requireNonNull(event, "event");
+        Objects.requireNonNull(event, EVENT_PARAM);
         return scheduler.supply(ExecutionTarget.global(), "teleport-event", () -> {
             call(event);
             return VoidResult.nullValue();
@@ -34,13 +36,13 @@ public final class TeleportEventBus {
     }
 
     public CotaniPreTeleportEvent callPreTeleportSync(CotaniPreTeleportEvent event) {
-        Objects.requireNonNull(event, "event");
+        Objects.requireNonNull(event, EVENT_PARAM);
         call(event);
         return event;
     }
 
     public void call(Event event) {
-        Objects.requireNonNull(event, "event");
+        Objects.requireNonNull(event, EVENT_PARAM);
         Bukkit.getPluginManager().callEvent(event);
     }
 }

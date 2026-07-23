@@ -11,6 +11,8 @@ import java.util.Objects;
  */
 public final class CacheSettingsBuilder {
 
+    private static final String DURATION_PARAM = "duration";
+
     private long maximumSize = 10_000;
     private Duration expireAfterAccess = Duration.ZERO;
     private Duration expireAfterWrite = Duration.ZERO;
@@ -27,17 +29,17 @@ public final class CacheSettingsBuilder {
     }
 
     public CacheSettingsBuilder expireAfterAccess(Duration duration) {
-        this.expireAfterAccess = Objects.requireNonNull(duration, "duration");
+        this.expireAfterAccess = Objects.requireNonNull(duration, DURATION_PARAM);
         return this;
     }
 
     public CacheSettingsBuilder expireAfterWrite(Duration duration) {
-        this.expireAfterWrite = Objects.requireNonNull(duration, "duration");
+        this.expireAfterWrite = Objects.requireNonNull(duration, DURATION_PARAM);
         return this;
     }
 
     public CacheSettingsBuilder autosaveInterval(Duration duration) {
-        this.autosaveInterval = Objects.requireNonNull(duration, "duration");
+        this.autosaveInterval = Objects.requireNonNull(duration, DURATION_PARAM);
         return this;
     }
 

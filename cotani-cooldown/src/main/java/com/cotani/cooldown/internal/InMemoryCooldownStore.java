@@ -13,11 +13,13 @@ import org.jspecify.annotations.Nullable;
 
 public final class InMemoryCooldownStore implements CooldownStore {
 
+    private static final String KEY_NULL_MSG = "key cannot be null";
+
     private final ConcurrentMap<CooldownKey, CooldownEntry> entries = new ConcurrentHashMap<>();
 
     @Override
     public Optional<CooldownEntry> find(CooldownKey key) {
-        Objects.requireNonNull(key, "key cannot be null");
+        Objects.requireNonNull(key, KEY_NULL_MSG);
 
         return Optional.ofNullable(entries.get(key));
     }
@@ -31,7 +33,7 @@ public final class InMemoryCooldownStore implements CooldownStore {
 
     @Override
     public void remove(CooldownKey key) {
-        Objects.requireNonNull(key, "key cannot be null");
+        Objects.requireNonNull(key, KEY_NULL_MSG);
 
         entries.remove(key);
     }
@@ -51,7 +53,7 @@ public final class InMemoryCooldownStore implements CooldownStore {
 
     @Override
     public CooldownResult checkAndStart(CooldownKey key, Duration duration, Clock clock) {
-        Objects.requireNonNull(key, "key cannot be null");
+        Objects.requireNonNull(key, KEY_NULL_MSG);
         Objects.requireNonNull(duration, "duration cannot be null");
         Objects.requireNonNull(clock, "clock cannot be null");
 

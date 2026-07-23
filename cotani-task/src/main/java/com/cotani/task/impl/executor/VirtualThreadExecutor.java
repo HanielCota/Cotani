@@ -17,6 +17,8 @@ public final class VirtualThreadExecutor implements AutoCloseable {
 
     private static final String THREAD_NAME = "cotani-task-";
     private static final String DELAYED_THREAD_NAME = THREAD_NAME + "delayed";
+    private static final String METADATA_PARAM = "metadata";
+    private static final String RUNNABLE_PARAM = "runnable";
     private static final int DEFAULT_MAX_CONCURRENT = 256;
 
     private final ExecutorService taskExecutor;
@@ -71,16 +73,16 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     }
 
     public Future<Void> submit(TaskMetadata metadata, Runnable runnable) {
-        Objects.requireNonNull(metadata, "metadata");
-        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(metadata, METADATA_PARAM);
+        Objects.requireNonNull(runnable, RUNNABLE_PARAM);
 
         return taskExecutor.submit(new NamedTask(metadata, runnable, nameThreads), null);
     }
 
     @SuppressWarnings("unchecked")
     public Future<Void> schedule(TaskMetadata metadata, Runnable runnable, long delayMillis) {
-        Objects.requireNonNull(metadata, "metadata");
-        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(metadata, METADATA_PARAM);
+        Objects.requireNonNull(runnable, RUNNABLE_PARAM);
 
         return (Future<Void>) delayedExecutor.schedule(
                 new NamedTask(metadata, runnable, nameThreads), delayMillis, TimeUnit.MILLISECONDS);
@@ -89,8 +91,8 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     @SuppressWarnings("unchecked")
     public Future<Void> scheduleAtFixedRate(
             TaskMetadata metadata, Runnable runnable, long initialDelayMillis, long periodMillis) {
-        Objects.requireNonNull(metadata, "metadata");
-        Objects.requireNonNull(runnable, "runnable");
+        Objects.requireNonNull(metadata, METADATA_PARAM);
+        Objects.requireNonNull(runnable, RUNNABLE_PARAM);
 
         return (Future<Void>) delayedExecutor.scheduleAtFixedRate(
                 new NamedTask(metadata, runnable, nameThreads),

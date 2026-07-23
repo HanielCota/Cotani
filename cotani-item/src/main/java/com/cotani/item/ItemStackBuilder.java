@@ -32,6 +32,13 @@ import org.jspecify.annotations.Nullable;
 @NullMarked
 public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
+    private static final String MINIMESSAGE_PARAM_NULL_MSG = "Parameter 'miniMessage' must not be null";
+    private static final String ENCHANTMENT_PARAM_NULL_MSG = "Parameter 'enchantment' must not be null";
+    private static final String FLAGS_PARAM_NULL_MSG = "Parameter 'flags' must not be null";
+    private static final String CONSUMER_PARAM_NULL_MSG = "Parameter 'consumer' must not be null";
+    private static final String TYPES_PARAM_NULL_MSG = "Parameter 'types' must not be null";
+    private static final String TYPE_PARAM_NULL_MSG = "Parameter 'type' must not be null";
+
     private final ItemStack item;
 
     protected ItemStackBuilder(Material material) {
@@ -79,7 +86,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T customName(String miniMessage) {
-        Objects.requireNonNull(miniMessage, "Parameter 'miniMessage' must not be null");
+        Objects.requireNonNull(miniMessage, MINIMESSAGE_PARAM_NULL_MSG);
         return customName(MiniMessages.parse(miniMessage));
     }
 
@@ -98,7 +105,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T itemName(String miniMessage) {
-        Objects.requireNonNull(miniMessage, "Parameter 'miniMessage' must not be null");
+        Objects.requireNonNull(miniMessage, MINIMESSAGE_PARAM_NULL_MSG);
         return itemName(MiniMessages.parse(miniMessage));
     }
 
@@ -146,7 +153,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T addLore(String miniMessage) {
-        Objects.requireNonNull(miniMessage, "Parameter 'miniMessage' must not be null");
+        Objects.requireNonNull(miniMessage, MINIMESSAGE_PARAM_NULL_MSG);
         return addLore(MiniMessages.parse(miniMessage));
     }
 
@@ -156,7 +163,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T enchant(Enchantment enchantment, int level) {
-        Objects.requireNonNull(enchantment, "Parameter 'enchantment' must not be null");
+        Objects.requireNonNull(enchantment, ENCHANTMENT_PARAM_NULL_MSG);
         return setEnchantments(DataComponentTypes.ENCHANTMENTS, enchantment, level);
     }
 
@@ -173,7 +180,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T removeEnchant(Enchantment enchantment) {
-        Objects.requireNonNull(enchantment, "Parameter 'enchantment' must not be null");
+        Objects.requireNonNull(enchantment, ENCHANTMENT_PARAM_NULL_MSG);
         var existing = item.getData(DataComponentTypes.ENCHANTMENTS);
         if (existing == null || !existing.enchantments().containsKey(enchantment)) {
             return self();
@@ -195,7 +202,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T storedEnchant(Enchantment enchantment, int level) {
-        Objects.requireNonNull(enchantment, "Parameter 'enchantment' must not be null");
+        Objects.requireNonNull(enchantment, ENCHANTMENT_PARAM_NULL_MSG);
         return setEnchantments(DataComponentTypes.STORED_ENCHANTMENTS, enchantment, level);
     }
 
@@ -223,13 +230,13 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T flags(ItemFlag... flags) {
-        Objects.requireNonNull(flags, "Parameter 'flags' must not be null");
+        Objects.requireNonNull(flags, FLAGS_PARAM_NULL_MSG);
         item.addItemFlags(flags);
         return self();
     }
 
     public final T removeFlags(ItemFlag... flags) {
-        Objects.requireNonNull(flags, "Parameter 'flags' must not be null");
+        Objects.requireNonNull(flags, FLAGS_PARAM_NULL_MSG);
         item.removeItemFlags(flags);
         return self();
     }
@@ -249,7 +256,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T customModelData(Consumer<CustomModelData.Builder> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         var builder = CustomModelData.customModelData();
         consumer.accept(builder);
         item.setData(DataComponentTypes.CUSTOM_MODEL_DATA, builder.build());
@@ -262,7 +269,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T customModelDataFlags(boolean... flags) {
-        Objects.requireNonNull(flags, "Parameter 'flags' must not be null");
+        Objects.requireNonNull(flags, FLAGS_PARAM_NULL_MSG);
         return customModelData(component -> component.addFlags(boxedBooleans(flags)));
     }
 
@@ -417,7 +424,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T persistentData(Consumer<PersistentDataContainer> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         item.editPersistentDataContainer(consumer);
         return self();
     }
@@ -427,7 +434,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T food(Consumer<FoodProperties.Builder> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         var builder = FoodProperties.food();
         consumer.accept(builder);
         item.setData(DataComponentTypes.FOOD, builder.build());
@@ -443,7 +450,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T tool(Consumer<Tool.Builder> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         var builder = Tool.tool();
         consumer.accept(builder);
         item.setData(DataComponentTypes.TOOL, builder.build());
@@ -456,7 +463,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T weapon(Consumer<Weapon.Builder> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         var builder = Weapon.weapon();
         consumer.accept(builder);
         item.setData(DataComponentTypes.WEAPON, builder.build());
@@ -510,12 +517,12 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T repairable(ItemType... types) {
-        Objects.requireNonNull(types, "Parameter 'types' must not be null");
+        Objects.requireNonNull(types, TYPES_PARAM_NULL_MSG);
         return repairable(List.of(types));
     }
 
     public final T repairable(List<ItemType> types) {
-        Objects.requireNonNull(types, "Parameter 'types' must not be null");
+        Objects.requireNonNull(types, TYPES_PARAM_NULL_MSG);
         var repairableTypes = RegistrySet.keySetFromValues(RegistryKey.ITEM, types);
         item.setData(DataComponentTypes.REPAIRABLE, Repairable.repairable(repairableTypes));
         return self();
@@ -527,7 +534,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T damageResistant(RegistryKeySet<DamageType> types) {
-        Objects.requireNonNull(types, "Parameter 'types' must not be null");
+        Objects.requireNonNull(types, TYPES_PARAM_NULL_MSG);
         item.setData(DataComponentTypes.DAMAGE_RESISTANT, DamageResistant.damageResistant(types));
         return self();
     }
@@ -544,7 +551,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T equippable(Consumer<Equippable.Builder> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         var existing = item.getData(DataComponentTypes.EQUIPPABLE);
         var builder = existing == null ? Equippable.equippable(EquipmentSlot.HEAD) : existing.toBuilder();
         consumer.accept(builder);
@@ -568,7 +575,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T potion(PotionType type) {
-        Objects.requireNonNull(type, "Parameter 'type' must not be null");
+        Objects.requireNonNull(type, TYPE_PARAM_NULL_MSG);
         var builder = potionContentsBuilder();
         builder.potion(type);
         item.setData(DataComponentTypes.POTION_CONTENTS, builder.build());
@@ -602,7 +609,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T blocksAttacks(Consumer<BlocksAttacks.Builder> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         var builder = BlocksAttacks.blocksAttacks();
         consumer.accept(builder);
         item.setData(DataComponentTypes.BLOCKS_ATTACKS, builder.build());
@@ -610,7 +617,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T consumable(Consumer<Consumable.Builder> consumer) {
-        Objects.requireNonNull(consumer, "Parameter 'consumer' must not be null");
+        Objects.requireNonNull(consumer, CONSUMER_PARAM_NULL_MSG);
         var builder = Consumable.consumable();
         consumer.accept(builder);
         item.setData(DataComponentTypes.CONSUMABLE, builder.build());
@@ -618,19 +625,19 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T resetData(DataComponentType type) {
-        Objects.requireNonNull(type, "Parameter 'type' must not be null");
+        Objects.requireNonNull(type, TYPE_PARAM_NULL_MSG);
         item.resetData(type);
         return self();
     }
 
     public final T unsetData(DataComponentType type) {
-        Objects.requireNonNull(type, "Parameter 'type' must not be null");
+        Objects.requireNonNull(type, TYPE_PARAM_NULL_MSG);
         item.unsetData(type);
         return self();
     }
 
     public final boolean hasData(DataComponentType type) {
-        Objects.requireNonNull(type, "Parameter 'type' must not be null");
+        Objects.requireNonNull(type, TYPE_PARAM_NULL_MSG);
         return item.hasData(type);
     }
 }

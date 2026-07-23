@@ -11,11 +11,17 @@ import java.util.concurrent.CompletionStage;
 
 public final class StorageUserRepository implements UserRepository {
 
+    private static final String UNIQUE_ID_COL = "unique_id";
+    private static final String USERNAME_COL = "username";
+    private static final String LAST_JOIN_AT_COL = "last_join_at";
+    private static final String LAST_QUIT_AT_COL = "last_quit_at";
+    private static final String VERSION_COL = "version";
+
     private static final String TABLE = "cotani_users";
     private static final List<String> UPSERT_COLUMNS =
-            List.of("unique_id", "username", "first_join_at", "last_join_at", "last_quit_at", "version");
-    private static final List<String> CONFLICT_COLUMNS = List.of("unique_id");
-    private static final List<String> UPDATE_COLUMNS = List.of("username", "last_join_at", "last_quit_at", "version");
+            List.of(UNIQUE_ID_COL, USERNAME_COL, "first_join_at", LAST_JOIN_AT_COL, LAST_QUIT_AT_COL, VERSION_COL);
+    private static final List<String> CONFLICT_COLUMNS = List.of(UNIQUE_ID_COL);
+    private static final List<String> UPDATE_COLUMNS = List.of(USERNAME_COL, LAST_JOIN_AT_COL, LAST_QUIT_AT_COL, VERSION_COL);
 
     private final CotaniStorage storage;
     private final UserMapper mapper;
@@ -42,7 +48,7 @@ public final class StorageUserRepository implements UserRepository {
 
         return storage.table(TABLE)
                 .select()
-                .where("unique_id", uniqueId)
+                .where(UNIQUE_ID_COL, uniqueId)
                 .limit(1)
                 .one(row -> mapper.toUser(row, uniqueId, username, now));
     }
@@ -56,14 +62,14 @@ public final class StorageUserRepository implements UserRepository {
     public CompletionStage<Void> save(SimpleCotaniUser user) {
         return storage.table(TABLE)
                 .upsert()
-                .value("unique_id", user.uniqueId())
-                .value("username", user.username())
+                .value(UNIQUE_ID_COL, user.uniqueId())
+                .value(USERNAME_COL, user.username())
                 .value("first_join_at", user.firstJoinAt())
-                .value("last_join_at", user.lastJoinAt())
-                .value("last_quit_at", user.lastQuitAt())
-                .value("version", user.version())
-                .conflict("unique_id")
-                .update("username", "last_join_at", "last_quit_at", "version")
+                .value(LAST_JOIN_AT_COL, user.lastJoinAt())
+                .value(LAST_QUIT_AT_COL, user.lastQuitAt())
+                .value(VERSION_COL, user.version())
+                .conflict(UNIQUE_ID_COL)
+                .update(USERNAME_COL, LAST_JOIN_AT_COL, LAST_QUIT_AT_COL, VERSION_COL)
                 .execute();
     }
 

@@ -98,10 +98,14 @@ class RecordConfigBinderValidationTest {
         }
 
         @Override
-        public void load() {}
+        public void load() {
+            // Test config source does not load from disk.
+        }
 
         @Override
-        public void save() {}
+        public void save() {
+            // Test config source does not persist to disk.
+        }
 
         @Override
         public boolean contains(String path) {
@@ -168,7 +172,7 @@ class RecordConfigBinderValidationTest {
         }
 
         @Override
-        public List<?> list(String path) {
+        public List<Object> list(String path) {
             Object value = entry(path).raw();
             if (value instanceof List<?> list) {
                 return List.copyOf(list);

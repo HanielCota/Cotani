@@ -23,6 +23,8 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public final class SqlCooldownRepository implements CacheRepository<UUID, PlayerCooldowns> {
 
+    private static final String PLAYER_ID_PARAM = "playerId";
+
     private final CotaniStorage storage;
 
     public SqlCooldownRepository(CotaniStorage storage) {
@@ -31,7 +33,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
 
     @Override
     public CompletionStage<Optional<PlayerCooldowns>> find(UUID playerId) {
-        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
 
         var sql =
                 "SELECT action_name, started_at, expires_at FROM cotani_cooldowns WHERE target_type = 'USER' AND target_id = ?";
@@ -60,7 +62,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
 
     @Override
     public CompletionStage<Void> save(UUID playerId, PlayerCooldowns value) {
-        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
         Objects.requireNonNull(value, "value");
 
         return storage.transactions().run(tx -> {
@@ -97,7 +99,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
 
     @Override
     public CompletionStage<Void> delete(UUID playerId) {
-        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
 
         var sql = "DELETE FROM cotani_cooldowns WHERE target_type = 'USER' AND target_id = ?";
         return storage.transactions().run(tx -> tx.update(sql, binder -> binder.string(playerId.toString())));

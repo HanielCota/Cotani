@@ -50,12 +50,12 @@ class ConfigSerializerRegistryTest {
 
     @Test
     void registerIsThreadSafe() {
-        var registry = new ConfigSerializerRegistry();
+        var localRegistry = new ConfigSerializerRegistry();
         var threads = new Thread[4];
         for (int i = 0; i < threads.length; i++) {
             threads[i] = new Thread(() -> {
                 for (int j = 0; j < 100; j++) {
-                    registry.register(new IntegerSerializer());
+                    localRegistry.register(new IntegerSerializer());
                 }
             });
             threads[i].start();
@@ -67,7 +67,7 @@ class ConfigSerializerRegistryTest {
                 Thread.currentThread().interrupt();
             }
         }
-        var value = new ConfigValue("test.yml", "n", "42", true, registry);
-        assertEquals(42, registry.convert(value, Integer.class));
+        var value = new ConfigValue("test.yml", "n", "42", true, localRegistry);
+        assertEquals(42, localRegistry.convert(value, Integer.class));
     }
 }

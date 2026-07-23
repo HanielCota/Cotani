@@ -3,6 +3,7 @@ package com.cotani.text;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -59,7 +60,7 @@ class PlaceholdersTest {
 
     @Test
     void createsDatePlaceholder() {
-        var date = LocalDate.of(2024, 5, 27);
+        var date = LocalDate.of(2024, Month.MAY, 27);
         var component = MiniMessages.parse("<date:'yyyy-MM-dd'>", Placeholders.date("date", date));
 
         assertEquals("2024-05-27", ComponentTexts.toPlain(component));

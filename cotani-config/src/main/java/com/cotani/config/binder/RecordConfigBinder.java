@@ -41,7 +41,7 @@ public final class RecordConfigBinder implements ConfigBinder {
 
     private static String toKebabCase(String input) {
         return input.replaceAll("([a-z0-9])([A-Z])", "$1-$2")
-                .replaceAll("([A-Z]+)([A-Z][a-z])", "$1-$2")
+                .replaceAll("([A-Z]+?)([A-Z][a-z])", "$1-$2")
                 .toLowerCase(Locale.ROOT);
     }
 
@@ -281,12 +281,12 @@ public final class RecordConfigBinder implements ConfigBinder {
 
         @Override
         public void load() {
-            /* TODO document why this method is empty */
+            // In-memory config source does not load from disk.
         }
 
         @Override
         public void save() {
-            /* TODO document why this method is empty */
+            // In-memory config source does not persist to disk.
         }
 
         @Override
@@ -336,7 +336,7 @@ public final class RecordConfigBinder implements ConfigBinder {
         }
 
         @Override
-        public List<?> list(String path) {
+        public List<Object> list(String path) {
             Object value = resolve(path).raw();
             if (value instanceof List<?> list) {
                 return List.copyOf(list);

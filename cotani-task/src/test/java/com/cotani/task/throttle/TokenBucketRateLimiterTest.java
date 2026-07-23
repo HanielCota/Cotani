@@ -27,6 +27,7 @@ class TokenBucketRateLimiterTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2925")
     void respectsRefillRate() throws InterruptedException {
         RateLimiter limiter = new TokenBucketRateLimiter(1, Duration.ofMillis(100));
 

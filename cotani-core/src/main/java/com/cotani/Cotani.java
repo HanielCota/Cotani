@@ -19,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 public final class Cotani implements AutoCloseable {
 
     private static final Duration ASYNC_CLOSE_TIMEOUT = Duration.ofSeconds(10);
+    private static final String CLOSEABLE_NULL_MSG = "Parameter 'closeable' must not be null";
 
     private final Plugin plugin;
     private final CopyOnWriteArrayList<AutoCloseable> closeables;
@@ -54,7 +55,7 @@ public final class Cotani implements AutoCloseable {
     }
 
     public Cotani register(AutoCloseable closeable) {
-        Objects.requireNonNull(closeable, "Parameter 'closeable' must not be null");
+        Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
 
         if (closed.get()) {
             throw new IllegalStateException("Cotani is already closed");
@@ -65,7 +66,7 @@ public final class Cotani implements AutoCloseable {
     }
 
     public Cotani deregister(AutoCloseable closeable) {
-        Objects.requireNonNull(closeable, "Parameter 'closeable' must not be null");
+        Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
 
         closeables.remove(closeable);
         return this;
@@ -146,7 +147,7 @@ public final class Cotani implements AutoCloseable {
         }
 
         public Builder with(AutoCloseable closeable) {
-            Objects.requireNonNull(closeable, "Parameter 'closeable' must not be null");
+            Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
             ensureOpen();
 
             closeables.add(closeable);
@@ -161,7 +162,7 @@ public final class Cotani implements AutoCloseable {
          * concurrently and are given {@value #ASYNC_CLOSE_TIMEOUT} seconds to complete.
          */
         public Builder withAsync(Supplier<CompletionStage<Void>> closeable) {
-            Objects.requireNonNull(closeable, "Parameter 'closeable' must not be null");
+            Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
             ensureOpen();
 
             asyncCloseables.add(closeable);
@@ -172,11 +173,11 @@ public final class Cotani implements AutoCloseable {
         public Cotani build() {
             ensureOpen();
 
-            var built = new Cotani(plugin, closeables, asyncCloseables);
+            var instance = new Cotani(plugin, closeables, asyncCloseables);
             this.built = true;
             closeables.clear();
             asyncCloseables.clear();
-            return built;
+            return instance;
         }
 
         private void ensureOpen() {

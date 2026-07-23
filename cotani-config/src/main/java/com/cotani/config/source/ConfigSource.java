@@ -30,7 +30,7 @@ public interface ConfigSource {
 
     Map<String, Object> section(String path);
 
-    List<?> list(String path);
+    List<Object> list(String path);
 
     record Entry(@Nullable Object raw, boolean exists) {}
 }

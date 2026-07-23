@@ -41,28 +41,30 @@ public final class TeleportMessages {
     }
 
     public static final class Builder {
+        private static final String MESSAGE_PARAM = "message";
+
         private Component blockedByCombat = Component.text("Você não pode teleportar em combate.");
         private Component blockedByCooldown = Component.text("Aguarde antes de teleportar novamente.");
         private Component blockedByPermission = Component.text("Você não tem permissão para teleportar.");
         private Component blockedByRegion = Component.text("Você não pode teleportar para esta região.");
 
         public Builder blockedByCombat(Component message) {
-            this.blockedByCombat = Objects.requireNonNull(message, "message");
+            this.blockedByCombat = Objects.requireNonNull(message, MESSAGE_PARAM);
             return this;
         }
 
         public Builder blockedByCooldown(Component message) {
-            this.blockedByCooldown = Objects.requireNonNull(message, "message");
+            this.blockedByCooldown = Objects.requireNonNull(message, MESSAGE_PARAM);
             return this;
         }
 
         public Builder blockedByPermission(Component message) {
-            this.blockedByPermission = Objects.requireNonNull(message, "message");
+            this.blockedByPermission = Objects.requireNonNull(message, MESSAGE_PARAM);
             return this;
         }
 
         public Builder blockedByRegion(Component message) {
-            this.blockedByRegion = Objects.requireNonNull(message, "message");
+            this.blockedByRegion = Objects.requireNonNull(message, MESSAGE_PARAM);
             return this;
         }
 

@@ -17,6 +17,8 @@ import org.jspecify.annotations.Nullable;
 
 public final class DataCacheBuilder<K, V> {
 
+    private static final String DEFAULT_VALUE_PARAM = "defaultValue";
+
     private final Class<K> keyType;
     private final Class<V> valueType;
     private final CacheSettingsBuilder settingsBuilder = CacheSettings.builder();
@@ -35,12 +37,12 @@ public final class DataCacheBuilder<K, V> {
 
     public DataCacheBuilder<K, V> defaultValue(Supplier<V> defaultValue) {
         this.defaultValue =
-                _ -> Objects.requireNonNull(defaultValue, "defaultValue").get();
+                _ -> Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM).get();
         return this;
     }
 
     public DataCacheBuilder<K, V> defaultValue(Function<K, V> defaultValue) {
-        this.defaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
+        this.defaultValue = Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
         return this;
     }
 
@@ -96,7 +98,7 @@ public final class DataCacheBuilder<K, V> {
         validate();
 
         var resolvedRepository = resolveRepository();
-        var resolvedDefaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
+        var resolvedDefaultValue = Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
         return new CaffeineDataCache<>(resolvedRepository, resolvedDefaultValue, scheduler, settingsBuilder.build());
     }
 

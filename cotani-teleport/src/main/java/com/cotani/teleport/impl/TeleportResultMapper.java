@@ -13,6 +13,8 @@ import java.util.concurrent.TimeoutException;
 import org.bukkit.Location;
 
 public final class TeleportResultMapper {
+    private static final String CONTEXT_PARAM = "context";
+
     private final TeleportEventNotifier eventNotifier;
 
     public TeleportResultMapper(TeleportEventNotifier eventNotifier) {
@@ -21,7 +23,7 @@ public final class TeleportResultMapper {
 
     public CompletionStage<TeleportResult> mapSuccess(
             TeleportContext context, Location from, Location eventTarget, Instant startedAt) {
-        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(context, CONTEXT_PARAM);
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(eventTarget, "eventTarget");
         Objects.requireNonNull(startedAt, "startedAt");
@@ -33,13 +35,13 @@ public final class TeleportResultMapper {
     }
 
     public CompletionStage<TeleportResult> mapTeleportFailure(TeleportContext context) {
-        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(context, CONTEXT_PARAM);
         TeleportResult.Failure failure = TeleportResults.failure(context, TeleportFailureReason.TELEPORT_FAILED);
         return eventNotifier.fireFailure(failure).thenApply(_ -> failure);
     }
 
     public CompletionStage<TeleportResult> mapException(TeleportContext context, Throwable error) {
-        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(context, CONTEXT_PARAM);
         Objects.requireNonNull(error, "error");
         Throwable cause = error;
         while (cause instanceof CompletionException || cause instanceof ExecutionException) {

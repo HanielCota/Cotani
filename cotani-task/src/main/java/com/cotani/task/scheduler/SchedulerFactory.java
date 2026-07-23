@@ -15,35 +15,39 @@ import org.bukkit.plugin.Plugin;
 
 public final class SchedulerFactory {
 
+    private static final String PLUGIN_PARAM = "plugin";
+    private static final String OPTIONS_PARAM = "options";
+    private static final String EXCEPTION_HANDLER_PARAM = "exceptionHandler";
+
     private SchedulerFactory() {}
 
     public static PaperTaskScheduler create(Plugin plugin) {
-        Objects.requireNonNull(plugin, "plugin");
+        Objects.requireNonNull(plugin, PLUGIN_PARAM);
 
         return create(plugin, SchedulerOptions.defaults());
     }
 
     public static PaperTaskScheduler create(Plugin plugin, SchedulerOptions options) {
-        Objects.requireNonNull(plugin, "plugin");
-        Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(plugin, PLUGIN_PARAM);
+        Objects.requireNonNull(options, OPTIONS_PARAM);
 
         return create(plugin, options, new LoggerTaskExceptionHandler(plugin.getLogger()));
     }
 
     public static PaperTaskScheduler create(
             Plugin plugin, SchedulerOptions options, TaskExceptionHandler exceptionHandler) {
-        Objects.requireNonNull(plugin, "plugin");
-        Objects.requireNonNull(options, "options");
-        Objects.requireNonNull(exceptionHandler, "exceptionHandler");
+        Objects.requireNonNull(plugin, PLUGIN_PARAM);
+        Objects.requireNonNull(options, OPTIONS_PARAM);
+        Objects.requireNonNull(exceptionHandler, EXCEPTION_HANDLER_PARAM);
 
         return create(plugin, options, exceptionHandler, new DefaultTaskMetrics());
     }
 
     public static PaperTaskScheduler create(
             Plugin plugin, SchedulerOptions options, TaskExceptionHandler exceptionHandler, TaskMetrics metrics) {
-        Objects.requireNonNull(plugin, "plugin");
-        Objects.requireNonNull(options, "options");
-        Objects.requireNonNull(exceptionHandler, "exceptionHandler");
+        Objects.requireNonNull(plugin, PLUGIN_PARAM);
+        Objects.requireNonNull(options, OPTIONS_PARAM);
+        Objects.requireNonNull(exceptionHandler, EXCEPTION_HANDLER_PARAM);
         Objects.requireNonNull(metrics, "metrics");
 
         return create(plugin, options, exceptionHandler, metrics, new NoopPersistentTaskStore());
@@ -55,9 +59,9 @@ public final class SchedulerFactory {
             TaskExceptionHandler exceptionHandler,
             TaskMetrics metrics,
             PersistentTaskStore persistentTaskStore) {
-        Objects.requireNonNull(plugin, "plugin");
-        Objects.requireNonNull(options, "options");
-        Objects.requireNonNull(exceptionHandler, "exceptionHandler");
+        Objects.requireNonNull(plugin, PLUGIN_PARAM);
+        Objects.requireNonNull(options, OPTIONS_PARAM);
+        Objects.requireNonNull(exceptionHandler, EXCEPTION_HANDLER_PARAM);
         Objects.requireNonNull(metrics, "metrics");
         Objects.requireNonNull(persistentTaskStore, "persistentTaskStore");
 

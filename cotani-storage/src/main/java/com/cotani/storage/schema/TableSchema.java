@@ -10,6 +10,8 @@ import org.jspecify.annotations.Nullable;
 
 public final class TableSchema {
 
+    private static final String COLUMN_NAME_LABEL = "Column name";
+
     private final String name;
     private final QueryExecutor executor;
     private final SqlDialect dialect;
@@ -25,35 +27,35 @@ public final class TableSchema {
     }
 
     public TableSchema id(String column, ColumnType type) {
-        var validatedName = Identifiers.requireValid(column, "Column name");
+        var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
         columns.add(new ColumnDefinition(validatedName, type, 255, true, false, true));
         cachedSql = null;
         return this;
     }
 
     public TableSchema column(String column, ColumnType type) {
-        var validatedName = Identifiers.requireValid(column, "Column name");
+        var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
         columns.add(new ColumnDefinition(validatedName, type, 255, false, true, false));
         cachedSql = null;
         return this;
     }
 
     public TableSchema column(String column, ColumnType type, int length) {
-        var validatedName = Identifiers.requireValid(column, "Column name");
+        var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
         columns.add(new ColumnDefinition(validatedName, type, length, false, true, false));
         cachedSql = null;
         return this;
     }
 
     public TableSchema required(String column, ColumnType type) {
-        var validatedName = Identifiers.requireValid(column, "Column name");
+        var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
         columns.add(new ColumnDefinition(validatedName, type, 255, false, false, false));
         cachedSql = null;
         return this;
     }
 
     public TableSchema unique(String column, ColumnType type) {
-        var validatedName = Identifiers.requireValid(column, "Column name");
+        var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
         columns.add(new ColumnDefinition(validatedName, type, 255, false, false, true));
         cachedSql = null;
         return this;

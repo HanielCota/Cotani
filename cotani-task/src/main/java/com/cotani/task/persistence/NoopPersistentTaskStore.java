@@ -5,7 +5,9 @@ import java.util.List;
 public final class NoopPersistentTaskStore implements PersistentTaskStore {
 
     @Override
-    public void save(PersistentTask task) {}
+    public void save(PersistentTask task) {
+        // Noop store does not persist tasks.
+    }
 
     @Override
     public List<PersistentTask> loadPending() {
@@ -13,5 +15,7 @@ public final class NoopPersistentTaskStore implements PersistentTaskStore {
     }
 
     @Override
-    public void markCompleted(PersistentTask task) {}
+    public void markCompleted(PersistentTask task) {
+        // Noop store does not track completion.
+    }
 }

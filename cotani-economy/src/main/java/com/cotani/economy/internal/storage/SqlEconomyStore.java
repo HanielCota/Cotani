@@ -31,6 +31,12 @@ import java.util.concurrent.CompletionStage;
  */
 public final class SqlEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
 
+    private static final String USER_ID_PARAM = "userId";
+    private static final String CURRENCY_ID_PARAM = "currencyId";
+    private static final String AMOUNT_PARAM = "amount";
+    private static final String REASON_PARAM = "reason";
+    private static final String OPERATION_ID_PARAM = "operationId";
+
     private final CotaniStorage storage;
     private final Clock clock;
     private final EconomySettings settings;
@@ -47,8 +53,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
 
     @Override
     public CompletionStage<EconomyAccount> getOrCreate(UUID userId, CurrencyId currencyId) {
-        Objects.requireNonNull(userId, "userId");
-        Objects.requireNonNull(currencyId, "currencyId");
+        Objects.requireNonNull(userId, USER_ID_PARAM);
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
 
         return storage.transactions().run(tx -> getOrCreateLocked(tx, userId, currencyId));
     }
@@ -60,11 +66,11 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        Objects.requireNonNull(userId, "userId");
-        Objects.requireNonNull(currencyId, "currencyId");
-        Objects.requireNonNull(amount, "amount");
-        Objects.requireNonNull(reason, "reason");
-        Objects.requireNonNull(operationId, "operationId");
+        Objects.requireNonNull(userId, USER_ID_PARAM);
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
+        Objects.requireNonNull(amount, AMOUNT_PARAM);
+        Objects.requireNonNull(reason, REASON_PARAM);
+        Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
         return storage.transactions()
@@ -86,11 +92,11 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        Objects.requireNonNull(userId, "userId");
-        Objects.requireNonNull(currencyId, "currencyId");
-        Objects.requireNonNull(amount, "amount");
-        Objects.requireNonNull(reason, "reason");
-        Objects.requireNonNull(operationId, "operationId");
+        Objects.requireNonNull(userId, USER_ID_PARAM);
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
+        Objects.requireNonNull(amount, AMOUNT_PARAM);
+        Objects.requireNonNull(reason, REASON_PARAM);
+        Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
         return storage.transactions()
@@ -111,11 +117,11 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        Objects.requireNonNull(userId, "userId");
-        Objects.requireNonNull(currencyId, "currencyId");
-        Objects.requireNonNull(amount, "amount");
-        Objects.requireNonNull(reason, "reason");
-        Objects.requireNonNull(operationId, "operationId");
+        Objects.requireNonNull(userId, USER_ID_PARAM);
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
+        Objects.requireNonNull(amount, AMOUNT_PARAM);
+        Objects.requireNonNull(reason, REASON_PARAM);
+        Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
         return storage.transactions()
@@ -140,10 +146,10 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
             EconomyOperationId operationId) {
         Objects.requireNonNull(sourceUserId, "sourceUserId");
         Objects.requireNonNull(targetUserId, "targetUserId");
-        Objects.requireNonNull(currencyId, "currencyId");
-        Objects.requireNonNull(amount, "amount");
-        Objects.requireNonNull(reason, "reason");
-        Objects.requireNonNull(operationId, "operationId");
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
+        Objects.requireNonNull(amount, AMOUNT_PARAM);
+        Objects.requireNonNull(reason, REASON_PARAM);
+        Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         // Lock in consistent order to prevent deadlocks
         UUID firstId = sourceUserId.compareTo(targetUserId) <= 0 ? sourceUserId : targetUserId;

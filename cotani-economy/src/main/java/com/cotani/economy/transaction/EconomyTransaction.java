@@ -15,6 +15,7 @@ public sealed interface EconomyTransaction
                 EconomyTransaction.Set,
                 EconomyTransaction.Transfer {
 
+    @SuppressWarnings("java:S107")
     static Deposit deposit(
             EconomyOperationId opId,
             UUID targetId,
@@ -28,6 +29,7 @@ public sealed interface EconomyTransaction
                 EconomyTransactionId.random(), opId, targetId, currId, amount, balBefore, balAfter, reason, now);
     }
 
+    @SuppressWarnings("java:S107")
     static Withdraw withdraw(
             EconomyOperationId opId,
             UUID sourceId,
@@ -41,6 +43,7 @@ public sealed interface EconomyTransaction
                 EconomyTransactionId.random(), opId, sourceId, currId, amount, balBefore, balAfter, reason, now);
     }
 
+    @SuppressWarnings("java:S107")
     static Set set(
             EconomyOperationId opId,
             UUID targetId,
@@ -53,6 +56,7 @@ public sealed interface EconomyTransaction
         return new Set(EconomyTransactionId.random(), opId, targetId, currId, amount, balBefore, balAfter, reason, now);
     }
 
+    @SuppressWarnings("java:S107")
     static Transfer transfer(
             EconomyOperationId opId,
             UUID sourceId,
@@ -126,6 +130,7 @@ public sealed interface EconomyTransaction
         throw new UnsupportedOperationException("This transaction type does not have a target balance.");
     }
 
+    @SuppressWarnings("java:S107")
     record Deposit(
             EconomyTransactionId id,
             EconomyOperationId operationId,
@@ -178,6 +183,7 @@ public sealed interface EconomyTransaction
         }
     }
 
+    @SuppressWarnings("java:S107")
     record Withdraw(
             EconomyTransactionId id,
             EconomyOperationId operationId,
@@ -230,6 +236,7 @@ public sealed interface EconomyTransaction
         }
     }
 
+    @SuppressWarnings("java:S107")
     record Set(
             EconomyTransactionId id,
             EconomyOperationId operationId,
@@ -282,6 +289,7 @@ public sealed interface EconomyTransaction
         }
     }
 
+    @SuppressWarnings("java:S107")
     record Transfer(
             EconomyTransactionId id,
             EconomyOperationId operationId,

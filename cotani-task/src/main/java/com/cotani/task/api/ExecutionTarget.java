@@ -14,6 +14,7 @@ import org.bukkit.entity.Entity;
  * objects such as {@link Location} and {@link Entity} are never captured into async flows; they are
  * resolved only when the task is about to run on the correct thread.
  */
+@SuppressWarnings("java:S1845")
 public sealed interface ExecutionTarget
         permits ExecutionTarget.Async, ExecutionTarget.Global, ExecutionTarget.Region, ExecutionTarget.EntityTarget {
 

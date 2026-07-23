@@ -20,6 +20,15 @@ import java.util.concurrent.CompletionStage;
 
 final class EconomyStorageMappers {
 
+    private static final String CREATED_AT = "created_at";
+    private static final String TRANSACTION_ID = "transaction_id";
+    private static final String TARGET_USER_ID = "target_user_id";
+    private static final String TARGET_BALANCE_BEFORE = "target_balance_before";
+    private static final String TARGET_BALANCE_AFTER = "target_balance_after";
+    private static final String SOURCE_USER_ID = "source_user_id";
+    private static final String SOURCE_BALANCE_BEFORE = "source_balance_before";
+    private static final String SOURCE_BALANCE_AFTER = "source_balance_after";
+
     private EconomyStorageMappers() {}
 
     static EconomyAccount accountFromRow(UUID userId, CurrencyId currencyId, Row row) throws SQLException {
@@ -27,12 +36,12 @@ final class EconomyStorageMappers {
                 userId,
                 currencyId,
                 new BigDecimal(requireString(row, "balance")),
-                requireInstant(row, "created_at"),
+                requireInstant(row, CREATED_AT),
                 requireInstant(row, "updated_at"));
     }
 
     static EconomyTransaction transactionFromRow(Row row) throws SQLException {
-        EconomyTransactionId id = new EconomyTransactionId(requireUuid(row, "transaction_id"));
+        EconomyTransactionId id = new EconomyTransactionId(requireUuid(row, TRANSACTION_ID));
         EconomyOperationId operationId = new EconomyOperationId(requireUuid(row, "operation_id"));
         EconomyTransactionType type = EconomyTransactionType.valueOf(requireString(row, "type"));
         CurrencyId currencyId = CurrencyId.of(requireString(row, "currency_id"));
@@ -41,54 +50,54 @@ final class EconomyStorageMappers {
                 requireString(row, "reason_key"),
                 requireString(row, "reason_source"),
                 row.getUuid("reason_actor_user_id"));
-        Instant createdAt = requireInstant(row, "created_at");
+        Instant createdAt = requireInstant(row, CREATED_AT);
 
         return switch (type) {
             case DEPOSIT ->
                 new EconomyTransaction.Deposit(
                         id,
                         operationId,
-                        requireUuid(row, "target_user_id"),
+                        requireUuid(row, TARGET_USER_ID),
                         currencyId,
                         amount,
-                        requireBigDecimal(row, "target_balance_before"),
-                        requireBigDecimal(row, "target_balance_after"),
+                        requireBigDecimal(row, TARGET_BALANCE_BEFORE),
+                        requireBigDecimal(row, TARGET_BALANCE_AFTER),
                         reason,
                         createdAt);
             case WITHDRAW ->
                 new EconomyTransaction.Withdraw(
                         id,
                         operationId,
-                        requireUuid(row, "source_user_id"),
+                        requireUuid(row, SOURCE_USER_ID),
                         currencyId,
                         amount,
-                        requireBigDecimal(row, "source_balance_before"),
-                        requireBigDecimal(row, "source_balance_after"),
+                        requireBigDecimal(row, SOURCE_BALANCE_BEFORE),
+                        requireBigDecimal(row, SOURCE_BALANCE_AFTER),
                         reason,
                         createdAt);
             case SET ->
                 new EconomyTransaction.Set(
                         id,
                         operationId,
-                        requireUuid(row, "target_user_id"),
+                        requireUuid(row, TARGET_USER_ID),
                         currencyId,
                         amount,
-                        requireBigDecimal(row, "target_balance_before"),
-                        requireBigDecimal(row, "target_balance_after"),
+                        requireBigDecimal(row, TARGET_BALANCE_BEFORE),
+                        requireBigDecimal(row, TARGET_BALANCE_AFTER),
                         reason,
                         createdAt);
             case TRANSFER ->
                 new EconomyTransaction.Transfer(
                         id,
                         operationId,
-                        requireUuid(row, "source_user_id"),
-                        requireUuid(row, "target_user_id"),
+                        requireUuid(row, SOURCE_USER_ID),
+                        requireUuid(row, TARGET_USER_ID),
                         currencyId,
                         amount,
-                        requireBigDecimal(row, "source_balance_before"),
-                        requireBigDecimal(row, "source_balance_after"),
-                        requireBigDecimal(row, "target_balance_before"),
-                        requireBigDecimal(row, "target_balance_after"),
+                        requireBigDecimal(row, SOURCE_BALANCE_BEFORE),
+                        requireBigDecimal(row, SOURCE_BALANCE_AFTER),
+                        requireBigDecimal(row, TARGET_BALANCE_BEFORE),
+                        requireBigDecimal(row, TARGET_BALANCE_AFTER),
                         reason,
                         createdAt);
         };
@@ -100,22 +109,22 @@ final class EconomyStorageMappers {
                 .upsert(
                         "cotani_economy_transactions",
                         List.of(
-                                "transaction_id",
+                                TRANSACTION_ID,
                                 "operation_id",
                                 "type",
-                                "source_user_id",
-                                "target_user_id",
+                                SOURCE_USER_ID,
+                                TARGET_USER_ID,
                                 "currency_id",
                                 "amount",
-                                "source_balance_before",
-                                "source_balance_after",
-                                "target_balance_before",
-                                "target_balance_after",
+                                SOURCE_BALANCE_BEFORE,
+                                SOURCE_BALANCE_AFTER,
+                                TARGET_BALANCE_BEFORE,
+                                TARGET_BALANCE_AFTER,
                                 "reason_key",
                                 "reason_source",
                                 "reason_actor_user_id",
-                                "created_at"),
-                        List.of("transaction_id"),
+                                CREATED_AT),
+                        List.of(TRANSACTION_ID),
                         List.of());
         return tx.update(sql, binder -> {
                     binder.set(transaction.id().value());

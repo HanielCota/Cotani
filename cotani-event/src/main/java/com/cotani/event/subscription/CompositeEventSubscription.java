@@ -17,7 +17,9 @@ public final class CompositeEventSubscription implements AutoCloseable {
     /**
      * Creates a new empty composite subscription.
      */
-    public CompositeEventSubscription() {}
+    public CompositeEventSubscription() {
+        // Default constructor.
+    }
 
     /**
      * Adds an event subscription to this composite subscription.

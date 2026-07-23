@@ -107,49 +107,50 @@ public final class CacheCooldownStore implements CooldownStore {
         Objects.requireNonNull(clock, "clock");
 
         if (key.target() instanceof UserCooldownTarget(UUID userId)) {
-            Optional<PlayerCooldowns> optional = playerCache.find(userId);
-            if (optional.isEmpty()) {
-                // The player cache is not loaded. We must NOT fall through into nonPlayerEntries:
-                // find() never reads user cooldowns from that map, so the cooldown would be
-                // silently lost. User cooldowns require the player data to be loaded first
-                // (e.g. via PlayerDataCache.getOrLoadAsync). Failing loudly keeps the bug observable.
-                throw new IllegalStateException("Cannot check/start cooldown for user " + userId
-                        + " because the player cache is not loaded. Load the player first: " + key);
-            }
-
-            PlayerCooldowns playerCooldowns = optional.get();
-            Instant now = clock.instant();
-            CooldownEntry current =
-                    playerCooldowns.activeCooldowns().get(key.action().value());
-
-            if (current != null && !current.expired(now)) {
-                return CooldownResult.denied(key, current.remaining(now), current.expiresAt());
-            }
-
-            Instant expiresAt = now.plus(duration);
-            CooldownEntry created = new CooldownEntry(key, now, expiresAt);
-            playerCooldowns.activeCooldowns().put(key.action().value(), created);
-            playerCache.markDirty(userId);
-            playerCache.mutateAsync(
-                    userId, pc -> pc.activeCooldowns().put(key.action().value(), created));
-
-            return CooldownResult.allowed(key);
+            return checkAndStartUserCooldown(userId, key, duration, clock);
         }
 
+        return checkAndStartNonPlayerCooldown(key, duration, clock);
+    }
+
+    private CooldownResult checkAndStartUserCooldown(UUID userId, CooldownKey key, Duration duration, Clock clock) {
+        Optional<PlayerCooldowns> optional = playerCache.find(userId);
+        if (optional.isEmpty()) {
+            throw new IllegalStateException("Cannot check/start cooldown for user " + userId
+                    + " because the player cache is not loaded. Load the player first: " + key);
+        }
+
+        PlayerCooldowns playerCooldowns = optional.get();
+        Instant now = clock.instant();
+        CooldownEntry current = playerCooldowns.activeCooldowns().get(key.action().value());
+
+        if (current != null && !current.expired(now)) {
+            return CooldownResult.denied(key, current.remaining(now), current.expiresAt());
+        }
+
+        Instant expiresAt = now.plus(duration);
+        CooldownEntry created = new CooldownEntry(key, now, expiresAt);
+        playerCooldowns.activeCooldowns().put(key.action().value(), created);
+        playerCache.markDirty(userId);
+        playerCache.mutateAsync(
+                userId, pc -> pc.activeCooldowns().put(key.action().value(), created));
+
+        return CooldownResult.allowed(key);
+    }
+
+    private CooldownResult checkAndStartNonPlayerCooldown(CooldownKey key, Duration duration, Clock clock) {
         Instant now = clock.instant();
         AtomicReference<CooldownResult> resultReference = new AtomicReference<>();
 
         nonPlayerEntries.compute(key, (ignored, current) -> {
             if (current != null && !current.expired(now)) {
                 resultReference.set(CooldownResult.denied(key, current.remaining(now), current.expiresAt()));
-
                 return current;
             }
 
             Instant expiresAt = now.plus(duration);
             CooldownEntry created = new CooldownEntry(key, now, expiresAt);
             resultReference.set(CooldownResult.allowed(key));
-
             return created;
         });
 

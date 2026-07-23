@@ -23,6 +23,8 @@ import org.bukkit.entity.Entity;
 
 public final class DefaultTaskChain<T> implements TaskChain<T> {
 
+    private static final String ACTION_PARAM = "action";
+
     private final CompletableFuture<T> future;
     private final PaperTaskScheduler scheduler;
     private final Supplier<CompletableFuture<T>> futureFactory;
@@ -171,7 +173,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     @Override
     public TaskChain<T> onStart(Runnable action) {
-        Objects.requireNonNull(action, "action");
+        Objects.requireNonNull(action, ACTION_PARAM);
 
         CompletableFuture<T> started = scheduler
                 .supplyAsync("chain-on-start", () -> {
@@ -198,7 +200,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     @Override
     public TaskChain<T> onComplete(Runnable action) {
-        Objects.requireNonNull(action, "action");
+        Objects.requireNonNull(action, ACTION_PARAM);
 
         var _ = future.whenComplete((ignored, throwable) -> action.run());
 
@@ -207,7 +209,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     @Override
     public TaskChain<T> onCancel(Runnable action) {
-        Objects.requireNonNull(action, "action");
+        Objects.requireNonNull(action, ACTION_PARAM);
 
         var _ = future.whenComplete((ignored, throwable) -> {
             if (future.isCancelled()) {
