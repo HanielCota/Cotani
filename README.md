@@ -38,22 +38,24 @@ Cotani implements a strict boundary between asynchronous IO execution and Paper'
 
 ```mermaid
 flowchart TD
-    subgraph MainThread [" Bukkit / Paper Main Thread "]
-        A[Minecraft Event / Command] -->|1. Extract Immutable IDs e.g. UUID| B(Main Thread Context)
-        G[Paper API Operations e.g. Teleport, Inv] <--|4. Return to Main Thread via TaskChain| F
+    subgraph MainThread ["Bukkit / Paper Main Thread"]
+        A["Minecraft Event / Command"] -->|"1. Extract Immutable IDs (UUID)"| B["Main Thread Context"]
+        G["Paper API Operations (Teleport, Inv)"]
     end
 
-    subgraph AsyncEngine [" Cotani Async Engine "]
-        B -->|2. TaskChain.supplyAsync| C[Off-Thread Executor]
-        C --> D{Cache Check}
-        D -->|Hit| E[Caffeine Cache]
-        D -->|Miss| F[Storage Provider / Database]
+    subgraph AsyncEngine ["Cotani Async Engine"]
+        B -->|"2. TaskChain.supplyAsync"| C["Off-Thread Executor"]
+        C --> D{"Cache Check"}
+        D -->|"Hit"| E["Caffeine Cache"]
+        D -->|"Miss"| F["Storage Provider / Database"]
         E --> F
     end
 
-    subgraph Persistence [" Database / IO Layer "]
-        F <-->|3. Async SQL / Migrations| H[(SQLite / MySQL / MariaDB)]
+    subgraph Persistence ["Database / IO Layer"]
+        F -->|"3. Async SQL / Migrations"| H[("SQLite / MySQL / MariaDB")]
     end
+
+    F -->|"4. Return via TaskChain"| G
 ```
 
 ---
