@@ -1,5 +1,5 @@
 [versions]
-adventure = "4.17.0"
+adventure = "5.2.0"
 java = "25"
 caffeine = "3.2.0"
 errorprone = "5.1.0"
