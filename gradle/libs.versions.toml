@@ -12,7 +12,7 @@ mockito = "5.17.0"
 mysql = "9.3.0"
 nullaway = "0.13.8"
 paper = "26.2.build.40-alpha"
-spotless = "8.7.0"
+spotless = "8.8.0"
 sqlite = "3.53.2.1"
 
 [libraries]
