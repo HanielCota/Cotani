@@ -55,6 +55,13 @@ class SkullTextureResolverTest {
     }
 
     @Test
+    void normalizesHttpUrl() throws Exception {
+        assertEquals(
+                "https://textures.minecraft.net/texture/abc123",
+                normalize("http://textures.minecraft.net/texture/abc123"));
+    }
+
+    @Test
     void normalizesDomainOnlyUrl() throws Exception {
         assertEquals(
                 "https://textures.minecraft.net/texture/abc123", normalize("textures.minecraft.net/texture/abc123"));

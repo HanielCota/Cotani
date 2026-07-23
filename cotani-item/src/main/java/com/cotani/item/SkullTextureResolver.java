@@ -87,7 +87,7 @@ public final class SkullTextureResolver implements AutoCloseable {
         var stripped = input.strip();
         var lower = stripped.toLowerCase(Locale.ROOT);
         if (lower.startsWith(HTTP_TEXTURES_DOMAIN)) {
-            return "https://" + stripped.substring(HTTP_TEXTURES_DOMAIN.length());
+            return TEXTURES_DOMAIN + stripped.substring(HTTP_TEXTURES_DOMAIN.length());
         }
         if (lower.startsWith(TEXTURES_DOMAIN)) {
             return stripped;
