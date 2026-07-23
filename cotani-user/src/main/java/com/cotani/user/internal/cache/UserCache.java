@@ -39,14 +39,15 @@ public final class UserCache {
     public boolean remove(UUID uniqueId, UUID expectedSessionId) {
         Objects.requireNonNull(uniqueId, "uniqueId");
         Objects.requireNonNull(expectedSessionId, "expectedSessionId");
-        SimpleCotaniUser current = users.get(uniqueId);
-
-        if (current == null || !current.sessionId().equals(expectedSessionId)) {
-            return false;
-        }
-
-        users.remove(uniqueId);
-        return true;
+        boolean[] removed = new boolean[1];
+        users.computeIfPresent(uniqueId, (id, current) -> {
+            if (current.sessionId().equals(expectedSessionId)) {
+                removed[0] = true;
+                return null;
+            }
+            return current;
+        });
+        return removed[0];
     }
 
     public void clear() {
