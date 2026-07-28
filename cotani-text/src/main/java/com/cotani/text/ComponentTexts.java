@@ -1,5 +1,7 @@
 package com.cotani.text;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
@@ -19,6 +21,7 @@ import org.jspecify.annotations.NullMarked;
 public final class ComponentTexts {
 
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
+    private static final String COMPONENTS_NULL_MESSAGE = "Parameter 'components' must not be null";
     private static final String CONTENT_NULL_MESSAGE = "Parameter 'content' must not be null";
     private static final String LEGACY_NULL_MESSAGE = "Parameter 'legacy' must not be null";
     private static final String MINI_MESSAGE_NULL_MESSAGE = "Parameter 'miniMessage' must not be null";
@@ -245,6 +248,20 @@ public final class ComponentTexts {
     }
 
     /**
+     * Returns an unmodifiable list of components with italic decoration explicitly disabled.
+     *
+     * <p>Useful for item lore lines, which inherit an italic style by default.
+     *
+     * @param components the collection of components
+     * @return an unmodifiable list of components without italics
+     */
+    public static List<Component> withoutItalics(Collection<? extends Component> components) {
+        Objects.requireNonNull(components, COMPONENTS_NULL_MESSAGE);
+
+        return components.stream().map(ComponentTexts::withoutItalics).toList();
+    }
+
+    /**
      * Returns a copy of the component with the given decoration explicitly disabled.
      *
      * @param component the component
@@ -256,6 +273,21 @@ public final class ComponentTexts {
         Objects.requireNonNull(decoration, DECORATION_NULL_MESSAGE);
 
         return component.decoration(decoration, false);
+    }
+
+    /**
+     * Returns an unmodifiable list of components with the given decoration explicitly disabled.
+     *
+     * @param components the collection of components
+     * @param decoration the decoration to disable
+     * @return an unmodifiable list of components without the decoration
+     */
+    public static List<Component> withoutDecoration(
+            Collection<? extends Component> components, TextDecoration decoration) {
+        Objects.requireNonNull(components, COMPONENTS_NULL_MESSAGE);
+        Objects.requireNonNull(decoration, DECORATION_NULL_MESSAGE);
+
+        return components.stream().map(c -> withoutDecoration(c, decoration)).toList();
     }
 
     /**

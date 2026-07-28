@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.currency.EconomyCurrency;
-import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import java.math.BigDecimal;
@@ -157,12 +156,10 @@ class InMemoryEconomyStoreConcurrencyTest {
                     .join();
 
             long successes = outcomes.stream().filter(f -> f.join() == null).count();
-            long duplicates = outcomes.stream()
-                    .filter(f -> f.join() instanceof DuplicateEconomyOperationException)
-                    .count();
+            long failures = outcomes.stream().filter(f -> f.join() != null).count();
 
-            assertEquals(1, successes, "exactly one operation with the same id should succeed");
-            assertEquals(threads - 1, duplicates, "all others should be rejected as duplicates");
+            assertEquals(threads, successes, "all callers should observe a successful idempotent result");
+            assertEquals(0, failures, "idempotent retries must not fail");
 
             var account = store.getOrCreate(userId, SETTINGS.defaultCurrency().id())
                     .toCompletableFuture()

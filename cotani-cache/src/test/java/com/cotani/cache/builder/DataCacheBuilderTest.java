@@ -1,7 +1,9 @@
 package com.cotani.cache.builder;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.cotani.cache.CotaniCache;
 import com.cotani.cache.api.DataCache;
@@ -10,7 +12,10 @@ import com.cotani.cache.policy.CachePreset;
 import com.cotani.cache.policy.CacheSettings;
 import com.cotani.cache.repository.CacheRepository;
 import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.api.SchedulerTask;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +35,8 @@ class DataCacheBuilderTest {
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
+        when(scheduler.asyncExecutor()).thenReturn(CompletableFuture.delayedExecutor(0, TimeUnit.MILLISECONDS));
+        when(scheduler.asyncTimer(any(), any(), any())).thenReturn(SchedulerTask.noop());
     }
 
     @AfterEach

@@ -86,8 +86,7 @@ class DefaultUserModuleTest {
                 DefaultUserModule.createWithService(plugin, scheduler, UserModuleOptions.defaults(), service);
 
         CotaniCloseException exception = assertThrows(CotaniCloseException.class, module::close);
-        assertInstanceOf(java.util.concurrent.ExecutionException.class, exception.getCause());
-        assertSame(saveFailure, exception.getCause().getCause());
+        assertSame(saveFailure, exception.getCause());
 
         verify(service).saveAll();
         verify(service, never()).clearCache();

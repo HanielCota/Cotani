@@ -211,4 +211,101 @@ class CotaniTest {
 
         assertFalse(closed.get());
     }
+
+    @Test
+    void closeAsyncExecutesAsyncCloseables() {
+        var plugin = pluginWithLogger();
+        var asyncExecuted = new AtomicBoolean();
+        var syncExecuted = new AtomicBoolean();
+
+        var cotani = Cotani.forPlugin(plugin)
+                .with(() -> syncExecuted.set(true))
+                .withAsync(() -> {
+                    asyncExecuted.set(true);
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                })
+                .build();
+
+        cotani.closeAsync().toCompletableFuture().join();
+
+        assertTrue(asyncExecuted.get());
+        assertTrue(syncExecuted.get());
+    }
+
+    @Test
+    void registerAsyncAndDeregisterAsync() {
+        var plugin = pluginWithLogger();
+        var executed = new AtomicBoolean();
+        java.util.function.Supplier<java.util.concurrent.CompletionStage<Void>> asyncSupplier = () -> {
+            executed.set(true);
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        };
+
+        var cotani = Cotani.forPlugin(plugin).build();
+        cotani.registerAsync(asyncSupplier);
+        cotani.deregisterAsync(asyncSupplier);
+        cotani.close();
+
+        assertFalse(executed.get());
+    }
+
+    @Test
+    void asyncSupplierExceptionIsAggregated() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin)
+                .withAsync(() -> {
+                    throw new RuntimeException("Async supplier boom");
+                })
+                .build();
+
+        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        assertEquals("Failed to close resource", thrown.getMessage());
+        assertNotNull(thrown.getCause());
+        assertEquals("Async supplier boom", thrown.getCause().getMessage());
+    }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void registerAsyncNullRejects() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin).build();
+
+        assertThrows(NullPointerException.class, () -> cotani.registerAsync(null));
+    }
+
+    @Test
+    void asyncStageFailureIsAggregated() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin)
+                .withAsync(() -> {
+                    var failed = new java.util.concurrent.CompletableFuture<Void>();
+                    failed.completeExceptionally(new IllegalStateException("stage boom"));
+                    return failed;
+                })
+                .build();
+
+        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+
+        assertEquals("Failed to close resource", thrown.getMessage());
+        assertNotNull(thrown.getCause());
+        assertEquals("stage boom", thrown.getCause().getMessage());
+    }
+
+    @Test
+    void closeRestoresInterruptFlag() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin)
+                .withAsync(java.util.concurrent.CompletableFuture::new) // never completes
+                .build();
+
+        Thread.currentThread().interrupt();
+        try {
+            var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+
+            assertEquals("Interrupted while closing resources", thrown.getMessage());
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            Thread.interrupted(); // clear the flag for subsequent tests
+        }
+    }
 }

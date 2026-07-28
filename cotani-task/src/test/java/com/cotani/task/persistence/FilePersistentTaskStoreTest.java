@@ -46,4 +46,16 @@ class FilePersistentTaskStoreTest {
         assertTrue(store.loadPending().isEmpty());
         assertTrue(Files.notExists(tempDir.resolve(task.id() + ".task")));
     }
+
+    @Test
+    void corruptTaskFileIsCleanedUp() throws Exception {
+        FilePersistentTaskStore store = new FilePersistentTaskStore(tempDir);
+        Path corruptFile = tempDir.resolve("corrupt.task");
+        Files.writeString(corruptFile, "bad-content\ntruncated", StandardCharsets.UTF_8);
+
+        List<PersistentTask> pending = store.loadPending();
+
+        assertTrue(pending.isEmpty());
+        assertFalse(Files.exists(corruptFile));
+    }
 }

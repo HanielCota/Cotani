@@ -111,6 +111,21 @@ class DefaultTaskChainTest {
     }
 
     @Test
+    void timeoutPreservesOriginalException() {
+        IllegalStateException cause = new IllegalStateException("db failed");
+        DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.failedFuture(cause), scheduler);
+
+        ExecutionException exception = assertThrows(
+                ExecutionException.class,
+                () -> chain.timeout(Duration.ofSeconds(1))
+                        .toCompletionStage()
+                        .toCompletableFuture()
+                        .get());
+
+        assertSame(cause, exception.getCause());
+    }
+
+    @Test
     void allOfCollectsResults() throws Exception {
         TaskChain<String> a = new DefaultTaskChain<>(CompletableFuture.completedFuture("a"), scheduler);
         TaskChain<String> b = new DefaultTaskChain<>(CompletableFuture.completedFuture("b"), scheduler);

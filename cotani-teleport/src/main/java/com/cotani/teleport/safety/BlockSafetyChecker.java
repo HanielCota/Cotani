@@ -37,7 +37,7 @@ public final class BlockSafetyChecker {
         if (!feet.isPassable() || !head.isPassable()) {
             return false;
         }
-        if (!ground.getType().isSolid()) {
+        if (!ground.isSolid() || ground.isPassable()) {
             return false;
         }
         if (options.avoidLiquids() && isLiquid(feet, head, ground)) {
@@ -55,8 +55,8 @@ public final class BlockSafetyChecker {
     }
 
     private static boolean isOutsideBounds(World world, Location location) {
-        double y = location.getY();
-        return y < world.getMinHeight() || y + 1 >= world.getMaxHeight();
+        int y = location.getBlockY();
+        return y - 1 < world.getMinHeight() || y + 1 >= world.getMaxHeight();
     }
 
     private static boolean isLiquid(Block feet, Block head, Block ground) {
@@ -69,7 +69,19 @@ public final class BlockSafetyChecker {
 
     private static boolean isHazardMaterial(Material material) {
         return switch (material) {
-            case LAVA, FIRE, SOUL_FIRE, CACTUS, MAGMA_BLOCK, SWEET_BERRY_BUSH, POWDER_SNOW -> true;
+            case LAVA,
+                    FIRE,
+                    SOUL_FIRE,
+                    CACTUS,
+                    MAGMA_BLOCK,
+                    SWEET_BERRY_BUSH,
+                    POWDER_SNOW,
+                    WITHER_ROSE,
+                    CAMPFIRE,
+                    SOUL_CAMPFIRE,
+                    END_PORTAL,
+                    NETHER_PORTAL,
+                    POINTED_DRIPSTONE -> true;
             default -> false;
         };
     }

@@ -18,14 +18,13 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 /**
- * Cache decorador para {@link EconomyService}.
+ * Cache decorator for {@link EconomyService}.
  *
- * <p>Apenas leituras de saldo (<code>balance</code> e <code>has</code>) são cacheadas. Operações de escrita
- * invalidam a entrada do usuário após o storage confirmar sucesso. A implementação usa Caffeine para
- * coalescer requisições concorrentes ao mesmo par (usuário, moeda) e limitar o tamanho do cache.
+ * <p>Reads of balance ({@code balance} and {@code has}) are cached. Successful writes update the cache
+ * with the post-transaction balance (write-through) so concurrent loads cannot repopulate a stale value
+ * after invalidate.
  *
- * <p>O carregem assíncrono do Caffeine usa o {@link Executor} explícito recebido no construtor, em vez do
- * {@code ForkJoinPool.commonPool()} padrão, para manter o isolamento dos pools do plugin.
+ * <p>Async loads use the explicit {@link Executor} instead of {@code ForkJoinPool.commonPool()}.
  */
 public final class CachedEconomyService implements EconomyService, AutoCloseable {
 
@@ -63,6 +62,7 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
 
     @Override
     public CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
+        Objects.requireNonNull(amount, "amount");
         return balance(userId, currencyId).thenApply(balance -> balance.amount().compareTo(amount) >= 0);
     }
 
@@ -73,7 +73,7 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        return mutate(userId, delegate.deposit(userId, currencyId, amount, reason, operationId));
+        return mutate(delegate.deposit(userId, currencyId, amount, reason, operationId));
     }
 
     @Override
@@ -89,7 +89,7 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        return mutate(userId, delegate.withdraw(userId, currencyId, amount, reason, operationId));
+        return mutate(delegate.withdraw(userId, currencyId, amount, reason, operationId));
     }
 
     @Override
@@ -105,7 +105,7 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        return mutate(userId, delegate.set(userId, currencyId, amount, reason, operationId));
+        return mutate(delegate.set(userId, currencyId, amount, reason, operationId));
     }
 
     @Override
@@ -122,12 +122,7 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        return delegate.transfer(sourceUserId, targetUserId, currencyId, amount, reason, operationId)
-                .thenApply(transaction -> {
-                    invalidate(sourceUserId, currencyId);
-                    invalidate(targetUserId, currencyId);
-                    return transaction;
-                });
+        return mutate(delegate.transfer(sourceUserId, targetUserId, currencyId, amount, reason, operationId));
     }
 
     @Override
@@ -149,15 +144,32 @@ public final class CachedEconomyService implements EconomyService, AutoCloseable
         return delegate.balance(key.userId(), key.currencyId()).toCompletableFuture();
     }
 
-    private CompletionStage<EconomyTransaction> mutate(UUID userId, CompletionStage<EconomyTransaction> future) {
+    private CompletionStage<EconomyTransaction> mutate(CompletionStage<EconomyTransaction> future) {
         return future.thenApply(transaction -> {
-            invalidate(userId, transaction.currencyId());
+            writeThrough(transaction);
             return transaction;
         });
     }
 
-    private void invalidate(UUID userId, CurrencyId currencyId) {
-        cache.asMap().remove(new BalanceKey(userId, currencyId));
+    private void writeThrough(EconomyTransaction transaction) {
+        CurrencyId currencyId = transaction.currencyId();
+        switch (transaction) {
+            case EconomyTransaction.Deposit deposit ->
+                putBalance(deposit.targetUserId(), currencyId, deposit.targetBalanceAfter());
+            case EconomyTransaction.Withdraw withdraw ->
+                putBalance(withdraw.sourceUserId(), currencyId, withdraw.sourceBalanceAfter());
+            case EconomyTransaction.Set set -> putBalance(set.targetUserId(), currencyId, set.targetBalanceAfter());
+            case EconomyTransaction.Transfer transfer -> {
+                putBalance(transfer.sourceUserId(), currencyId, transfer.sourceBalanceAfter());
+                putBalance(transfer.targetUserId(), currencyId, transfer.targetBalanceAfter());
+            }
+        }
+    }
+
+    private void putBalance(UUID userId, CurrencyId currencyId, BigDecimal amount) {
+        cache.put(
+                new BalanceKey(userId, currencyId),
+                CompletableFuture.completedFuture(new EconomyBalance(userId, currencyId, amount)));
     }
 
     private CurrencyId defaultCurrency() {

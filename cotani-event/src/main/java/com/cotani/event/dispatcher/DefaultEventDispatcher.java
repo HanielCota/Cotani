@@ -34,9 +34,9 @@ public final class DefaultEventDispatcher implements EventDispatcher {
             return;
         }
 
-        if (event instanceof CancellableEvent cancellable
-                && cancellable.cancelled()
-                && subscription.ignoreCancelled()) {
+        if (subscription.ignoreCancelled()
+                && event instanceof CancellableEvent cancellable
+                && cancellable.cancelled()) {
             return;
         }
 

@@ -63,21 +63,26 @@ public final class TransactionManager {
     }
 
     private void finishTransaction(TransactionState state, @Nullable Throwable error) {
-        try (Connection connection = state.connection) {
+        Connection connection = state.connection;
+        try {
             if (error != null) {
                 rollback(connection, error);
-                return;
+            } else {
+                connection.commit();
             }
-            connection.commit();
         } catch (SQLException failure) {
             var wrapped = new StorageException(new TransactionError("Could not finish transaction.", failure));
             if (error != null) {
                 error.addSuppressed(wrapped);
-                return;
+            } else {
+                throw wrapped;
             }
-            throw wrapped;
         } finally {
-            restoreAutoCommit(state.connection, state.previousAutoCommit);
+            try {
+                restoreAutoCommit(connection, state.previousAutoCommit);
+            } finally {
+                closeQuietly(connection, error);
+            }
         }
     }
 
@@ -94,7 +99,21 @@ public final class TransactionManager {
         try {
             connection.setAutoCommit(previousAutoCommit);
         } catch (SQLException ignored) {
-            // best-effort restore; connection is about to be closed by try-with-resources
+            // best-effort restore before returning the connection to the pool
+        }
+    }
+
+    private void closeQuietly(Connection connection, @Nullable Throwable error) {
+        try {
+            connection.close();
+        } catch (SQLException closeFailure) {
+            var wrapped =
+                    new StorageException(new TransactionError("Could not close transaction connection.", closeFailure));
+            if (error != null) {
+                error.addSuppressed(wrapped);
+                return;
+            }
+            throw wrapped;
         }
     }
 

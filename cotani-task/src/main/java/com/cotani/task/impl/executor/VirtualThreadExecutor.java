@@ -6,13 +6,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.*;
 
-/**
- * Async executor backed by either virtual threads or a fixed platform thread pool.
- *
- * <p>When virtual threads are enabled, concurrency is not artificially capped: virtual threads are
- * cheap and the JDK schedules them on the available carrier threads. A fixed platform pool is used
- * otherwise, with {@code maxConcurrent} threads.
- */
 public final class VirtualThreadExecutor implements AutoCloseable {
 
     private static final String THREAD_NAME = "cotani-task-";
@@ -20,6 +13,8 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     private static final String METADATA_PARAM = "metadata";
     private static final String RUNNABLE_PARAM = "runnable";
     private static final int DEFAULT_MAX_CONCURRENT = 256;
+    private static final int BOUNDED_QUEUE_CAPACITY = 4096;
+    private static final int DELAYED_POOL_SIZE = 4;
 
     private final ExecutorService taskExecutor;
     private final ScheduledExecutorService delayedExecutor;
@@ -60,16 +55,37 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     private static ExecutorService createTaskExecutor(int maxConcurrent, boolean useVirtualThreads) {
         if (useVirtualThreads) {
             ThreadFactory factory = Thread.ofVirtual().name(THREAD_NAME, 0).factory();
-            return Executors.newThreadPerTaskExecutor(factory);
+            var semaphore = new Semaphore(maxConcurrent);
+            return new ThreadPoolExecutor(
+                    0, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), factory) {
+                @Override
+                public void execute(Runnable command) {
+                    semaphore.acquireUninterruptibly();
+                    super.execute(() -> {
+                        try {
+                            command.run();
+                        } finally {
+                            semaphore.release();
+                        }
+                    });
+                }
+            };
         }
 
         ThreadFactory factory = Thread.ofPlatform().name(THREAD_NAME).factory();
-        return Executors.newFixedThreadPool(maxConcurrent, factory);
+        return new ThreadPoolExecutor(
+                maxConcurrent,
+                maxConcurrent,
+                60L,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(BOUNDED_QUEUE_CAPACITY),
+                factory,
+                new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
     private static ScheduledExecutorService createDelayedExecutor() {
         ThreadFactory factory = Thread.ofPlatform().name(DELAYED_THREAD_NAME).factory();
-        return Executors.newSingleThreadScheduledExecutor(factory);
+        return new ScheduledThreadPoolExecutor(DELAYED_POOL_SIZE, factory);
     }
 
     public Future<Void> submit(TaskMetadata metadata, Runnable runnable) {

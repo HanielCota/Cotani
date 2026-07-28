@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.Location;
+import org.jspecify.annotations.Nullable;
 
 public record PendingTeleportView(
         UUID id,
@@ -11,7 +12,11 @@ public record PendingTeleportView(
         Location target,
         Duration delay,
         PendingTeleportState state,
-        Optional<TeleportCancelReason> cancelReason) {
+        @Nullable TeleportCancelReason cancelReasonNullable) {
+
+    public Optional<TeleportCancelReason> cancelReason() {
+        return Optional.ofNullable(cancelReasonNullable);
+    }
 
     /**
      * Returns a defensive copy of the target location. Callers must not rely on mutating the

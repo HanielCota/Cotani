@@ -39,9 +39,14 @@ public final class RecordConfigBinder implements ConfigBinder {
         return toKebabCase(component.getName());
     }
 
+    private static final java.util.regex.Pattern KEBAB_FIRST = java.util.regex.Pattern.compile("([a-z0-9])([A-Z])");
+    private static final java.util.regex.Pattern KEBAB_SECOND =
+            java.util.regex.Pattern.compile("([A-Z]+?)([A-Z][a-z])");
+
     private static String toKebabCase(String input) {
-        return input.replaceAll("([a-z0-9])([A-Z])", "$1-$2")
-                .replaceAll("([A-Z]+?)([A-Z][a-z])", "$1-$2")
+        return KEBAB_SECOND
+                .matcher(KEBAB_FIRST.matcher(input).replaceAll("$1-$2"))
+                .replaceAll("$1-$2")
                 .toLowerCase(Locale.ROOT);
     }
 

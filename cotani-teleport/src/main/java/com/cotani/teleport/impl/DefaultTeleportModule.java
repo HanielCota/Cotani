@@ -5,6 +5,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.adapter.CombatAdapter;
 import com.cotani.teleport.adapter.RegionProtectionAdapter;
 import com.cotani.teleport.api.PendingTeleportService;
+import com.cotani.teleport.api.PlayerResolver;
 import com.cotani.teleport.api.TeleportMessages;
 import com.cotani.teleport.api.TeleportModule;
 import com.cotani.teleport.api.TeleportService;
@@ -45,17 +46,6 @@ public final class DefaultTeleportModule implements TeleportModule {
         this.pendingTeleportService = pendingTeleportService;
         this.cooldownService = cooldownService;
         this.options = options;
-    }
-
-    /**
-     * @deprecated For tests only. Production must supply real adapters via
-     * {@link #create(Plugin, CombatAdapter, RegionProtectionAdapter, PaperTaskScheduler)}.
-     * This overload silently uses noop combat/region adapters.
-     */
-    @Deprecated
-    @SuppressWarnings("InlineMeSuggester")
-    public static DefaultTeleportModule create(Plugin plugin, PaperTaskScheduler scheduler) {
-        return create(plugin, CombatAdapter.noop(), RegionProtectionAdapter.noop(), scheduler);
     }
 
     public static DefaultTeleportModule create(
@@ -115,30 +105,32 @@ public final class DefaultTeleportModule implements TeleportModule {
         Cotani cotani = null;
         try {
             Clock clock = Clock.systemUTC();
+            PlayerResolver playerResolver = PlayerResolver.bukkit();
 
             TeleportCooldownService cooldownService = new TeleportCooldownService(clock);
 
             TeleportPolicyChain policyChain = new TeleportPolicyChain(List.of(
-                    new PermissionTeleportPolicy("cotani.teleport.use", messages),
-                    new CombatTeleportPolicy(combatAdapter, messages),
+                    new PermissionTeleportPolicy("cotani.teleport.use", messages, playerResolver),
+                    new CombatTeleportPolicy(combatAdapter, messages, playerResolver),
                     new CooldownTeleportPolicy(cooldownService, messages),
-                    new RegionTeleportPolicy(regionAdapter, messages)));
+                    new RegionTeleportPolicy(regionAdapter, messages, playerResolver)));
 
             TeleportEventBus eventBus = new TeleportEventBus(scheduler);
-            TeleportEventNotifier eventNotifier = new TeleportEventNotifier(eventBus, clock);
+            TeleportEventNotifier eventNotifier = new TeleportEventNotifier(eventBus, clock, playerResolver);
             TeleportResultMapper resultMapper = new TeleportResultMapper(eventNotifier);
 
-            TeleportService teleportService = new PaperTeleportService(PaperTeleportService.Dependencies.create(
+            TeleportService teleportService = new PaperTeleportService(new PaperTeleportService.Dependencies(
                     policyChain,
                     new DefaultSafeLocationResolver(scheduler),
                     eventNotifier,
                     resultMapper,
                     cooldownService,
                     scheduler,
-                    clock));
+                    clock,
+                    playerResolver));
 
             DefaultPendingTeleportService pendingTeleportService =
-                    new DefaultPendingTeleportService(teleportService, scheduler);
+                    new DefaultPendingTeleportService(teleportService, scheduler, playerResolver);
 
             PendingTeleportListener listener = new PendingTeleportListener(pendingTeleportService);
 

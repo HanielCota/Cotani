@@ -7,7 +7,9 @@ import com.cotani.cooldown.api.CooldownTargets;
 import com.cotani.teleport.api.TeleportCause;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.EnumMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.NullMarked;
@@ -18,8 +20,17 @@ public final class TeleportCooldownService implements AutoCloseable {
     private static final String PLAYER_ID_PARAM = "playerId";
     private static final String CAUSE_PARAM = "cause";
     private static final String TELEPORT_PREFIX = "teleport.";
+    private static final Map<TeleportCause, String> ACTION_KEYS = buildActionKeys();
 
     private final CooldownService cooldownService;
+
+    private static Map<TeleportCause, String> buildActionKeys() {
+        Map<TeleportCause, String> keys = new EnumMap<>(TeleportCause.class);
+        for (TeleportCause cause : TeleportCause.values()) {
+            keys.put(cause, TELEPORT_PREFIX + cause.name().toLowerCase(Locale.ROOT));
+        }
+        return Map.copyOf(keys);
+    }
 
     public TeleportCooldownService(CooldownService cooldownService) {
         this.cooldownService = Objects.requireNonNull(cooldownService, "cooldownService");
@@ -29,15 +40,15 @@ public final class TeleportCooldownService implements AutoCloseable {
         this.cooldownService = CotaniCooldowns.inMemory(Objects.requireNonNull(clock, "clock"));
     }
 
+    private static String actionKey(TeleportCause cause) {
+        return Objects.requireNonNull(ACTION_KEYS.get(cause));
+    }
+
     public boolean isOnCooldown(UUID playerId, TeleportCause cause) {
         Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
         Objects.requireNonNull(cause, CAUSE_PARAM);
 
-        return cooldownService
-                .user(playerId)
-                .action(TELEPORT_PREFIX + cause.name().toLowerCase(Locale.ROOT))
-                .check()
-                .denied();
+        return cooldownService.user(playerId).action(actionKey(cause)).check().denied();
     }
 
     public boolean tryAcquire(UUID playerId, TeleportCause cause, Duration duration) {
@@ -47,7 +58,7 @@ public final class TeleportCooldownService implements AutoCloseable {
 
         return cooldownService
                 .user(playerId)
-                .action(TELEPORT_PREFIX + cause.name().toLowerCase(Locale.ROOT))
+                .action(actionKey(cause))
                 .duration(duration)
                 .checkAndStart()
                 .allowed();
@@ -60,7 +71,7 @@ public final class TeleportCooldownService implements AutoCloseable {
 
         cooldownService
                 .user(playerId)
-                .action(TELEPORT_PREFIX + cause.name().toLowerCase(Locale.ROOT))
+                .action(actionKey(cause))
                 .duration(duration)
                 .start();
     }
@@ -69,9 +80,7 @@ public final class TeleportCooldownService implements AutoCloseable {
         Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
         Objects.requireNonNull(cause, CAUSE_PARAM);
 
-        cooldownService.remove(
-                CooldownTargets.user(playerId),
-                CooldownAction.of(TELEPORT_PREFIX + cause.name().toLowerCase(Locale.ROOT)));
+        cooldownService.remove(CooldownTargets.user(playerId), CooldownAction.of(actionKey(cause)));
     }
 
     public void clearAll(UUID playerId) {

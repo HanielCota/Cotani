@@ -27,8 +27,9 @@ import com.cotani.teleport.api.TeleportOptions;
 import com.cotani.teleport.api.TeleportCause;
 import com.cotani.teleport.api.TeleportResult;
 
-var module = CotaniTeleports.create(plugin, scheduler);
+var module = CotaniTeleports.create(plugin, combatAdapter, regionAdapter, scheduler);
 TeleportService teleports = module.teleportService();
+
 
 teleports.teleport(
     TeleportRequest.builder()
@@ -73,7 +74,8 @@ module.pendingTeleportService().schedule(
 1. **Structured Teleport Requests**: Always create teleports through the `TeleportRequest` builder. Do not invoke `player.teleport(...)` directly.
 2. **Production Adapters**: Implement and provide real integrations for `CombatAdapter` and `RegionProtectionAdapter` when deploying. Do not use the default noop placeholders in production.
 3. **Handle Failure Paths**: Never ignore the completion stage return. Check for failure states to notify players or refund currency transactions.
-4. **Instantiate via Factory**: Always create the service using `CotaniTeleports.create(...)`. The static `CotaniTeleport` facade is deprecated.
+4. **Instantiate via Factory**: Always create the service using `CotaniTeleports.create(plugin, combatAdapter, regionAdapter, scheduler)`.
+
 5. **Entity Capturing Guidelines**: Capture `UUID` values and clone `Location` instances before starting validations. Do not pass mutable, live `Player` references down async policy stacks.
 
 ## Anti-Patterns

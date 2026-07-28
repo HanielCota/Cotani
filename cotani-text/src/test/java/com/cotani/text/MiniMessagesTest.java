@@ -69,4 +69,14 @@ class MiniMessagesTest {
         var serialized = MiniMessages.serializeList(components);
         assertEquals(inputs, serialized);
     }
+
+    @Test
+    void parsesListWithAudienceAndResolvers() {
+        var inputs = java.util.List.of("<green>Hello <name>");
+        var audience = net.kyori.adventure.audience.Audience.empty();
+        var components = MiniMessages.parseList(inputs, audience, Placeholders.unparsed("name", "World"));
+
+        assertEquals(1, components.size());
+        assertEquals("Hello World", ComponentTexts.toPlain(components.get(0)));
+    }
 }

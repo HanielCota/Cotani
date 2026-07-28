@@ -13,7 +13,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -52,6 +54,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     @Override
     public <U> TaskChain<U> thenRegion(Location location, Function<T, U> function) {
+        // Capture immutable world/chunk ids immediately — never store the live Location.
         return thenTarget(ExecutionTarget.region(location), "chain-region", function);
     }
 
@@ -62,6 +65,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     @Override
     public <U> TaskChain<U> thenEntity(Entity entity, Function<T, U> function) {
+        // Capture entity UUID immediately — never store the live Entity reference.
         return thenTarget(ExecutionTarget.entity(entity), "chain-entity", function);
     }
 
@@ -147,15 +151,23 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
         Objects.requireNonNull(duration, "duration");
 
         CompletableFuture<T> timed = future.orTimeout(duration.toMillis(), TimeUnit.MILLISECONDS)
-                .exceptionally(throwable -> {
-                    throw new CompletionException(new TaskTimeoutException(duration));
+                .exceptionallyCompose(throwable -> {
+                    Throwable cause = unwrap(throwable);
+                    if (cause instanceof TimeoutException) {
+                        return CompletableFuture.failedFuture(new TaskTimeoutException(duration));
+                    }
+                    return CompletableFuture.failedFuture(cause);
                 });
 
         Supplier<CompletableFuture<T>> factory = () -> futureFactory
                 .get()
                 .orTimeout(duration.toMillis(), TimeUnit.MILLISECONDS)
-                .exceptionally(throwable -> {
-                    throw new CompletionException(new TaskTimeoutException(duration));
+                .exceptionallyCompose(throwable -> {
+                    Throwable cause = unwrap(throwable);
+                    if (cause instanceof TimeoutException) {
+                        return CompletableFuture.failedFuture(new TaskTimeoutException(duration));
+                    }
+                    return CompletableFuture.failedFuture(cause);
                 });
 
         return new DefaultTaskChain<>(timed, scheduler, factory);
@@ -168,32 +180,33 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
         CompletableFuture<T> retried =
                 future.exceptionallyCompose(throwable -> retry(unwrap(throwable), retryPolicy, 1));
 
-        return new DefaultTaskChain<>(retried, scheduler, futureFactory);
+        // Factory must recreate the full retried pipeline so nested retry / re-execution
+        // re-applies the same policy instead of only the pre-retry base future.
+        Supplier<CompletableFuture<T>> factory =
+                () -> futureFactory.get().exceptionallyCompose(throwable -> retry(unwrap(throwable), retryPolicy, 1));
+
+        return new DefaultTaskChain<>(retried, scheduler, factory);
     }
 
     @Override
     public TaskChain<T> onStart(Runnable action) {
         Objects.requireNonNull(action, ACTION_PARAM);
 
-        CompletableFuture<T> started = scheduler
-                .supplyAsync("chain-on-start", () -> {
-                    action.run();
+        CompletableFuture<T> started = CompletableFuture.supplyAsync(
+                        () -> {
+                            action.run();
+                            return VoidResult.nullValue();
+                        },
+                        scheduler.asyncExecutor())
+                .thenCompose(ignored -> future);
 
-                    return VoidResult.nullValue();
-                })
-                .toCompletionStage()
-                .thenCompose(ignored -> future)
-                .toCompletableFuture();
-
-        Supplier<CompletableFuture<T>> factory = () -> scheduler
-                .supplyAsync("chain-on-start", () -> {
-                    action.run();
-
-                    return VoidResult.nullValue();
-                })
-                .toCompletionStage()
-                .thenCompose(ignored -> futureFactory.get())
-                .toCompletableFuture();
+        Supplier<CompletableFuture<T>> factory = () -> CompletableFuture.supplyAsync(
+                        () -> {
+                            action.run();
+                            return VoidResult.nullValue();
+                        },
+                        scheduler.asyncExecutor())
+                .thenCompose(ignored -> futureFactory.get());
 
         return new DefaultTaskChain<>(started, scheduler, factory);
     }
@@ -298,10 +311,11 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     }
 
     private Throwable unwrap(Throwable throwable) {
-        if (throwable instanceof CompletionException completionException && completionException.getCause() != null) {
-            return completionException.getCause();
+        Throwable current = throwable;
+        while ((current instanceof CompletionException || current instanceof ExecutionException)
+                && current.getCause() != null) {
+            current = current.getCause();
         }
-
-        return throwable;
+        return current;
     }
 }

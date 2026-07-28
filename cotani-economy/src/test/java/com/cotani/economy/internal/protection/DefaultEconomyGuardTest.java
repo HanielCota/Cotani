@@ -89,7 +89,27 @@ class DefaultEconomyGuardTest {
     }
 
     @Test
-    void validateCurrencyIdAcceptsValue() {
-        assertDoesNotThrow(() -> GUARD.validateCurrencyId(CurrencyId.of("gems")));
+    void validateCurrencyIdAcceptsDefaultCurrency() {
+        assertDoesNotThrow(
+                () -> GUARD.validateCurrencyId(SETTINGS.defaultCurrency().id()));
+    }
+
+    @Test
+    void validateCurrencyIdRejectsUnknownCurrency() {
+        assertThrows(IllegalArgumentException.class, () -> GUARD.validateCurrencyId(CurrencyId.of("gems")));
+    }
+
+    @Test
+    void normalizeAmountUsesCurrencySpecificScale() {
+        var gems = new EconomyCurrency(CurrencyId.of("gems"), "Gems", "G", 0);
+        var coins = EconomyCurrency.coins();
+        var settings = EconomySettings.defaultSettings(coins, java.util.List.of(gems));
+        var guard = new DefaultEconomyGuard(settings);
+
+        var normalizedGems = guard.normalizeAmount(gems.id(), BigDecimal.TEN);
+        assertEquals(0, normalizedGems.scale());
+
+        assertThrows(InvalidAmountException.class, () -> guard.normalizeAmount(gems.id(), new BigDecimal("1.5")));
+        assertDoesNotThrow(() -> guard.normalizeAmount(coins.id(), new BigDecimal("1.50")));
     }
 }

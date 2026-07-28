@@ -149,6 +149,10 @@ public final class CotaniStorage implements AutoCloseable {
         return transactions;
     }
 
+    public QueryExecutor queryExecutor() {
+        return executor;
+    }
+
     public ValueSerializerRegistry serializers() {
         return serializers;
     }

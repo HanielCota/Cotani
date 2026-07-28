@@ -5,6 +5,7 @@ import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.security.Identifiers;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
@@ -16,6 +17,7 @@ public final class TableSchema {
     private final QueryExecutor executor;
     private final SqlDialect dialect;
     private final List<ColumnDefinition> columns = new ArrayList<>();
+    private final List<String> compositePrimaryKey = new ArrayList<>();
 
     @Nullable
     private String cachedSql;
@@ -61,6 +63,27 @@ public final class TableSchema {
         return this;
     }
 
+    /**
+     * Declares a composite primary key. Column names must already be present via
+     * {@link #required}, {@link #column}, {@link #unique} or {@link #id}.
+     *
+     * <p>When a composite key is set, per-column {@code PRIMARY KEY} markers from {@link #id}
+     * are omitted in favor of a single table-level constraint.
+     */
+    public TableSchema primaryKey(String... columns) {
+        Objects.requireNonNull(columns, "columns");
+        if (columns.length == 0) {
+            throw new IllegalArgumentException("primary key must contain at least one column");
+        }
+        compositePrimaryKey.clear();
+        for (String column : columns) {
+            var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
+            compositePrimaryKey.add(validatedName);
+        }
+        cachedSql = null;
+        return this;
+    }
+
     public CompletionStage<Void> createIfNotExists() {
         return executor.update(sql(), binder -> {});
     }
@@ -70,6 +93,7 @@ public final class TableSchema {
             return cachedSql;
         }
 
+        boolean useCompositePrimaryKey = !compositePrimaryKey.isEmpty();
         var builder =
                 new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(name).append(" (");
         var columnCount = columns.size();
@@ -77,26 +101,36 @@ public final class TableSchema {
             if (i > 0) {
                 builder.append(", ");
             }
-            builder.append(definition(columns.get(i)));
+            builder.append(definition(columns.get(i), useCompositePrimaryKey));
+        }
+        if (useCompositePrimaryKey) {
+            builder.append(", PRIMARY KEY (");
+            for (var i = 0; i < compositePrimaryKey.size(); i++) {
+                if (i > 0) {
+                    builder.append(", ");
+                }
+                builder.append(compositePrimaryKey.get(i));
+            }
+            builder.append(')');
         }
         cachedSql = builder.append(")").toString();
         return cachedSql;
     }
 
-    private String definition(ColumnDefinition column) {
+    private String definition(ColumnDefinition column, boolean useCompositePrimaryKey) {
         var typeName = column.type().name();
         var columnLength = column.length();
         var sqlType = dialect.type(typeName, columnLength);
         var builder = new StringBuilder(column.name()).append(" ").append(sqlType);
 
-        appendPrimary(column, builder);
+        appendPrimary(column, builder, useCompositePrimaryKey);
         appendNullable(column, builder);
-        appendUnique(column, builder);
+        appendUnique(column, builder, useCompositePrimaryKey);
         return builder.toString();
     }
 
-    private void appendPrimary(ColumnDefinition column, StringBuilder builder) {
-        if (!column.primary()) {
+    private void appendPrimary(ColumnDefinition column, StringBuilder builder, boolean useCompositePrimaryKey) {
+        if (!column.primary() || useCompositePrimaryKey) {
             return;
         }
 
@@ -111,12 +145,12 @@ public final class TableSchema {
         builder.append(" NOT NULL");
     }
 
-    private void appendUnique(ColumnDefinition column, StringBuilder builder) {
+    private void appendUnique(ColumnDefinition column, StringBuilder builder, boolean useCompositePrimaryKey) {
         if (!column.unique()) {
             return;
         }
 
-        if (column.primary()) {
+        if (column.primary() && !useCompositePrimaryKey) {
             return;
         }
 

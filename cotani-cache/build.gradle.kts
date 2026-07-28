@@ -1,24 +1,14 @@
-plugins {
-    `java-library`
-    alias(libs.plugins.errorprone)
-    alias(libs.plugins.spotless)
-}
-
-description = "Cotani — caching abstraction with Caffeine"
+description = "Cotani - caffeine and player cache module"
 
 dependencies {
+    api(project(":core"))
     api(project(":task"))
-    api(libs.jspecify)
-
-    implementation(libs.caffeine)
+    api(project(":storage"))
+    api(project(":config"))
 
     compileOnlyApi(libs.paper.api)
-
-    errorprone(libs.errorprone.core)
-    errorprone(libs.nullaway)
+    api(libs.jspecify)
+    api(libs.caffeine)
 
     testImplementation(libs.paper.api)
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.mockito.core)
-    testRuntimeOnly(libs.junit.platform.launcher)
 }

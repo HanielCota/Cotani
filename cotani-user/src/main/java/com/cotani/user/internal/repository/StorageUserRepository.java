@@ -21,7 +21,8 @@ public final class StorageUserRepository implements UserRepository {
     private static final List<String> UPSERT_COLUMNS =
             List.of(UNIQUE_ID_COL, USERNAME_COL, "first_join_at", LAST_JOIN_AT_COL, LAST_QUIT_AT_COL, VERSION_COL);
     private static final List<String> CONFLICT_COLUMNS = List.of(UNIQUE_ID_COL);
-    private static final List<String> UPDATE_COLUMNS = List.of(USERNAME_COL, LAST_JOIN_AT_COL, LAST_QUIT_AT_COL, VERSION_COL);
+    private static final List<String> UPDATE_COLUMNS =
+            List.of(USERNAME_COL, LAST_JOIN_AT_COL, LAST_QUIT_AT_COL, VERSION_COL);
 
     private final CotaniStorage storage;
     private final UserMapper mapper;

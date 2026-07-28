@@ -42,8 +42,6 @@ public final class UserListener implements Listener {
 
         userService
                 .load(uniqueId, username)
-                .toCompletableFuture()
-                .orTimeout(10, TimeUnit.SECONDS)
                 .thenAccept(user -> scheduler.global("user-load-complete", () -> {
                     try {
                         Player onlinePlayer = Bukkit.getPlayer(uniqueId);

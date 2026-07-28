@@ -14,6 +14,7 @@ import com.cotani.task.util.CompletionStages;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -56,6 +57,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     private final CacheSettings settings;
     private final SchedulerTask autosaveTask;
     private final ConcurrentHashMap<K, PendingSave<V>> pendingSaves = new ConcurrentHashMap<>();
+    private final java.util.Set<K> dirtyKeys = ConcurrentHashMap.newKeySet();
     private final AtomicInteger dirtyCount = new AtomicInteger(0);
     private final AtomicBoolean autosaveInProgress = new AtomicBoolean(false);
 
@@ -104,6 +106,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     public CompletionStage<V> update(K key, UnaryOperator<V> updater) {
         var entry = getRequiredEntry(key);
         if (entry.update(updater)) {
+            dirtyKeys.add(key);
             dirtyCount.incrementAndGet();
         }
         return CompletableFuture.completedFuture(entry.value());
@@ -113,6 +116,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     public CompletionStage<V> mutate(K key, Consumer<V> mutator) {
         var entry = getRequiredEntry(key);
         if (entry.mutate(mutator)) {
+            dirtyKeys.add(key);
             dirtyCount.incrementAndGet();
         }
         return CompletableFuture.completedFuture(entry.value());
@@ -124,7 +128,11 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         Objects.requireNonNull(value, "value");
         CacheEntry<V> previous = cache.synchronous().getIfPresent(key);
         if (previous != null && previous.dirty()) {
-            dirtyCount.decrementAndGet();
+            // Capture dirty value before replace; mark clean so onRemoval does not double-count.
+            enqueuePendingSave(key, previous);
+            if (previous.markSavedIfVersionMatches(previous.version())) {
+                dirtyCount.decrementAndGet();
+            }
         }
         cache.synchronous().put(key, new CacheEntry<>(value));
     }
@@ -137,6 +145,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                     return Objects.requireNonNull(repository.save(key, entry.value()), REPOSITORY_SAVE_NULL_MSG)
                             .thenRun(() -> {
                                 if (entry.markSavedIfVersionMatches(versionAtStart)) {
+                                    dirtyKeys.remove(key);
                                     dirtyCount.decrementAndGet();
                                 }
                             })
@@ -149,12 +158,8 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public CompletionStage<Void> saveDirty() {
-        var dirtyKeys = cache.synchronous().asMap().entrySet().stream()
-                .filter(e -> e.getValue().dirty())
-                .map(Map.Entry::getKey)
-                .toList();
-
-        return allOf(dirtyKeys.stream().map(this::save));
+        var keys = List.copyOf(dirtyKeys);
+        return allOf(keys.stream().map(this::save));
     }
 
     @Override
@@ -175,6 +180,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public void markDirty(K key) {
         if (getRequiredEntry(key).markDirty()) {
+            dirtyKeys.add(key);
             dirtyCount.incrementAndGet();
         }
     }
@@ -240,9 +246,11 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     }
 
     private AsyncLoadingCache<K, CacheEntry<V>> createCache(CacheSettings settings) {
-        var builder = Caffeine.newBuilder().maximumSize(settings.maximumSize()).removalListener((RemovalListener<
-                        K, CacheEntry<V>>)
-                (key, entry, cause) -> CaffeineDataCache.this.onRemoval(key, entry));
+        var builder = Caffeine.newBuilder()
+                .maximumSize(settings.maximumSize())
+                .executor(scheduler.asyncExecutor())
+                .removalListener((RemovalListener<K, CacheEntry<V>>)
+                        (key, entry, cause) -> CaffeineDataCache.this.onRemoval(key, entry));
 
         if (settings.expireAfterAccessEnabled()) {
             builder.expireAfterAccess(settings.expireAfterAccess());
@@ -295,7 +303,15 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     }
 
     private void onRemoval(@Nullable K key, @Nullable CacheEntry<V> entry) {
-        if (key == null || entry == null || !settings.saveOnEvict() || !entry.dirty()) {
+        if (key == null || entry == null || !entry.dirty()) {
+            return;
+        }
+
+        dirtyKeys.remove(key);
+        dirtyCount.decrementAndGet();
+
+        if (!settings.saveOnEvict()) {
+            enqueuePendingSave(key, entry);
             return;
         }
 
@@ -309,10 +325,12 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                                 error,
                                 () -> "Could not save evicted cache entry: " + key + ". Queuing for retry.");
                         pendingSaves.put(key, new PendingSave<>(value, versionAtStart));
-                    } else if (entry.markSavedIfVersionMatches(versionAtStart)) {
-                        dirtyCount.decrementAndGet();
                     }
                 });
+    }
+
+    private void enqueuePendingSave(K key, CacheEntry<V> entry) {
+        pendingSaves.put(key, new PendingSave<>(entry.value(), entry.version()));
     }
 
     private CompletionStage<Void> savePending() {
@@ -328,10 +346,10 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         return Objects.requireNonNull(repository.save(key, pending.value()), REPOSITORY_SAVE_NULL_MSG)
                 .thenRun(() -> {
                     pendingSaves.remove(key, pending);
+                    // dirtyCount was already adjusted when the dirty entry left the cache.
                     CacheEntry<V> entry = cache.synchronous().getIfPresent(key);
-                    if (entry != null && entry.version() == pending.version()) {
+                    if (entry != null && entry.dirty() && entry.version() == pending.version()) {
                         entry.markSaved();
-                        dirtyCount.decrementAndGet();
                     }
                 })
                 .exceptionallyCompose(error -> {

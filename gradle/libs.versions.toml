@@ -8,6 +8,7 @@ hikaricp = "7.1.0"
 jspecify = "1.0.0"
 junit = "6.1.2"
 mariadb = "3.5.9"
+micrometer = "1.14.4"
 mockito = "5.23.0"
 mysql = "9.3.0"
 nullaway = "0.13.8"
@@ -24,8 +25,10 @@ errorprone-gradle = { module = "net.ltgt.gradle:gradle-errorprone-plugin", versi
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
 mariadb-java-client = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mariadb" }
+micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mysql-connector = { module = "com.mysql:mysql-connector-j", version.ref = "mysql" }
 nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }

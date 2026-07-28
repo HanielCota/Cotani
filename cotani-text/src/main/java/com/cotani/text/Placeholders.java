@@ -2,8 +2,8 @@ package com.cotani.text;
 
 import java.text.ChoiceFormat;
 import java.time.temporal.TemporalAccessor;
+import java.util.Map;
 import java.util.Objects;
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
 import net.kyori.adventure.text.format.StyleBuilderApplicable;
 import net.kyori.adventure.text.minimessage.tag.resolver.Formatter;
@@ -31,6 +31,7 @@ public final class Placeholders {
     private static final String STYLE_NULL_MESSAGE = "Parameter 'style' must not be null";
     private static final String COMPONENTS_NULL_MESSAGE = "Parameter 'components' must not be null";
     private static final String RESOLVERS_NULL_MESSAGE = "Parameter 'resolvers' must not be null";
+    private static final String PLACEHOLDERS_NULL_MESSAGE = "Parameter 'placeholders' must not be null";
 
     private Placeholders() {}
 
@@ -41,11 +42,27 @@ public final class Placeholders {
      * @param value the component to insert
      * @return a tag resolver for the placeholder
      */
-    public static TagResolver component(String key, Component value) {
+    public static TagResolver component(String key, ComponentLike value) {
         Objects.requireNonNull(key, KEY_NULL_MESSAGE);
         Objects.requireNonNull(value, VALUE_NULL_MESSAGE);
 
         return Placeholder.component(key, value);
+    }
+
+    /**
+     * Creates a tag resolver combining multiple component placeholders from a map.
+     *
+     * @param placeholders a map of tag names to component values
+     * @return a combined tag resolver for the placeholders
+     */
+    public static TagResolver component(Map<String, ? extends ComponentLike> placeholders) {
+        Objects.requireNonNull(placeholders, PLACEHOLDERS_NULL_MESSAGE);
+
+        TagResolver[] resolvers = placeholders.entrySet().stream()
+                .map(entry -> component(entry.getKey(), entry.getValue()))
+                .toArray(TagResolver[]::new);
+
+        return TagResolver.resolver(resolvers);
     }
 
     /**
@@ -60,6 +77,22 @@ public final class Placeholders {
         Objects.requireNonNull(value, VALUE_NULL_MESSAGE);
 
         return Placeholder.unparsed(key, value);
+    }
+
+    /**
+     * Creates a tag resolver combining multiple unparsed text placeholders from a map.
+     *
+     * @param placeholders a map of tag names to raw text values
+     * @return a combined tag resolver for the placeholders
+     */
+    public static TagResolver unparsed(Map<String, String> placeholders) {
+        Objects.requireNonNull(placeholders, PLACEHOLDERS_NULL_MESSAGE);
+
+        TagResolver[] resolvers = placeholders.entrySet().stream()
+                .map(entry -> unparsed(entry.getKey(), entry.getValue()))
+                .toArray(TagResolver[]::new);
+
+        return TagResolver.resolver(resolvers);
     }
 
     /**

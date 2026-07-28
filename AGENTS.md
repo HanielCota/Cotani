@@ -305,8 +305,16 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 
 - Use `TeleportRequest.builder()` and explicit `TeleportOptions` for every teleport.
 - Provide real `CombatAdapter` and `RegionProtectionAdapter` integrations; do not rely on the noop defaults in production.
-- Handle both `TeleportResult.Success` and `TeleportResult.Failure` in the completion stage.
-- Prefer `CotaniTeleports.create(...)` over the deprecated static `CotaniTeleport` facade.
+- Use `CotaniTeleports.create(plugin, combatAdapter, regionAdapter, scheduler)` to instantiate the module.
+
+
+### cotani-gui
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniGuiModule.create(plugin))`; without it clicks are ignored.
+- Build menus with `GuiWindow.panel(...)` + `Structure` symbols; never manipulate `Inventory` slots manually.
+- Create reactive state with `State.of(...)`; mutate bound properties only on the thread that owns the viewer (main thread on Paper, entity region thread on Folia).
+- Close `Property.Subscription`s when disposing panels; `GuiPanel` already does this on close.
+- Do not bypass `AntiExploitGuard`; it cancels every interaction with Cotani top inventories and enforces click debounce.
 
 ## Anti-patterns by module
 

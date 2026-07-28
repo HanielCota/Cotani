@@ -103,4 +103,24 @@ class PlaceholdersTest {
 
         assertEquals("AB", ComponentTexts.toPlain(component));
     }
+
+    @Test
+    void createsUnparsedMapPlaceholders() {
+        var map = java.util.Map.of("player", "Steve", "world", "Nether");
+        var resolver = Placeholders.unparsed(map);
+        var component = MiniMessages.parse("<player> in <world>", resolver);
+
+        assertEquals("Steve in Nether", ComponentTexts.toPlain(component));
+    }
+
+    @Test
+    void createsComponentMapPlaceholders() {
+        var map = java.util.Map.of(
+                "player", Component.text("Steve", NamedTextColor.YELLOW),
+                "rank", Component.text("VIP", NamedTextColor.GREEN));
+        var resolver = Placeholders.component(map);
+        var component = MiniMessages.parse("[<rank>] <player>", resolver);
+
+        assertEquals("[VIP] Steve", ComponentTexts.toPlain(component));
+    }
 }

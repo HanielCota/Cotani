@@ -128,11 +128,31 @@ class ComponentTextsTest {
     }
 
     @Test
+    void removesItalicsFromCollection() {
+        var components = List.of(Component.text("Line 1").decorate(TextDecoration.ITALIC), Component.text("Line 2"));
+        var result = ComponentTexts.withoutItalics(components);
+
+        assertEquals(2, result.size());
+        assertFalse(result.get(0).hasDecoration(TextDecoration.ITALIC));
+        assertFalse(result.get(1).hasDecoration(TextDecoration.ITALIC));
+    }
+
+    @Test
     void removesSpecificDecoration() {
         var component = Component.text("Hello").decorate(TextDecoration.BOLD);
         var withoutBold = ComponentTexts.withoutDecoration(component, TextDecoration.BOLD);
 
         assertFalse(withoutBold.hasDecoration(TextDecoration.BOLD));
+    }
+
+    @Test
+    void removesSpecificDecorationFromCollection() {
+        var components = List.of(Component.text("Line 1").decorate(TextDecoration.BOLD), Component.text("Line 2"));
+        var result = ComponentTexts.withoutDecoration(components, TextDecoration.BOLD);
+
+        assertEquals(2, result.size());
+        assertFalse(result.get(0).hasDecoration(TextDecoration.BOLD));
+        assertFalse(result.get(1).hasDecoration(TextDecoration.BOLD));
     }
 
     @Test

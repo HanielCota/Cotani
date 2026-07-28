@@ -5,23 +5,28 @@ import com.cotani.event.subscription.EventSubscription;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class DefaultEventRegistry implements EventRegistry {
 
     private final CopyOnWriteArrayList<EventSubscription> subscriptions = new CopyOnWriteArrayList<>();
-    private final ConcurrentMap<Class<? extends CotaniEvent>, List<EventSubscription>> resolvedCache =
-            new ConcurrentHashMap<>();
+    private final Map<UUID, EventSubscription> subscriptionIndex = new ConcurrentHashMap<>();
+    private final Map<Class<? extends CotaniEvent>, List<EventSubscription>> resolvedCache = new ConcurrentHashMap<>();
+    private final Map<Class<? extends CotaniEvent>, AtomicInteger> inactiveCounters = new ConcurrentHashMap<>();
 
     @Override
     public void register(EventSubscription subscription) {
         Objects.requireNonNull(subscription, "subscription cannot be null");
 
         subscriptions.add(subscription);
+        subscriptionIndex.put(subscription.id(), subscription);
         resolvedCache.clear();
+        inactiveCounters.clear();
     }
 
     @Override
@@ -29,8 +34,11 @@ public final class DefaultEventRegistry implements EventRegistry {
         Objects.requireNonNull(subscription, "subscription cannot be null");
 
         subscription.unsubscribe();
-        subscriptions.removeIf(current -> current.id().equals(subscription.id()));
-        resolvedCache.clear();
+        subscriptionIndex.remove(subscription.id());
+        if (subscriptions.remove(subscription)) {
+            inactiveCounters.clear();
+            resolvedCache.clear();
+        }
     }
 
     @Override
@@ -39,22 +47,16 @@ public final class DefaultEventRegistry implements EventRegistry {
 
         Class<? extends CotaniEvent> eventClass = event.getClass();
         List<EventSubscription> cached = resolvedCache.get(eventClass);
-        if (cached != null) {
-            boolean hasInactive = false;
-            for (EventSubscription sub : cached) {
-                if (!sub.active()) {
-                    hasInactive = true;
-                    break;
-                }
-            }
-            if (!hasInactive) {
-                return cached;
-            }
-            resolvedCache.remove(eventClass);
-            removeInactive();
+        var inactiveCounter = inactiveCounters.get(eventClass);
+        if (cached != null && (inactiveCounter == null || inactiveCounter.get() == 0)) {
+            return cached;
         }
 
-        return resolvedCache.computeIfAbsent(eventClass, this::resolveSubscriptions);
+        return resolvedCache.computeIfAbsent(eventClass, cls -> {
+            var result = resolveSubscriptions(cls);
+            inactiveCounters.put(cls, new AtomicInteger(countInactive(result)));
+            return result;
+        });
     }
 
     private List<EventSubscription> resolveSubscriptions(Class<? extends CotaniEvent> eventClass) {
@@ -70,10 +72,26 @@ public final class DefaultEventRegistry implements EventRegistry {
         return List.copyOf(matchingSubscriptions);
     }
 
+    private static int countInactive(List<EventSubscription> subs) {
+        int count = 0;
+        for (var s : subs) {
+            if (!s.active()) count++;
+        }
+        return count;
+    }
+
     @Override
     public void removeInactive() {
-        if (subscriptions.removeIf(subscription -> !subscription.active())) {
+        boolean changed = subscriptions.removeIf(subscription -> {
+            if (!subscription.active()) {
+                subscriptionIndex.remove(subscription.id());
+                return true;
+            }
+            return false;
+        });
+        if (changed) {
             resolvedCache.clear();
+            inactiveCounters.clear();
         }
     }
 
@@ -81,6 +99,8 @@ public final class DefaultEventRegistry implements EventRegistry {
     public void clear() {
         subscriptions.forEach(EventSubscription::unsubscribe);
         subscriptions.clear();
+        subscriptionIndex.clear();
         resolvedCache.clear();
+        inactiveCounters.clear();
     }
 }

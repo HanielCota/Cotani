@@ -10,7 +10,11 @@ public interface EconomyGuard {
 
     BigDecimal normalizeAmount(BigDecimal amount);
 
+    BigDecimal normalizeAmount(CurrencyId currencyId, BigDecimal amount);
+
     void validateBalanceAmount(BigDecimal amount);
+
+    void validateBalanceAmount(CurrencyId currencyId, BigDecimal amount);
 
     void validateUserId(UUID userId);
 
@@ -21,4 +25,6 @@ public interface EconomyGuard {
     void validateOperationId(EconomyOperationId operationId);
 
     void validateTransfer(UUID sourceUserId, UUID targetUserId, BigDecimal amount);
+
+    void validateTransfer(UUID sourceUserId, UUID targetUserId, CurrencyId currencyId, BigDecimal amount);
 }

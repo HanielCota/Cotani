@@ -536,7 +536,26 @@ class PaperTeleportServiceTest {
         verify(cooldownService).put(PLAYER_ID, TeleportCause.PLUGIN_INTERNAL, duration);
     }
 
+    @Test
+    void failsWhenTargetLocationHasNonFiniteYawOrPitch() {
+        var service = newService();
+        var world = mockWorld();
+        var from = location(world, 0, 64, 0);
+        var player = mockPlayer(PLAYER_ID, from);
+        var invalidTarget = new Location(world, 10, 64, 10, Float.NaN, 0.0f);
+        when(playerResolver.resolve(PLAYER_ID)).thenReturn(player);
+
+        var result = service.teleport(request(player, invalidTarget, TeleportOptions.admin()))
+                .toCompletableFuture()
+                .join();
+
+        assertInstanceOf(TeleportResult.Failure.class, result);
+        var failure = (TeleportResult.Failure) result;
+        assertEquals(TeleportFailureReason.INVALID_LOCATION, failure.reason());
+    }
+
     private TeleportRequest request(UUID playerId, Location target, TeleportOptions options) {
+
         return TeleportRequest.builder()
                 .playerId(playerId)
                 .target(target)

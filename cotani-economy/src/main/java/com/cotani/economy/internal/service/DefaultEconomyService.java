@@ -66,7 +66,7 @@ public final class DefaultEconomyService implements EconomyService {
         guard.validateUserId(userId);
         guard.validateCurrencyId(currencyId);
 
-        var normalizedAmount = guard.normalizeAmount(amount);
+        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
 
         return balance(userId, currencyId).thenApply(balance -> balance.amount().compareTo(normalizedAmount) >= 0);
     }
@@ -83,7 +83,7 @@ public final class DefaultEconomyService implements EconomyService {
         guard.validateReason(reason);
         guard.validateOperationId(operationId);
 
-        var normalizedAmount = guard.normalizeAmount(amount);
+        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
 
         return accountRepository
                 .deposit(userId, currencyId, normalizedAmount, reason, operationId)
@@ -108,7 +108,7 @@ public final class DefaultEconomyService implements EconomyService {
         guard.validateReason(reason);
         guard.validateOperationId(operationId);
 
-        var normalizedAmount = guard.normalizeAmount(amount);
+        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
 
         return accountRepository
                 .withdraw(userId, currencyId, normalizedAmount, reason, operationId)
@@ -132,9 +132,9 @@ public final class DefaultEconomyService implements EconomyService {
         guard.validateCurrencyId(currencyId);
         guard.validateReason(reason);
         guard.validateOperationId(operationId);
-        guard.validateBalanceAmount(amount);
+        guard.validateBalanceAmount(currencyId, amount);
 
-        var normalizedAmount = amount.setScale(settings.defaultCurrency().decimalPlaces(), RoundingMode.UNNECESSARY);
+        var normalizedAmount = amount.setScale(settings.decimalPlaces(currencyId), RoundingMode.UNNECESSARY);
 
         return accountRepository
                 .set(userId, currencyId, normalizedAmount, reason, operationId)
@@ -155,12 +155,12 @@ public final class DefaultEconomyService implements EconomyService {
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        guard.validateTransfer(sourceUserId, targetUserId, amount);
+        guard.validateTransfer(sourceUserId, targetUserId, currencyId, amount);
         guard.validateCurrencyId(currencyId);
         guard.validateReason(reason);
         guard.validateOperationId(operationId);
 
-        var normalizedAmount = guard.normalizeAmount(amount);
+        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
 
         return transferRepository
                 .transfer(sourceUserId, targetUserId, currencyId, normalizedAmount, reason, operationId)

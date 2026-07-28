@@ -9,7 +9,7 @@ Async teleport with policies, cooldowns, safe-location resolution and pending te
 1. Use `TeleportRequest.builder()` with explicit `TeleportOptions` for every teleport.
 2. Provide real `CombatAdapter` and `RegionProtectionAdapter` integrations in production; do not ship with noop defaults.
 3. Handle both `TeleportResult.Success` and `TeleportResult.Failure` in the completion stage.
-4. Use `CotaniTeleports.create(...)` instead of the deprecated static `CotaniTeleport` facade.
+4. Use `CotaniTeleports.create(plugin, combatAdapter, regionAdapter, scheduler)` factory.
 5. Capture `UUID` and `Location` (cloned) before async validation; do not pass live `Player` into policies.
 
 ## Patterns
@@ -17,7 +17,8 @@ Async teleport with policies, cooldowns, safe-location resolution and pending te
 ### Basic teleport
 
 ```java
-var module = CotaniTeleports.create(plugin, scheduler);
+var module = CotaniTeleports.create(plugin, combatAdapter, regionAdapter, scheduler);
+
 module.teleportService().teleport(
     TeleportRequest.builder()
         .playerId(player.getUniqueId())

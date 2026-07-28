@@ -14,16 +14,23 @@ import java.util.UUID;
 public final class DefaultEconomyGuard implements EconomyGuard {
 
     private final EconomySettings settings;
-    private final int decimalPlaces;
 
     public DefaultEconomyGuard(EconomySettings settings) {
         this.settings = Objects.requireNonNull(settings, "settings");
-        decimalPlaces = settings.defaultCurrency().decimalPlaces();
     }
 
     @Override
     public BigDecimal normalizeAmount(BigDecimal amount) {
+        return normalizeAmount(settings.defaultCurrency().id(), amount);
+    }
+
+    @Override
+    public BigDecimal normalizeAmount(CurrencyId currencyId, BigDecimal amount) {
+        Objects.requireNonNull(currencyId, "currencyId");
         Objects.requireNonNull(amount, "amount");
+        validateCurrencyId(currencyId);
+
+        int decimalPlaces = settings.decimalPlaces(currencyId);
 
         if (amount.signum() <= 0) {
             throw new InvalidAmountException(amount, "amount must be greater than zero");
@@ -43,7 +50,16 @@ public final class DefaultEconomyGuard implements EconomyGuard {
 
     @Override
     public void validateBalanceAmount(BigDecimal amount) {
+        validateBalanceAmount(settings.defaultCurrency().id(), amount);
+    }
+
+    @Override
+    public void validateBalanceAmount(CurrencyId currencyId, BigDecimal amount) {
+        Objects.requireNonNull(currencyId, "currencyId");
         Objects.requireNonNull(amount, "amount");
+        validateCurrencyId(currencyId);
+
+        int decimalPlaces = settings.decimalPlaces(currencyId);
 
         if (amount.signum() < 0) {
             throw new InvalidAmountException(amount, "balance cannot be negative");
@@ -66,6 +82,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
     @Override
     public void validateCurrencyId(CurrencyId currencyId) {
         Objects.requireNonNull(currencyId, "currencyId");
+        settings.requireCurrency(currencyId);
     }
 
     @Override
@@ -80,9 +97,14 @@ public final class DefaultEconomyGuard implements EconomyGuard {
 
     @Override
     public void validateTransfer(UUID sourceUserId, UUID targetUserId, BigDecimal amount) {
+        validateTransfer(sourceUserId, targetUserId, settings.defaultCurrency().id(), amount);
+    }
+
+    @Override
+    public void validateTransfer(UUID sourceUserId, UUID targetUserId, CurrencyId currencyId, BigDecimal amount) {
         validateUserId(sourceUserId);
         validateUserId(targetUserId);
-        normalizeAmount(amount);
+        normalizeAmount(currencyId, amount);
 
         if (sourceUserId.equals(targetUserId)) {
             throw new SameEconomyAccountTransferException(sourceUserId);

@@ -2,6 +2,7 @@ package com.cotani.config.validation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -14,10 +15,11 @@ public final class ValidationResult {
     }
 
     public void add(ConfigIssue issue) {
-        issues.add(issue);
+        issues.add(Objects.requireNonNull(issue, "issue"));
     }
 
     public void merge(ValidationResult result) {
+        Objects.requireNonNull(result, "result");
         issues.addAll(result.issues());
     }
 
@@ -44,6 +46,7 @@ public final class ValidationResult {
     }
 
     public void log(Logger logger) {
+        Objects.requireNonNull(logger, "logger");
         issues.forEach(issue -> logger.warning(issue.format()));
     }
 }

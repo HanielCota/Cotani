@@ -72,15 +72,8 @@ public final class DefaultCooldownOperation implements CooldownOperation {
 
     @Override
     public CooldownResult start() {
-        ensureDuration();
-
-        CooldownResult result = check();
-
-        if (result.denied()) {
-            return result;
-        }
-
-        return restart();
+        // Atomic check-and-start to avoid TOCTOU races under concurrent callers.
+        return checkAndStart();
     }
 
     @Override
@@ -117,9 +110,10 @@ public final class DefaultCooldownOperation implements CooldownOperation {
             Bukkit.getPluginManager()
                     .callEvent(new CotaniCooldownDenyEvent(
                             key, result.remaining(), Objects.requireNonNull(result.expiresAt())));
-        } else {
-            Bukkit.getPluginManager().callEvent(new CotaniCooldownStartEvent(key, Objects.requireNonNull(duration)));
+            return;
         }
+
+        Bukkit.getPluginManager().callEvent(new CotaniCooldownStartEvent(key, Objects.requireNonNull(duration)));
     }
 
     @Override

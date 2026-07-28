@@ -1,12 +1,13 @@
 package com.cotani.task.persistence;
 
 import java.util.List;
+import java.util.Objects;
 
 public final class NoopPersistentTaskStore implements PersistentTaskStore {
 
     @Override
     public void save(PersistentTask task) {
-        // Noop store does not persist tasks.
+        Objects.requireNonNull(task, "task");
     }
 
     @Override
@@ -16,6 +17,6 @@ public final class NoopPersistentTaskStore implements PersistentTaskStore {
 
     @Override
     public void markCompleted(PersistentTask task) {
-        // Noop store does not track completion.
+        Objects.requireNonNull(task, "task");
     }
 }

@@ -20,11 +20,12 @@ public final class CreateEconomyTablesMigration implements Migration {
     @Override
     public CompletionStage<Void> migrate(Schema schema) {
         return schema.table("cotani_economy_accounts")
-                .id("user_id", ColumnType.UUID)
+                .required("user_id", ColumnType.UUID)
                 .required("currency_id", ColumnType.STRING)
                 .required("balance", ColumnType.STRING)
                 .required("created_at", ColumnType.TIMESTAMP)
                 .required("updated_at", ColumnType.TIMESTAMP)
+                .primaryKey("user_id", "currency_id")
                 .createIfNotExists()
                 .thenCompose(_ -> schema.table("cotani_economy_transactions")
                         .id("transaction_id", ColumnType.UUID)

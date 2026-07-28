@@ -3,6 +3,7 @@ package com.cotani.user.internal.mapper;
 import com.cotani.storage.query.Row;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import java.sql.SQLException;
+import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -10,28 +11,19 @@ public final class UserMapper {
 
     public SimpleCotaniUser toUser(Row row, UUID fallbackUniqueId, @Nullable String fallbackUsername, long now)
             throws SQLException {
-        UUID uniqueId = row.getUuid("unique_id");
-        if (uniqueId == null) {
-            uniqueId = fallbackUniqueId;
-        }
+        UUID uniqueId = Objects.requireNonNullElse(row.getUuid("unique_id"), fallbackUniqueId);
 
-        String username = row.getString("username");
-        if (username.isBlank()) {
-            username = fallbackUsername == null || fallbackUsername.isBlank() ? "unknown" : fallbackUsername;
-        }
+        String rawUsername = row.getString("username");
+        String username = (rawUsername != null && !rawUsername.isBlank())
+                ? rawUsername
+                : (fallbackUsername != null && !fallbackUsername.isBlank() ? fallbackUsername : "unknown");
 
-        Long firstJoinAt = row.getLongOrNull("first_join_at");
-        Long lastJoinAt = row.getLongOrNull("last_join_at");
-        Long lastQuitAt = row.getLongOrNull("last_quit_at");
-        Long version = row.getLongOrNull("version");
+        long firstJoinAt = Objects.requireNonNullElse(row.getLongOrNull("first_join_at"), now);
+        long lastJoinAt = Objects.requireNonNullElse(row.getLongOrNull("last_join_at"), now);
+        long lastQuitAt = Objects.requireNonNullElse(row.getLongOrNull("last_quit_at"), 0L);
+        long version = Objects.requireNonNullElse(row.getLongOrNull("version"), 0L);
 
         return new SimpleCotaniUser(
-                uniqueId,
-                UUID.randomUUID(),
-                username,
-                firstJoinAt == null ? now : firstJoinAt,
-                lastJoinAt == null ? now : lastJoinAt,
-                lastQuitAt == null ? 0L : lastQuitAt,
-                version == null ? 0L : version);
+                uniqueId, UUID.randomUUID(), username, firstJoinAt, lastJoinAt, lastQuitAt, version);
     }
 }

@@ -50,6 +50,7 @@ public final class SimpleUserService implements InternalUserService {
 
     @Override
     public CompletionStage<CotaniUser> getOrThrowAsync(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return findAsync(uniqueId)
                 .thenApply(optional -> optional.orElseThrow(() -> new UserNotLoadedException(uniqueId)));
     }
@@ -69,7 +70,8 @@ public final class SimpleUserService implements InternalUserService {
         if (cached.isPresent()) {
             SimpleCotaniUser user = cached.get();
             long now = System.currentTimeMillis();
-            SimpleCotaniUser updated = user.withUsername(username).withLastJoinAt(now);
+            SimpleCotaniUser updated =
+                    user.withUsername(username).withLastJoinAt(now).withNewSessionId();
             cache.put(updated);
             return CompletableFuture.completedStage(updated);
         }
@@ -88,7 +90,8 @@ public final class SimpleUserService implements InternalUserService {
                 .thenApply(optionalUser -> {
                     SimpleCotaniUser loaded =
                             optionalUser.orElseGet(() -> SimpleCotaniUser.createNew(uniqueId, username, now));
-                    SimpleCotaniUser updated = loaded.withUsername(username).withLastJoinAt(now);
+                    SimpleCotaniUser updated =
+                            loaded.withUsername(username).withLastJoinAt(now).withNewSessionId();
                     cache.put(updated);
                     return updated;
                 })
@@ -96,9 +99,10 @@ public final class SimpleUserService implements InternalUserService {
                     loadingUsers.remove(uniqueId);
                     if (throwable != null) {
                         loadFuture.completeExceptionally(throwable);
-                    } else {
-                        loadFuture.complete(result);
+                        return;
                     }
+
+                    loadFuture.complete(result);
                 });
 
         return loadFuture;
@@ -106,6 +110,7 @@ public final class SimpleUserService implements InternalUserService {
 
     @Override
     public CompletionStage<Void> unload(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
 
         if (optionalUser.isEmpty()) {
@@ -117,21 +122,39 @@ public final class SimpleUserService implements InternalUserService {
 
         cache.put(user.withLastQuitAt(System.currentTimeMillis()));
 
-        return cache.save(uniqueId).thenRun(() -> cache.remove(uniqueId, sessionId));
+        return save(uniqueId).thenRun(() -> cache.remove(uniqueId, sessionId));
     }
 
     @Override
     public CompletionStage<Void> save(UUID uniqueId) {
-        if (!cache.contains(uniqueId)) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+        Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
+        if (optionalUser.isEmpty()) {
             return CompletionStages.completedVoid();
         }
 
-        return cache.save(uniqueId);
+        SimpleCotaniUser original = optionalUser.get();
+        SimpleCotaniUser updated = original.withIncrementedVersion();
+        cache.put(updated);
+
+        return repository.save(updated);
     }
 
     @Override
     public CompletionStage<Void> saveAll() {
-        return cache.saveAll();
+        var snapshot = cache.allInternal();
+        if (snapshot.isEmpty()) {
+            return CompletionStages.completedVoid();
+        }
+
+        var updated = new java.util.ArrayList<SimpleCotaniUser>(snapshot.size());
+        for (SimpleCotaniUser original : snapshot) {
+            SimpleCotaniUser next = original.withIncrementedVersion();
+            cache.put(next);
+            updated.add(next);
+        }
+
+        return repository.saveAll(updated);
     }
 
     public void clearCache() {

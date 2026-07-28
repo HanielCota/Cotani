@@ -15,8 +15,8 @@ import org.bukkit.event.HandlerList;
  * thread. Bukkit event dispatch ({@code PluginManager#callEvent}) is not thread-safe, so calling this
  * method from any other thread throws {@link IllegalStateException}.
  *
- * @apiNote Always publish from the main thread. If you are on an async thread, hand the event back to the
- *     main thread (for example via {@code PaperTaskScheduler#global}) before calling {@code publish}.
+ * <p><b>API Note:</b> Always publish from the main thread. If you are on an async thread, hand the event back to the
+ * main thread (for example via {@code PaperTaskScheduler#global}) before calling {@code publish}.
  */
 public final class BukkitEconomyEventPublisher implements EconomyEventPublisher {
 

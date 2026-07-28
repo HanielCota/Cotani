@@ -1,3 +1,18 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven("https://repo.papermc.io/repository/maven-public/")
+    }
+}
+
 rootProject.name = "cotani"
 
 include(
@@ -12,7 +27,9 @@ include(
     "storage",
     "user",
     "cooldown",
-    "event"
+    "event",
+    "metrics",
+    "gui"
 )
 
 project(":cache").projectDir = file("cotani-cache")
@@ -27,3 +44,6 @@ project(":storage").projectDir = file("cotani-storage")
 project(":user").projectDir = file("cotani-user")
 project(":cooldown").projectDir = file("cotani-cooldown")
 project(":event").projectDir = file("cotani-event")
+project(":metrics").projectDir = file("cotani-metrics")
+project(":gui").projectDir = file("cotani-gui")
+

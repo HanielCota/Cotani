@@ -5,21 +5,14 @@ import com.cotani.storage.error.ConnectionError;
 import com.cotani.storage.error.StorageException;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
-/**
- * Single-connection SQLite provider.
- *
- * <p>SQLite WAL allows many readers but only one writer; sharing one connection avoids the cost of
- * opening the database and applying PRAGMAs on every query. The PRAGMAs are applied once through
- * the JDBC URL, so every returned connection is already configured.
- */
 public final class SQLiteStorageProvider implements StorageProvider {
 
     private static final String PRAGMA_JOURNAL_MODE = "PRAGMA journal_mode = WAL";
@@ -50,22 +43,13 @@ public final class SQLiteStorageProvider implements StorageProvider {
             try (Statement statement = opened.createStatement()) {
                 statement.execute(PRAGMA_JOURNAL_MODE);
             }
-            Connection proxy = (Connection) java.lang.reflect.Proxy.newProxyInstance(
-                    Connection.class.getClassLoader(), new Class<?>[] {Connection.class}, (p, method, args) -> {
-                        if (method.getName().equals("close")) {
-                            return null;
-                        }
-                        try {
-                            return method.invoke(opened, args);
-                        } catch (java.lang.reflect.InvocationTargetException e) {
-                            throw e.getCause();
-                        }
-                    });
-            if (connection.compareAndSet(null, proxy)) {
-                realConnection.set(opened);
-            } else {
+            Connection proxy = new NonClosingConnection(opened);
+            if (!connection.compareAndSet(null, proxy)) {
                 closeQuietly(opened);
+                return;
             }
+
+            realConnection.set(opened);
         } catch (SQLException exception) {
             throw new StorageException(new ConnectionError("Could not open SQLite connection.", exception));
         }
@@ -111,6 +95,298 @@ public final class SQLiteStorageProvider implements StorageProvider {
             }
         } catch (SQLException ignored) {
             // best-effort close
+        }
+    }
+
+    private static final class NonClosingConnection implements Connection {
+
+        private final Connection delegate;
+
+        NonClosingConnection(Connection delegate) {
+            this.delegate = Objects.requireNonNull(delegate, "delegate");
+        }
+
+        @Override
+        public void close() {
+            // intentionally no-op; the real connection is closed by the provider
+        }
+
+        @Override
+        public Statement createStatement() throws SQLException {
+            return delegate.createStatement();
+        }
+
+        @Override
+        public PreparedStatement prepareStatement(String sql) throws SQLException {
+            return delegate.prepareStatement(sql);
+        }
+
+        @Override
+        public CallableStatement prepareCall(String sql) throws SQLException {
+            return delegate.prepareCall(sql);
+        }
+
+        @Override
+        public String nativeSQL(String sql) throws SQLException {
+            return delegate.nativeSQL(sql);
+        }
+
+        @Override
+        public void setAutoCommit(boolean autoCommit) throws SQLException {
+            delegate.setAutoCommit(autoCommit);
+        }
+
+        @Override
+        public boolean getAutoCommit() throws SQLException {
+            return delegate.getAutoCommit();
+        }
+
+        @Override
+        public void commit() throws SQLException {
+            delegate.commit();
+        }
+
+        @Override
+        public void rollback() throws SQLException {
+            delegate.rollback();
+        }
+
+        @Override
+        public boolean isClosed() throws SQLException {
+            return delegate.isClosed();
+        }
+
+        @Override
+        public DatabaseMetaData getMetaData() throws SQLException {
+            return delegate.getMetaData();
+        }
+
+        @Override
+        public void setReadOnly(boolean readOnly) throws SQLException {
+            delegate.setReadOnly(readOnly);
+        }
+
+        @Override
+        public boolean isReadOnly() throws SQLException {
+            return delegate.isReadOnly();
+        }
+
+        @Override
+        public void setCatalog(String catalog) throws SQLException {
+            delegate.setCatalog(catalog);
+        }
+
+        @Override
+        public String getCatalog() throws SQLException {
+            return delegate.getCatalog();
+        }
+
+        @Override
+        public void setTransactionIsolation(int level) throws SQLException {
+            delegate.setTransactionIsolation(level);
+        }
+
+        @Override
+        public int getTransactionIsolation() throws SQLException {
+            return delegate.getTransactionIsolation();
+        }
+
+        @Override
+        public SQLWarning getWarnings() throws SQLException {
+            return delegate.getWarnings();
+        }
+
+        @Override
+        public void clearWarnings() throws SQLException {
+            delegate.clearWarnings();
+        }
+
+        @Override
+        public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
+            return delegate.createStatement(resultSetType, resultSetConcurrency);
+        }
+
+        @Override
+        public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency)
+                throws SQLException {
+            return delegate.prepareStatement(sql, resultSetType, resultSetConcurrency);
+        }
+
+        @Override
+        public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency)
+                throws SQLException {
+            return delegate.prepareCall(sql, resultSetType, resultSetConcurrency);
+        }
+
+        @Override
+        public Map<String, Class<?>> getTypeMap() throws SQLException {
+            return delegate.getTypeMap();
+        }
+
+        @Override
+        public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
+            delegate.setTypeMap(map);
+        }
+
+        @Override
+        public void setHoldability(int holdability) throws SQLException {
+            delegate.setHoldability(holdability);
+        }
+
+        @Override
+        public int getHoldability() throws SQLException {
+            return delegate.getHoldability();
+        }
+
+        @Override
+        public Savepoint setSavepoint() throws SQLException {
+            return delegate.setSavepoint();
+        }
+
+        @Override
+        public Savepoint setSavepoint(String name) throws SQLException {
+            return delegate.setSavepoint(name);
+        }
+
+        @Override
+        public void rollback(Savepoint savepoint) throws SQLException {
+            delegate.rollback(savepoint);
+        }
+
+        @Override
+        public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+            delegate.releaseSavepoint(savepoint);
+        }
+
+        @Override
+        public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability)
+                throws SQLException {
+            return delegate.createStatement(resultSetType, resultSetConcurrency, resultSetHoldability);
+        }
+
+        @Override
+        public PreparedStatement prepareStatement(
+                String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+            return delegate.prepareStatement(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
+        }
+
+        @Override
+        public CallableStatement prepareCall(
+                String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+            return delegate.prepareCall(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
+        }
+
+        @Override
+        public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) throws SQLException {
+            return delegate.prepareStatement(sql, autoGeneratedKeys);
+        }
+
+        @Override
+        public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
+            return delegate.prepareStatement(sql, columnIndexes);
+        }
+
+        @Override
+        public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
+            return delegate.prepareStatement(sql, columnNames);
+        }
+
+        @Override
+        public Clob createClob() throws SQLException {
+            return delegate.createClob();
+        }
+
+        @Override
+        public Blob createBlob() throws SQLException {
+            return delegate.createBlob();
+        }
+
+        @Override
+        public NClob createNClob() throws SQLException {
+            return delegate.createNClob();
+        }
+
+        @Override
+        public SQLXML createSQLXML() throws SQLException {
+            return delegate.createSQLXML();
+        }
+
+        @Override
+        public boolean isValid(int timeout) throws SQLException {
+            return delegate.isValid(timeout);
+        }
+
+        @Override
+        public void setClientInfo(String name, String value) {
+            try {
+                delegate.setClientInfo(name, value);
+            } catch (SQLClientInfoException ignored) {
+                // best-effort
+            }
+        }
+
+        @Override
+        public void setClientInfo(Properties properties) {
+            try {
+                delegate.setClientInfo(properties);
+            } catch (SQLClientInfoException ignored) {
+                // best-effort
+            }
+        }
+
+        @Override
+        public String getClientInfo(String name) throws SQLException {
+            return delegate.getClientInfo(name);
+        }
+
+        @Override
+        public Properties getClientInfo() throws SQLException {
+            return delegate.getClientInfo();
+        }
+
+        @Override
+        public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+            return delegate.createArrayOf(typeName, elements);
+        }
+
+        @Override
+        public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
+            return delegate.createStruct(typeName, attributes);
+        }
+
+        @Override
+        public void setSchema(String schema) throws SQLException {
+            delegate.setSchema(schema);
+        }
+
+        @Override
+        public String getSchema() throws SQLException {
+            return delegate.getSchema();
+        }
+
+        @Override
+        public void abort(Executor executor) throws SQLException {
+            delegate.abort(executor);
+        }
+
+        @Override
+        public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+            delegate.setNetworkTimeout(executor, milliseconds);
+        }
+
+        @Override
+        public int getNetworkTimeout() throws SQLException {
+            return delegate.getNetworkTimeout();
+        }
+
+        @Override
+        public <T> T unwrap(Class<T> iface) throws SQLException {
+            return delegate.unwrap(iface);
+        }
+
+        @Override
+        public boolean isWrapperFor(Class<?> iface) throws SQLException {
+            return delegate.isWrapperFor(iface);
         }
     }
 }

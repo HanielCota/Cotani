@@ -37,7 +37,7 @@ public final class SkullTextureResolver implements AutoCloseable {
 
     public PlayerProfile fromBase64(String base64) {
         Objects.requireNonNull(base64, "Parameter 'base64' must not be null");
-        return buildProfile(base64);
+        return profileCache.get(base64, SkullTextureResolver::buildProfile);
     }
 
     public PlayerProfile fromUrl(String textureUrl) {

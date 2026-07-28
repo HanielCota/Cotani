@@ -37,6 +37,8 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     private final TaskMetrics metrics;
     private final PersistentTaskStore persistentTaskStore;
     private final Map<String, SchedulerTask> pendingDebounces = new ConcurrentHashMap<>();
+    private final Executor cachedAsyncExecutor;
+    private final Executor cachedGlobalExecutor;
 
     public ModernPaperTaskScheduler(
             PlatformScheduler platformScheduler,
@@ -60,6 +62,8 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         this.taskRunner = new TaskRunner(exceptionHandler, metrics);
         this.taskErrorReporter = new TaskErrorReporter(exceptionHandler);
         this.taskDispatcher = new TaskDispatcher(platformScheduler, taskRunner);
+        this.cachedAsyncExecutor = command -> async("executor-async", command);
+        this.cachedGlobalExecutor = command -> global("executor-global", command);
     }
 
     @Override
@@ -248,25 +252,29 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         Objects.requireNonNull(quietPeriod, "quietPeriod");
 
         var metadata = metadata("debounce-" + name, ExecutionTarget.async());
-        AtomicReference<SchedulerTask> taskRef = new AtomicReference<>();
-        SchedulerTask task = platformScheduler.runAsyncLater(
-                metadata,
-                taskRunner.wrap(metadata, () -> {
-                    pendingDebounces.remove(name, taskRef.get());
-                    runnable.run();
-                }),
-                quietPeriod);
-        taskRef.set(task);
+        AtomicReference<SchedulerTask> taskHolder = new AtomicReference<>();
 
         pendingDebounces.compute(name, (ignored, current) -> {
             if (current != null) {
                 current.cancel();
             }
 
-            return task;
+            SchedulerTask newTask = platformScheduler.runAsyncLater(
+                    metadata,
+                    taskRunner.wrap(metadata, () -> {
+                        SchedulerTask myTask = taskHolder.get();
+                        if (myTask != null) {
+                            pendingDebounces.remove(name, myTask);
+                        }
+                        runnable.run();
+                    }),
+                    quietPeriod);
+
+            taskHolder.set(newTask);
+            return newTask;
         });
 
-        return task;
+        return Objects.requireNonNull(taskHolder.get());
     }
 
     @Override
@@ -351,12 +359,12 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public Executor asyncExecutor() {
-        return command -> async("executor-async", command);
+        return cachedAsyncExecutor;
     }
 
     @Override
     public Executor globalExecutor() {
-        return command -> global("executor-global", command);
+        return cachedGlobalExecutor;
     }
 
     @Override

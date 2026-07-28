@@ -67,9 +67,11 @@ class PendingTeleportStateMachineTest {
     }
 
     @Test
-    void cancelFromExecutingReturnsFalse() {
+    void cancelFromExecutingReturnsTrue() {
         machine.markExecuting();
-        assertFalse(machine.cancel(TeleportCancelReason.QUIT));
+        assertTrue(machine.cancel(TeleportCancelReason.QUIT));
+        assertEquals(PendingTeleportState.CANCELLED, machine.state());
+        assertEquals(TeleportCancelReason.QUIT, machine.cancelReason().orElseThrow());
     }
 
     @Test

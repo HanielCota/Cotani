@@ -48,8 +48,7 @@ public final class DefaultTaskBucket implements TaskBucket {
         AtomicReference<@Nullable SchedulerTask> rescheduled = new AtomicReference<>();
 
         SchedulerTask immediate = scheduler.async(taskName, () -> {
-            SchedulerTask later = runThrottled(limiter, runnable);
-
+            SchedulerTask later = runThrottled(limiter, runnable, rescheduled);
             if (later != null) {
                 rescheduled.set(later);
             }
@@ -66,7 +65,8 @@ public final class DefaultTaskBucket implements TaskBucket {
                 bucketName, ignored -> new TokenBucketRateLimiter(defaultCapacity, defaultRefillPeriod));
     }
 
-    private SchedulerTask runThrottled(RateLimiter limiter, Runnable runnable) {
+    private SchedulerTask runThrottled(
+            RateLimiter limiter, Runnable runnable, AtomicReference<@Nullable SchedulerTask> holder) {
         if (limiter.tryAcquire()) {
             runnable.run();
             return SchedulerTask.noop();
@@ -76,6 +76,11 @@ public final class DefaultTaskBucket implements TaskBucket {
         if (delay.isZero() || delay.isNegative()) {
             delay = Duration.ofMillis(1);
         }
-        return scheduler.asyncLater(runnable, delay);
+        return scheduler.asyncLater(
+                () -> {
+                    SchedulerTask next = runThrottled(limiter, runnable, holder);
+                    holder.set(next);
+                },
+                delay);
     }
 }

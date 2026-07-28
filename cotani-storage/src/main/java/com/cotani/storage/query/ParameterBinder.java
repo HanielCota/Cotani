@@ -32,6 +32,15 @@ public final class ParameterBinder {
         if (value == null || value instanceof String || value instanceof Number || value instanceof Boolean) {
             return value;
         }
+        if (value instanceof UUID uuid) {
+            return uuid.toString();
+        }
+        if (value instanceof Instant instant) {
+            return instant.toString();
+        }
+        if (value instanceof Duration duration) {
+            return duration.toMillis();
+        }
         return serializers.serialize(value);
     }
 

@@ -24,6 +24,14 @@ public record SimpleCotaniUser(
         return new SimpleCotaniUser(uniqueId, UUID.randomUUID(), username, now, now, 0L, 0L);
     }
 
+    public SimpleCotaniUser withSessionId(UUID sessionId) {
+        return new SimpleCotaniUser(uniqueId, sessionId, username, firstJoinAt, lastJoinAt, lastQuitAt, version);
+    }
+
+    public SimpleCotaniUser withNewSessionId() {
+        return withSessionId(UUID.randomUUID());
+    }
+
     public SimpleCotaniUser withUsername(String username) {
         return new SimpleCotaniUser(uniqueId, sessionId, username, firstJoinAt, lastJoinAt, lastQuitAt, version);
     }

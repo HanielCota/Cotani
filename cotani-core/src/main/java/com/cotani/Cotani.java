@@ -20,6 +20,7 @@ public final class Cotani implements AutoCloseable {
 
     private static final Duration ASYNC_CLOSE_TIMEOUT = Duration.ofSeconds(10);
     private static final String CLOSEABLE_NULL_MSG = "Parameter 'closeable' must not be null";
+    private static final String ASYNC_CLOSEABLE_NULL_MSG = "Parameter 'asyncCloseable' must not be null";
 
     private final Plugin plugin;
     private final CopyOnWriteArrayList<AutoCloseable> closeables;
@@ -56,10 +57,7 @@ public final class Cotani implements AutoCloseable {
 
     public Cotani register(AutoCloseable closeable) {
         Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
-
-        if (closed.get()) {
-            throw new IllegalStateException("Cotani is already closed");
-        }
+        ensureNotClosed();
 
         closeables.add(closeable);
         return this;
@@ -72,18 +70,133 @@ public final class Cotani implements AutoCloseable {
         return this;
     }
 
-    @Override
-    public void close() {
+    public Cotani registerAsync(Supplier<CompletionStage<Void>> asyncCloseable) {
+        Objects.requireNonNull(asyncCloseable, ASYNC_CLOSEABLE_NULL_MSG);
+        ensureNotClosed();
+
+        asyncCloseables.add(asyncCloseable);
+        return this;
+    }
+
+    public Cotani deregisterAsync(Supplier<CompletionStage<Void>> asyncCloseable) {
+        Objects.requireNonNull(asyncCloseable, ASYNC_CLOSEABLE_NULL_MSG);
+
+        asyncCloseables.remove(asyncCloseable);
+        return this;
+    }
+
+    private void ensureNotClosed() {
+        if (closed.get()) {
+            throw new IllegalStateException("Cotani is already closed");
+        }
+    }
+
+    /**
+     * Executes resource teardown asynchronously.
+     *
+     * <p>First, all registered asynchronous teardown stages are executed concurrently.
+     * Once completed, synchronous closeables are executed in reverse registration order.
+     *
+     * @return a stage completing when all teardown steps finish
+     */
+    public CompletionStage<Void> closeAsync() {
         if (!closed.compareAndSet(false, true)) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
 
-        CotaniCloseException firstFailure = null;
+        var result = new CompletableFuture<Void>();
+        var asyncSnapshot = List.copyOf(asyncCloseables);
+        var syncSnapshot = List.copyOf(closeables);
+        asyncCloseables.clear();
+        closeables.clear();
 
-        firstFailure = closeAsyncCloseables(firstFailure);
+        executeAsyncCloseables(asyncSnapshot).whenComplete((firstFailure, asyncErr) -> {
+            var combinedFailure = firstFailure;
+            if (asyncErr != null && combinedFailure == null) {
+                combinedFailure = new CotaniCloseException("Failed to execute async closeables", asyncErr);
+            }
 
-        var resources = closeables;
+            combinedFailure = executeSyncCloseables(syncSnapshot, combinedFailure);
+
+            if (combinedFailure != null) {
+                result.completeExceptionally(combinedFailure);
+                return;
+            }
+
+            result.complete(null);
+        });
+
+        return result;
+    }
+
+    /**
+     * Closes all registered resources, blocking the calling thread.
+     *
+     * <p>Never call this method on the server main thread; it blocks for up to 10 seconds
+     * and will stall the game loop. Prefer {@link #closeAsync()} for main-thread usage
+     * (e.g., from {@code onDisable}) by composing the completion stage.
+     *
+     * @throws CotaniCloseException if any resource fails to close, teardown times out, or the thread is interrupted
+     */
+    @Override
+    public void close() {
+        try {
+            closeAsync().toCompletableFuture().get(ASYNC_CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new CotaniCloseException("Interrupted while closing resources", interrupted);
+        } catch (Exception failure) {
+            Throwable cause = failure.getCause() != null ? failure.getCause() : failure;
+            if (cause instanceof CotaniCloseException closeEx) {
+                throw closeEx;
+            }
+            throw new CotaniCloseException("Failed to close resource within timeout", cause);
+        }
+    }
+
+    private CompletionStage<@Nullable CotaniCloseException> executeAsyncCloseables(
+            List<Supplier<CompletionStage<Void>>> suppliers) {
+        if (suppliers.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        List<CompletionStage<Void>> stages = new ArrayList<>(suppliers.size());
+        CotaniCloseException initialFailure = null;
+
+        for (var supplier : suppliers.reversed()) {
+            try {
+                stages.add(supplier.get());
+            } catch (Exception failure) {
+                plugin.getLogger().log(Level.SEVERE, "Async closeable supplier failed", failure);
+                initialFailure = mergeFailure(initialFailure, failure);
+            }
+        }
+
+        if (stages.isEmpty()) {
+            return CompletableFuture.completedFuture(initialFailure);
+        }
+
+        final var capturedFailure = initialFailure;
+
+        return CompletableFuture.allOf(stages.stream()
+                        .map(CompletionStage::toCompletableFuture)
+                        .toArray(CompletableFuture[]::new))
+                .handle((res, failure) -> {
+                    var current = capturedFailure;
+                    if (failure != null) {
+                        plugin.getLogger().log(Level.SEVERE, "Async closeables did not complete successfully", failure);
+                        Throwable cause = failure.getCause() != null ? failure.getCause() : failure;
+                        current = mergeFailure(current, cause);
+                    }
+                    return current;
+                });
+    }
+
+    private @Nullable CotaniCloseException executeSyncCloseables(
+            List<AutoCloseable> resources, @Nullable CotaniCloseException initialFailure) {
+        CotaniCloseException currentFailure = initialFailure;
         int index = resources.size();
+
         for (var closeable : resources.reversed()) {
             index--;
             try {
@@ -91,48 +204,11 @@ public final class Cotani implements AutoCloseable {
             } catch (Exception failure) {
                 plugin.getLogger()
                         .log(Level.SEVERE, "Failed to close resource #{0}: {1}", new Object[] {index, closeable});
-                firstFailure = mergeFailure(firstFailure, failure);
-            }
-        }
-        resources.clear();
-        asyncCloseables.clear();
-
-        if (firstFailure != null) {
-            throw firstFailure;
-        }
-    }
-
-    private @Nullable CotaniCloseException closeAsyncCloseables(@Nullable CotaniCloseException firstFailure) {
-        if (asyncCloseables.isEmpty()) {
-            return firstFailure;
-        }
-
-        List<CompletionStage<Void>> stages = new ArrayList<>(asyncCloseables.size());
-        for (var supplier : asyncCloseables.reversed()) {
-            try {
-                stages.add(supplier.get());
-            } catch (Exception failure) {
-                plugin.getLogger().log(Level.SEVERE, "Async closeable supplier failed", failure);
-                firstFailure = mergeFailure(firstFailure, failure);
+                currentFailure = mergeFailure(currentFailure, failure);
             }
         }
 
-        if (stages.isEmpty()) {
-            return firstFailure;
-        }
-
-        try {
-            CompletableFuture.allOf(stages.stream()
-                            .map(CompletionStage::toCompletableFuture)
-                            .toArray(CompletableFuture[]::new))
-                    .get(ASYNC_CLOSE_TIMEOUT.toSeconds(), TimeUnit.SECONDS);
-        } catch (Exception failure) {
-            plugin.getLogger()
-                    .log(Level.SEVERE, "Async closeables did not complete within " + ASYNC_CLOSE_TIMEOUT, failure);
-            firstFailure = mergeFailure(firstFailure, failure);
-        }
-
-        return firstFailure;
+        return currentFailure;
     }
 
     public static final class Builder {
@@ -158,14 +234,13 @@ public final class Cotani implements AutoCloseable {
         /**
          * Registers an asynchronous teardown stage.
          *
-         * <p>The supplier is invoked when {@link Cotani#close()} is called. All async closeables run
-         * concurrently and are given {@value #ASYNC_CLOSE_TIMEOUT} seconds to complete.
+         * <p>The supplier is invoked when {@link Cotani#close()} or {@link Cotani#closeAsync()} is called.
          */
-        public Builder withAsync(Supplier<CompletionStage<Void>> closeable) {
-            Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
+        public Builder withAsync(Supplier<CompletionStage<Void>> asyncCloseable) {
+            Objects.requireNonNull(asyncCloseable, ASYNC_CLOSEABLE_NULL_MSG);
             ensureOpen();
 
-            asyncCloseables.add(closeable);
+            asyncCloseables.add(asyncCloseable);
 
             return this;
         }

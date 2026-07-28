@@ -4,13 +4,17 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public final class FilePersistentTaskStore implements PersistentTaskStore {
 
+    private static final Logger LOGGER = Logger.getLogger(FilePersistentTaskStore.class.getName());
     private static final String EXTENSION = ".task";
 
     private final Path directory;
@@ -30,6 +34,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
         Objects.requireNonNull(task, "task");
 
         Path file = directory.resolve(task.id() + EXTENSION);
+        Path tempFile = directory.resolve(task.id() + ".tmp");
         String id = task.id().toString();
         String payload = Base64.getEncoder().encodeToString(task.payload());
         String content = String.join(
@@ -41,8 +46,18 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
                 payload);
 
         try {
-            Files.writeString(file, content, StandardCharsets.UTF_8);
+            Files.writeString(tempFile, content, StandardCharsets.UTF_8);
+            try {
+                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException atomicMoveFailed) {
+                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException exception) {
+            try {
+                Files.deleteIfExists(tempFile);
+            } catch (IOException _) {
+                // Ignore cleanup failure
+            }
             throw new IllegalStateException("Failed to save persistent task: " + task.id(), exception);
         }
     }
@@ -51,7 +66,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
     public List<PersistentTask> loadPending() {
         try (Stream<Path> files = Files.list(directory)) {
             return files.filter(path -> path.toString().endsWith(EXTENSION))
-                    .map(this::parse)
+                    .map(this::parseAndDeleteCorrupt)
                     .flatMap(Optional::stream)
                     .toList();
         } catch (IOException exception) {
@@ -70,6 +85,19 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to delete completed task: " + task.id(), exception);
         }
+    }
+
+    private Optional<PersistentTask> parseAndDeleteCorrupt(Path file) {
+        Optional<PersistentTask> parsed = parse(file);
+        if (parsed.isEmpty()) {
+            LOGGER.log(Level.WARNING, "Corrupt persistent task file detected and removed: {0}", file);
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException _) {
+                // Ignore deletion failure
+            }
+        }
+        return parsed;
     }
 
     private Optional<PersistentTask> parse(Path file) {

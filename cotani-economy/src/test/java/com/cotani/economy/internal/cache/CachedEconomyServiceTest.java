@@ -40,7 +40,7 @@ class CachedEconomyServiceTest {
     }
 
     @Test
-    void depositInvalidatesCache() {
+    void depositWritesThroughCache() {
         var delegate = Mockito.mock(EconomyService.class);
         when(delegate.balance(USER_ID, CURRENCY)).thenReturn(CompletableFuture.completedFuture(BALANCE));
         var transaction = new EconomyTransaction.Deposit(
@@ -66,9 +66,10 @@ class CachedEconomyServiceTest {
         cache.deposit(USER_ID, BigDecimal.TEN, EconomyReason.system("test"), EconomyOperationId.random())
                 .toCompletableFuture()
                 .join();
-        cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
+        var after = cache.balance(USER_ID, CURRENCY).toCompletableFuture().join();
 
-        verify(delegate, times(2)).balance(USER_ID, CURRENCY);
+        assertEquals(0, after.amount().compareTo(BigDecimal.TEN));
+        verify(delegate, times(1)).balance(USER_ID, CURRENCY);
     }
 
     @Test

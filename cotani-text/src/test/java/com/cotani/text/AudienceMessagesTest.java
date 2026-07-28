@@ -102,6 +102,68 @@ class AudienceMessagesTest {
         assertEquals(fadeOut, audience.lastTitle.times().fadeOut());
     }
 
+    @Test
+    void sendsComponentActionBar() {
+        var audience = new CapturingAudience();
+        var component = Component.text("Alert", NamedTextColor.RED);
+
+        AudienceMessages.sendActionBar(audience, component);
+
+        assertEquals(component, audience.lastActionBar);
+    }
+
+    @Test
+    void sendsComponentPlayerListHeaderAndFooter() {
+        var audience = new CapturingAudience();
+        var header = Component.text("Header", NamedTextColor.BLUE);
+        var footer = Component.text("Footer", NamedTextColor.GREEN);
+
+        AudienceMessages.sendPlayerListHeader(audience, header);
+        AudienceMessages.sendPlayerListFooter(audience, footer);
+
+        assertEquals(header, audience.lastPlayerListHeader);
+        assertEquals(footer, audience.lastPlayerListFooter);
+
+        var audience2 = new CapturingAudience();
+        AudienceMessages.sendPlayerListHeaderAndFooter(audience2, header, footer);
+
+        assertEquals(header, audience2.lastPlayerListHeader);
+        assertEquals(footer, audience2.lastPlayerListFooter);
+    }
+
+    @Test
+    void sendsComponentTitle() {
+        var audience = new CapturingAudience();
+        var title = Component.text("Title", NamedTextColor.RED);
+        var subtitle = Component.text("Subtitle", NamedTextColor.YELLOW);
+
+        AudienceMessages.sendTitle(audience, title, subtitle);
+
+        assertNotNull(audience.lastTitle);
+        assertEquals(title, audience.lastTitle.title());
+        assertEquals(subtitle, audience.lastTitle.subtitle());
+    }
+
+    @Test
+    void sendsComponentTitleWithDuration() {
+        var audience = new CapturingAudience();
+        var title = Component.text("Title", NamedTextColor.RED);
+        var subtitle = Component.text("Subtitle", NamedTextColor.YELLOW);
+        var fadeIn = java.time.Duration.ofSeconds(1);
+        var stay = java.time.Duration.ofSeconds(2);
+        var fadeOut = java.time.Duration.ofSeconds(3);
+
+        AudienceMessages.sendTitle(audience, title, subtitle, fadeIn, stay, fadeOut);
+
+        assertNotNull(audience.lastTitle);
+        assertEquals(title, audience.lastTitle.title());
+        assertEquals(subtitle, audience.lastTitle.subtitle());
+        assertNotNull(audience.lastTitle.times());
+        assertEquals(fadeIn, audience.lastTitle.times().fadeIn());
+        assertEquals(stay, audience.lastTitle.times().stay());
+        assertEquals(fadeOut, audience.lastTitle.times().fadeOut());
+    }
+
     private static final class CapturingAudience implements Audience {
 
         Component lastMessage = Component.empty();

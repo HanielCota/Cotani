@@ -26,6 +26,10 @@ public final class TeleportValidator {
     }
 
     private static boolean isFinite(Location location) {
-        return Double.isFinite(location.getX()) && Double.isFinite(location.getY()) && Double.isFinite(location.getZ());
+        return Double.isFinite(location.getX())
+                && Double.isFinite(location.getY())
+                && Double.isFinite(location.getZ())
+                && Float.isFinite(location.getYaw())
+                && Float.isFinite(location.getPitch());
     }
 }

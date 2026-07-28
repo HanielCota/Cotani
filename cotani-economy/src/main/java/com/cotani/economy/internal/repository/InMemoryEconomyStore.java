@@ -3,19 +3,20 @@ package com.cotani.economy.internal.repository;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
-import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 /**
@@ -23,6 +24,9 @@ import java.util.function.Supplier;
  *
  * <p>Each account is protected by its own lock to allow concurrent operations on different accounts.
  * Transfers lock both source and target accounts in a deterministic key order to avoid deadlocks.
+ *
+ * <p>Operations are idempotent: repeating the same {@link EconomyOperationId} returns the original
+ * transaction without applying the balance change again.
  */
 public final class InMemoryEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
 
@@ -34,8 +38,9 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             new ConcurrentHashMap<>();
     private final ConcurrentLinkedDeque<EconomyTransaction> transactions = new ConcurrentLinkedDeque<>();
     private final ConcurrentMap<EconomyAccountKey, Object> locks = new ConcurrentHashMap<>();
-    private final Set<EconomyOperationId> inFlightOperations = ConcurrentHashMap.newKeySet();
-    private final Object operationLock = new Object();
+    private final ConcurrentMap<EconomyOperationId, CompletableFuture<EconomyTransaction>> inFlightOperations =
+            new ConcurrentHashMap<>();
+    private static final int LOCK_CLEANUP_THRESHOLD = 10_000;
 
     public InMemoryEconomyStore(Executor executor, Clock clock, EconomySettings settings) {
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -61,9 +66,14 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             EconomyOperationId operationId) {
 
         var key = new EconomyAccountKey(userId, currencyId);
-        return CompletableFuture.supplyAsync(
+        return executeIdempotent(
+                operationId,
                 () -> withLock(key, () -> {
-                    assertOperationIsNew(operationId);
+                    EconomyTransaction existing = transactionsByOperation.get(operationId);
+                    if (existing != null) {
+                        return existing;
+                    }
+
                     var now = clock.instant();
                     var account = getOrCreateLocked(key);
                     var updatedAccount = account.deposit(amount, now);
@@ -81,10 +91,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                             reason,
                             now);
 
-                    saveTransactionLocked(transaction);
-                    return transaction;
-                }),
-                executor);
+                    return saveTransactionLocked(transaction);
+                }));
     }
 
     @Override
@@ -95,9 +103,14 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             EconomyReason reason,
             EconomyOperationId operationId) {
         var key = new EconomyAccountKey(userId, currencyId);
-        return CompletableFuture.supplyAsync(
+        return executeIdempotent(
+                operationId,
                 () -> withLock(key, () -> {
-                    assertOperationIsNew(operationId);
+                    EconomyTransaction existing = transactionsByOperation.get(operationId);
+                    if (existing != null) {
+                        return existing;
+                    }
+
                     var now = clock.instant();
                     var account = getOrCreateLocked(key);
                     var updatedAccount = account.withdraw(amount, now);
@@ -114,10 +127,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                             reason,
                             now);
 
-                    saveTransactionLocked(transaction);
-                    return transaction;
-                }),
-                executor);
+                    return saveTransactionLocked(transaction);
+                }));
     }
 
     @Override
@@ -128,9 +139,14 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             EconomyReason reason,
             EconomyOperationId operationId) {
         var key = new EconomyAccountKey(userId, currencyId);
-        return CompletableFuture.supplyAsync(
+        return executeIdempotent(
+                operationId,
                 () -> withLock(key, () -> {
-                    assertOperationIsNew(operationId);
+                    EconomyTransaction existing = transactionsByOperation.get(operationId);
+                    if (existing != null) {
+                        return existing;
+                    }
+
                     var now = clock.instant();
                     var account = getOrCreateLocked(key);
                     var updatedAccount = account.setBalance(amount, now);
@@ -148,10 +164,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                             reason,
                             now);
 
-                    saveTransactionLocked(transaction);
-                    return transaction;
-                }),
-                executor);
+                    return saveTransactionLocked(transaction);
+                }));
     }
 
     @Override
@@ -165,9 +179,14 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         var sourceKey = new EconomyAccountKey(sourceUserId, currencyId);
         var targetKey = new EconomyAccountKey(targetUserId, currencyId);
 
-        return CompletableFuture.supplyAsync(
+        return executeIdempotent(
+                operationId,
                 () -> withBothLocks(sourceKey, targetKey, () -> {
-                    assertOperationIsNew(operationId);
+                    EconomyTransaction existing = transactionsByOperation.get(operationId);
+                    if (existing != null) {
+                        return existing;
+                    }
+
                     var now = clock.instant();
                     var sourceAccount = getOrCreateLocked(sourceKey);
                     var targetAccount = getOrCreateLocked(targetKey);
@@ -191,20 +210,58 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                             reason,
                             now);
 
-                    saveTransactionLocked(transaction);
-                    return transaction;
-                }),
-                executor);
+                    return saveTransactionLocked(transaction);
+                }));
     }
 
     public CompletableFuture<List<EconomyTransaction>> recentTransactions(int limit) {
         return CompletableFuture.supplyAsync(
-                () -> transactions.stream()
-                        .sorted(Comparator.comparing(EconomyTransaction::createdAt)
-                                .reversed())
-                        .limit(limit)
-                        .toList(),
+                () -> {
+                    var result = new java.util.ArrayList<EconomyTransaction>(Math.min(limit, transactions.size()));
+                    var iterator = transactions.descendingIterator();
+                    while (iterator.hasNext() && result.size() < limit) {
+                        result.add(iterator.next());
+                    }
+                    return List.copyOf(result);
+                },
                 executor);
+    }
+
+    private CompletableFuture<EconomyTransaction> executeIdempotent(
+            EconomyOperationId operationId, Supplier<EconomyTransaction> action) {
+        Objects.requireNonNull(operationId, "operationId");
+
+        EconomyTransaction existing = transactionsByOperation.get(operationId);
+        if (existing != null) {
+            return CompletableFuture.completedFuture(existing);
+        }
+
+        return inFlightOperations.compute(operationId, (id, inFlight) -> {
+            if (inFlight != null && !inFlight.isDone()) {
+                return inFlight;
+            }
+
+            CompletableFuture<EconomyTransaction> created = CompletableFuture.supplyAsync(
+                    () -> {
+                        EconomyTransaction saved = transactionsByOperation.get(id);
+                        if (saved != null) {
+                            return saved;
+                        }
+                        return action.get();
+                    },
+                    executor);
+            var _ = created.whenComplete((r, e) -> {
+                inFlightOperations.remove(id, created);
+                maybeCleanupStaleLocks();
+            });
+            return created;
+        });
+    }
+
+    private void maybeCleanupStaleLocks() {
+        if (locks.size() > LOCK_CLEANUP_THRESHOLD) {
+            locks.keySet().removeIf(key -> !accounts.containsKey(key));
+        }
     }
 
     private EconomyAccount getOrCreateLocked(EconomyAccountKey key) {
@@ -219,28 +276,14 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         return previous != null ? previous : created;
     }
 
-    private void assertOperationIsNew(EconomyOperationId operationId) {
-        Objects.requireNonNull(operationId, "operationId");
-
-        synchronized (operationLock) {
-            if (transactionsByOperation.containsKey(operationId)) {
-                throw new DuplicateEconomyOperationException(operationId);
-            }
-            if (!inFlightOperations.add(operationId)) {
-                throw new DuplicateEconomyOperationException(operationId);
-            }
-        }
-    }
-
-    private void saveTransactionLocked(EconomyTransaction transaction) {
-        synchronized (operationLock) {
-            inFlightOperations.remove(transaction.operationId());
-            EconomyTransaction previous = transactionsByOperation.putIfAbsent(transaction.operationId(), transaction);
-            if (previous != null) {
-                throw new DuplicateEconomyOperationException(transaction.operationId());
-            }
+    private EconomyTransaction saveTransactionLocked(EconomyTransaction transaction) {
+        EconomyTransaction previous = transactionsByOperation.putIfAbsent(transaction.operationId(), transaction);
+        if (previous != null) {
+            // Another winner already committed this operation id — keep the original.
+            return previous;
         }
         transactions.add(transaction);
+        return transaction;
     }
 
     private void ensureMaximumBalance(EconomyAccount account) {

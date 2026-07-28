@@ -1,5 +1,6 @@
 package com.cotani.user.api;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -16,4 +17,16 @@ public interface CotaniUser {
     long lastJoinAt();
 
     long lastQuitAt();
+
+    default Instant firstJoinInstant() {
+        return Instant.ofEpochMilli(firstJoinAt());
+    }
+
+    default Instant lastJoinInstant() {
+        return Instant.ofEpochMilli(lastJoinAt());
+    }
+
+    default Instant lastQuitInstant() {
+        return Instant.ofEpochMilli(lastQuitAt());
+    }
 }

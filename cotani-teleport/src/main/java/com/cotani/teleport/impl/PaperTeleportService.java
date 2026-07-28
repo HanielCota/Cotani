@@ -8,12 +8,12 @@ import com.cotani.teleport.policy.PolicyResult;
 import com.cotani.teleport.policy.TeleportCooldownService;
 import com.cotani.teleport.policy.TeleportPolicyChain;
 import com.cotani.teleport.safety.SafeLocationResolver;
+import com.cotani.text.AudienceMessages;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import org.bukkit.Location;
@@ -101,7 +101,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
     private CompletionStage<TeleportResult> finishTeleport(TeleportContext context, Location resolvedTarget) {
         return deps.scheduler()
                 .supply(ExecutionTarget.entity(context.playerId()), "teleport-finish", () -> validateOrStart(context))
-                .thenCompose(result -> result.<CompletionStage<TeleportResult>>map(CompletableFuture::completedFuture)
+                .thenCompose(result -> result.map(this::notifyFailure)
                         .orElseGet(() -> firePreTeleportAndExecute(context, resolvedTarget)));
     }
 
@@ -117,7 +117,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
         }
 
         if (context.options().sendMessages()) {
-            player.sendMessage(denied.message());
+            AudienceMessages.sendMessage(player, denied.message());
         }
 
         return Optional.of(TeleportResults.failure(context, denied.reason()));
@@ -127,8 +127,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
             TeleportContext context, Location resolvedTarget) {
         Player player = resolvePlayer(context.playerId());
         if (player == null) {
-            return CompletableFuture.completedFuture(
-                    TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
+            return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
         }
 
         CotaniPreTeleportEvent event = deps.eventNotifier()
@@ -150,8 +149,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
         return flatten(deps.scheduler().supply(ExecutionTarget.entity(context.playerId()), "teleport-execute", () -> {
             Player player = resolvePlayer(context.playerId());
             if (player == null) {
-                return CompletableFuture.completedFuture(
-                        TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
+                return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
             }
 
             preparePlayer(player, options.player());
@@ -172,8 +170,12 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
                                         () -> deps.resultMapper().mapException(context, error))));
             }
 
-            boolean success = player.teleport(eventTarget);
-            return completeTeleport(context, eventTarget, velocity, success, startedAt);
+            try {
+                boolean success = player.teleport(eventTarget);
+                return completeTeleport(context, eventTarget, velocity, success, startedAt);
+            } catch (Throwable error) {
+                return deps.resultMapper().mapException(context, error);
+            }
         }));
     }
 
@@ -189,8 +191,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
 
         Player player = resolvePlayer(context.playerId());
         if (player == null) {
-            return CompletableFuture.completedFuture(
-                    TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
+            return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
         }
 
         if (context.options().preserveVelocity()) {

@@ -3,10 +3,19 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
-    `java-library`
-    alias(libs.plugins.errorprone)
-    alias(libs.plugins.spotless)
+    base
+    alias(libs.plugins.errorprone) apply false
+    alias(libs.plugins.spotless) apply false
 }
+
+// The type-safe `libs` accessor is not resolvable inside the `subprojects` block,
+// so capture the catalog entries used by shared configuration here.
+val javaToolchainVersion = libs.versions.java.get()
+val errorproneCore = libs.errorprone.core
+val nullawayProcessor = libs.nullaway
+val junitJupiter = libs.junit.jupiter
+val mockitoCore = libs.mockito.core
+val junitPlatformLauncher = libs.junit.platform.launcher
 
 abstract class ValidateModuleArchitecture : DefaultTask() {
 
@@ -22,8 +31,8 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
         val moduleNames = modules.get()
         val moduleSet = moduleNames.toSet()
         val importPattern =
-            Regex("""^import\s+com\.cotani\.(${moduleNames.joinToString("|")})\.(impl|internal)\.""")
-        val apiImportPattern = Regex("""^import\s+com\.cotani\..*\.(impl|internal)\.""")
+            Regex("""^import\s+(?:com|net)\.cotani\.(${moduleNames.joinToString("|")})\.(impl|internal)\.""")
+        val apiImportPattern = Regex("""^import\s+(?:com|net)\.cotani\..*\.(impl|internal)\.""")
         val violations = mutableListOf<String>()
 
         moduleNames.forEach { module ->
@@ -102,79 +111,75 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
 group = "com.cotani"
 description = "Cotani — modular Paper library"
 
-allprojects {
-    repositories {
-        mavenCentral()
-        maven("https://repo.papermc.io/repository/maven-public/")
-    }
-}
-
 subprojects {
-    pluginManager.withPlugin("java-library") {
-        apply(plugin = "maven-publish")
+    apply(plugin = "java-library")
+    apply(plugin = "maven-publish")
+    apply(plugin = "net.ltgt.errorprone")
+    apply(plugin = "com.diffplug.spotless")
 
-        configure<JavaPluginExtension> {
-            toolchain {
-                languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get()))
-            }
-            withSourcesJar()
-            withJavadocJar()
+    configure<JavaPluginExtension> {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(javaToolchainVersion))
         }
+        withSourcesJar()
+        withJavadocJar()
+    }
 
-        configure<PublishingExtension> {
-            publications {
-                create<MavenPublication>("mavenJava") {
-                    from(components["java"])
-                    artifactId = "cotani-${project.name}"
-                    pom {
-                        name.set("cotani-${project.name}")
-                        description.set(project.description ?: "Cotani — ${project.name} module")
-                    }
+    configure<PublishingExtension> {
+        publications {
+            create<MavenPublication>("mavenJava") {
+                from(components["java"])
+                artifactId = "cotani-${project.name}"
+                pom {
+                    name.set("cotani-${project.name}")
+                    description.set(project.description ?: "Cotani — ${project.name} module")
                 }
             }
         }
+    }
 
-        tasks.withType<JavaCompile>().configureEach {
-            options.encoding = "UTF-8"
-            options.compilerArgs.addAll(listOf("-Werror", "-Xlint:all"))
-        }
+    dependencies {
+        "errorprone"(errorproneCore)
+        "errorprone"(nullawayProcessor)
 
-        tasks.withType<Test>().configureEach {
-            useJUnitPlatform()
-            jvmArgs("-Dnet.bytebuddy.experimental=true")
-        }
+        "testImplementation"(junitJupiter)
+        "testImplementation"(mockitoCore)
+        "testRuntimeOnly"(junitPlatformLauncher)
+    }
 
-        tasks.withType<Javadoc>().configureEach {
-            val docletOptions = options as StandardJavadocDocletOptions
-            docletOptions.addStringOption("Xdoclint:-missing", "-quiet")
-
-            val sourceFiles = source.filter { file ->
-                file.name != "package-info.java" && file.name.endsWith(".java")
-            }
-            if (sourceFiles.isEmpty) {
-                enabled = false
-            }
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+        options.compilerArgs.addAll(listOf("-Werror", "-Xlint:all"))
+        options.errorprone {
+            disableWarningsInGeneratedCode.set(true)
+            disable("StringConcatToTextBlock")
+            disable("NotJavadoc")
+            error("NullAway")
+            option("NullAway:AnnotatedPackages", "com.cotani,net.cotani")
+            option("NullAway:AcknowledgeRestrictiveAnnotations", "true")
         }
     }
 
-    pluginManager.withPlugin("net.ltgt.errorprone") {
-        tasks.withType<JavaCompile>().configureEach {
-            options.errorprone {
-                disableWarningsInGeneratedCode.set(true)
-                disable("StringConcatToTextBlock")
-                disable("NotJavadoc")
-                error("NullAway")
-                option("NullAway:AnnotatedPackages", "com.cotani")
-                option("NullAway:AcknowledgeRestrictiveAnnotations", "true")
-            }
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+        jvmArgs("-Dnet.bytebuddy.experimental=true")
+    }
+
+    tasks.withType<Javadoc>().configureEach {
+        val docletOptions = options as StandardJavadocDocletOptions
+        docletOptions.addStringOption("Xdoclint:-missing", "-quiet")
+
+        val sourceFiles = source.filter { file ->
+            file.name != "package-info.java" && file.name.endsWith(".java")
+        }
+        if (sourceFiles.isEmpty) {
+            enabled = false
         }
     }
 
-    pluginManager.withPlugin("com.diffplug.spotless") {
-        configure<com.diffplug.gradle.spotless.SpotlessExtension> {
-            java {
-                palantirJavaFormat("2.94.0")
-            }
+    configure<com.diffplug.gradle.spotless.SpotlessExtension> {
+        java {
+            palantirJavaFormat("2.94.0")
         }
     }
 }
@@ -183,9 +188,10 @@ val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("val
     group = "verification"
     description = "Validates Cotani module boundaries and Gradle dependency cycles."
     rootDirectory.set(layout.projectDirectory)
-    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event"))
+    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui"))
 }
 
 tasks.named("check") {
     dependsOn(validateModuleArchitecture)
 }
+

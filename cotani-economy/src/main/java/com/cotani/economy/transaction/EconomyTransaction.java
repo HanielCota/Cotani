@@ -107,27 +107,27 @@ public sealed interface EconomyTransaction
     }
 
     default @Nullable UUID sourceUserId() {
-        throw new UnsupportedOperationException("This transaction type does not have a source user.");
+        return null;
     }
 
     default @Nullable UUID targetUserId() {
-        throw new UnsupportedOperationException("This transaction type does not have a target user.");
+        return null;
     }
 
     default @Nullable BigDecimal sourceBalanceBefore() {
-        throw new UnsupportedOperationException("This transaction type does not have a source balance.");
+        return null;
     }
 
     default @Nullable BigDecimal sourceBalanceAfter() {
-        throw new UnsupportedOperationException("This transaction type does not have a source balance.");
+        return null;
     }
 
     default @Nullable BigDecimal targetBalanceBefore() {
-        throw new UnsupportedOperationException("This transaction type does not have a target balance.");
+        return null;
     }
 
     default @Nullable BigDecimal targetBalanceAfter() {
-        throw new UnsupportedOperationException("This transaction type does not have a target balance.");
+        return null;
     }
 
     @SuppressWarnings("java:S107")
@@ -258,8 +258,8 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(targetBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
-            if (amount.signum() <= 0) {
-                throw new IllegalArgumentException("Transaction amount must be positive.");
+            if (amount.signum() < 0) {
+                throw new IllegalArgumentException("Set balance amount cannot be negative.");
             }
         }
 

@@ -32,7 +32,7 @@ public final class PendingTeleportListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Player player) {
+        if (event.getEntity() instanceof Player player && pendingService.hasPending(player.getUniqueId())) {
             pendingService.cancel(player.getUniqueId(), TeleportCancelReason.DAMAGED);
         }
     }
@@ -46,7 +46,10 @@ public final class PendingTeleportListener implements Listener {
     public void onDamageDealt(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Player player) {
             pendingService.cancel(player.getUniqueId(), TeleportCancelReason.COMBAT);
-        } else if (event.getDamager() instanceof org.bukkit.entity.Projectile projectile
+            return;
+        }
+
+        if (event.getDamager() instanceof org.bukkit.entity.Projectile projectile
                 && projectile.getShooter() instanceof Player player) {
             pendingService.cancel(player.getUniqueId(), TeleportCancelReason.COMBAT);
         }

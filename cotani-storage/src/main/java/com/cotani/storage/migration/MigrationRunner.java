@@ -19,6 +19,8 @@ public final class MigrationRunner {
         )
         """;
 
+    private static final String SELECT_EXECUTED_VERSIONS = "SELECT version FROM cotani_migrations";
+
     private final QueryExecutor executor;
     private final Schema schema;
     private final List<Migration> migrations = new ArrayList<>();
@@ -42,33 +44,32 @@ public final class MigrationRunner {
         var ordered = migrations.stream()
                 .sorted(Comparator.comparingInt(Migration::version))
                 .toList();
-        return executor.update(CREATE_MIGRATIONS_TABLE, binder -> {}).thenCompose(_ -> runAll(ordered));
+        return executor.update(CREATE_MIGRATIONS_TABLE, binder -> {})
+                .thenCompose(_ -> loadExecutedVersions())
+                .thenCompose(executed -> runAll(ordered, executed));
     }
 
-    private CompletionStage<Void> runAll(List<Migration> ordered) {
+    private CompletionStage<Set<Integer>> loadExecutedVersions() {
+        return executor.queryMany(SELECT_EXECUTED_VERSIONS, binder -> {}, row -> row.getInt("version"))
+                .thenApply(list -> new HashSet<>(list));
+    }
+
+    private CompletionStage<Void> runAll(List<Migration> ordered, Set<Integer> executed) {
         CompletionStage<Void> seed = CompletionStages.completedVoid();
         for (var migration : ordered) {
+            if (executed.contains(migration.version())) {
+                continue;
+            }
             seed = seed.thenCompose(_ -> runOne(migration));
         }
         return seed;
     }
 
     private CompletionStage<Void> runOne(Migration migration) {
-        return executor.queryOne(
-                        "SELECT version FROM cotani_migrations WHERE version = ?",
-                        binder -> binder.set(migration.version()),
-                        row -> row.getInt("version"))
-                .thenCompose(existing -> {
-                    if (existing.isPresent()) {
-                        return CompletionStages.completedVoid();
-                    }
-                    return executor.transaction(transactional -> {
-                        var transactionalSchema = new Schema(transactional, schema.dialect());
-                        return migration
-                                .migrate(transactionalSchema)
-                                .thenCompose(_ -> markExecuted(transactional, migration));
-                    });
-                });
+        return executor.transaction(transactional -> {
+            var transactionalSchema = new Schema(transactional, schema.dialect());
+            return migration.migrate(transactionalSchema).thenCompose(_ -> markExecuted(transactional, migration));
+        });
     }
 
     private CompletionStage<Void> markExecuted(QueryExecutor executor, Migration migration) {

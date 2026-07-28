@@ -63,13 +63,13 @@ class SimpleUserServiceTest {
         SimpleCotaniUser user = SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L);
 
         when(cache.findInternal(uniqueId)).thenReturn(Optional.of(user));
-        when(cache.save(uniqueId)).thenReturn(CompletableFuture.completedFuture(null));
+        when(repository.save(any(SimpleCotaniUser.class))).thenReturn(CompletableFuture.completedFuture(null));
         when(cache.remove(uniqueId, user.sessionId())).thenReturn(true);
 
         service.unload(uniqueId).toCompletableFuture().join();
 
-        verify(cache).put(argThat(u -> u.uniqueId().equals(uniqueId) && u.lastQuitAt() > 0));
-        verify(cache).save(uniqueId);
+        verify(cache, atLeastOnce()).put(argThat(u -> u.uniqueId().equals(uniqueId) && u.lastQuitAt() > 0));
+        verify(repository).save(any());
         verify(cache).remove(uniqueId, user.sessionId());
     }
 
@@ -80,28 +80,36 @@ class SimpleUserServiceTest {
 
         service.unload(uniqueId).toCompletableFuture().join();
 
-        verify(cache, never()).save(any());
+        verify(repository, never()).save(any());
         verify(cache, never()).remove(any(), any());
     }
 
     @Test
-    void saveDelegatesToCache() {
+    void saveIncrementsVersionAndCallsRepository() {
         UUID uniqueId = UUID.randomUUID();
-        when(cache.contains(uniqueId)).thenReturn(true);
-        when(cache.save(uniqueId)).thenReturn(CompletableFuture.completedFuture(null));
+        SimpleCotaniUser user =
+                SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L).withVersion(2L);
+        when(cache.findInternal(uniqueId)).thenReturn(Optional.of(user));
+        when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.save(uniqueId).toCompletableFuture().join();
 
-        verify(cache).save(uniqueId);
+        verify(repository).save(argThat(u -> u.version() == 3L));
     }
 
     @Test
-    void saveAllDelegatesToCache() {
-        when(cache.saveAll()).thenReturn(CompletableFuture.completedFuture(null));
+    void saveAllSavesAllCachedUsers() {
+        UUID uniqueId = UUID.randomUUID();
+        SimpleCotaniUser user =
+                SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L).withVersion(1L);
+        when(cache.allInternal()).thenReturn(java.util.List.of(user));
+        when(repository.saveAll(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.saveAll().toCompletableFuture().join();
 
-        verify(cache).saveAll();
+        verify(repository)
+                .saveAll(argThat(
+                        list -> list.size() == 1 && list.iterator().next().version() == 2L));
     }
 
     @Test

@@ -46,12 +46,17 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
             return;
         }
 
-        service.saveAll().whenComplete((_, throwable) -> {
+        try {
+            service.saveAll().whenComplete((_, throwable) -> {
+                inProgress.set(false);
+                if (throwable != null) {
+                    plugin.getLogger().log(Level.SEVERE, "Failed to auto-save users", throwable);
+                }
+            });
+        } catch (Exception failure) {
             inProgress.set(false);
-            if (throwable != null) {
-                plugin.getLogger().log(Level.SEVERE, "Failed to auto-save users", throwable);
-            }
-        });
+            plugin.getLogger().log(Level.SEVERE, "Failed to initiate auto-save for users", failure);
+        }
     }
 
     public static DefaultUserModule create(
@@ -62,7 +67,7 @@ public final class DefaultUserModule implements com.cotani.user.api.UserModule {
         Objects.requireNonNull(options, "options");
 
         var repository = new StorageUserRepository(storage, new UserMapper());
-        var cache = new UserCache(repository);
+        var cache = new UserCache();
         var service = new SimpleUserService(cache, repository);
         return createWithService(plugin, scheduler, options, service);
     }

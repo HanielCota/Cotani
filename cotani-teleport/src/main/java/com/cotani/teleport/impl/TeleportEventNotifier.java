@@ -1,5 +1,6 @@
 package com.cotani.teleport.impl;
 
+import com.cotani.teleport.api.PlayerResolver;
 import com.cotani.teleport.api.TeleportCause;
 import com.cotani.teleport.api.TeleportResult;
 import com.cotani.teleport.event.CotaniPostTeleportEvent;
@@ -13,17 +14,22 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 public final class TeleportEventNotifier {
     private final TeleportEventBus eventBus;
     private final Clock clock;
+    private final PlayerResolver playerResolver;
 
     public TeleportEventNotifier(TeleportEventBus eventBus, Clock clock) {
+        this(eventBus, clock, PlayerResolver.bukkit());
+    }
+
+    public TeleportEventNotifier(TeleportEventBus eventBus, Clock clock, PlayerResolver playerResolver) {
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.playerResolver = Objects.requireNonNull(playerResolver, "playerResolver");
     }
 
     public CompletionStage<CotaniPreTeleportEvent> firePreTeleport(
@@ -33,7 +39,7 @@ public final class TeleportEventNotifier {
         Objects.requireNonNull(resolvedTarget, "resolvedTarget");
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(source, "source");
-        Player player = Bukkit.getPlayer(playerId);
+        Player player = playerResolver.resolve(playerId);
         if (player == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -58,7 +64,7 @@ public final class TeleportEventNotifier {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(eventTarget, "eventTarget");
         Objects.requireNonNull(result, "result");
-        Player player = Bukkit.getPlayer(playerId);
+        Player player = playerResolver.resolve(playerId);
         if (player == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -67,7 +73,7 @@ public final class TeleportEventNotifier {
 
     public CompletionStage<Void> fireFailure(TeleportResult.Failure failure) {
         Objects.requireNonNull(failure, "failure");
-        Player player = Bukkit.getPlayer(failure.playerId());
+        Player player = playerResolver.resolve(failure.playerId());
         if (player == null) {
             return CompletableFuture.completedFuture(null);
         }

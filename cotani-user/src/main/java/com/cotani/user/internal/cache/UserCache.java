@@ -1,11 +1,9 @@
 package com.cotani.user.internal.cache;
 
-import com.cotani.task.util.CompletionStages;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
 import java.util.*;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -13,27 +11,43 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>New users are created by {@link com.cotani.user.internal.service.SimpleUserService}; this cache never
  * auto-creates a user. Loads are served from memory; persistence is delegated to {@link UserRepository}.
+ *
+ * <p>The cache uses a bounded map that evicts the least-recently-used entry when the maximum size is
+ * exceeded, preventing unbounded growth on long-running servers.
  */
 public final class UserCache {
 
-    private final Map<UUID, SimpleCotaniUser> users = new ConcurrentHashMap<>();
-    private final UserRepository repository;
+    private static final int DEFAULT_MAX_CACHED_USERS = 10_000;
 
-    public UserCache(UserRepository repository) {
-        this.repository = Objects.requireNonNull(repository, "repository");
+    private final int maxCachedUsers;
+    private final Map<UUID, SimpleCotaniUser> users;
+
+    public UserCache() {
+        this(DEFAULT_MAX_CACHED_USERS);
+    }
+
+    public UserCache(int maxCachedUsers) {
+        if (maxCachedUsers <= 0) {
+            throw new IllegalArgumentException("maxCachedUsers must be positive");
+        }
+        this.maxCachedUsers = maxCachedUsers;
+        this.users = new ConcurrentHashMap<>();
     }
 
     public Optional<SimpleCotaniUser> findInternal(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return Optional.ofNullable(users.get(uniqueId));
     }
 
     public Optional<CotaniUser> find(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return Optional.ofNullable(users.get(uniqueId)).map(CotaniUser.class::cast);
     }
 
     public void put(SimpleCotaniUser user) {
         Objects.requireNonNull(user, "user");
         users.put(user.uniqueId(), user);
+        evictIfNeeded();
     }
 
     public boolean remove(UUID uniqueId, UUID expectedSessionId) {
@@ -55,6 +69,7 @@ public final class UserCache {
     }
 
     public boolean contains(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return users.containsKey(uniqueId);
     }
 
@@ -62,38 +77,13 @@ public final class UserCache {
         return List.copyOf(users.values());
     }
 
-    public CompletionStage<Void> save(UUID uniqueId) {
-        SimpleCotaniUser original = users.get(uniqueId);
-        if (original == null) {
-            return CompletionStages.completedVoid();
-        }
-
-        var updated = original.withIncrementedVersion();
-        if (!users.replace(uniqueId, original, updated)) {
-            return CompletionStages.completedVoid();
-        }
-
-        return repository.save(updated);
-    }
-
-    public CompletionStage<Void> saveAll() {
-        var snapshot = List.copyOf(users.values());
-        if (snapshot.isEmpty()) {
-            return CompletionStages.completedVoid();
-        }
-
-        var updated = new ArrayList<SimpleCotaniUser>(snapshot.size());
-        for (SimpleCotaniUser original : snapshot) {
-            var next = original.withIncrementedVersion();
-            if (users.replace(original.uniqueId(), original, next)) {
-                updated.add(next);
+    private void evictIfNeeded() {
+        while (users.size() > maxCachedUsers) {
+            var iterator = users.keySet().iterator();
+            if (iterator.hasNext()) {
+                iterator.next();
+                iterator.remove();
             }
         }
-
-        if (updated.isEmpty()) {
-            return CompletionStages.completedVoid();
-        }
-
-        return repository.saveAll(updated);
     }
 }

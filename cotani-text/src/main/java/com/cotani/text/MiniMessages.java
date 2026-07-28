@@ -1,40 +1,39 @@
 package com.cotani.text;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.jspecify.annotations.NullMarked;
 
-/**
- * Utilities for parsing and serializing MiniMessage strings.
- *
- * <p>MiniMessage is the preferred way to represent rich text in configuration files and user
- * input. This class wraps the default Adventure {@link MiniMessage}
- * instance with short, null-safe methods that integrate cleanly with {@link Placeholders}.
- */
 @NullMarked
 public final class MiniMessages {
 
     private static final String INPUT_NULL_MESSAGE = "Parameter 'input' must not be null";
     private static final String TARGET_NULL_MESSAGE = "Parameter 'target' must not be null";
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
+    private static final int PARSE_CACHE_MAX_SIZE = 512;
+    private static final Map<String, Component> parseCache =
+            Collections.synchronizedMap(new java.util.LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Component> eldest) {
+                    return size() > PARSE_CACHE_MAX_SIZE;
+                }
+            });
 
     private MiniMessages() {}
 
-    /**
-     * Parses a MiniMessage string into a component using the default tag set.
-     *
-     * @param input the MiniMessage string
-     * @return the parsed component
-     */
     public static Component parse(String input) {
         Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
 
-        return ComponentSerializers.MINIMESSAGE.deserialize(input);
+        if (input.indexOf('<') < 0) {
+            return Component.text(input);
+        }
+        return parseCache.computeIfAbsent(input, ComponentSerializers.MINIMESSAGE::deserialize);
     }
 
     /**
@@ -155,12 +154,29 @@ public final class MiniMessages {
     }
 
     /**
+     * Parses a collection of MiniMessage strings into a list of components for a specific target,
+     * applying the given placeholders.
+     *
+     * @param inputs the collection of MiniMessage strings
+     * @param target the target of the deserialization
+     * @param resolvers the tag resolvers to apply
+     * @return the list of parsed components
+     */
+    public static List<Component> parseList(Collection<String> inputs, Audience target, TagResolver... resolvers) {
+        Objects.requireNonNull(inputs, "Parameter 'inputs' must not be null");
+        Objects.requireNonNull(target, TARGET_NULL_MESSAGE);
+        Objects.requireNonNull(resolvers, "Parameter 'resolvers' must not be null");
+
+        return inputs.stream().map(input -> parse(input, target, resolvers)).toList();
+    }
+
+    /**
      * Serializes a collection of components into a list of MiniMessage strings.
      *
      * @param components the collection of components to serialize
      * @return the list of MiniMessage representations
      */
-    public static List<String> serializeList(Collection<Component> components) {
+    public static List<String> serializeList(Collection<? extends Component> components) {
         Objects.requireNonNull(components, "Parameter 'components' must not be null");
 
         return components.stream().map(MiniMessages::serialize).toList();

@@ -2,6 +2,7 @@ package com.cotani.teleport.pending;
 
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.api.*;
+import com.cotani.teleport.api.PlayerResolver;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -10,7 +11,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -19,11 +19,18 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
 
     private final TeleportService teleportService;
     private final PaperTaskScheduler scheduler;
+    private final PlayerResolver playerResolver;
     private final Map<UUID, PendingTeleportStateMachine> pendingByPlayer = new ConcurrentHashMap<>();
 
     public DefaultPendingTeleportService(TeleportService teleportService, PaperTaskScheduler scheduler) {
+        this(teleportService, scheduler, PlayerResolver.bukkit());
+    }
+
+    public DefaultPendingTeleportService(
+            TeleportService teleportService, PaperTaskScheduler scheduler, PlayerResolver playerResolver) {
         this.teleportService = Objects.requireNonNull(teleportService, "teleportService");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this.playerResolver = Objects.requireNonNull(playerResolver, "playerResolver");
     }
 
     @Override
@@ -44,14 +51,14 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         PendingTeleportStateMachine pending = new PendingTeleportStateMachine(data);
 
         PendingTeleportStateMachine previous = pendingByPlayer.put(playerId, pending);
-        if (previous != null && !previous.cancel(TeleportCancelReason.REPLACED)) {
-            previous.cancelExecution(TeleportCancelReason.REPLACED);
+        if (previous != null) {
+            previous.cancel(TeleportCancelReason.REPLACED);
         }
 
-        Player player = Bukkit.getPlayer(playerId);
+        Player player = playerResolver.resolve(playerId);
         if (player == null) {
             pendingByPlayer.remove(playerId, pending);
-            pending.cancelExecution(TeleportCancelReason.QUIT);
+            pending.cancel(TeleportCancelReason.QUIT);
             return data.id();
         }
         pending.attachTask(
@@ -63,18 +70,28 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
     public boolean cancel(UUID playerId, TeleportCancelReason reason) {
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(reason, "reason");
-        PendingTeleportStateMachine pending = pendingByPlayer.remove(playerId);
-        return pending != null && pending.cancel(reason);
+        PendingTeleportStateMachine pending = pendingByPlayer.get(playerId);
+        if (pending == null) {
+            return false;
+        }
+        boolean cancelled = pending.cancel(reason);
+        if (cancelled) {
+            pendingByPlayer.remove(playerId, pending);
+        }
+        return cancelled;
     }
 
     @Override
     public boolean hasPending(UUID playerId) {
-        return pendingByPlayer.containsKey(playerId);
+        PendingTeleportStateMachine pending = pendingByPlayer.get(playerId);
+        return pending != null && !pending.isCancelled();
     }
 
     @Override
     public Optional<PendingTeleportView> find(UUID playerId) {
-        return Optional.ofNullable(pendingByPlayer.get(playerId)).map(this::toView);
+        return Optional.ofNullable(pendingByPlayer.get(playerId))
+                .filter(pending -> !pending.isCancelled())
+                .map(this::toView);
     }
 
     @Override
@@ -89,7 +106,13 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         }
 
         PendingTeleportData data = pending.data();
-        Player player = Bukkit.getPlayer(data.playerId());
+        // Re-check after claiming EXECUTING: damage/move may have cancelled in the gap.
+        if (pending.isCancelled()) {
+            pendingByPlayer.remove(data.playerId(), pending);
+            return;
+        }
+
+        Player player = playerResolver.resolve(data.playerId());
         if (player == null || !player.isOnline()) {
             pendingByPlayer.remove(data.playerId(), pending);
             pending.cancelExecution(TeleportCancelReason.QUIT);
@@ -104,8 +127,17 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
                 .options(data.options())
                 .build();
 
+        // Final gate immediately before starting the teleport pipeline.
+        if (pending.isCancelled()) {
+            pendingByPlayer.remove(data.playerId(), pending);
+            return;
+        }
+
         var _ = teleportService.teleport(request).whenComplete((result, error) -> {
             pendingByPlayer.remove(data.playerId(), pending);
+            if (pending.isCancelled()) {
+                return;
+            }
             if (error != null) {
                 LOGGER.log(
                         Level.WARNING,
@@ -126,6 +158,11 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
     private PendingTeleportView toView(PendingTeleportStateMachine pending) {
         PendingTeleportData data = pending.data();
         return new PendingTeleportView(
-                data.id(), data.playerId(), data.target(), data.delay(), pending.state(), pending.cancelReason());
+                data.id(),
+                data.playerId(),
+                data.target(),
+                data.delay(),
+                pending.state(),
+                pending.cancelReason().orElse(null));
     }
 }

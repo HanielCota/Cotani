@@ -4,7 +4,7 @@ import java.io.Serial;
 import java.time.Duration;
 import java.util.Objects;
 
-public class TaskTimeoutException extends RuntimeException {
+public final class TaskTimeoutException extends RuntimeException {
 
     @Serial
     private static final long serialVersionUID = 1L;

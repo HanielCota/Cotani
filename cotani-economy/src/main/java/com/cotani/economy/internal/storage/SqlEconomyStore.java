@@ -3,6 +3,7 @@ package com.cotani.economy.internal.storage;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
+import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.internal.repository.EconomyAccountRepository;
 import com.cotani.economy.internal.repository.EconomyTransferRepository;
@@ -22,12 +23,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 /**
  * SQL-backed implementation of economy persistence.
  *
- * <p>Operations run on the storage executor provided by {@link CotaniStorage}. Balance mutations use
- * conditional updates so races cannot produce negative balances or exceed maximum balance.
+ * <p>Operations run on the storage executor provided by {@link CotaniStorage}. Repeating the same
+ * {@link EconomyOperationId} returns the previously committed transaction without mutating balances
+ * again.
  */
 public final class SqlEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
 
@@ -73,8 +76,9 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
-        return storage.transactions()
-                .run(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
+        return runIdempotent(
+                operationId,
+                tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.deposit(amount, now);
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.deposit(
@@ -99,8 +103,9 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
-        return storage.transactions()
-                .run(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
+        return runIdempotent(
+                operationId,
+                tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.withdraw(amount, now);
                     EconomyTransaction transaction = EconomyTransaction.withdraw(
                             operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
@@ -124,8 +129,9 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
-        return storage.transactions()
-                .run(tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
+        return runIdempotent(
+                operationId,
+                tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.setBalance(amount, now);
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.set(
@@ -151,13 +157,13 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(reason, REASON_PARAM);
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
-        // Lock in consistent order to prevent deadlocks
         UUID firstId = sourceUserId.compareTo(targetUserId) <= 0 ? sourceUserId : targetUserId;
         UUID secondId = firstId.equals(sourceUserId) ? targetUserId : sourceUserId;
 
         Instant now = clock.instant();
-        return storage.transactions()
-                .run(tx -> getOrCreateLocked(tx, firstId, currencyId)
+        return runIdempotent(
+                operationId,
+                tx -> getOrCreateLocked(tx, firstId, currencyId)
                         .thenCompose(firstAccount -> getOrCreateLocked(tx, secondId, currencyId)
                                 .thenCompose(secondAccount -> {
                                     EconomyAccount source = firstId.equals(sourceUserId) ? firstAccount : secondAccount;
@@ -185,6 +191,50 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                                             .thenCompose(_ -> insertTransaction(tx, transaction))
                                             .thenApply(_ -> transaction);
                                 })));
+    }
+
+    private CompletionStage<EconomyTransaction> runIdempotent(
+            EconomyOperationId operationId,
+            Function<TransactionContext, CompletionStage<EconomyTransaction>> mutation) {
+        return storage.transactions()
+                .run(tx -> findTransactionByOperationId(tx, operationId).thenCompose(existing -> {
+                    if (existing.isPresent()) {
+                        return CompletableFuture.completedStage(existing.get());
+                    }
+                    return mutation.apply(tx);
+                }))
+                .exceptionallyCompose(error -> {
+                    if (!(unwrap(error) instanceof DuplicateEconomyOperationException)
+                            && !EconomyStorageMappers.isUniqueViolation(error)) {
+                        return CompletableFuture.failedFuture(error);
+                    }
+                    return findTransactionByOperationIdAsync(operationId)
+                            .thenCompose(found -> found.map(CompletableFuture::completedStage)
+                                    .orElseGet(() -> CompletableFuture.failedFuture(
+                                            error instanceof DuplicateEconomyOperationException
+                                                    ? error
+                                                    : new DuplicateEconomyOperationException(operationId))));
+                });
+    }
+
+    private CompletionStage<Optional<EconomyTransaction>> findTransactionByOperationIdAsync(
+            EconomyOperationId operationId) {
+        return storage.table("cotani_economy_transactions")
+                .select()
+                .where("operation_id", operationId.value())
+                .one(EconomyStorageMappers::transactionFromRow);
+    }
+
+    private CompletionStage<Optional<EconomyTransaction>> findTransactionByOperationId(
+            TransactionContext tx, EconomyOperationId operationId) {
+        String sql = """
+                SELECT transaction_id, operation_id, type, source_user_id, target_user_id, currency_id, amount,
+                       source_balance_before, source_balance_after, target_balance_before, target_balance_after,
+                       reason_key, reason_source, reason_actor_user_id, created_at
+                FROM cotani_economy_transactions
+                WHERE operation_id = ?
+                """;
+        return tx.queryOne(sql, binder -> binder.set(operationId.value()), EconomyStorageMappers::transactionFromRow);
     }
 
     private CompletionStage<EconomyAccount> getOrCreateLocked(
@@ -255,12 +305,22 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     }
 
     private CompletionStage<Void> insertTransaction(TransactionContext tx, EconomyTransaction transaction) {
-        return EconomyStorageMappers.insertTransaction(tx, storage, transaction);
+        return EconomyStorageMappers.insertTransaction(tx, transaction);
     }
 
     private void ensureMaximumBalance(EconomyAccount account) {
         if (account.balance().compareTo(settings.maximumBalance()) > 0) {
             throw new MaximumBalanceExceededException(account.userId(), account.balance(), settings.maximumBalance());
         }
+    }
+
+    private static Throwable unwrap(Throwable error) {
+        Throwable cause = error;
+        while (cause.getCause() != null
+                && (cause instanceof java.util.concurrent.CompletionException
+                        || cause instanceof java.util.concurrent.ExecutionException)) {
+            cause = cause.getCause();
+        }
+        return cause;
     }
 }

@@ -52,7 +52,7 @@ class DefaultSafeLocationResolverTest {
         var resolver = newResolver();
         var target = new Location(null, 0, 64, 0);
 
-        var result = resolver.resolve(target, OPTIONS).join();
+        var result = resolver.resolve(target, OPTIONS).toCompletableFuture().join();
 
         assertTrue(result.isEmpty());
     }
@@ -66,7 +66,7 @@ class DefaultSafeLocationResolverTest {
         var resolver = newResolver();
         var target = new Location(world, chunkX * 16 + 3.0, 64, chunkZ * 16 + 7.0);
 
-        resolver.resolve(target, OPTIONS).join();
+        resolver.resolve(target, OPTIONS).toCompletableFuture().join();
 
         var captor = ArgumentCaptor.forClass(ExecutionTarget.class);
         verify(scheduler).supply(captor.capture(), anyString(), any(Supplier.class));
@@ -85,7 +85,7 @@ class DefaultSafeLocationResolverTest {
         var resolver = newResolver();
         var target = new Location(world, 3.0, 64, 7.0);
 
-        resolver.resolve(target, OPTIONS).join();
+        resolver.resolve(target, OPTIONS).toCompletableFuture().join();
 
         verify(world).getChunkAtAsync(chunkX, chunkZ);
     }
@@ -99,7 +99,7 @@ class DefaultSafeLocationResolverTest {
         var resolver = newResolver();
         var target = new Location(world, targetChunkX * 16 + 3.0, 64, targetChunkZ * 16 + 7.0);
 
-        resolver.resolve(target, OPTIONS).join();
+        resolver.resolve(target, OPTIONS).toCompletableFuture().join();
 
         var captor = ArgumentCaptor.forClass(ExecutionTarget.class);
         verify(scheduler).supply(captor.capture(), anyString(), any(Supplier.class));

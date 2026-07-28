@@ -1,13 +1,12 @@
 package com.cotani.task.api;
 
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 public final class RetryPolicy {
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final double MIN_JITTER = 0.0;
     private static final double MAX_JITTER = 1.0;
 
@@ -85,8 +84,8 @@ public final class RetryPolicy {
         }
 
         double factor = symmetricJitter
-                ? 1 + jitter * (SECURE_RANDOM.nextDouble() - 0.5) * 2
-                : 1 - jitter * SECURE_RANDOM.nextDouble();
+                ? 1 + jitter * (ThreadLocalRandom.current().nextDouble() - 0.5) * 2
+                : 1 - jitter * ThreadLocalRandom.current().nextDouble();
 
         return Math.max(0, (long) (exponential * factor));
     }

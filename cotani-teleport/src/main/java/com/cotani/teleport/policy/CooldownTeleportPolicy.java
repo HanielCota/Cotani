@@ -10,7 +10,7 @@ public final class CooldownTeleportPolicy implements TeleportPolicy {
     private final TeleportMessages messages;
 
     public CooldownTeleportPolicy(TeleportCooldownService cooldownService, TeleportMessages messages) {
-        this.cooldownService = cooldownService;
+        this.cooldownService = Objects.requireNonNull(cooldownService, "cooldownService");
         this.messages = Objects.requireNonNull(messages, "messages");
     }
 

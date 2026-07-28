@@ -3,28 +3,60 @@ package com.cotani.teleport.safety;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.api.SafeLocationOptions;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
 import org.bukkit.World;
 
 /**
  * Default safe-location resolver.
  *
- * <p>The search reuses a single mutable {@link Location} while scanning candidates to avoid allocating
- * one object per iteration. World-border, height-bounds and chunk-loaded checks that do not change
- * during the search are validated once before the loop.
+ * <p>Candidate offsets are evaluated in ascending 3D Euclidean distance order so that the returned
+ * safe location is guaranteed to be the nearest safe location to the requested target.
  *
- * <p>To respect Folia region affinity, the horizontal search is clamped to the chunk of the target
- * location. Callers that need a wider search must schedule multiple region tasks.
+ * <p>To respect Folia region affinity, horizontal search candidate coordinates are clamped to the chunk
+ * of the target location.
  */
 public final class DefaultSafeLocationResolver implements com.cotani.teleport.safety.SafeLocationResolver {
+
+    private static final Map<Long, List<Offset>> OFFSET_CACHE = new ConcurrentHashMap<>();
 
     private final PaperTaskScheduler scheduler;
 
     public DefaultSafeLocationResolver(PaperTaskScheduler scheduler) {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+    }
+
+    private record Offset(int dx, int dy, int dz, int distSq) implements Comparable<Offset> {
+        @Override
+        public int compareTo(Offset o) {
+            return Integer.compare(this.distSq, o.distSq);
+        }
+    }
+
+    private static List<Offset> getOrComputeOffsets(int horizontal, int vertical) {
+        // Candidates are clamped to the target chunk (~16x16), so radii beyond that only waste memory.
+        int effectiveHorizontal = Math.min(Math.max(0, horizontal), 15);
+        int effectiveVertical = Math.min(Math.max(0, vertical), 512);
+        long key = (((long) effectiveHorizontal) << 32) | (effectiveVertical & 0xFFFFFFFFL);
+        return OFFSET_CACHE.computeIfAbsent(key, _ -> {
+            List<Offset> offsets = new ArrayList<>();
+            for (int dy = -effectiveVertical; dy <= effectiveVertical; dy++) {
+                for (int dx = -effectiveHorizontal; dx <= effectiveHorizontal; dx++) {
+                    for (int dz = -effectiveHorizontal; dz <= effectiveHorizontal; dz++) {
+                        if (dx == 0 && dy == 0 && dz == 0) {
+                            continue;
+                        }
+                        int distSq = dx * dx + dy * dy + dz * dz;
+                        offsets.add(new Offset(dx, dy, dz, distSq));
+                    }
+                }
+            }
+            Collections.sort(offsets);
+            return List.copyOf(offsets);
+        });
     }
 
     private static Optional<Location> resolveSync(Location target, SafeLocationOptions options) {
@@ -48,62 +80,40 @@ public final class DefaultSafeLocationResolver implements com.cotani.teleport.sa
         int chunkMinZ = (baseZ >> 4) << 4;
         int chunkMaxZ = chunkMinZ + 15;
 
+        int minWorldY = world.getMinHeight() + 1;
+        int maxWorldY = world.getMaxHeight() - 1;
+
         Location candidate = new Location(world, 0, 0, 0, target.getYaw(), target.getPitch());
 
-        SearchBounds bounds = new SearchBounds(
-                baseX, baseY, baseZ, horizontal, vertical, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ);
-
-        Optional<Location> up = search(world, candidate, bounds, 1, options);
-        if (up.isPresent()) {
-            return up;
-        }
-        return search(world, candidate, bounds, -1, options);
-    }
-
-    private record SearchBounds(
-            int baseX,
-            int baseY,
-            int baseZ,
-            int horizontal,
-            int vertical,
-            int chunkMinX,
-            int chunkMaxX,
-            int chunkMinZ,
-            int chunkMaxZ) {}
-
-    private static Optional<Location> search(
-            World world,
-            Location candidate,
-            SearchBounds bounds,
-            int direction,
-            SafeLocationOptions options) {
-        int startOffset = direction > 0 ? 0 : 1;
-
-        for (int yOffset = startOffset; yOffset <= bounds.vertical(); yOffset++) {
-            int y = bounds.baseY() + (yOffset * direction);
-            if (y < world.getMinHeight() || y + 1 >= world.getMaxHeight()) {
+        List<Offset> offsets = getOrComputeOffsets(horizontal, vertical);
+        for (Offset offset : offsets) {
+            int x = baseX + offset.dx();
+            if (x < chunkMinX || x > chunkMaxX) {
                 continue;
             }
-            int minX = Math.max(bounds.chunkMinX(), bounds.baseX() - bounds.horizontal());
-            int maxX = Math.min(bounds.chunkMaxX(), bounds.baseX() + bounds.horizontal());
-            int minZ = Math.max(bounds.chunkMinZ(), bounds.baseZ() - bounds.horizontal());
-            int maxZ = Math.min(bounds.chunkMaxZ(), bounds.baseZ() + bounds.horizontal());
-            for (int x = minX; x <= maxX; x++) {
-                for (int z = minZ; z <= maxZ; z++) {
-                    candidate.setX(x + 0.5);
-                    candidate.setY(y);
-                    candidate.setZ(z + 0.5);
-                    if (BlockSafetyChecker.isSafe(candidate, options)) {
-                        return Optional.of(candidate.clone());
-                    }
-                }
+            int z = baseZ + offset.dz();
+            if (z < chunkMinZ || z > chunkMaxZ) {
+                continue;
+            }
+            int y = baseY + offset.dy();
+            if (y < minWorldY || y >= maxWorldY) {
+                continue;
+            }
+
+            candidate.setX(x + 0.5);
+            candidate.setY(y);
+            candidate.setZ(z + 0.5);
+
+            if (BlockSafetyChecker.isSafe(candidate, options)) {
+                return Optional.of(candidate.clone());
             }
         }
+
         return Optional.empty();
     }
 
     @Override
-    public CompletableFuture<Optional<Location>> resolve(Location target, SafeLocationOptions options) {
+    public CompletionStage<Optional<Location>> resolve(Location target, SafeLocationOptions options) {
         Location cloned = target.clone();
         World world = cloned.getWorld();
         if (world == null) {

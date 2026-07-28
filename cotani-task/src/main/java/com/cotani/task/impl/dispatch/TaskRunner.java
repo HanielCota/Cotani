@@ -8,7 +8,6 @@ import com.cotani.task.metrics.TaskMetrics;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
 public final class TaskRunner {
@@ -36,11 +35,17 @@ public final class TaskRunner {
                 try {
                     runnable.run();
                     metrics.record(metadata, true, elapsed(context));
-                } catch (Exception exception) {
+                } catch (Throwable throwable) {
                     metrics.record(metadata, false, elapsed(context));
-                    exceptionHandler.handle(context, exception);
+                    exceptionHandler.handle(context, throwable);
 
-                    throw exception;
+                    if (throwable instanceof RuntimeException runtime) {
+                        throw runtime;
+                    }
+                    if (throwable instanceof Error error) {
+                        throw error;
+                    }
+                    throw new RuntimeException(throwable);
                 }
             });
         };
@@ -56,10 +61,10 @@ public final class TaskRunner {
         try {
             future.complete(supplier.get());
             metrics.record(metadata, true, elapsed(context));
-        } catch (Exception exception) {
+        } catch (Throwable throwable) {
             metrics.record(metadata, false, elapsed(context));
-            exceptionHandler.handle(context, exception);
-            future.completeExceptionally(new CompletionException(exception));
+            exceptionHandler.handle(context, throwable);
+            future.completeExceptionally(throwable);
         }
     }
 }

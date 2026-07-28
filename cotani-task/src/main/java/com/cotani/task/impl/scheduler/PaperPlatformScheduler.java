@@ -151,17 +151,13 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
     public SchedulerTask runRegionLater(
             TaskMetadata metadata, UUID worldId, int chunkX, int chunkZ, Runnable runnable, Duration delay) {
         var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobalLater(
-                metadata,
-                () -> {
-                    var world = Bukkit.getWorld(worldId);
-                    if (world == null) {
-                        return;
-                    }
-                    delegate.set(runRegionLater(
-                            metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, delay));
-                },
-                delay);
+        var setup = runGlobal(metadata, () -> {
+            var world = Bukkit.getWorld(worldId);
+            if (world == null) {
+                return;
+            }
+            delegate.set(runRegionLater(metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, delay));
+        });
         return new CompositeSchedulerTask(setup, delegate);
     }
 
@@ -204,17 +200,14 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
     public SchedulerTask runEntityLater(
             TaskMetadata metadata, UUID entityId, Runnable runnable, Runnable retired, Duration delay) {
         var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobalLater(
-                metadata,
-                () -> {
-                    var entity = Bukkit.getEntity(entityId);
-                    if (entity == null) {
-                        retired.run();
-                        return;
-                    }
-                    delegate.set(runEntityLater(metadata, entity, runnable, retired, delay));
-                },
-                delay);
+        var setup = runGlobal(metadata, () -> {
+            var entity = Bukkit.getEntity(entityId);
+            if (entity == null) {
+                retired.run();
+                return;
+            }
+            delegate.set(runEntityLater(metadata, entity, runnable, retired, delay));
+        });
         return new CompositeSchedulerTask(setup, delegate);
     }
 

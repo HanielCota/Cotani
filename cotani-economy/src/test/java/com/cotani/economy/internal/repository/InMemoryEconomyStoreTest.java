@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.currency.EconomyCurrency;
-import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.exception.InsufficientFundsException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.transaction.EconomyOperationId;
@@ -64,19 +63,20 @@ class InMemoryEconomyStoreTest {
     }
 
     @Test
-    void depositFailsForDuplicateOperationId() {
+    void depositDuplicateOperationIdIsIdempotent() {
         var store = newStore();
         var userId = UUID.randomUUID();
         var operationId = EconomyOperationId.random();
 
-        store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
+        var first = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
+                .toCompletableFuture()
+                .join();
+        var second = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
                 .toCompletableFuture()
                 .join();
 
-        assertCause(
-                DuplicateEconomyOperationException.class,
-                store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
-                        .toCompletableFuture());
+        assertEquals(first.id(), second.id());
+        assertEquals(0, second.amount().compareTo(BigDecimal.TEN));
     }
 
     @Test
@@ -175,7 +175,7 @@ class InMemoryEconomyStoreTest {
     }
 
     @Test
-    void failedOperationIdCannotBeReused() {
+    void failedOperationIdCanBeRetried() {
         var store = newStore();
         var userId = UUID.randomUUID();
         var operationId = EconomyOperationId.random();
@@ -185,26 +185,34 @@ class InMemoryEconomyStoreTest {
                 store.withdraw(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
                         .toCompletableFuture());
 
-        assertCause(
-                DuplicateEconomyOperationException.class,
-                store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
-                        .toCompletableFuture());
+        var transaction = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
+                .toCompletableFuture()
+                .join();
+
+        assertEquals(operationId, transaction.operationId());
     }
 
     @Test
-    void duplicateOperationIdIsRejected() {
+    void duplicateOperationIdReturnsOriginalTransaction() {
         var store = newStore();
         var userId = UUID.randomUUID();
         var operationId = EconomyOperationId.random();
 
-        store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
+        var first = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
+                .toCompletableFuture()
+                .join();
+        var second = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
                 .toCompletableFuture()
                 .join();
 
-        assertCause(
-                DuplicateEconomyOperationException.class,
-                store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
-                        .toCompletableFuture());
+        assertEquals(first.id(), second.id());
+        assertEquals(0, first.amount().compareTo(BigDecimal.TEN));
+        assertEquals(0, second.amount().compareTo(BigDecimal.TEN));
+
+        var account = store.getOrCreate(userId, SETTINGS.defaultCurrency().id())
+                .toCompletableFuture()
+                .join();
+        assertEquals(0, account.balance().compareTo(SETTINGS.startingBalance().add(BigDecimal.TEN)));
     }
 
     @Test
@@ -226,11 +234,8 @@ class InMemoryEconomyStoreTest {
                             .join();
                     successes.incrementAndGet();
                 } catch (CompletionException exception) {
-                    if (exception.getCause() instanceof DuplicateEconomyOperationException) {
-                        failures.incrementAndGet();
-                    } else {
-                        throw exception;
-                    }
+                    failures.incrementAndGet();
+                    throw exception;
                 } catch (InterruptedException interrupted) {
                     Thread.currentThread().interrupt();
                 } finally {
@@ -242,8 +247,8 @@ class InMemoryEconomyStoreTest {
         startLatch.countDown();
         assertTrue(doneLatch.await(5, TimeUnit.SECONDS));
 
-        assertEquals(1, successes.get());
-        assertEquals(1, failures.get());
+        assertEquals(2, successes.get());
+        assertEquals(0, failures.get());
 
         var account = store.getOrCreate(userId, SETTINGS.defaultCurrency().id())
                 .toCompletableFuture()

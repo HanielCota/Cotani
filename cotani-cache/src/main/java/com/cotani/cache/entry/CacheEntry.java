@@ -31,24 +31,23 @@ public final class CacheEntry<V> {
         return currentState().value();
     }
 
-    /**
-     * Updates the value and returns {@code true} if the entry transitioned from clean to dirty.
-     */
     public boolean update(UnaryOperator<V> updater) {
         Objects.requireNonNull(updater, "updater");
 
         var becameDirty = new AtomicBoolean(false);
         state.updateAndGet(current -> {
-            var updated = Objects.requireNonNull(updater.apply(current.value()), "updated");
+            var currentValue = current.value();
+            var updated = Objects.requireNonNull(updater.apply(currentValue), "updated");
+            if (Objects.equals(currentValue, updated)) {
+                becameDirty.set(false);
+                return current;
+            }
             becameDirty.set(!current.dirty());
             return new EntryState<>(updated, true, current.lastSavedAt(), current.version() + 1);
         });
         return becameDirty.get();
     }
 
-    /**
-     * Mutates the value in place and returns {@code true} if the entry transitioned from clean to dirty.
-     */
     public boolean mutate(Consumer<V> mutator) {
         Objects.requireNonNull(mutator, "mutator");
 

@@ -15,7 +15,7 @@ public final class PendingTeleportStateMachine {
     private final AtomicReference<SchedulerTask> task = new AtomicReference<>(SchedulerTask.noop());
 
     public PendingTeleportStateMachine(PendingTeleportData data) {
-        this.data = data;
+        this.data = Objects.requireNonNull(data, "data");
     }
 
     public PendingTeleportData data() {
@@ -47,12 +47,15 @@ public final class PendingTeleportStateMachine {
 
     public boolean cancel(TeleportCancelReason reason) {
         Objects.requireNonNull(reason, "reason");
-        boolean changed = state.compareAndSet(PendingTeleportState.WAITING, PendingTeleportState.CANCELLED);
-        if (changed) {
+        // Cancel both warmup (WAITING) and the execute window (EXECUTING) so damage/move
+        // during the hop to teleportService still aborts completion.
+        if (state.compareAndSet(PendingTeleportState.WAITING, PendingTeleportState.CANCELLED)
+                || state.compareAndSet(PendingTeleportState.EXECUTING, PendingTeleportState.CANCELLED)) {
             cancelReason.set(reason);
             Objects.requireNonNull(task.get()).cancel();
+            return true;
         }
-        return changed;
+        return false;
     }
 
     public boolean cancelExecution(TeleportCancelReason reason) {
@@ -63,5 +66,9 @@ public final class PendingTeleportStateMachine {
             Objects.requireNonNull(task.get()).cancel();
         }
         return changed;
+    }
+
+    public boolean isCancelled() {
+        return state.get() == PendingTeleportState.CANCELLED;
     }
 }
