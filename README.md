@@ -1,290 +1,177 @@
 <div align="center">
 
-# ⚡ Cotani
+# Cotani
 
-**A high-performance, modular, async-safe architecture framework for modern Paper/PaperSpigot plugin development.**
+**Modular, async-safe building blocks for Paper and Folia plugins.**
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/ci.yml?branch=master&style=for-the-badge&logo=github&label=Build)](https://github.com/HanielCota/Cotani/actions)
-[![License](https://img.shields.io/github/license/HanielCota/Cotani?style=for-the-badge&color=blue)](LICENSE)
-[![Java Version](https://img.shields.io/badge/Java-25-orange?style=for-the-badge&logo=openjdk)](https://adoptium.net)
-[![Paper API](https://img.shields.io/badge/Paper-26.2-cyan?style=for-the-badge&logo=papermc)](https://papermc.io)
-[![JitPack](https://img.shields.io/jitpack/v/github/HanielCota/Cotani?style=for-the-badge&logo=jitpack&color=brightgreen)](https://jitpack.io/#HanielCota/Cotani)
+[![Build](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/ci.yml?branch=master&style=flat-square&logo=github&label=build)](https://github.com/HanielCota/Cotani/actions/workflows/ci.yml)
+[![Java 25](https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk)](https://adoptium.net/)
+[![Paper 26.2](https://img.shields.io/badge/Paper-26.2-3f48cc?style=flat-square)](https://papermc.io/)
+[![JitPack](https://img.shields.io/jitpack/v/github/HanielCota/Cotani?style=flat-square&logo=jitpack)](https://jitpack.io/#HanielCota/Cotani)
+[![MIT](https://img.shields.io/github/license/HanielCota/Cotani?style=flat-square)](LICENSE)
 
----
-
-[Overview](#-overview) • [Architecture](#-architecture) • [Modules Matrix](#-modules-matrix) • [Code Showcase](#-code-showcase) • [Installation](#-installation) • [Standards](#-architectural-standards)
+[Overview](#overview) · [Installation](#installation) · [Modules](#modules) · [Quick start](#quick-start) · [Development](#development)
 
 </div>
 
----
+## Overview
 
-## 📌 Overview
+Cotani is a Java 25 multi-module library for building Paper and Folia plugins with explicit execution boundaries. It provides scheduling, persistence, caching, configuration, user, economy, teleport, cooldown, event, GUI, text, item and metrics APIs without turning the plugin main class into a service locator.
 
-**Cotani** is an enterprise-grade architectural foundation designed specifically for high-load Minecraft server plugins built on Paper, PaperSpigot, and Folia. It strictly enforces non-blocking async execution patterns, isolates heavy IO operations from region/main threads, and provides type-safe abstractions for common plugin components.
+The project is built around a few invariants:
 
-### 🌟 Key Pillars
-
-- **🔒 Main-Thread Safety**: Provides explicit boundaries for delegating database queries, configuration parsing, and file IO off the main thread.
-- **⚡ Non-Blocking Pipeline**: Application flows compose through `CompletionStage` and custom `TaskChain` transitions without blocking to extract results; guarded synchronous lifecycle adapters remain for compatibility.
-- **📦 14 Focused Modules**: Modular design allowing developers to include only what they need (Economy, Teleport, Storage, Cache, Config, etc.).
-- **🛠️ Controlled State**: Built on constructor injection, bounded caches, dependency control, and explicit lifecycle management.
-- **💎 Type-Safe Java 25 Records**: Map YAML/JSON configuration files directly into immutable Java `record` instances with strict validation annotations.
-
-### Runtime baseline
-
-Cotani targets **Java 25** and **Paper API 26.2 stable**. The Gradle toolchain, CI and published artifacts use this same baseline; older Java or Paper releases are not supported by the current source tree.
-
----
-
-## 📐 Architecture
-
-Cotani implements a strict boundary between asynchronous IO execution and Paper's main/region server threads:
+- public asynchronous APIs expose composable `CompletionStage` or `TaskChain` results;
+- database and file I/O stay off server-owned threads;
+- Bukkit and Paper objects are accessed only from the thread that owns them;
+- services receive dependencies through constructors;
+- resources have explicit, non-blocking shutdown paths;
+- mutable state and collections are isolated behind clear contracts.
 
 ```mermaid
-flowchart TD
-    subgraph MainThread ["Bukkit / Paper Main Thread"]
-        A["Minecraft Event / Command"] -->|"1. Extract Immutable IDs (UUID)"| B["Main Thread Context"]
-        G["Paper API Operations (Teleport, Inv)"]
-    end
-
-    subgraph AsyncEngine ["Cotani Async Engine"]
-        B -->|"2. TaskChain.supplyAsync"| C["Off-Thread Executor"]
-        C --> D{"Cache Check"}
-        D -->|"Hit"| E["Caffeine Cache"]
-        D -->|"Miss"| F["Storage Provider / Database"]
-        E --> F
-    end
-
-    subgraph Persistence ["Database / IO Layer"]
-        F -->|"3. Async SQL / Migrations"| H[("SQLite / MySQL / MariaDB")]
-    end
-
-    F -->|"4. Return via TaskChain"| G
+flowchart LR
+    A["Paper event or command"] --> B["Capture UUIDs and immutable values"]
+    B --> C["Compose async service and storage work"]
+    C --> D["Switch through PaperTaskScheduler"]
+    D --> E["Access Bukkit/Paper on the owning thread"]
 ```
 
----
+## Requirements
 
-## 🧩 Modules Matrix
+- JDK 25
+- Paper API 26.2 for Paper-dependent modules
+- Gradle Wrapper for building the repository
+- Docker only for the MySQL and MariaDB integration-test suites
 
-Cotani is split into 14 focused modules. Each module contains dedicated documentation and contracts:
+> [!IMPORTANT]
+> Cotani modules are libraries, not a standalone server plugin. Package the modules your plugin uses with your normal shading and relocation setup unless your deployment provides them separately.
 
-| Module | Description | Documentation |
-| :--- | :--- | :--- |
-| 🚀 **`cotani-core`** | Bootstrap container, ordered service shutdown, lifecycle management. | [Core Docs](cotani-core/README.md) |
-| ⚡ **`cotani-task`** | Thread switching (`TaskChain`), retries, timeouts, and scheduler wrappers. | [Task Docs](cotani-task/README.md) |
-| 💾 **`cotani-cache`** | Caffeine-backed caching with automated dirty tracking & background saves. | [Cache Docs](cotani-cache/README.md) |
-| 📝 **`cotani-config`** | Immutable configuration mapping from YAML directly into Java `record`s. | [Config Docs](cotani-config/README.md) |
-| 🗄️ **`cotani-storage`** | Off-thread SQL driver engine (SQLite/MySQL/MariaDB) with automated migrations. | [Storage Docs](cotani-storage/README.md) |
-| 🎨 **`cotani-text`** | MiniMessage formatting, dynamic placeholder pipelines & audience delivery. | [Text Docs](cotani-text/README.md) |
-| ⚔️ **`cotani-item`** | Fluent `ItemStack` & skull builders with MiniMessage lore/name support. | [Item Docs](cotani-item/README.md) |
-| 👤 **`cotani-user`** | Async session resolution, player data loading, and cache flushes. | [User Docs](cotani-user/README.md) |
-| 💰 **`cotani-economy`** | Idempotent transactions with exact `BigDecimal` precision. | [Economy Docs](cotani-economy/README.md) |
-| 🌀 **`cotani-teleport`** | Async teleport sequences with safety checks, countdowns & combat checks. | [Teleport Docs](cotani-teleport/README.md) |
-| ⏳ **`cotani-cooldown`** | Persistent database and in-memory rate limiting and action cooldowns. | [Cooldown Docs](cotani-cooldown/README.md) |
-| 📢 **`cotani-event`** | Reflection-free, prioritized event publishing bus with subscription controls. | [Event Docs](cotani-event/README.md) |
-| 📊 **`cotani-metrics`** | Micrometer metrics for Cotani services and storage. | [Metrics Docs](cotani-metrics/README.md) |
-| 🪟 **`cotani-gui`** | Declarative, reactive inventory interfaces with interaction guards. | [GUI Docs](cotani-gui/README.md) |
+## Installation
 
----
-
-## 💻 Code Showcase
-
-<details>
-<summary><b>1. Plugin Bootstrap & Lifecycle Management</b></summary>
-
-```java
-public final class CorePlugin extends JavaPlugin {
-
-    private Cotani cotani;
-    private PaperTaskScheduler scheduler;
-
-    @Override
-    public void onEnable() {
-        this.scheduler = SchedulerFactory.create(this);
-
-        this.cotani = Cotani.forPlugin(this)
-            .with(scheduler)
-            .build();
-    }
-
-    @Override
-    public void onDisable() {
-        if (cotani != null) {
-            cotani.close(); // Gracefully flushes caches, closes storage pools & cancels tasks
-        }
-    }
-}
-```
-</details>
-
-<details>
-<summary><b>2. Safe Thread Transitions with TaskChain</b></summary>
-
-```java
-// Run database query off-thread -> switch safely back to Paper main thread
-scheduler.supplyAsync(() -> userRepository.loadUser(playerUniqueId))
-    .thenGlobal(userOpt -> {
-        // Safe to call Paper/Bukkit APIs here
-        userOpt.ifPresent(user -> player.sendMessage(Component.text("Welcome back, " + user.name())));
-        return userOpt;
-    })
-    .thenAsync(userOpt -> auditLogService.recordLogin(playerUniqueId))
-    .toCompletionStage();
-```
-</details>
-
-<details>
-<summary><b>3. Immutable Record-Backed Configuration</b></summary>
-
-```java
-@ConfigPath("database.yml")
-public record DatabaseConfig(
-    @Default("localhost") String host,
-    @Range(min = 1024, max = 65535) int port,
-    @Required String database,
-    @Default("root") String username,
-    @Default("") String password
-) {}
-
-// Load or reload asynchronously without blocking
-configService.loadAsync(DatabaseConfig.class)
-    .thenAccept(config -> logger.info("Database host: " + config.host()));
-```
-</details>
-
-<details>
-<summary><b>4. Idempotent Economy Operations</b></summary>
-
-```java
-EconomyOperationId operationId = EconomyOperationId.random();
-EconomyReason reason = EconomyReason.player("shop_purchase");
-
-economyService.withdraw(player.getUniqueId(), BigDecimal.valueOf(150.00), reason, operationId)
-    .whenComplete((transaction, error) -> {
-        if (error instanceof InsufficientFundsException) {
-            player.sendMessage(Component.text("You cannot afford this item!", NamedTextColor.RED));
-        } else if (transaction != null) {
-            player.sendMessage(Component.text("Purchased item! New balance: $" + transaction.newBalance()));
-        }
-    });
-```
-</details>
-
-<details>
-<summary><b>5. Fluent MiniMessage Item Builder</b></summary>
-
-```java
-ItemStack item = ItemBuilder.of(Material.NETHERITE_SWORD)
-    .customName("<gradient:#ff416c:#ff4b2b><bold>Lava Blade</bold></gradient>")
-    .lore(
-        "<gray>Forged in nether flames.",
-        "<yellow>Damage: <white>+15"
-    )
-    .enchant(Enchantment.SHARPNESS, 5)
-    .glow()
-    .build();
-
-player.getInventory().addItem(item);
-```
-</details>
-
----
-
-## 📥 Installation
-
-Cotani is published via **JitPack**. Add the repository and desired modules to your build file:
-
-### Gradle (Kotlin DSL)
+The latest tagged version is `1.0.0` and is available through JitPack. Add JitPack and Paper's Maven repository to `settings.gradle.kts`:
 
 ```kotlin
-repositories {
-    mavenCentral()
-    maven("https://jitpack.io")
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://jitpack.io")
+    }
 }
+```
 
+Then select only the modules your plugin needs:
+
+```kotlin
 dependencies {
     val cotaniVersion = "1.0.0"
 
     implementation("com.github.HanielCota.Cotani:cotani-core:$cotaniVersion")
     implementation("com.github.HanielCota.Cotani:cotani-task:$cotaniVersion")
-    implementation("com.github.HanielCota.Cotani:cotani-cache:$cotaniVersion")
     implementation("com.github.HanielCota.Cotani:cotani-storage:$cotaniVersion")
-    implementation("com.github.HanielCota.Cotani:cotani-text:$cotaniVersion")
-    implementation("com.github.HanielCota.Cotani:cotani-item:$cotaniVersion")
+    implementation("com.github.HanielCota.Cotani:cotani-cache:$cotaniVersion")
 }
 ```
 
-<details>
-<summary><b>Gradle (Groovy DSL) & Maven</b></summary>
+> [!NOTE]
+> The current source tree is `1.0.1-SNAPSHOT`. The `cotani-gui` and `cotani-metrics` modules were added after tag `1.0.0`; use a commit-based JitPack version only when intentionally testing unreleased code.
 
-#### Gradle (Groovy)
+JitPack also provides the equivalent Maven and Groovy DSL snippets on the [Cotani package page](https://jitpack.io/#HanielCota/Cotani).
 
-```groovy
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-}
+## Modules
 
-dependencies {
-    implementation 'com.github.HanielCota.Cotani:cotani-core:1.0.0'
-    implementation 'com.github.HanielCota.Cotani:cotani-task:1.0.0'
+| Module | Purpose |
+| --- | --- |
+| [`cotani-core`](cotani-core/README.md) | Lifecycle ownership and coalesced resource shutdown |
+| [`cotani-task`](cotani-task/README.md) | Async, global, region and entity scheduling with `TaskChain` |
+| [`cotani-storage`](cotani-storage/README.md) | SQLite, MySQL and MariaDB access, migrations and transactions |
+| [`cotani-cache`](cotani-cache/README.md) | Caffeine-backed data and player caches with persistence |
+| [`cotani-config`](cotani-config/README.md) | YAML binding to immutable records, validation and async reload |
+| [`cotani-user`](cotani-user/README.md) | Async user resolution and session lifecycle |
+| [`cotani-economy`](cotani-economy/README.md) | Precise, idempotent and auditable economy operations |
+| [`cotani-teleport`](cotani-teleport/README.md) | Policy-driven teleport pipelines and safety checks |
+| [`cotani-cooldown`](cotani-cooldown/README.md) | Local and distributed cooldown acquisition |
+| [`cotani-event`](cotani-event/README.md) | Reflection-free event dispatch and subscriptions |
+| [`cotani-gui`](cotani-gui/README.md) | Declarative inventory UIs with reactive state and exploit guards |
+| [`cotani-metrics`](cotani-metrics/) | Micrometer metrics and optional Prometheus export |
+| [`cotani-text`](cotani-text/README.md) | Adventure and MiniMessage formatting helpers |
+| [`cotani-item`](cotani-item/README.md) | Fluent Paper data-component item builders |
+
+## Quick start
+
+Create one scheduler during plugin startup and register its asynchronous shutdown with the Cotani lifecycle:
+
+```java
+public final class MyPlugin extends JavaPlugin {
+
+    private Cotani lifecycle;
+    private PaperTaskScheduler scheduler;
+
+    @Override
+    public void onEnable() {
+        scheduler = SchedulerFactory.create(this);
+        lifecycle = Cotani.forPlugin(this)
+            .withAsync(scheduler::closeAsync)
+            .build();
+    }
+
+    @Override
+    public void onDisable() {
+        if (lifecycle == null) {
+            return;
+        }
+
+        lifecycle.closeAsync().exceptionally(failure -> {
+            getLogger().log(Level.SEVERE, "Could not close Cotani resources", failure);
+            return null;
+        });
+    }
 }
 ```
 
-#### Maven (`pom.xml`)
+When an asynchronous service result needs to touch a player, retain the UUID and return through the entity scheduler:
 
-```xml
-<repositories>
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
-</repositories>
+```java
+UUID playerId = player.getUniqueId();
 
-<dependency>
-    <groupId>com.github.HanielCota.Cotani</groupId>
-    <artifactId>cotani-core</artifactId>
-    <version>1.0.0</version>
-</dependency>
+scheduler.chain(userService.findAsync(playerId))
+    .consumeEntity(playerId, user -> {
+        Player onlinePlayer = Bukkit.getPlayer(playerId);
+        if (onlinePlayer == null) {
+            return;
+        }
+
+        user.ifPresent(profile -> onlinePlayer.sendMessage(
+            Component.text("Welcome back, " + profile.username() + "!")
+        ));
+    })
+    .toCompletionStage()
+    .exceptionally(failure -> {
+        getLogger().log(Level.SEVERE, "Could not load user " + playerId, failure);
+        return null;
+    });
 ```
-</details>
-
----
-
-## 🛡️ Architectural Standards
-
-> [!IMPORTANT]
-> **Non-Blocking Rule**: Never call `future.join()`, `future.get()`, or `Thread.sleep(...)` inside application code.
 
 > [!WARNING]
-> **Entity Isolation**: Never store live `Player`, `World`, or `Entity` references inside long-lived services or capture them inside async lambdas. Always extract immutable identifiers (`UUID`, `Location` copies) first.
+> Never call `join()`, `get()` or `Thread.sleep(...)` in application code. Do not capture live `Player`, `World`, `Entity`, `Inventory` or `Block` objects in asynchronous flows.
 
-> [!TIP]
-> **Defensive API Design**: Cotani APIs use defensive collection copies and Java `Optional` for expected absence instead of returning `null`.
+Detailed usage examples live in each module README. The [Cotani cookbook](docs/ai/cotani-cookbook.md) collects end-to-end plugin recipes.
 
-For detailed architecture guides and developer cookbooks, check out:
-- 📖 [Repository Rules (`AGENTS.md`)](AGENTS.md)
-- 🍳 [Cotani Developer Cookbook](docs/ai/cotani-cookbook.md)
-- 📐 [Java Engineering Standards](.agents/skills/java-engineering-standards/SKILL.md)
-- ⚡ [Java Async Standards](.agents/skills/java-async-standards/SKILL.md)
-- 🏗️ [Paper Plugin Architecture](.agents/skills/paper-plugin-architecture/SKILL.md)
+## Development
 
----
+Clone the repository and run the checks with the included wrapper:
 
-## 🤝 Contributing & Security
+```bash
+git clone https://github.com/HanielCota/Cotani.git
+cd Cotani
+./gradlew spotlessApply
+./gradlew check
+```
 
-Contributions are welcome! Please review our [Contributing Guide](CONTRIBUTING.md) before submitting Pull Requests.
+`check` runs unit tests, formatting validation, Error Prone, NullAway and module-boundary checks. With Docker available, it also exercises the MySQL and MariaDB integration suites.
 
-- 🐛 **Found a bug?** Open a [Bug Report](https://github.com/HanielCota/Cotani/issues/new?template=bug_report.yml).
-- ✨ **Have an idea?** Submit a [Feature Request](https://github.com/HanielCota/Cotani/issues/new?template=feature_request.yml).
-- 🔒 **Security Vulnerability?** Read our [Security Policy](SECURITY.md).
+Additional project references:
 
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
-<div align="center">
-<sub>Crafted with ❤️ for high-performance PaperSpigot server networks.</sub>
-</div>
+- [Architecture and engineering rules](AGENTS.md)
+- [Contributor workflow](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Full architecture audit](docs/review/full-architecture-audit.md)
