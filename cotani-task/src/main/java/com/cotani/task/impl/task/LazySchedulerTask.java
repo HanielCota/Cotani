@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
+@com.cotani.api.InternalApi
 public final class LazySchedulerTask implements SchedulerTask {
 
     private final AtomicReference<@Nullable SchedulerTask> setupTask;

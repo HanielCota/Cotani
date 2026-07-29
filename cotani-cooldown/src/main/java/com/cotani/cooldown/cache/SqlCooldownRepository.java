@@ -40,8 +40,10 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
         return storage.queryExecutor()
                 .queryMany(sql, binder -> binder.string(playerId.toString()), row -> {
                     String action = row.getString("action_name");
-                    Instant startedAt = Objects.requireNonNull(row.getInstant("started_at"));
-                    Instant expiresAt = Objects.requireNonNull(row.getInstant("expires_at"));
+                    Instant startedAt = row.getInstantOptional("started_at")
+                            .orElseThrow(() -> new IllegalStateException("started_at is SQL NULL"));
+                    Instant expiresAt = row.getInstantOptional("expires_at")
+                            .orElseThrow(() -> new IllegalStateException("expires_at is SQL NULL"));
                     return new CooldownEntry(
                             new CooldownKey(CooldownTargets.user(playerId), CooldownAction.of(action)),
                             startedAt,

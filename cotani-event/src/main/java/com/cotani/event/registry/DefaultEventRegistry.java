@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class DefaultEventRegistry implements EventRegistry {
 
@@ -18,26 +19,36 @@ public final class DefaultEventRegistry implements EventRegistry {
     private final Map<UUID, EventSubscription> subscriptionIndex = new ConcurrentHashMap<>();
     private final Map<Class<? extends CotaniEvent>, List<EventSubscription>> resolvedCache = new ConcurrentHashMap<>();
     private final Map<Class<? extends CotaniEvent>, AtomicInteger> inactiveCounters = new ConcurrentHashMap<>();
+    private final ReentrantReadWriteLock snapshotLock = new ReentrantReadWriteLock();
 
     @Override
     public void register(EventSubscription subscription) {
         Objects.requireNonNull(subscription, "subscription cannot be null");
-
-        subscriptions.add(subscription);
-        subscriptionIndex.put(subscription.id(), subscription);
-        resolvedCache.clear();
-        inactiveCounters.clear();
+        snapshotLock.writeLock().lock();
+        try {
+            subscriptions.add(subscription);
+            subscriptionIndex.put(subscription.id(), subscription);
+            resolvedCache.clear();
+            inactiveCounters.clear();
+        } finally {
+            snapshotLock.writeLock().unlock();
+        }
     }
 
     @Override
     public void unregister(EventSubscription subscription) {
         Objects.requireNonNull(subscription, "subscription cannot be null");
 
-        subscription.unsubscribe();
-        subscriptionIndex.remove(subscription.id());
-        if (subscriptions.remove(subscription)) {
-            inactiveCounters.clear();
-            resolvedCache.clear();
+        snapshotLock.writeLock().lock();
+        try {
+            subscription.unsubscribe();
+            subscriptionIndex.remove(subscription.id());
+            if (subscriptions.remove(subscription)) {
+                inactiveCounters.clear();
+                resolvedCache.clear();
+            }
+        } finally {
+            snapshotLock.writeLock().unlock();
         }
     }
 
@@ -45,18 +56,23 @@ public final class DefaultEventRegistry implements EventRegistry {
     public List<EventSubscription> subscriptionsFor(CotaniEvent event) {
         Objects.requireNonNull(event, "event cannot be null");
 
-        Class<? extends CotaniEvent> eventClass = event.getClass();
-        List<EventSubscription> cached = resolvedCache.get(eventClass);
-        var inactiveCounter = inactiveCounters.get(eventClass);
-        if (cached != null && (inactiveCounter == null || inactiveCounter.get() == 0)) {
-            return cached;
-        }
+        snapshotLock.readLock().lock();
+        try {
+            Class<? extends CotaniEvent> eventClass = event.getClass();
+            List<EventSubscription> cached = resolvedCache.get(eventClass);
+            var inactiveCounter = inactiveCounters.get(eventClass);
+            if (cached != null && (inactiveCounter == null || inactiveCounter.get() == 0)) {
+                return cached;
+            }
 
-        return resolvedCache.computeIfAbsent(eventClass, cls -> {
-            var result = resolveSubscriptions(cls);
-            inactiveCounters.put(cls, new AtomicInteger(countInactive(result)));
-            return result;
-        });
+            return resolvedCache.computeIfAbsent(eventClass, cls -> {
+                var result = resolveSubscriptions(cls);
+                inactiveCounters.put(cls, new AtomicInteger(countInactive(result)));
+                return result;
+            });
+        } finally {
+            snapshotLock.readLock().unlock();
+        }
     }
 
     private List<EventSubscription> resolveSubscriptions(Class<? extends CotaniEvent> eventClass) {
@@ -82,25 +98,35 @@ public final class DefaultEventRegistry implements EventRegistry {
 
     @Override
     public void removeInactive() {
-        boolean changed = subscriptions.removeIf(subscription -> {
-            if (!subscription.active()) {
-                subscriptionIndex.remove(subscription.id());
-                return true;
+        snapshotLock.writeLock().lock();
+        try {
+            boolean changed = subscriptions.removeIf(subscription -> {
+                if (!subscription.active()) {
+                    subscriptionIndex.remove(subscription.id());
+                    return true;
+                }
+                return false;
+            });
+            if (changed) {
+                resolvedCache.clear();
+                inactiveCounters.clear();
             }
-            return false;
-        });
-        if (changed) {
-            resolvedCache.clear();
-            inactiveCounters.clear();
+        } finally {
+            snapshotLock.writeLock().unlock();
         }
     }
 
     @Override
     public void clear() {
-        subscriptions.forEach(EventSubscription::unsubscribe);
-        subscriptions.clear();
-        subscriptionIndex.clear();
-        resolvedCache.clear();
-        inactiveCounters.clear();
+        snapshotLock.writeLock().lock();
+        try {
+            subscriptions.forEach(EventSubscription::unsubscribe);
+            subscriptions.clear();
+            subscriptionIndex.clear();
+            resolvedCache.clear();
+            inactiveCounters.clear();
+        } finally {
+            snapshotLock.writeLock().unlock();
+        }
     }
 }

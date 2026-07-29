@@ -11,6 +11,7 @@ import java.math.RoundingMode;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
+@com.cotani.api.InternalApi
 public final class EconomyConfiguration implements AutoCloseable {
 
     private final CotaniConfigs configs;

@@ -5,6 +5,7 @@ import com.cotani.storage.backend.StorageBackend;
 import com.cotani.storage.config.StorageConfigReader;
 import com.cotani.storage.dialect.DialectFactory;
 import com.cotani.storage.dialect.SqlDialect;
+import com.cotani.storage.executor.AdmissionControlledExecutorService;
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.migration.Migration;
 import com.cotani.storage.migration.MigrationRunner;
@@ -28,6 +29,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 @NullMarked
 public final class CotaniStorage implements AutoCloseable {
@@ -47,13 +49,21 @@ public final class CotaniStorage implements AutoCloseable {
     private final SqlDialect dialect;
     private final Schema schema;
     private final TransactionManager transactions;
-    private final AtomicBoolean started = new AtomicBoolean();
+    private final int queryTimeoutSeconds;
+    private final Object lifecycleLock = new Object();
+    private final Object resourceCloseLock = new Object();
+    private final AtomicBoolean resourcesClosed = new AtomicBoolean();
+
+    private volatile LifecycleState state = LifecycleState.NEW;
+    private @Nullable CompletableFuture<CotaniStorage> startup;
+    private @Nullable CompletableFuture<Void> closing;
 
     CotaniStorage(
             Plugin plugin,
             StorageBackend backend,
             int threads,
             boolean useVirtualThreads,
+            int admissionQueueCapacity,
             List<Migration> migrations,
             List<Class<? extends CotaniRepository>> repositoryTypes,
             PaperTaskScheduler scheduler,
@@ -66,24 +76,41 @@ public final class CotaniStorage implements AutoCloseable {
         var platformFactory =
                 Thread.ofPlatform().name("cotani-storage-", 0).daemon(true).factory();
         var isSQLite = backend instanceof SQLiteBackend;
-        this.storageExecutor = createStorageExecutor(isSQLite, useVirtualThreads, threads, platformFactory);
+        int connectionLimit = connectionLimit(backend);
+        int concurrencyLimit = useVirtualThreads ? connectionLimit : Math.min(threads, connectionLimit);
+        this.storageExecutor = createStorageExecutor(
+                isSQLite, useVirtualThreads, concurrencyLimit, admissionQueueCapacity, platformFactory);
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this.queryTimeoutSeconds = queryTimeoutSeconds;
         this.dialect = new DialectFactory().create(backend);
-        this.executor = new QueryExecutor(provider, storageExecutor, serializers, queryTimeoutSeconds);
+        Executor guardedExecutor = this::executeStorageOperation;
+        this.executor = new QueryExecutor(provider, guardedExecutor, serializers, queryTimeoutSeconds);
         this.schema = new Schema(executor, dialect);
-        this.transactions = new TransactionManager(provider, storageExecutor, serializers, queryTimeoutSeconds);
+        this.transactions = new TransactionManager(provider, guardedExecutor, serializers, queryTimeoutSeconds);
     }
 
     private static ExecutorService createStorageExecutor(
-            boolean isSQLite, boolean useVirtualThreads, int threads, ThreadFactory platformFactory) {
-        if (isSQLite) {
-            return Executors.newSingleThreadExecutor(platformFactory);
-        }
-        if (useVirtualThreads) {
-            return Executors.newThreadPerTaskExecutor(
-                    Thread.ofVirtual().name("cotani-storage-vt-", 0).factory());
-        }
-        return Executors.newFixedThreadPool(threads, platformFactory);
+            boolean isSQLite,
+            boolean useVirtualThreads,
+            int requestedConcurrency,
+            int admissionQueueCapacity,
+            ThreadFactory platformFactory) {
+        int concurrencyLimit = isSQLite ? 1 : requestedConcurrency;
+        ExecutorService workers = useVirtualThreads && !isSQLite
+                ? Executors.newThreadPerTaskExecutor(
+                        Thread.ofVirtual().name("cotani-storage-vt-", 0).factory())
+                : Executors.newFixedThreadPool(concurrencyLimit, platformFactory);
+        return new AdmissionControlledExecutorService(workers, concurrencyLimit, admissionQueueCapacity);
+    }
+
+    private static int connectionLimit(StorageBackend backend) {
+        return switch (backend) {
+            case com.cotani.storage.backend.MySqlBackend mysql ->
+                mysql.credentials().pool().maximumPoolSize();
+            case com.cotani.storage.backend.MariaDbBackend mariaDb ->
+                mariaDb.credentials().value().pool().maximumPoolSize();
+            case SQLiteBackend _ -> 1;
+        };
     }
 
     public static CotaniStorageBuilder create(Plugin plugin) {
@@ -105,24 +132,49 @@ public final class CotaniStorage implements AutoCloseable {
     }
 
     public CompletionStage<CotaniStorage> startAsync() {
-        if (!started.compareAndSet(false, true)) {
-            return CompletableFuture.completedFuture(this);
+        synchronized (lifecycleLock) {
+            if (state == LifecycleState.RUNNING) {
+                return CompletableFuture.completedFuture(this);
+            }
+            if (state == LifecycleState.STARTING || state == LifecycleState.FAILED) {
+                return Objects.requireNonNull(startup, "startup");
+            }
+            if (state == LifecycleState.CLOSING || state == LifecycleState.CLOSED) {
+                return CompletableFuture.failedFuture(
+                        new IllegalStateException("CotaniStorage cannot be started after close has begun."));
+            }
+
+            state = LifecycleState.STARTING;
+            var startupPromise = new CompletableFuture<CotaniStorage>();
+            startup = startupPromise;
+            try {
+                registerRepositories();
+            } catch (Throwable failure) {
+                abortFailedStartup(failure, startupPromise);
+                return startupPromise;
+            }
+
+            var startupWork = CompletableFuture.supplyAsync(
+                            () -> {
+                                provider.start();
+                                return this;
+                            },
+                            storageExecutor)
+                    .thenCompose(storage -> runMigrations().thenApply(_ -> storage));
+            var _ = startupWork.whenComplete((storage, error) -> {
+                if (error != null) {
+                    abortFailedStartup(error, startupPromise);
+                    return;
+                }
+                synchronized (lifecycleLock) {
+                    if (state == LifecycleState.STARTING) {
+                        state = LifecycleState.RUNNING;
+                    }
+                }
+                startupPromise.complete(storage);
+            });
+            return startupPromise;
         }
-        registerRepositories();
-        return CompletableFuture.supplyAsync(
-                        () -> {
-                            provider.start();
-                            return this;
-                        },
-                        storageExecutor)
-                .thenCompose(storage -> runMigrations().thenApply(_ -> storage))
-                .exceptionallyCompose(error -> CompletableFuture.runAsync(
-                                () -> {
-                                    shutdownExecutor();
-                                    started.set(false);
-                                },
-                                scheduler.asyncExecutor())
-                        .thenCompose(_ -> CompletableFuture.failedFuture(error)));
     }
 
     public Plugin plugin() {
@@ -153,6 +205,16 @@ public final class CotaniStorage implements AutoCloseable {
         return executor;
     }
 
+    public StorageExecutorStats executorStats() {
+        var controlled = (AdmissionControlledExecutorService) storageExecutor;
+        return new StorageExecutorStats(
+                controlled.concurrencyLimit(),
+                controlled.queueCapacity(),
+                controlled.activeOperations(),
+                controlled.queuedOperations(),
+                controlled.rejectedOperations());
+    }
+
     public ValueSerializerRegistry serializers() {
         return serializers;
     }
@@ -172,17 +234,49 @@ public final class CotaniStorage implements AutoCloseable {
         if (Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("CotaniStorage.close() blocks; call closeAsync() off the main thread.");
         }
-        shutdownExecutor();
-        provider.close();
+        synchronized (lifecycleLock) {
+            if (state == LifecycleState.CLOSED) {
+                return;
+            }
+            state = LifecycleState.CLOSING;
+        }
+        try {
+            closeResources();
+            completeClose(null);
+        } catch (RuntimeException | Error failure) {
+            completeClose(failure);
+            throw failure;
+        }
     }
 
     public CompletionStage<Void> closeAsync() {
-        return CompletableFuture.runAsync(
-                () -> {
-                    shutdownExecutor();
-                    provider.close();
-                },
-                scheduler.asyncExecutor());
+        final CompletableFuture<Void> closePromise;
+        final CompletionStage<?> predecessor;
+        synchronized (lifecycleLock) {
+            if (closing != null) {
+                return closing;
+            }
+            closePromise = new CompletableFuture<>();
+            closing = closePromise;
+            predecessor = startup == null ? CompletableFuture.completedFuture(null) : startup.handle((_, _) -> null);
+            state = LifecycleState.CLOSING;
+        }
+
+        var _ = predecessor.whenComplete((_, _) -> {
+            try {
+                scheduler.asyncExecutor().execute(() -> {
+                    try {
+                        closeResources();
+                        completeClose(null);
+                    } catch (Throwable failure) {
+                        completeClose(failure);
+                    }
+                });
+            } catch (RejectedExecutionException rejected) {
+                closePromise.completeExceptionally(rejected);
+            }
+        });
+        return closePromise;
     }
 
     private void registerRepositories() {
@@ -204,7 +298,8 @@ public final class CotaniStorage implements AutoCloseable {
         if (migrations.isEmpty()) {
             return CompletionStages.completedVoid();
         }
-        var runner = new MigrationRunner(executor, schema);
+        var migrationExecutor = new QueryExecutor(provider, storageExecutor, serializers, queryTimeoutSeconds);
+        var runner = new MigrationRunner(migrationExecutor, new Schema(migrationExecutor, dialect));
         for (var migration : migrations) {
             runner.add(migration);
         }
@@ -221,5 +316,84 @@ public final class CotaniStorage implements AutoCloseable {
             storageExecutor.shutdownNow();
             Thread.currentThread().interrupt();
         }
+    }
+
+    private void executeStorageOperation(Runnable operation) {
+        if (state != LifecycleState.RUNNING) {
+            throw new RejectedExecutionException("CotaniStorage is not running (state=" + state + ").");
+        }
+        storageExecutor.execute(operation);
+    }
+
+    private void abortFailedStartup(Throwable failure, CompletableFuture<CotaniStorage> startupPromise) {
+        Runnable cleanup = () -> {
+            synchronized (resourceCloseLock) {
+                if (resourcesClosed.compareAndSet(false, true)) {
+                    storageExecutor.shutdownNow();
+                    try {
+                        provider.close();
+                    } catch (RuntimeException | Error closeFailure) {
+                        failure.addSuppressed(closeFailure);
+                    }
+                    repositories.clear();
+                }
+            }
+            synchronized (lifecycleLock) {
+                if (state != LifecycleState.CLOSING) {
+                    state = LifecycleState.FAILED;
+                }
+            }
+            startupPromise.completeExceptionally(unwrapCompletionFailure(failure));
+        };
+        try {
+            scheduler.asyncExecutor().execute(cleanup);
+        } catch (RejectedExecutionException rejected) {
+            failure.addSuppressed(rejected);
+            cleanup.run();
+        }
+    }
+
+    private void closeResources() {
+        synchronized (resourceCloseLock) {
+            if (!resourcesClosed.compareAndSet(false, true)) {
+                return;
+            }
+            shutdownExecutor();
+            provider.close();
+            repositories.clear();
+        }
+    }
+
+    private void completeClose(@Nullable Throwable failure) {
+        CompletableFuture<Void> closePromise;
+        synchronized (lifecycleLock) {
+            state = LifecycleState.CLOSED;
+            if (closing == null) {
+                closing = new CompletableFuture<>();
+            }
+            closePromise = closing;
+        }
+        if (failure == null) {
+            closePromise.complete(null);
+        } else {
+            closePromise.completeExceptionally(failure);
+        }
+    }
+
+    private static Throwable unwrapCompletionFailure(Throwable failure) {
+        if ((failure instanceof CompletionException || failure instanceof ExecutionException)
+                && failure.getCause() != null) {
+            return failure.getCause();
+        }
+        return failure;
+    }
+
+    private enum LifecycleState {
+        NEW,
+        STARTING,
+        RUNNING,
+        CLOSING,
+        CLOSED,
+        FAILED
     }
 }

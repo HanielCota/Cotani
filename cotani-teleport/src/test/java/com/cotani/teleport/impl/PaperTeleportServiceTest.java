@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
@@ -114,6 +116,10 @@ class PaperTeleportServiceTest {
     }
 
     private static TeleportOptions adminAsyncOptions() {
+        return adminAsyncOptions(Duration.ofSeconds(10));
+    }
+
+    private static TeleportOptions adminAsyncOptions(Duration timeout) {
         return TeleportOptions.builder()
                 .safety(SafetySettings.builder().safeLocation(false).build())
                 .policies(PolicySettings.builder()
@@ -124,6 +130,25 @@ class PaperTeleportServiceTest {
                         .build())
                 .feedback(FeedbackSettings.builder().sendMessages(false).build())
                 .execution(ExecutionSettings.builder().async(true).build())
+                .timeout(timeout)
+                .build();
+    }
+
+    private static TeleportOptions indeterminateAsyncOptions() {
+        return TeleportOptions.builder()
+                .safety(SafetySettings.builder().safeLocation(false).build())
+                .policies(PolicySettings.builder()
+                        .checkCombat(false)
+                        .checkCooldown(false)
+                        .checkPermission(false)
+                        .checkRegion(false)
+                        .build())
+                .feedback(FeedbackSettings.builder().sendMessages(false).build())
+                .execution(ExecutionSettings.builder()
+                        .async(true)
+                        .reconciliationTimeout(Duration.ofMillis(10))
+                        .build())
+                .timeout(Duration.ofMillis(10))
                 .build();
     }
 
@@ -230,6 +255,77 @@ class PaperTeleportServiceTest {
         assertTrue(result instanceof TeleportResult.Success);
         verify(player).teleportAsync(any(Location.class));
         verify(player, never()).teleport(any(Location.class));
+    }
+
+    @Test
+    void asyncTimeoutWaitsForUnderlyingTeleportOutcome() {
+        var service = newService();
+        var world = mockWorld();
+        var from = location(world, 0, 64, 0);
+        var player = mockPlayer(PLAYER_ID, from);
+        var target = location(world, 10, 64, 10);
+        when(playerResolver.resolve(PLAYER_ID)).thenReturn(player);
+        when(policyChain.validate(any(TeleportContext.class))).thenReturn(PolicyResult.allowed());
+        var preEvent = new CotaniPreTeleportEvent(player, from, target, TeleportCause.PLUGIN_INTERNAL, "test");
+        when(eventNotifier.firePreTeleportSync(
+                        eq(player), any(Location.class), eq(target), eq(TeleportCause.PLUGIN_INTERNAL), eq("test")))
+                .thenReturn(preEvent);
+        var underlyingTeleport = new CompletableFuture<Boolean>();
+        when(player.teleportAsync(any(Location.class))).thenReturn(underlyingTeleport);
+
+        var result = service.teleport(request(player, target, adminAsyncOptions(Duration.ofMillis(10))))
+                .toCompletableFuture();
+        var deadlineObserved = new CompletableFuture<Void>();
+        var timer = Executors.newSingleThreadScheduledExecutor();
+        try {
+            var _ = timer.schedule(() -> deadlineObserved.complete(null), 50, TimeUnit.MILLISECONDS);
+            deadlineObserved.join();
+            assertFalse(result.isDone(), "an unconfirmed timeout must not release the player pipeline");
+
+            underlyingTeleport.complete(true);
+
+            assertInstanceOf(TeleportResult.Success.class, result.join());
+            verify(eventNotifier, never()).fireFailure(any(TeleportResult.Failure.class));
+        } finally {
+            timer.shutdownNow();
+        }
+    }
+
+    @Test
+    void neverCompletingPaperFutureReturnsIndeterminateAndQuarantinesPlayer() throws Exception {
+        var service = newService();
+        var world = mockWorld();
+        var from = location(world, 0, 64, 0);
+        var player = mockPlayer(PLAYER_ID, from);
+        var target = location(world, 10, 64, 10);
+        when(playerResolver.resolve(PLAYER_ID)).thenReturn(player);
+        when(policyChain.validate(any(TeleportContext.class))).thenReturn(PolicyResult.allowed());
+        var preEvent = new CotaniPreTeleportEvent(player, from, target, TeleportCause.PLUGIN_INTERNAL, "test");
+        when(eventNotifier.firePreTeleportSync(
+                        eq(player), any(Location.class), eq(target), eq(TeleportCause.PLUGIN_INTERNAL), eq("test")))
+                .thenReturn(preEvent);
+        var underlyingTeleport = new CompletableFuture<Boolean>();
+        when(player.teleportAsync(any(Location.class))).thenReturn(underlyingTeleport);
+
+        var result = service.teleport(request(player, target, indeterminateAsyncOptions()))
+                .toCompletableFuture()
+                .get(2, TimeUnit.SECONDS);
+
+        assertTrue(result instanceof TeleportResult.Failure failure
+                && failure.reason() == TeleportFailureReason.OUTCOME_INDETERMINATE);
+        assertTrue(service.hasIndeterminateTeleport(PLAYER_ID));
+
+        var blocked = service.teleport(request(player, target, adminSyncOptions()))
+                .toCompletableFuture()
+                .get(2, TimeUnit.SECONDS);
+        assertTrue(blocked instanceof TeleportResult.Failure failure
+                && failure.reason() == TeleportFailureReason.OUTCOME_INDETERMINATE);
+        verify(player, never()).teleport(any(Location.class));
+
+        underlyingTeleport.complete(true);
+        assertFalse(service.hasIndeterminateTeleport(PLAYER_ID));
+        verify(eventNotifier)
+                .firePostTeleport(eq(PLAYER_ID), any(Location.class), eq(target), any(TeleportResult.Success.class));
     }
 
     @Test
@@ -427,6 +523,70 @@ class PaperTeleportServiceTest {
     }
 
     @Test
+    void eventChangedSafeTargetIsResolvedAndPoliciesAreRevalidated() {
+        var service = newService();
+        var world = mockWorld();
+        var from = location(world, 0, 64, 0);
+        var player = mockPlayer(PLAYER_ID, from);
+        var requested = location(world, 10, 64, 10);
+        var initiallyResolved = location(world, 12, 64, 12);
+        var eventTarget = location(world, 20, 64, 20);
+        var finalResolved = location(world, 22, 64, 22);
+        when(playerResolver.resolve(PLAYER_ID)).thenReturn(player);
+        when(policyChain.validate(any(TeleportContext.class))).thenReturn(PolicyResult.allowed());
+        when(safeLocationResolver.resolve(eq(requested), any(SafeLocationOptions.class)))
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(initiallyResolved)));
+        when(safeLocationResolver.resolve(eq(eventTarget), any(SafeLocationOptions.class)))
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(finalResolved)));
+        var preEvent =
+                new CotaniPreTeleportEvent(player, from, initiallyResolved, TeleportCause.PLUGIN_INTERNAL, "test");
+        preEvent.setTo(eventTarget);
+        when(eventNotifier.firePreTeleportSync(
+                        eq(player),
+                        any(Location.class),
+                        eq(initiallyResolved),
+                        eq(TeleportCause.PLUGIN_INTERNAL),
+                        eq("test")))
+                .thenReturn(preEvent);
+        when(player.teleport(any(Location.class))).thenReturn(true);
+
+        var result = service.teleport(request(player, requested, safeOptions()))
+                .toCompletableFuture()
+                .join();
+
+        assertInstanceOf(TeleportResult.Success.class, result);
+        verify(safeLocationResolver).resolve(eq(requested), any(SafeLocationOptions.class));
+        verify(safeLocationResolver).resolve(eq(eventTarget), any(SafeLocationOptions.class));
+        verify(policyChain, times(2)).validate(any(TeleportContext.class));
+        verify(player).teleport(finalResolved);
+    }
+
+    @Test
+    void eventChangedInvalidTargetIsRejectedBeforeTeleport() {
+        var service = newService();
+        var world = mockWorld();
+        var from = location(world, 0, 64, 0);
+        var player = mockPlayer(PLAYER_ID, from);
+        var target = location(world, 10, 64, 10);
+        when(playerResolver.resolve(PLAYER_ID)).thenReturn(player);
+        when(policyChain.validate(any(TeleportContext.class))).thenReturn(PolicyResult.allowed());
+        var preEvent = new CotaniPreTeleportEvent(player, from, target, TeleportCause.PLUGIN_INTERNAL, "test");
+        preEvent.setTo(new Location(null, 20, 64, 20));
+        when(eventNotifier.firePreTeleportSync(
+                        eq(player), any(Location.class), eq(target), eq(TeleportCause.PLUGIN_INTERNAL), eq("test")))
+                .thenReturn(preEvent);
+
+        var result = service.teleport(request(player, target, adminSyncOptions()))
+                .toCompletableFuture()
+                .join();
+
+        assertTrue(result instanceof TeleportResult.Failure failure
+                && failure.reason() == TeleportFailureReason.WORLD_UNLOADED);
+        verify(player, never()).teleport(any(Location.class));
+        verify(player, never()).teleportAsync(any(Location.class));
+    }
+
+    @Test
     void unsafeLocationReturnsFailure() {
         var service = newService();
         var world = mockWorld();
@@ -534,6 +694,45 @@ class PaperTeleportServiceTest {
                 .join();
 
         verify(cooldownService).put(PLAYER_ID, TeleportCause.PLUGIN_INTERNAL, duration);
+    }
+
+    @Test
+    void teleportsForSamePlayerExecuteSequentially() {
+        var service = newService();
+        var world = mockWorld();
+        var from = location(world, 0, 64, 0);
+        var player = mockPlayer(PLAYER_ID, from);
+        var firstTarget = location(world, 10, 64, 10);
+        var secondTarget = location(world, 20, 64, 20);
+        when(playerResolver.resolve(PLAYER_ID)).thenReturn(player);
+        when(policyChain.validate(any(TeleportContext.class))).thenReturn(PolicyResult.allowed());
+        var firstEvent = new CotaniPreTeleportEvent(player, from, firstTarget, TeleportCause.PLUGIN_INTERNAL, "test");
+        var secondEvent = new CotaniPreTeleportEvent(player, from, secondTarget, TeleportCause.PLUGIN_INTERNAL, "test");
+        when(eventNotifier.firePreTeleportSync(
+                        eq(player),
+                        any(Location.class),
+                        any(Location.class),
+                        eq(TeleportCause.PLUGIN_INTERNAL),
+                        eq("test")))
+                .thenReturn(firstEvent, secondEvent);
+        var firstTeleport = new CompletableFuture<Boolean>();
+        when(player.teleportAsync(any(Location.class)))
+                .thenReturn(firstTeleport)
+                .thenReturn(CompletableFuture.completedFuture(true));
+
+        var firstResult = service.teleport(request(player, firstTarget, adminAsyncOptions()));
+        var secondResult = service.teleport(request(player, secondTarget, adminAsyncOptions()));
+
+        verify(player, times(1)).teleportAsync(any(Location.class));
+        assertFalse(secondResult.toCompletableFuture().isDone());
+
+        firstTeleport.complete(true);
+
+        assertInstanceOf(
+                TeleportResult.Success.class, firstResult.toCompletableFuture().join());
+        assertInstanceOf(
+                TeleportResult.Success.class, secondResult.toCompletableFuture().join());
+        verify(player, times(2)).teleportAsync(any(Location.class));
     }
 
     @Test

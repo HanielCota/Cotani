@@ -8,14 +8,17 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
+@com.cotani.api.InternalApi
 public final class InMemoryCooldownStore implements CooldownStore {
 
     private static final String KEY_NULL_MSG = "key cannot be null";
 
     private final ConcurrentMap<CooldownKey, CooldownEntry> entries = new ConcurrentHashMap<>();
+    private final AtomicLong nextCleanupEpochMilli = new AtomicLong(Long.MIN_VALUE);
 
     @Override
     public Optional<CooldownEntry> find(CooldownKey key) {
@@ -56,13 +59,17 @@ public final class InMemoryCooldownStore implements CooldownStore {
         Objects.requireNonNull(key, KEY_NULL_MSG);
         Objects.requireNonNull(duration, "duration cannot be null");
         Objects.requireNonNull(clock, "clock cannot be null");
+        if (!duration.isPositive()) {
+            throw new IllegalArgumentException("duration must be positive");
+        }
 
         Instant now = clock.instant();
+        cleanupWhenDue(now);
         AtomicReference<@Nullable CooldownResult> resultReference = new AtomicReference<>();
 
         entries.compute(key, (ignored, current) -> {
-            if (current != null && !current.expired(clock)) {
-                resultReference.set(CooldownResult.denied(key, current.remaining(clock), current.expiresAt()));
+            if (current != null && !current.expired(now)) {
+                resultReference.set(CooldownResult.denied(key, current.remaining(now), current.expiresAt()));
 
                 return current;
             }
@@ -76,5 +83,26 @@ public final class InMemoryCooldownStore implements CooldownStore {
         });
 
         return Objects.requireNonNull(resultReference.get());
+    }
+
+    public long estimatedSize() {
+        return entries.size();
+    }
+
+    private void cleanupWhenDue(Instant now) {
+        long nowMillis = now.toEpochMilli();
+        long nextCleanup = nextCleanupEpochMilli.get();
+        if (nowMillis < nextCleanup || !nextCleanupEpochMilli.compareAndSet(nextCleanup, safeNextCleanup(now))) {
+            return;
+        }
+        entries.entrySet().removeIf(entry -> entry.getValue().expired(now));
+    }
+
+    private static long safeNextCleanup(Instant now) {
+        try {
+            return now.plus(Duration.ofMinutes(1)).toEpochMilli();
+        } catch (ArithmeticException overflow) {
+            return Long.MAX_VALUE;
+        }
     }
 }

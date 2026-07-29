@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import net.cotani.metrics.config.MetricsConfig;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -19,13 +19,19 @@ import org.jspecify.annotations.Nullable;
 public final class PrometheusServer implements AutoCloseable {
 
     private final PrometheusMeterRegistry registry;
+    private final String host;
     private final int port;
     private final String path;
     private @Nullable HttpServer server;
     private @Nullable ExecutorService executor;
 
     public PrometheusServer(PrometheusMeterRegistry registry, int port, String path) {
+        this(registry, MetricsConfig.DEFAULT_HOST, port, path);
+    }
+
+    public PrometheusServer(PrometheusMeterRegistry registry, String host, int port, String path) {
         this.registry = Objects.requireNonNull(registry, "registry");
+        this.host = Objects.requireNonNull(host, "host");
         this.port = port;
         this.path = Objects.requireNonNull(path, "path");
     }
@@ -36,7 +42,7 @@ public final class PrometheusServer implements AutoCloseable {
         }
 
         try {
-            HttpServer http = HttpServer.create(new InetSocketAddress(port), 0);
+            HttpServer http = HttpServer.create(new InetSocketAddress(host, port), 0);
             ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor();
             http.setExecutor(exec);
             http.createContext(path, this::handleScrape);
@@ -49,6 +55,11 @@ public final class PrometheusServer implements AutoCloseable {
     }
 
     private void handleScrape(HttpExchange exchange) throws IOException {
+        if (!path.equals(exchange.getRequestURI().getPath())) {
+            exchange.sendResponseHeaders(404, -1);
+            exchange.close();
+            return;
+        }
         if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             exchange.close();
@@ -67,8 +78,12 @@ public final class PrometheusServer implements AutoCloseable {
         return server != null;
     }
 
-    public int port() {
-        return port;
+    public synchronized int port() {
+        return server == null ? port : server.getAddress().getPort();
+    }
+
+    public String host() {
+        return host;
     }
 
     public String path() {
@@ -78,19 +93,11 @@ public final class PrometheusServer implements AutoCloseable {
     @Override
     public synchronized void close() {
         if (server != null) {
-            server.stop(1);
+            server.stop(0);
             server = null;
         }
         if (executor != null) {
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
+            executor.shutdownNow();
             executor = null;
         }
     }

@@ -6,6 +6,7 @@ import com.cotani.task.api.TaskMetadata;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+@com.cotani.api.InternalApi
 public final class TaskDispatcher {
 
     private final PlatformScheduler platformScheduler;

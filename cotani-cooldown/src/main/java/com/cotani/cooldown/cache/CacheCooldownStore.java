@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,6 +24,7 @@ public final class CacheCooldownStore implements CooldownStore {
 
     private final PlayerDataCache<PlayerCooldowns> playerCache;
     private final ConcurrentMap<CooldownKey, CooldownEntry> nonPlayerEntries = new ConcurrentHashMap<>();
+    private final AtomicLong nextCleanupEpochMilli = new AtomicLong(Long.MIN_VALUE);
 
     public CacheCooldownStore(PlayerDataCache<PlayerCooldowns> playerCache) {
         this.playerCache = Objects.requireNonNull(playerCache, "playerCache");
@@ -98,6 +100,9 @@ public final class CacheCooldownStore implements CooldownStore {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(duration, "duration");
         Objects.requireNonNull(clock, "clock");
+        if (!duration.isPositive()) {
+            throw new IllegalArgumentException("duration must be positive");
+        }
 
         if (key.target() instanceof UserCooldownTarget(UUID userId)) {
             return checkAndStartUserCooldown(userId, key, duration, clock);
@@ -115,24 +120,16 @@ public final class CacheCooldownStore implements CooldownStore {
 
         PlayerCooldowns playerCooldowns = optional.get();
         Instant now = clock.instant();
-        var current = playerCooldowns.find(key.action().value());
-
-        if (current.isPresent() && !current.get().expired(now)) {
-            var entry = current.get();
-            return CooldownResult.denied(key, entry.remaining(now), entry.expiresAt());
+        var result = playerCooldowns.checkAndStart(key, duration, now);
+        if (result.allowed()) {
+            playerCache.markDirty(userId);
         }
-
-        Instant expiresAt = now.plus(duration);
-        CooldownEntry created = new CooldownEntry(key, now, expiresAt);
-        playerCooldowns.put(created);
-        playerCache.markDirty(userId);
-        playerCache.mutateAsync(userId, pc -> pc.put(created));
-
-        return CooldownResult.allowed(key);
+        return result;
     }
 
     private CooldownResult checkAndStartNonPlayerCooldown(CooldownKey key, Duration duration, Clock clock) {
         Instant now = clock.instant();
+        cleanupNonPlayerEntriesWhenDue(now);
         AtomicReference<@Nullable CooldownResult> resultReference = new AtomicReference<>();
 
         nonPlayerEntries.compute(key, (ignored, current) -> {
@@ -148,5 +145,22 @@ public final class CacheCooldownStore implements CooldownStore {
         });
 
         return Objects.requireNonNull(resultReference.get());
+    }
+
+    private void cleanupNonPlayerEntriesWhenDue(Instant now) {
+        long nowMillis = now.toEpochMilli();
+        long nextCleanup = nextCleanupEpochMilli.get();
+        if (nowMillis < nextCleanup || !nextCleanupEpochMilli.compareAndSet(nextCleanup, safeNextCleanup(now))) {
+            return;
+        }
+        nonPlayerEntries.entrySet().removeIf(entry -> entry.getValue().expired(now));
+    }
+
+    private static long safeNextCleanup(Instant now) {
+        try {
+            return now.plus(Duration.ofMinutes(1)).toEpochMilli();
+        } catch (ArithmeticException overflow) {
+            return Long.MAX_VALUE;
+        }
     }
 }

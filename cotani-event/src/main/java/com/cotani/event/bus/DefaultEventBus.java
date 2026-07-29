@@ -2,6 +2,7 @@ package com.cotani.event.bus;
 
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.api.EventBus;
+import com.cotani.event.api.EventDispatchPolicy;
 import com.cotani.event.api.EventListener;
 import com.cotani.event.api.EventPriority;
 import com.cotani.event.dispatcher.DefaultEventDispatcher;
@@ -15,25 +16,47 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class DefaultEventBus implements EventBus {
 
     private final EventRegistry registry;
     private final EventDispatcher dispatcher;
     private final Executor asyncExecutor;
+    private final java.util.Optional<ExecutorService> ownedListenerExecutor;
 
     public DefaultEventBus(EventRegistry registry, EventDispatcher dispatcher, Executor asyncExecutor) {
+        this(registry, dispatcher, asyncExecutor, java.util.Optional.empty());
+    }
+
+    private DefaultEventBus(
+            EventRegistry registry,
+            EventDispatcher dispatcher,
+            Executor asyncExecutor,
+            java.util.Optional<ExecutorService> ownedListenerExecutor) {
         this.registry = Objects.requireNonNull(registry, "registry cannot be null");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher cannot be null");
         this.asyncExecutor = Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
+        this.ownedListenerExecutor = Objects.requireNonNull(ownedListenerExecutor, "ownedListenerExecutor");
     }
 
     public static DefaultEventBus create(EventExceptionHandler exceptionHandler, Executor asyncExecutor) {
+        return create(exceptionHandler, asyncExecutor, EventDispatchPolicy.defaults());
+    }
+
+    public static DefaultEventBus create(
+            EventExceptionHandler exceptionHandler, Executor asyncExecutor, EventDispatchPolicy policy) {
         Objects.requireNonNull(exceptionHandler, "exceptionHandler cannot be null");
         Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
 
+        Objects.requireNonNull(policy, "policy cannot be null");
+        var listenerExecutor = Executors.newVirtualThreadPerTaskExecutor();
         return new DefaultEventBus(
-                new DefaultEventRegistry(), new DefaultEventDispatcher(exceptionHandler), asyncExecutor);
+                new DefaultEventRegistry(),
+                new DefaultEventDispatcher(exceptionHandler, listenerExecutor, policy),
+                asyncExecutor,
+                java.util.Optional.of(listenerExecutor));
     }
 
     @Override
@@ -46,8 +69,13 @@ public final class DefaultEventBus implements EventBus {
     @Override
     public <T extends CotaniEvent> CompletionStage<T> publishAsync(T event) {
         Objects.requireNonNull(event, "event cannot be null");
-
-        return CompletableFuture.supplyAsync(() -> publish(event), asyncExecutor);
+        var kickoff = new CompletableFuture<Void>();
+        try {
+            asyncExecutor.execute(() -> kickoff.complete(null));
+        } catch (RuntimeException schedulingFailure) {
+            kickoff.completeExceptionally(schedulingFailure);
+        }
+        return kickoff.thenCompose(_ -> dispatcher.dispatchAsync(event, registry.subscriptionsFor(event)));
     }
 
     @Override
@@ -85,5 +113,11 @@ public final class DefaultEventBus implements EventBus {
     @Override
     public void clear() {
         registry.clear();
+    }
+
+    @Override
+    public void close() {
+        clear();
+        ownedListenerExecutor.ifPresent(ExecutorService::shutdownNow);
     }
 }

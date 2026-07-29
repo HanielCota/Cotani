@@ -4,6 +4,7 @@ import com.cotani.user.api.CotaniUser;
 import java.util.Objects;
 import java.util.UUID;
 
+@com.cotani.api.InternalApi
 public record SimpleCotaniUser(
         UUID uniqueId,
         UUID sessionId,

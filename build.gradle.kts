@@ -35,6 +35,24 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
         val apiImportPattern = Regex("""^import\s+(?:com|net)\.cotani\..*\.(impl|internal)\.""")
         val violations = mutableListOf<String>()
 
+        root.walkTopDown()
+            .filter { file ->
+                file.isFile &&
+                        file.extension == "java" &&
+                        file.invariantSeparatorsPath.contains("/src/main/java/") &&
+                        (file.invariantSeparatorsPath.contains("/internal/") ||
+                                file.invariantSeparatorsPath.contains("/impl/"))
+            }
+            .forEach { file ->
+                val source = file.readText()
+                if (Regex("""(?m)^public\s+(?:final\s+|abstract\s+)?(?:class|record|interface|enum|sealed\s+interface)\s+""")
+                        .containsMatchIn(source) &&
+                    !source.contains("@com.cotani.api.InternalApi")) {
+                    violations +=
+                        "${file.relativeTo(root)} exposes an unmarked implementation; add @InternalApi or move the contract out of impl/internal"
+                }
+            }
+
         moduleNames.forEach { module ->
             val sourceRoot = root.resolve("cotani-$module/src")
             if (!sourceRoot.exists()) {
@@ -179,7 +197,7 @@ subprojects {
 
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         java {
-            palantirJavaFormat("2.94.0")
+            palantirJavaFormat("2.96.0")
         }
     }
 }
@@ -194,4 +212,3 @@ val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("val
 tasks.named("check") {
     dependsOn(validateModuleArchitecture)
 }
-

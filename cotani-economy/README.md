@@ -11,6 +11,7 @@ Economy API with `BigDecimal` values, atomic transactions, idempotency and event
 - **Exact Precision**: Powered by `BigDecimal` to prevent float/double rounding errors.
 - **Idempotent Transactions**: Every transaction requires a unique `EconomyOperationId` to prevent duplication bugs.
 - **Atomic Operations**: Balances are updated via ACID-compliant atomic transactions.
+- **Cross-Instance Consistency**: Balance reads and mutations use the SQL source of truth; no process-local balance cache can serve a stale value.
 - **Auditable Ledger**: Keeps records of all transactions (`deposit`, `withdraw`, `transfer`) along with structured metadata (`EconomyReason`).
 - **Domain-Specific Exceptions**: Easily handle errors like `InsufficientFundsException` or `InvalidAmountException` in your async chains.
 
@@ -72,6 +73,7 @@ economy.transfer(sourceId, targetId, BigDecimal.valueOf(50), reason, operationId
 3. **No Double/Float Usage**: Always represent financial amounts with `BigDecimal`. Do not use primitive floating-point structures.
 4. **Service-Exclusive Operations**: Route every balance modification exclusively through the `EconomyService`. Never run direct raw SQL updates on currency tables.
 5. **Swallow No Exceptions**: Propagate and handle financial failure exceptions explicitly. Swallowing failures leads to out-of-sync player balances.
+6. **Shared Database**: Multiple server instances may share the same database; keep operation IDs unique per logical operation and size the pool/admission queue for expected contention.
 
 ## Anti-Patterns
 

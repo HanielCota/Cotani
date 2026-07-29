@@ -9,8 +9,10 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -26,6 +28,7 @@ public final class Cotani implements AutoCloseable {
     private final CopyOnWriteArrayList<AutoCloseable> closeables;
     private final CopyOnWriteArrayList<Supplier<CompletionStage<Void>>> asyncCloseables;
     private final AtomicBoolean closed;
+    private final AtomicReference<@Nullable CompletableFuture<Void>> closeFuture;
 
     private Cotani(
             Plugin plugin, List<AutoCloseable> closeables, List<Supplier<CompletionStage<Void>>> asyncCloseables) {
@@ -33,6 +36,7 @@ public final class Cotani implements AutoCloseable {
         this.closeables = new CopyOnWriteArrayList<>(closeables);
         this.asyncCloseables = new CopyOnWriteArrayList<>(asyncCloseables);
         this.closed = new AtomicBoolean();
+        this.closeFuture = new AtomicReference<>();
     }
 
     public static Builder forPlugin(Plugin plugin) {
@@ -100,11 +104,12 @@ public final class Cotani implements AutoCloseable {
      * @return a stage completing when all teardown steps finish
      */
     public CompletionStage<Void> closeAsync() {
-        if (!closed.compareAndSet(false, true)) {
-            return CompletableFuture.completedFuture(null);
-        }
-
         var result = new CompletableFuture<Void>();
+        if (!closeFuture.compareAndSet(null, result)) {
+            return Objects.requireNonNull(closeFuture.get(), "closeFuture");
+        }
+        closed.set(true);
+
         var asyncSnapshot = List.copyOf(asyncCloseables);
         var syncSnapshot = List.copyOf(closeables);
         asyncCloseables.clear();
@@ -140,6 +145,9 @@ public final class Cotani implements AutoCloseable {
      */
     @Override
     public void close() {
+        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("Cotani.close() blocks; use closeAsync() on the server thread.");
+        }
         try {
             closeAsync().toCompletableFuture().get(ASYNC_CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException interrupted) {

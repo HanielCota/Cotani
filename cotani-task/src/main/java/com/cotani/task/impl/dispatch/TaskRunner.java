@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+@com.cotani.api.InternalApi
 public final class TaskRunner {
 
     private final TaskExceptionHandler exceptionHandler;

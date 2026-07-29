@@ -9,6 +9,7 @@ import com.cotani.user.internal.model.SimpleCotaniUser;
 import java.util.*;
 import java.util.concurrent.CompletionStage;
 
+@com.cotani.api.InternalApi
 public final class StorageUserRepository implements UserRepository {
 
     private static final String UNIQUE_ID_COL = "unique_id";

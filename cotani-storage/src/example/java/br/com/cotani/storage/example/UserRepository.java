@@ -55,6 +55,10 @@ public final class UserRepository extends PlayerDataRepository<User> {
     }
 
     private User map(Row row) throws SQLException {
-        return new User(row.getUuid("unique_id"), row.getString("name"), row.getLong("coins"));
+        return new User(
+                row.getUuidOptional("unique_id")
+                        .orElseThrow(() -> new IllegalStateException("unique_id is SQL NULL")),
+                row.getString("name"),
+                row.getLong("coins"));
     }
 }

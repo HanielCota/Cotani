@@ -18,6 +18,7 @@ import org.bukkit.entity.Player;
  *
  * @param <V> the player data type
  */
+@com.cotani.api.InternalApi
 public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     private static final String PLAYER_PARAM = "player";

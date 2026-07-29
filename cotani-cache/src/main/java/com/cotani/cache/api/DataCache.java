@@ -16,6 +16,11 @@ import java.util.function.UnaryOperator;
  *
  * <p>Keys and values must not be {@code null}.
  *
+ * <p>Without a configured {@code CacheInvalidationBus}, consistency is local and eventual. With a
+ * shared bus, clean entries are invalidated after successful writes. Every out-of-process writer
+ * must participate in that protocol; dirty local entries are deliberately retained to avoid data
+ * loss.
+ *
  * @param <K> the key type
  * @param <V> the value type
  */

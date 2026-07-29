@@ -6,6 +6,7 @@ import com.cotani.economy.transaction.EconomyReason;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@com.cotani.api.InternalApi
 public interface EconomyGuard {
 
     BigDecimal normalizeAmount(BigDecimal amount);

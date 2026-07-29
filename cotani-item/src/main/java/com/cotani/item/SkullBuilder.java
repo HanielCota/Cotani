@@ -14,14 +14,20 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
 
-    private static final SkullTextureResolver TEXTURE_RESOLVER = new SkullTextureResolver();
+    private final SkullTextureResolver textureResolver;
 
-    private SkullBuilder() {
+    private SkullBuilder(SkullTextureResolver textureResolver) {
         super(Material.PLAYER_HEAD);
+        this.textureResolver = Objects.requireNonNull(textureResolver, "textureResolver");
     }
 
     public static SkullBuilder create() {
-        return new SkullBuilder();
+        return new SkullBuilder(SkullTextureResolver.uncached());
+    }
+
+    /** Uses the caller-owned resolver, allowing an explicitly scoped shared texture cache. */
+    public static SkullBuilder create(SkullTextureResolver textureResolver) {
+        return new SkullBuilder(textureResolver);
     }
 
     @Override
@@ -50,15 +56,15 @@ public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
     }
 
     public SkullBuilder texture(String base64) {
-        return profile(TEXTURE_RESOLVER.fromBase64(base64));
+        return profile(textureResolver.fromBase64(base64));
     }
 
     public SkullBuilder textureUrl(String textureUrl) {
-        return profile(TEXTURE_RESOLVER.fromUrl(textureUrl));
+        return profile(textureResolver.fromUrl(textureUrl));
     }
 
     public SkullBuilder textureUrl(URI textureUri) {
-        return profile(TEXTURE_RESOLVER.fromUrl(textureUri));
+        return profile(textureResolver.fromUrl(textureUri));
     }
 
     public SkullBuilder noteBlockSound(NamespacedKey soundKey) {

@@ -20,6 +20,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@com.cotani.api.InternalApi
 public final class DefaultEconomyService implements EconomyService {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultEconomyService.class.getName());

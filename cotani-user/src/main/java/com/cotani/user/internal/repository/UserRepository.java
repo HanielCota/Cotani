@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
+@com.cotani.api.InternalApi
 public interface UserRepository {
 
     CompletionStage<Optional<SimpleCotaniUser>> find(UUID uniqueId, String username);

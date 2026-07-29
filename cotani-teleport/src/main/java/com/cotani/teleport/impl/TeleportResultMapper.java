@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.bukkit.Location;
 
+@com.cotani.api.InternalApi
 public final class TeleportResultMapper {
     private static final String CONTEXT_PARAM = "context";
 

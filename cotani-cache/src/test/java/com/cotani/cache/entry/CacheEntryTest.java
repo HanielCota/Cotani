@@ -4,6 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("NullAway")
@@ -209,5 +213,49 @@ class CacheEntryTest {
         CacheEntry<String> entry = new CacheEntry<>("value");
 
         assertFalse(entry.markSavedIfVersionMatches(entry.version()));
+    }
+
+    @Test
+    void mutableUpdaterExecutesExactlyOncePerConcurrentOperation() throws InterruptedException {
+        CacheEntry<AtomicInteger> entry = new CacheEntry<>(new AtomicInteger());
+        AtomicInteger invocations = new AtomicInteger();
+        int threads = 8;
+        int operationsPerThread = 1_000;
+        CountDownLatch ready = new CountDownLatch(threads);
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(threads);
+        var executor = Executors.newFixedThreadPool(threads);
+
+        try {
+            for (int thread = 0; thread < threads; thread++) {
+                executor.execute(() -> {
+                    ready.countDown();
+                    try {
+                        start.await();
+                        for (int operation = 0; operation < operationsPerThread; operation++) {
+                            entry.mutate(value -> {
+                                invocations.incrementAndGet();
+                                value.incrementAndGet();
+                            });
+                        }
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+
+            assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+            assertTrue(done.await(10, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+        }
+
+        int expected = threads * operationsPerThread;
+        assertEquals(expected, invocations.get());
+        assertEquals(expected, entry.value().get());
+        assertEquals(expected, entry.version());
     }
 }

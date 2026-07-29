@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
@@ -63,6 +64,7 @@ public final class CotaniConfigsBuilder {
      * blocked during file I/O. Prefer {@link #loadAsync()} for non-blocking bootstrap.
      */
     public CotaniConfigs load() {
+        requireNonPrimaryThread();
         PaperTaskScheduler resolvedScheduler = requireScheduler();
         ConfigSerializerRegistry registry = ConfigSerializerRegistry.defaults(plugin);
         DefaultCotaniConfigs configs =
@@ -92,5 +94,12 @@ public final class CotaniConfigsBuilder {
             throw new IllegalStateException("No scheduler configured; call scheduler(...) before load().");
         }
         return resolved;
+    }
+
+    private static void requireNonPrimaryThread() {
+        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException(
+                    "Synchronous config file I/O is not allowed on the Paper primary thread; use loadAsync() instead.");
+        }
     }
 }

@@ -5,6 +5,7 @@ import com.cotani.config.CotaniConfigs;
 import com.cotani.config.binder.ConfigBinder;
 import com.cotani.config.binder.RecordConfigBinder;
 import com.cotani.config.exception.ConfigException;
+import com.cotani.config.security.ConfigPaths;
 import com.cotani.config.serializer.ConfigSerializerRegistry;
 import com.cotani.config.source.BukkitYamlConfigSource;
 import com.cotani.task.api.PaperTaskScheduler;
@@ -16,8 +17,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
+@com.cotani.api.InternalApi
 public final class DefaultCotaniConfigs implements CotaniConfigs {
 
     private final Plugin plugin;
@@ -37,7 +40,7 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
             boolean createMissingFiles,
             boolean copyDefaults) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
-        this.folder = Objects.requireNonNull(folder, "folder");
+        this.folder = Objects.requireNonNull(folder, "folder").toAbsolutePath().normalize();
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.serializers = Objects.requireNonNull(serializers, "serializers");
         this.binder = new RecordConfigBinder(serializers);
@@ -46,12 +49,10 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
     }
 
     public void register(String name) {
-        var resolved = folder.resolve(name).normalize();
-        if (!resolved.startsWith(folder.normalize())) {
-            throw new ConfigException("Config path escapes base folder: " + name);
-        }
-        var source = new BukkitYamlConfigSource(plugin, name, resolved, createMissingFiles, copyDefaults);
-        files.put(name, new DefaultCotaniConfig(name, source, serializers, binder));
+        Objects.requireNonNull(name, "name");
+        var resolved = ConfigPaths.requireContained(folder.resolve(name), folder);
+        var source = new BukkitYamlConfigSource(plugin, name, resolved, folder, createMissingFiles, copyDefaults);
+        files.put(name, new DefaultCotaniConfig(name, source, serializers, binder, scheduler));
     }
 
     @Override
@@ -75,6 +76,11 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
 
     @Override
     public void reload() {
+        requireNonPrimaryThread("reloadAsync()");
+        reloadFiles();
+    }
+
+    private void reloadFiles() {
         ConfigException firstFailure = null;
         for (var config : files.values()) {
             try {
@@ -96,18 +102,40 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
     @Override
     public TaskChain<Void> reloadAsync() {
         return scheduler.supplyAsync(() -> {
-            reload();
+            reloadFiles();
             return VoidResult.nullValue();
         });
     }
 
     @Override
     public void save() {
+        requireNonPrimaryThread("saveAsync()");
+        saveFiles();
+    }
+
+    @Override
+    public TaskChain<Void> saveAsync() {
+        return scheduler.supplyAsync(() -> {
+            saveFiles();
+            return VoidResult.nullValue();
+        });
+    }
+
+    private void saveFiles() {
         files.values().forEach(CotaniConfig::save);
     }
 
     @Override
     public void close() {
         files.clear();
+    }
+
+    private static void requireNonPrimaryThread(String alternative) {
+        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException(
+                    "Synchronous config file I/O is not allowed on the Paper primary thread; use "
+                            + alternative
+                            + " instead.");
+        }
     }
 }

@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@com.cotani.api.InternalApi
 public record LoggerTaskExceptionHandler(Logger logger) implements TaskExceptionHandler {
 
     public LoggerTaskExceptionHandler {

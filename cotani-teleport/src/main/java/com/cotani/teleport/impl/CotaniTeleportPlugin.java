@@ -9,6 +9,7 @@ import com.cotani.teleport.api.TeleportModule;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.Nullable;
 
+@com.cotani.api.InternalApi
 public final class CotaniTeleportPlugin extends JavaPlugin {
     private @Nullable PaperTaskScheduler scheduler;
     private @Nullable TeleportModule module;

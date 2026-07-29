@@ -6,13 +6,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.api.EventBus;
+import com.cotani.event.api.EventDispatchPolicy;
 import com.cotani.event.api.EventPriority;
 import com.cotani.event.bus.DefaultEventBus;
 import com.cotani.event.cancellable.AbstractCancellableEvent;
 import com.cotani.event.exception.LoggingEventExceptionHandler;
 import com.cotani.event.subscription.CompositeEventSubscription;
 import com.cotani.event.subscription.EventSubscription;
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -129,6 +135,33 @@ final class EventBusTest {
         // 5. Third publish - subscription shouldn't run
         eventBus.publish(new TestUserEvent(UUID.randomUUID()));
         assertEquals(1, counter.get());
+    }
+
+    @Test
+    void asyncDispatchTimesOutUnsubscribesAndContinuesAfterBlockingListener() throws Exception {
+        var failures = new CopyOnWriteArrayList<com.cotani.event.exception.EventListenerException>();
+        var policy = new EventDispatchPolicy(Duration.ofMillis(20), true);
+        try (var eventBus = DefaultEventBus.create(failures::add, Runnable::run, policy)) {
+            var blocker = new CountDownLatch(1);
+            var slow = eventBus.subscribe(TestUserEvent.class, _ -> {
+                try {
+                    blocker.await();
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            var laterListenerCalls = new AtomicInteger();
+            eventBus.subscribe(TestUserEvent.class, _ -> laterListenerCalls.incrementAndGet());
+
+            eventBus.publishAsync(new TestUserEvent(UUID.randomUUID()))
+                    .toCompletableFuture()
+                    .get(2, TimeUnit.SECONDS);
+
+            assertFalse(slow.active());
+            assertEquals(1, laterListenerCalls.get());
+            assertEquals(1, failures.size());
+            assertTrue(failures.getFirst().getCause() instanceof TimeoutException);
+        }
     }
 
     private static record TestUserEvent(UUID userId) implements CotaniEvent {}

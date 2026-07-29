@@ -14,6 +14,7 @@ A lightweight, reflection-free Java Event Bus for asynchronous and synchronous e
 - **Cancellable Events**: Fully supports event cancellation paradigms through `CancellableEvent` and `AbstractCancellableEvent`.
 - **Asynchronous & Synchronous Dispatch**: Dispatch events synchronously on the calling thread or asynchronously via executors.
 - **Robust Exception Handling**: Plug-in custom handlers (`EventExceptionHandler`) to catch and log failures during listener execution.
+- **Async Listener Deadlines**: Asynchronous listeners are isolated on virtual threads, interrupted on timeout, and optionally unsubscribed.
 
 ## Usage
 
@@ -85,6 +86,8 @@ if (event.isCancelled()) {
 1. **Explicit Unregistration**: Always release long-lived subscriptions by calling `.unsubscribe()` on the `EventSubscription` to avoid memory leaks.
 2. **Safe Exception Handling**: Avoid swallowing exceptions within listeners. Define an `EventExceptionHandler` or handle exceptions locally in the handler logic.
 3. **No Heavy Work in Sync Listeners**: Do not execute blocking database or network calls inside synchronous event listener callbacks. Delegate those tasks asynchronously.
+4. **Bounded Async Dispatch**: Construct the bus with an `EventDispatchPolicy` appropriate for the integration and call `publishAsync` for untrusted or potentially blocking listeners. The default deadline is five seconds and timed-out listeners are unsubscribed.
+5. **Lifecycle**: Close a bus created by `DefaultEventBus.create(...)` so its owned listener executor and subscriptions are released.
 
 ## Anti-Patterns
 

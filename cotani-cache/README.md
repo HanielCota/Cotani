@@ -13,6 +13,8 @@ Caffeine-backed asynchronous caching. Provides generic `DataCache` and player-fo
 - **Auto-Flush and Autosave**: Tracks state changes automatically and schedules background flush tasks.
 - **Caffeine Engine**: Backed by the high-performance Caffeine library.
 - **Dirty State Tracking**: Updates occur in-memory, dirty flags mark records, and background workers batch write modifications.
+- **Bounded Save Fan-Out**: Bulk flush and shutdown limit concurrent repository saves (16 by default).
+- **Optional Invalidation Bus**: Cache instances can coordinate clean-entry invalidation through a local or distributed bus implementation.
 
 ## Usage
 
@@ -25,8 +27,12 @@ PlayerDataCache<User> users = CotaniCache.players(User.class)
     .repository(new UserRepository(scheduler))
     .defaultValue(User::createDefault)
     .preset(CachePreset.PLAYER_DATA)
+    .maximumConcurrentSaves(8)
+    .invalidationBus(invalidationBus)
     .build(plugin, scheduler);
 ```
+
+Without an invalidation bus, consistency is local/eventual. For multiple JVMs, provide a shared `CacheInvalidationBus` transport and require every writer to publish through it. Remote invalidation never discards a locally dirty value.
 
 ### 2. Mutating Cached Data Asynchronously
 
@@ -58,7 +64,7 @@ DataCache<UUID, Instant> cooldowns = CotaniCache.temporary(
 
 1. **Isolation of Repositories**: Implementations of `CacheRepository` must not access Bukkit/Paper APIs directly. All persistence calls must run on async executors.
 2. **Default Value Factory**: Always declare a `defaultValue` provider. This ensures a fallback exists when data is missing or query failures occur during initialization.
-3. **Shutdown Flushing**: Always invoke `cache.close()` during plugin disable (`onDisable`). This flushes any pending dirty states immediately to prevent data loss.
+3. **Shutdown Flushing**: Register the cache in the Cotani lifecycle or compose `cache.closeAsync()`. The synchronous adapter must not be called on the Paper main thread.
 4. **Consistency Model**: Choose the correct mutation pattern: use `updateAsync` for immutable structures and `mutateAsync` for mutable data. Avoid mixing the two patterns arbitrarily on the same cache.
 
 ## Anti-Patterns

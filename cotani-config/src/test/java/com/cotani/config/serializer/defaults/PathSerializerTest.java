@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.cotani.config.exception.ConfigException;
 import com.cotani.config.serializer.ConfigSerializerRegistry;
 import com.cotani.config.value.ConfigValue;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,26 @@ class PathSerializerTest {
     void rejectsPathEscape() {
         var value = new ConfigValue("test.yml", "path", "../outside.txt", true, registry);
         assertThrows(ConfigException.class, () -> registry.convert(value, Path.class));
+    }
+
+    @Test
+    void rejectsSymlinkEscape() throws Exception {
+        var outside = tempFolder.resolveSibling(tempFolder.getFileName() + "-outside");
+        Files.createDirectories(outside);
+        var link = tempFolder.resolve("linked");
+        try {
+            Files.createSymbolicLink(link, outside);
+        } catch (UnsupportedOperationException | java.io.IOException | SecurityException unavailable) {
+            org.junit.jupiter.api.Assumptions.abort("Symbolic links unavailable: " + unavailable.getMessage());
+        }
+
+        try {
+            var value = new ConfigValue("test.yml", "path", "linked/secret.yml", true, registry);
+            assertThrows(ConfigException.class, () -> registry.convert(value, Path.class));
+        } finally {
+            Files.deleteIfExists(link);
+            Files.deleteIfExists(outside);
+        }
     }
 
     @Test

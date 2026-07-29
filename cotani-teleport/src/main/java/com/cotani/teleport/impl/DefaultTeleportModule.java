@@ -25,6 +25,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.jspecify.annotations.Nullable;
 
+@com.cotani.api.InternalApi
 public final class DefaultTeleportModule implements TeleportModule {
     private final Cotani cotani;
     private final PaperTaskScheduler scheduler;

@@ -43,20 +43,46 @@ public final class TransactionManager {
     }
 
     public <T> CompletionStage<T> runAsync(Function<TransactionContext, CompletionStage<T>> operation) {
+        Objects.requireNonNull(operation, "operation");
         return CompletableFuture.supplyAsync(this::beginTransaction, executor)
-                .thenCompose(state ->
-                        operation.apply(state.context).whenComplete((_, error) -> finishTransaction(state, error)));
+                .thenCompose(state -> executeOperation(state, operation));
+    }
+
+    private <T> CompletionStage<T> executeOperation(
+            TransactionState state, Function<TransactionContext, CompletionStage<T>> operation) {
+        final CompletionStage<T> stage;
+        try {
+            stage = Objects.requireNonNull(operation.apply(state.context), "transaction operation returned null");
+        } catch (Throwable failure) {
+            finishTransaction(state, failure);
+            return CompletableFuture.failedFuture(failure);
+        }
+        if (!stage.toCompletableFuture().isDone()) {
+            var failure = new IllegalStateException(
+                    "Transaction callbacks must not wait for external asynchronous work; compose only operations from the provided TransactionContext.");
+            finishTransaction(state, failure);
+            return CompletableFuture.failedFuture(failure);
+        }
+        return stage.whenComplete((_, error) -> finishTransaction(state, error));
     }
 
     private TransactionState beginTransaction() {
+        @Nullable Connection connection = null;
         try {
-            Connection connection = provider.connection();
+            connection = provider.connection();
             boolean previousAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             var transactional =
                     new QueryExecutor(provider, Runnable::run, serializers, queryTimeoutSeconds, connection);
             return new TransactionState(connection, previousAutoCommit, new TransactionContext(transactional));
         } catch (SQLException exception) {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException closeFailure) {
+                    exception.addSuppressed(closeFailure);
+                }
+            }
             throw new StorageException(
                     new TransactionError("Could not acquire connection for transaction.", exception));
         }

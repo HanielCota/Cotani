@@ -1,5 +1,6 @@
 package com.cotani.economy;
 
+import com.cotani.economy.currency.CurrencyDefinition;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.currency.EconomyCurrency;
 import java.math.BigDecimal;
@@ -13,6 +14,7 @@ import java.util.Optional;
 public record EconomySettings(
         EconomyCurrency defaultCurrency,
         Map<CurrencyId, EconomyCurrency> currencies,
+        Map<CurrencyId, CurrencyDefinition> currencyDefinitions,
         BigDecimal startingBalance,
         BigDecimal maximumBalance,
         BigDecimal maximumOperationAmount,
@@ -23,6 +25,7 @@ public record EconomySettings(
     public EconomySettings {
         Objects.requireNonNull(defaultCurrency, "defaultCurrency");
         Objects.requireNonNull(currencies, "currencies");
+        Objects.requireNonNull(currencyDefinitions, "currencyDefinitions");
         Objects.requireNonNull(startingBalance, "startingBalance");
         Objects.requireNonNull(maximumBalance, "maximumBalance");
         Objects.requireNonNull(maximumOperationAmount, "maximumOperationAmount");
@@ -71,6 +74,68 @@ public record EconomySettings(
         if (topCacheSeconds < 0) {
             throw new IllegalArgumentException("topCacheSeconds cannot be negative.");
         }
+
+        for (var configuredId : currencyDefinitions.keySet()) {
+            if (!currencies.containsKey(configuredId)) {
+                throw new IllegalArgumentException(
+                        "Currency definition has no registered currency: " + configuredId.value());
+            }
+        }
+        var resolvedDefinitions = new LinkedHashMap<CurrencyId, CurrencyDefinition>();
+        for (EconomyCurrency currency : currencies.values()) {
+            var definition = currencyDefinitions.getOrDefault(
+                    currency.id(),
+                    new CurrencyDefinition(
+                            currency, startingBalance, maximumBalance, maximumOperationAmount, minimumPayAmount, true));
+            if (!definition.currency().equals(currency)) {
+                throw new IllegalArgumentException("Currency definition does not match registered currency: "
+                        + currency.id().value());
+            }
+            requireScale(definition.startingBalance(), currency, "startingBalance");
+            requireScale(definition.maximumBalance(), currency, "maximumBalance");
+            requireScale(definition.maximumOperationAmount(), currency, "maximumOperationAmount");
+            requireScale(definition.minimumPayAmount(), currency, "minimumPayAmount");
+            resolvedDefinitions.put(currency.id(), definition);
+        }
+        currencyDefinitions = Map.copyOf(resolvedDefinitions);
+        if (!Objects.requireNonNull(currencyDefinitions.get(defaultCurrency.id()), "defaultCurrencyDefinition")
+                .enabled()) {
+            throw new IllegalArgumentException("The default currency must be enabled.");
+        }
+    }
+
+    /**
+     * Legacy local-cache setting retained for source compatibility.
+     *
+     * @deprecated balance reads are strongly consistent and no longer cached by the module
+     *     bootstrap
+     */
+    @Override
+    @Deprecated(forRemoval = false)
+    public int balanceCacheSeconds() {
+        return balanceCacheSeconds;
+    }
+
+    /** Backward-compatible constructor using global limits for every registered currency. */
+    public EconomySettings(
+            EconomyCurrency defaultCurrency,
+            Map<CurrencyId, EconomyCurrency> currencies,
+            BigDecimal startingBalance,
+            BigDecimal maximumBalance,
+            BigDecimal maximumOperationAmount,
+            BigDecimal minimumPayAmount,
+            int balanceCacheSeconds,
+            int topCacheSeconds) {
+        this(
+                defaultCurrency,
+                currencies,
+                Map.of(),
+                startingBalance,
+                maximumBalance,
+                maximumOperationAmount,
+                minimumPayAmount,
+                balanceCacheSeconds,
+                topCacheSeconds);
     }
 
     /**
@@ -140,6 +205,46 @@ public record EconomySettings(
     }
 
     public int decimalPlaces(CurrencyId currencyId) {
-        return requireCurrency(currencyId).decimalPlaces();
+        return requireEnabledDefinition(currencyId).currency().decimalPlaces();
+    }
+
+    public BigDecimal startingBalance(CurrencyId currencyId) {
+        return scaleFor(currencyId, requireEnabledDefinition(currencyId).startingBalance());
+    }
+
+    public BigDecimal maximumBalance(CurrencyId currencyId) {
+        return scaleFor(currencyId, requireEnabledDefinition(currencyId).maximumBalance());
+    }
+
+    public BigDecimal maximumOperationAmount(CurrencyId currencyId) {
+        return scaleFor(currencyId, requireEnabledDefinition(currencyId).maximumOperationAmount());
+    }
+
+    public BigDecimal minimumPayAmount(CurrencyId currencyId) {
+        return scaleFor(currencyId, requireEnabledDefinition(currencyId).minimumPayAmount());
+    }
+
+    public CurrencyDefinition requireEnabledDefinition(CurrencyId currencyId) {
+        requireCurrency(currencyId);
+        var definition = Objects.requireNonNull(currencyDefinitions.get(currencyId), "currencyDefinition");
+        if (!definition.enabled()) {
+            throw new IllegalArgumentException("Currency is disabled: " + currencyId.value());
+        }
+        return definition;
+    }
+
+    private BigDecimal scaleFor(CurrencyId currencyId, BigDecimal value) {
+        return value.setScale(decimalPlaces(currencyId), RoundingMode.UNNECESSARY);
+    }
+
+    private static void requireScale(BigDecimal value, EconomyCurrency currency, String settingName) {
+        try {
+            var _ = value.setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException invalidScale) {
+            throw new IllegalArgumentException(
+                    settingName + " is not representable by currency "
+                            + currency.id().value() + " with " + currency.decimalPlaces() + " decimal places.",
+                    invalidScale);
+        }
     }
 }

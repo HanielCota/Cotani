@@ -14,7 +14,7 @@ class CotaniMetricsModuleTest {
         try (CotaniMetricsModule module = CotaniMetricsModule.create(config)) {
             assertFalse(module.isEnabled());
             assertInstanceOf(NoOpMetricsRegistry.class, module.registry());
-            assertNull(module.prometheusServer());
+            assertTrue(module.prometheusServer().isEmpty());
         }
     }
 
@@ -24,8 +24,10 @@ class CotaniMetricsModuleTest {
         try (CotaniMetricsModule module = CotaniMetricsModule.create(config)) {
             assertTrue(module.isEnabled());
             assertInstanceOf(CotaniMetricsRegistry.class, module.registry());
-            assertNotNull(module.prometheusServer());
-            assertTrue(module.prometheusServer().isRunning());
+            assertTrue(module.prometheusServer().orElseThrow().isRunning());
+            assertEquals(
+                    MetricsConfig.DEFAULT_HOST,
+                    module.prometheusServer().orElseThrow().host());
         }
     }
 }

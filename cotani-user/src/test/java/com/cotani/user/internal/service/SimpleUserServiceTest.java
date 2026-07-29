@@ -63,13 +63,16 @@ class SimpleUserServiceTest {
         SimpleCotaniUser user = SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L);
 
         when(cache.findInternal(uniqueId)).thenReturn(Optional.of(user));
+        when(cache.updateIfSession(eq(uniqueId), eq(user.sessionId()), any()))
+                .thenAnswer(invocation -> Optional.of(invocation
+                        .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
+                        .apply(user)));
         when(repository.save(any(SimpleCotaniUser.class))).thenReturn(CompletableFuture.completedFuture(null));
         when(cache.remove(uniqueId, user.sessionId())).thenReturn(true);
 
         service.unload(uniqueId).toCompletableFuture().join();
 
-        verify(cache, atLeastOnce()).put(argThat(u -> u.uniqueId().equals(uniqueId) && u.lastQuitAt() > 0));
-        verify(repository).save(any());
+        verify(repository).save(argThat(saved -> saved.lastQuitAt() > 0 && saved.version() == 1L));
         verify(cache).remove(uniqueId, user.sessionId());
     }
 
@@ -90,6 +93,10 @@ class SimpleUserServiceTest {
         SimpleCotaniUser user =
                 SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L).withVersion(2L);
         when(cache.findInternal(uniqueId)).thenReturn(Optional.of(user));
+        when(cache.updateIfSession(eq(uniqueId), eq(user.sessionId()), any()))
+                .thenAnswer(invocation -> Optional.of(invocation
+                        .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
+                        .apply(user)));
         when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.save(uniqueId).toCompletableFuture().join();
@@ -103,13 +110,51 @@ class SimpleUserServiceTest {
         SimpleCotaniUser user =
                 SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L).withVersion(1L);
         when(cache.allInternal()).thenReturn(java.util.List.of(user));
-        when(repository.saveAll(any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(cache.updateIfSession(eq(uniqueId), eq(user.sessionId()), any()))
+                .thenAnswer(invocation -> Optional.of(invocation
+                        .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
+                        .apply(user)));
+        when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.saveAll().toCompletableFuture().join();
 
-        verify(repository)
-                .saveAll(argThat(
-                        list -> list.size() == 1 && list.iterator().next().version() == 2L));
+        verify(repository).save(argThat(saved -> saved.version() == 2L));
+    }
+
+    @Test
+    void oldSessionSaveCompletesBeforeNewSessionSave() {
+        var uniqueId = UUID.randomUUID();
+        var oldSession = SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L);
+        var newSession = oldSession.withNewSessionId();
+        when(cache.findInternal(uniqueId)).thenReturn(Optional.of(oldSession)).thenReturn(Optional.of(newSession));
+        when(cache.updateIfSession(eq(uniqueId), any(UUID.class), any())).thenAnswer(invocation -> {
+            var expectedSession = invocation.<UUID>getArgument(1);
+            var current = expectedSession.equals(oldSession.sessionId()) ? oldSession : newSession;
+            return Optional.of(invocation
+                    .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
+                    .apply(current));
+        });
+        var oldSave = new CompletableFuture<Void>();
+        var newSave = new CompletableFuture<Void>();
+        when(repository.save(any())).thenReturn(oldSave).thenReturn(newSave);
+
+        var unloading = service.unload(uniqueId).toCompletableFuture();
+        var savingNewSession = service.save(uniqueId).toCompletableFuture();
+
+        verify(repository, times(1)).save(any());
+        assertFalse(savingNewSession.isDone());
+
+        oldSave.complete(null);
+        verify(repository, times(2)).save(any());
+        newSave.complete(null);
+
+        assertDoesNotThrow(unloading::join);
+        assertDoesNotThrow(savingNewSession::join);
+        var savedUsers = org.mockito.ArgumentCaptor.forClass(SimpleCotaniUser.class);
+        verify(repository, times(2)).save(savedUsers.capture());
+        assertEquals(
+                oldSession.sessionId(), savedUsers.getAllValues().getFirst().sessionId());
+        assertEquals(newSession.sessionId(), savedUsers.getAllValues().getLast().sessionId());
     }
 
     @Test

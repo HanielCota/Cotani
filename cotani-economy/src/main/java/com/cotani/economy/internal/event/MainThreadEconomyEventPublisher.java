@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 /**
  * Publishes economy events on the server main thread.
  */
+@com.cotani.api.InternalApi
 public final class MainThreadEconomyEventPublisher implements EconomyEventPublisher {
 
     private final PaperTaskScheduler scheduler;

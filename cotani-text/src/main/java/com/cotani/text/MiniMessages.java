@@ -17,6 +17,7 @@ public final class MiniMessages {
     private static final String TARGET_NULL_MESSAGE = "Parameter 'target' must not be null";
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
     private static final int PARSE_CACHE_MAX_SIZE = 512;
+    private static final int MAX_TEMPLATE_LENGTH = 32_768;
     private static final Map<String, Component> parseCache =
             Collections.synchronizedMap(new java.util.LinkedHashMap<>(16, 0.75f, true) {
                 @Override
@@ -27,8 +28,14 @@ public final class MiniMessages {
 
     private MiniMessages() {}
 
+    /**
+     * Parses a trusted MiniMessage template.
+     *
+     * <p>Do not pass player-controlled text to this method: supported tags can create interactive
+     * components. Use {@link #literal(String)} for untrusted text.
+     */
     public static Component parse(String input) {
-        Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+        requireBoundedTemplate(input);
 
         if (input.indexOf('<') < 0) {
             return Component.text(input);
@@ -44,7 +51,7 @@ public final class MiniMessages {
      * @return the parsed component
      */
     public static Component parse(String input, TagResolver... resolvers) {
-        Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+        requireBoundedTemplate(input);
 
         return ComponentSerializers.MINIMESSAGE.deserialize(input, resolvers);
     }
@@ -59,7 +66,7 @@ public final class MiniMessages {
      * @return the parsed component
      */
     public static Component parse(String input, Audience target, TagResolver... resolvers) {
-        Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+        requireBoundedTemplate(input);
         Objects.requireNonNull(target, TARGET_NULL_MESSAGE);
 
         return ComponentSerializers.MINIMESSAGE.deserialize(input, target, resolvers);
@@ -75,6 +82,12 @@ public final class MiniMessages {
         Objects.requireNonNull(component, COMPONENT_NULL_MESSAGE);
 
         return ComponentSerializers.MINIMESSAGE.serialize(component);
+    }
+
+    /** Creates a literal component from untrusted text without interpreting MiniMessage tags. */
+    public static Component literal(String input) {
+        Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+        return Component.text(input);
     }
 
     /**
@@ -180,5 +193,12 @@ public final class MiniMessages {
         Objects.requireNonNull(components, "Parameter 'components' must not be null");
 
         return components.stream().map(MiniMessages::serialize).toList();
+    }
+
+    private static void requireBoundedTemplate(String input) {
+        Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+        if (input.length() > MAX_TEMPLATE_LENGTH) {
+            throw new IllegalArgumentException("MiniMessage template exceeds maximum length " + MAX_TEMPLATE_LENGTH);
+        }
     }
 }

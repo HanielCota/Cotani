@@ -12,13 +12,13 @@ Cotani is built on strict Java engineering standards:
 4. **Null Safety**: Annotate public APIs and check required inputs with `Objects.requireNonNull`. Never return `null`.
 5. **Imutability**: Return unmodifiable defensive copies (`List.copyOf`, `Set.copyOf`, `Map.copyOf`).
 
-For full design rules, please refer to [AGENTS.md](file:///D:/Cotani/AGENTS.md).
+For full design rules, please refer to [AGENTS.md](AGENTS.md).
 
 ## Local Development Setup
 
 ### Prerequisites
 
-- Java 21 or Java 25 JDK
+- Java 25 JDK
 - Git
 
 ### Build & Validate

@@ -24,6 +24,8 @@ public final class SkullTextureResolver implements AutoCloseable {
 
     private static final long DEFAULT_CACHE_EXPIRE_MINUTES = 60;
     private static final long DEFAULT_CACHE_MAXIMUM_SIZE = 1_000;
+    private static final int MAX_BASE64_LENGTH = 16_384;
+    private static final int MAX_TEXTURE_URL_LENGTH = 2_048;
 
     private final Cache<String, PlayerProfile> profileCache;
 
@@ -31,15 +33,38 @@ public final class SkullTextureResolver implements AutoCloseable {
         this(buildDefaultCache());
     }
 
+    /** Returns a resolver without shared or retained cache state. */
+    public static SkullTextureResolver uncached() {
+        return new SkullTextureResolver(Caffeine.newBuilder().maximumSize(0).build());
+    }
+
     public SkullTextureResolver(Cache<String, PlayerProfile> profileCache) {
         this.profileCache = Objects.requireNonNull(profileCache, "profileCache");
     }
 
+    /**
+     * Resolves a bounded texture payload into a Paper profile.
+     *
+     * <p>Because profile creation calls the Bukkit API, invoke this method only from a
+     * server-owned thread that is valid for the calling plugin.
+     */
     public PlayerProfile fromBase64(String base64) {
         Objects.requireNonNull(base64, "Parameter 'base64' must not be null");
+        requireBoundedInput(base64, "base64", MAX_BASE64_LENGTH);
+        try {
+            Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException failure) {
+            throw new IllegalArgumentException("Parameter 'base64' must be valid Base64", failure);
+        }
         return profileCache.get(base64, SkullTextureResolver::buildProfile);
     }
 
+    /**
+     * Resolves a bounded texture URL into a Paper profile.
+     *
+     * <p>Because profile creation calls the Bukkit API, invoke this method only from a
+     * server-owned thread that is valid for the calling plugin.
+     */
     public PlayerProfile fromUrl(String textureUrl) {
         Objects.requireNonNull(textureUrl, "Parameter 'textureUrl' must not be null");
         var normalizedUrl = normalizeTextureUrl(textureUrl);
@@ -85,6 +110,7 @@ public final class SkullTextureResolver implements AutoCloseable {
 
     private static String normalizeTextureUrl(String input) {
         var stripped = input.strip();
+        requireBoundedInput(stripped, "textureUrl", MAX_TEXTURE_URL_LENGTH);
         var lower = stripped.toLowerCase(Locale.ROOT);
         if (lower.startsWith(HTTP_TEXTURES_DOMAIN)) {
             return TEXTURES_DOMAIN + stripped.substring(HTTP_TEXTURES_DOMAIN.length());
@@ -120,5 +146,14 @@ public final class SkullTextureResolver implements AutoCloseable {
             }
         }
         return sb.toString();
+    }
+
+    private static void requireBoundedInput(String value, String parameter, int maximumLength) {
+        if (value.isBlank()) {
+            throw new IllegalArgumentException("Parameter '" + parameter + "' must not be blank");
+        }
+        if (value.length() > maximumLength) {
+            throw new IllegalArgumentException("Parameter '" + parameter + "' exceeds maximum length " + maximumLength);
+        }
     }
 }

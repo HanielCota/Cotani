@@ -13,6 +13,11 @@ dependencies {
     api(libs.jspecify)
 
     testImplementation(libs.paper.api)
+    testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.mysql)
+    testImplementation(libs.testcontainers.mariadb)
+    testRuntimeOnly(libs.mysql.connector)
+    testRuntimeOnly(libs.mariadb.java.client)
 }
 
 tasks.withType<JavaCompile>().configureEach {

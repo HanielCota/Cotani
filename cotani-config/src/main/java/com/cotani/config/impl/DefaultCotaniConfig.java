@@ -8,26 +8,37 @@ import com.cotani.config.serializer.ConfigSerializerRegistry;
 import com.cotani.config.source.ConfigSource;
 import com.cotani.config.validation.ValidationResult;
 import com.cotani.config.value.ConfigValue;
+import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.api.TaskChain;
+import com.cotani.task.util.VoidResult;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 
+@com.cotani.api.InternalApi
 public final class DefaultCotaniConfig implements CotaniConfig {
 
     private final String name;
     private final ConfigSource source;
     private final ConfigSerializerRegistry serializers;
     private final ConfigBinder binder;
+    private final PaperTaskScheduler scheduler;
 
     public DefaultCotaniConfig(
-            String name, ConfigSource source, ConfigSerializerRegistry serializers, ConfigBinder binder) {
+            String name,
+            ConfigSource source,
+            ConfigSerializerRegistry serializers,
+            ConfigBinder binder,
+            PaperTaskScheduler scheduler) {
         this.name = Objects.requireNonNull(name, "name");
         this.source = Objects.requireNonNull(source, "source");
         this.serializers = Objects.requireNonNull(serializers, "serializers");
         this.binder = Objects.requireNonNull(binder, "binder");
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
     }
 
     @Override
@@ -42,12 +53,30 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     @Override
     public void reload() {
+        requireNonPrimaryThread("reloadAsync()");
         source.load();
     }
 
     @Override
+    public TaskChain<Void> reloadAsync() {
+        return scheduler.supplyAsync(() -> {
+            source.load();
+            return VoidResult.nullValue();
+        });
+    }
+
+    @Override
     public void save() {
+        requireNonPrimaryThread("saveAsync()");
         source.save();
+    }
+
+    @Override
+    public TaskChain<Void> saveAsync() {
+        return scheduler.supplyAsync(() -> {
+            source.save();
+            return VoidResult.nullValue();
+        });
     }
 
     @Override
@@ -168,5 +197,14 @@ public final class DefaultCotaniConfig implements CotaniConfig {
     @Override
     public <T> ValidationResult validate(String path, Class<T> type) {
         return binder.validate(section(path), type);
+    }
+
+    private static void requireNonPrimaryThread(String alternative) {
+        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException(
+                    "Synchronous config file I/O is not allowed on the Paper primary thread; use "
+                            + alternative
+                            + " instead.");
+        }
     }
 }

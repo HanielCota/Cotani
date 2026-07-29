@@ -3,6 +3,8 @@ package com.cotani.cache.builder;
 import com.cotani.cache.api.DataCache;
 import com.cotani.cache.exception.CacheException;
 import com.cotani.cache.internal.caffeine.CaffeineDataCache;
+import com.cotani.cache.invalidation.CacheInvalidationBus;
+import com.cotani.cache.invalidation.NoopCacheInvalidationBus;
 import com.cotani.cache.policy.CachePreset;
 import com.cotani.cache.policy.CacheSettings;
 import com.cotani.cache.policy.CacheSettingsBuilder;
@@ -24,6 +26,8 @@ public final class DataCacheBuilder<K, V> {
     private final CacheSettingsBuilder settingsBuilder = CacheSettings.builder();
     private @Nullable CacheRepository<K, V> repository;
     private @Nullable Function<K, V> defaultValue;
+    private CacheInvalidationBus<K> invalidationBus = new NoopCacheInvalidationBus<>();
+    private int maximumConcurrentSaves = 16;
 
     public DataCacheBuilder(Class<K> keyType, Class<V> valueType) {
         this.keyType = Objects.requireNonNull(keyType, "keyType");
@@ -94,12 +98,31 @@ public final class DataCacheBuilder<K, V> {
         return this;
     }
 
+    public DataCacheBuilder<K, V> invalidationBus(CacheInvalidationBus<K> invalidationBus) {
+        this.invalidationBus = Objects.requireNonNull(invalidationBus, "invalidationBus");
+        return this;
+    }
+
+    public DataCacheBuilder<K, V> maximumConcurrentSaves(int maximumConcurrentSaves) {
+        if (maximumConcurrentSaves <= 0) {
+            throw new IllegalArgumentException("maximumConcurrentSaves must be positive");
+        }
+        this.maximumConcurrentSaves = maximumConcurrentSaves;
+        return this;
+    }
+
     public DataCache<K, V> build(PaperTaskScheduler scheduler) {
         validate();
 
         var resolvedRepository = resolveRepository();
         var resolvedDefaultValue = Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
-        return new CaffeineDataCache<>(resolvedRepository, resolvedDefaultValue, scheduler, settingsBuilder.build());
+        return new CaffeineDataCache<>(
+                resolvedRepository,
+                resolvedDefaultValue,
+                scheduler,
+                settingsBuilder.build(),
+                maximumConcurrentSaves,
+                invalidationBus);
     }
 
     private void validate() {

@@ -5,7 +5,9 @@ import com.cotani.task.api.TaskMetadata;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
+@com.cotani.api.InternalApi
 public final class VirtualThreadExecutor implements AutoCloseable {
 
     private static final String THREAD_NAME = "cotani-task-";
@@ -20,6 +22,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     private final ScheduledExecutorService delayedExecutor;
     private final boolean nameThreads;
     private final Duration shutdownTimeout;
+    private final AtomicReference<CompletableFuture<Void>> closeFuture = new AtomicReference<>();
 
     public VirtualThreadExecutor() {
         this(DEFAULT_MAX_CONCURRENT, true);
@@ -53,34 +56,17 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     }
 
     private static ExecutorService createTaskExecutor(int maxConcurrent, boolean useVirtualThreads) {
-        if (useVirtualThreads) {
-            ThreadFactory factory = Thread.ofVirtual().name(THREAD_NAME, 0).factory();
-            var semaphore = new Semaphore(maxConcurrent);
-            return new ThreadPoolExecutor(
-                    0, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), factory) {
-                @Override
-                public void execute(Runnable command) {
-                    semaphore.acquireUninterruptibly();
-                    super.execute(() -> {
-                        try {
-                            command.run();
-                        } finally {
-                            semaphore.release();
-                        }
-                    });
-                }
-            };
-        }
-
-        ThreadFactory factory = Thread.ofPlatform().name(THREAD_NAME).factory();
+        ThreadFactory factory = useVirtualThreads
+                ? Thread.ofVirtual().name(THREAD_NAME, 0).factory()
+                : Thread.ofPlatform().name(THREAD_NAME, 0).factory();
         return new ThreadPoolExecutor(
                 maxConcurrent,
                 maxConcurrent,
-                60L,
+                0L,
                 TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(BOUNDED_QUEUE_CAPACITY),
+                new ArrayBlockingQueue<>(BOUNDED_QUEUE_CAPACITY),
                 factory,
-                new ThreadPoolExecutor.CallerRunsPolicy());
+                new ThreadPoolExecutor.AbortPolicy());
     }
 
     private static ScheduledExecutorService createDelayedExecutor() {
@@ -121,8 +107,38 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         return taskExecutor.isShutdown() || delayedExecutor.isShutdown();
     }
 
+    public CompletionStage<Void> closeAsync() {
+        var existing = closeFuture.get();
+        if (existing != null) {
+            return existing;
+        }
+
+        var promise = new CompletableFuture<Void>();
+        if (!closeFuture.compareAndSet(null, promise)) {
+            return Objects.requireNonNull(closeFuture.get(), "closeFuture");
+        }
+
+        Thread.ofPlatform().daemon(true).name(THREAD_NAME + "shutdown").start(() -> {
+            try {
+                shutdownExecutors();
+                promise.complete(null);
+            } catch (Throwable failure) {
+                promise.completeExceptionally(failure);
+            }
+        });
+        return promise;
+    }
+
     @Override
     public void close() {
+        shutdownExecutors();
+        var existing = closeFuture.get();
+        if (existing != null) {
+            existing.complete(null);
+        }
+    }
+
+    private void shutdownExecutors() {
         shutdown(taskExecutor);
         shutdown(delayedExecutor);
     }

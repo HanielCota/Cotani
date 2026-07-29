@@ -91,7 +91,11 @@ public interface TaskChain<T> {
      * Retries the chain when it fails using {@code retryPolicy}.
      *
      * <p>Retry must only be used for idempotent operations. Re-executing a non-idempotent
-     * step can cause duplicated side effects.
+     * step can cause duplicated side effects. Retry is supported only for chains created from a
+     * repeatable scheduler supplier. Chains created by {@link PaperTaskScheduler#chain(CompletionStage)}
+     * reject retry because an external stage cannot be recreated safely.
+     *
+     * @throws IllegalStateException if this chain originated from a non-repeatable external stage
      */
     TaskChain<T> retry(RetryPolicy retryPolicy);
 

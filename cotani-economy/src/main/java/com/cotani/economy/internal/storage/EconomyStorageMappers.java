@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -49,7 +48,7 @@ final class EconomyStorageMappers {
         EconomyReason reason = new EconomyReason(
                 requireString(row, "reason_key"),
                 requireString(row, "reason_source"),
-                row.getUuid("reason_actor_user_id"));
+                row.getUuidOptional("reason_actor_user_id").orElse(null));
         Instant createdAt = requireInstant(row, CREATED_AT);
 
         return switch (type) {
@@ -189,19 +188,20 @@ final class EconomyStorageMappers {
     }
 
     private static String requireString(Row row, String column) throws SQLException {
-        return Objects.requireNonNull(row.getString(column), column);
+        return row.getString(column);
     }
 
     private static UUID requireUuid(Row row, String column) throws SQLException {
-        return Objects.requireNonNull(row.getUuid(column), column);
+        return row.getUuidOptional(column)
+                .orElseThrow(() -> new IllegalStateException("Column is SQL NULL: " + column));
     }
 
     private static Instant requireInstant(Row row, String column) throws SQLException {
-        return Objects.requireNonNull(row.getInstant(column), column);
+        return row.getInstantOptional(column)
+                .orElseThrow(() -> new IllegalStateException("Column is SQL NULL: " + column));
     }
 
     private static BigDecimal requireBigDecimal(Row row, String column) throws SQLException {
-        String raw = Objects.requireNonNull(row.getString(column), column);
-        return new BigDecimal(raw);
+        return new BigDecimal(row.getString(column));
     }
 }

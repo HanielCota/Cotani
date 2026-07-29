@@ -11,6 +11,7 @@ import java.math.RoundingMode;
 import java.util.Objects;
 import java.util.UUID;
 
+@com.cotani.api.InternalApi
 public final class DefaultEconomyGuard implements EconomyGuard {
 
     private final EconomySettings settings;
@@ -40,9 +41,9 @@ public final class DefaultEconomyGuard implements EconomyGuard {
             throw new InvalidAmountException(amount, "amount scale cannot be greater than " + decimalPlaces);
         }
 
-        if (amount.compareTo(settings.maximumOperationAmount()) > 0) {
-            throw new InvalidAmountException(
-                    amount, "amount cannot be greater than " + settings.maximumOperationAmount());
+        var maximumOperationAmount = settings.maximumOperationAmount(currencyId);
+        if (amount.compareTo(maximumOperationAmount) > 0) {
+            throw new InvalidAmountException(amount, "amount cannot be greater than " + maximumOperationAmount);
         }
 
         return amount.setScale(decimalPlaces, RoundingMode.UNNECESSARY);
@@ -69,8 +70,9 @@ public final class DefaultEconomyGuard implements EconomyGuard {
             throw new InvalidAmountException(amount, "balance scale cannot be greater than " + decimalPlaces);
         }
 
-        if (amount.compareTo(settings.maximumBalance()) > 0) {
-            throw new InvalidAmountException(amount, "balance cannot be greater than " + settings.maximumBalance());
+        var maximumBalance = settings.maximumBalance(currencyId);
+        if (amount.compareTo(maximumBalance) > 0) {
+            throw new InvalidAmountException(amount, "balance cannot be greater than " + maximumBalance);
         }
     }
 
@@ -82,7 +84,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
     @Override
     public void validateCurrencyId(CurrencyId currencyId) {
         Objects.requireNonNull(currencyId, "currencyId");
-        settings.requireCurrency(currencyId);
+        settings.requireEnabledDefinition(currencyId);
     }
 
     @Override

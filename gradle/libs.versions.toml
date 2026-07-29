@@ -12,9 +12,10 @@ micrometer = "1.14.4"
 mockito = "5.23.0"
 mysql = "9.3.0"
 nullaway = "0.13.8"
-paper = "26.2-rc-2.build.9-alpha"
+paper = "26.2.build.85-stable"
 spotless = "8.8.0"
 sqlite = "3.53.2.1"
+testcontainers = "2.0.5"
 
 [libraries]
 adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure" }
@@ -35,6 +36,9 @@ nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+testcontainers-mysql = { module = "org.testcontainers:testcontainers-mysql", version.ref = "testcontainers" }
+testcontainers-mariadb = { module = "org.testcontainers:testcontainers-mariadb", version.ref = "testcontainers" }
 
 [plugins]
 errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone" }

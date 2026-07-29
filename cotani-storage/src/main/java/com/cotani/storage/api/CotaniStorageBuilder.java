@@ -23,6 +23,7 @@ public final class CotaniStorageBuilder {
     private StorageBackend backend;
 
     private int threads = 4;
+    private int admissionQueueCapacity = 256;
     private boolean virtualThreads;
     private @Nullable PaperTaskScheduler scheduler;
     private Duration queryTimeout = Duration.ofSeconds(30);
@@ -80,6 +81,18 @@ public final class CotaniStorageBuilder {
         return this;
     }
 
+    /**
+     * Sets the number of storage operations that may wait behind active connection slots.
+     * Saturation completes new async operations exceptionally without blocking the caller.
+     */
+    public CotaniStorageBuilder admissionQueueCapacity(int capacity) {
+        if (capacity < 0) {
+            throw new IllegalArgumentException("admissionQueueCapacity must not be negative, got " + capacity);
+        }
+        this.admissionQueueCapacity = capacity;
+        return this;
+    }
+
     public CotaniStorageBuilder scheduler(PaperTaskScheduler scheduler) {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         return this;
@@ -113,10 +126,19 @@ public final class CotaniStorageBuilder {
                 backend,
                 threads,
                 virtualThreads,
+                admissionQueueCapacity,
                 List.copyOf(migrations),
                 List.copyOf(repositories),
                 requireScheduler(),
-                (int) queryTimeout.toSeconds());
+                toQueryTimeoutSeconds(queryTimeout));
+    }
+
+    static int toQueryTimeoutSeconds(Duration timeout) {
+        long roundedSeconds = timeout.getSeconds() + (timeout.getNano() == 0 ? 0 : 1);
+        if (roundedSeconds > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("queryTimeout exceeds the JDBC maximum: " + timeout);
+        }
+        return Math.toIntExact(roundedSeconds);
     }
 
     private PaperTaskScheduler requireScheduler() {

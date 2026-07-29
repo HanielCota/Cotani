@@ -233,6 +233,21 @@ class CotaniTest {
     }
 
     @Test
+    void concurrentCloseAsyncCallsShareCompletion() {
+        var plugin = pluginWithLogger();
+        var closeGate = new java.util.concurrent.CompletableFuture<Void>();
+        var cotani = Cotani.forPlugin(plugin).withAsync(() -> closeGate).build();
+
+        var first = cotani.closeAsync();
+        var second = cotani.closeAsync();
+
+        assertSame(first, second);
+        assertFalse(first.toCompletableFuture().isDone());
+        closeGate.complete(null);
+        assertDoesNotThrow(() -> first.toCompletableFuture().join());
+    }
+
+    @Test
     void registerAsyncAndDeregisterAsync() {
         var plugin = pluginWithLogger();
         var executed = new AtomicBoolean();

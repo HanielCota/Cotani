@@ -14,6 +14,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -361,11 +362,15 @@ class CaffeineDataCacheTest {
     }
 
     @Test
-    void failedEvictSaveIsRetriedOnClose() {
+    void failedEvictSaveIsRetriedOnClose() throws InterruptedException {
         CompletableFuture<Void> failedEvictSave = new CompletableFuture<>();
         CompletableFuture<Void> successfulRetry = CompletableFuture.completedFuture(null);
+        var saveStarted = new CountDownLatch(1);
         when(repository.save(anyString(), anyString()))
-                .thenReturn(failedEvictSave)
+                .thenAnswer(_ -> {
+                    saveStarted.countDown();
+                    return failedEvictSave;
+                })
                 .thenReturn(successfulRetry);
 
         DataCache<String, String> cache = createCache(CacheSettings.highActivity());
@@ -373,16 +378,63 @@ class CaffeineDataCacheTest {
         cache.markDirty("key");
 
         cache.unload("key");
-        try {
-            Thread.sleep(50);
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-        }
+        assertTrue(saveStarted.await(5, TimeUnit.SECONDS));
         failedEvictSave.completeExceptionally(new RuntimeException("boom"));
 
         cache.closeAsync().toCompletableFuture().join();
 
         verify(repository, times(2)).save("key", "value");
+    }
+
+    @Test
+    void oldEvictionSaveCannotOverwriteNewerEntrySave() throws InterruptedException {
+        var firstSave = new CompletableFuture<Void>();
+        var savedValues = new CopyOnWriteArrayList<String>();
+        var firstSaveStarted = new CountDownLatch(1);
+        when(repository.save(eq("key"), anyString())).thenAnswer(invocation -> {
+            savedValues.add(invocation.getArgument(1));
+            if (savedValues.size() == 1) {
+                firstSaveStarted.countDown();
+                return firstSave;
+            }
+            return CompletableFuture.completedFuture(null);
+        });
+
+        DataCache<String, String> cache = createCache(CacheSettings.highActivity());
+        cache.put("key", "old");
+        cache.markDirty("key");
+        cache.unload("key");
+        assertTrue(firstSaveStarted.await(5, TimeUnit.SECONDS));
+
+        cache.put("key", "new");
+        cache.markDirty("key");
+        var newerSave = cache.save("key").toCompletableFuture();
+
+        assertEquals(java.util.List.of("old"), savedValues);
+        assertFalse(newerSave.isDone());
+
+        firstSave.complete(null);
+        newerSave.join();
+
+        assertEquals(java.util.List.of("old", "new"), savedValues);
+        assertEquals(0, cache.dirtyCount());
+    }
+
+    @Test
+    void closeAsyncIsCoalescedAndRejectsNewMutations() {
+        var save = new CompletableFuture<Void>();
+        when(repository.save("key", "value")).thenReturn(save);
+        DataCache<String, String> cache = createCache(CacheSettings.staticData());
+        cache.put("key", "value");
+        cache.markDirty("key");
+
+        var first = cache.closeAsync();
+        var second = cache.closeAsync();
+
+        assertSame(first, second);
+        assertThrows(IllegalStateException.class, () -> cache.put("other", "value"));
+        save.complete(null);
+        assertDoesNotThrow(() -> first.toCompletableFuture().join());
     }
 
     @Test

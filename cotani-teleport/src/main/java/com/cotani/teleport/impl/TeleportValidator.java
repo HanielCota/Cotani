@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
+@com.cotani.api.InternalApi
 public final class TeleportValidator {
     private TeleportValidator() {}
 

@@ -6,8 +6,8 @@
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/ci.yml?branch=master&style=for-the-badge&logo=github&label=Build)](https://github.com/HanielCota/Cotani/actions)
 [![License](https://img.shields.io/github/license/HanielCota/Cotani?style=for-the-badge&color=blue)](LICENSE)
-[![Java Version](https://img.shields.io/badge/Java-21%2B-orange?style=for-the-badge&logo=openjdk)](https://adoptium.net)
-[![Paper API](https://img.shields.io/badge/Paper-1.20%2B-cyan?style=for-the-badge&logo=papermc)](https://papermc.io)
+[![Java Version](https://img.shields.io/badge/Java-25-orange?style=for-the-badge&logo=openjdk)](https://adoptium.net)
+[![Paper API](https://img.shields.io/badge/Paper-26.2-cyan?style=for-the-badge&logo=papermc)](https://papermc.io)
 [![JitPack](https://img.shields.io/jitpack/v/github/HanielCota/Cotani?style=for-the-badge&logo=jitpack&color=brightgreen)](https://jitpack.io/#HanielCota/Cotani)
 
 ---
@@ -24,11 +24,15 @@
 
 ### 🌟 Key Pillars
 
-- **🔒 Main-Thread Safety**: Guarantees zero lag spikes by delegating database queries, configuration parsing, and file IO off the main thread.
-- **⚡ Non-Blocking Pipeline**: Utilizes pure non-blocking reactive pipelines via `CompletionStage` and custom `TaskChain` transitions—no `.join()`, `.get()`, or `Thread.sleep()`.
-- **📦 12 Decoupled Modules**: Micro-modular design allowing developers to include only what they need (Economy, Teleport, Storage, Cache, Config, etc.).
-- **🛠️ Zero Static Mutability**: Built on pure constructor injection, dependency control, and explicit lifecycle management.
-- **💎 Type-Safe Java 21+ Records**: Map YAML/JSON configuration files directly into immutable Java `record` instances with strict validation annotations.
+- **🔒 Main-Thread Safety**: Provides explicit boundaries for delegating database queries, configuration parsing, and file IO off the main thread.
+- **⚡ Non-Blocking Pipeline**: Application flows compose through `CompletionStage` and custom `TaskChain` transitions without blocking to extract results; guarded synchronous lifecycle adapters remain for compatibility.
+- **📦 14 Focused Modules**: Modular design allowing developers to include only what they need (Economy, Teleport, Storage, Cache, Config, etc.).
+- **🛠️ Controlled State**: Built on constructor injection, bounded caches, dependency control, and explicit lifecycle management.
+- **💎 Type-Safe Java 25 Records**: Map YAML/JSON configuration files directly into immutable Java `record` instances with strict validation annotations.
+
+### Runtime baseline
+
+Cotani targets **Java 25** and **Paper API 26.2 stable**. The Gradle toolchain, CI and published artifacts use this same baseline; older Java or Paper releases are not supported by the current source tree.
 
 ---
 
@@ -62,22 +66,24 @@ flowchart TD
 
 ## 🧩 Modules Matrix
 
-Cotani is split into 12 standalone, decoupled modules. Each module contains dedicated documentation and focused contracts:
+Cotani is split into 14 focused modules. Each module contains dedicated documentation and contracts:
 
 | Module | Description | Documentation |
 | :--- | :--- | :--- |
-| 🚀 **`cotani-core`** | Bootstrap container, ordered service shutdown, lifecycle management. | [Core Docs](file:///D:/Cotani/cotani-core/README.md) |
-| ⚡ **`cotani-task`** | Thread switching (`TaskChain`), retries, timeouts, and scheduler wrappers. | [Task Docs](file:///D:/Cotani/cotani-task/README.md) |
-| 💾 **`cotani-cache`** | Caffeine-backed caching with automated dirty tracking & background saves. | [Cache Docs](file:///D:/Cotani/cotani-cache/README.md) |
-| 📝 **`cotani-config`** | Immutable configuration mapping from YAML directly into Java `record`s. | [Config Docs](file:///D:/Cotani/cotani-config/README.md) |
-| 🗄️ **`cotani-storage`** | Off-thread SQL driver engine (SQLite/MySQL/MariaDB) with automated migrations. | [Storage Docs](file:///D:/Cotani/cotani-storage/README.md) |
-| 🎨 **`cotani-text`** | MiniMessage formatting, dynamic placeholder pipelines & audience delivery. | [Text Docs](file:///D:/Cotani/cotani-text/README.md) |
-| ⚔️ **`cotani-item`** | Fluent `ItemStack` & skull builders with MiniMessage lore/name support. | [Item Docs](file:///D:/Cotani/cotani-item/README.md) |
-| 👤 **`cotani-user`** | Async session resolution, player data loading, and cache flushes. | [User Docs](file:///D:/Cotani/cotani-user/README.md) |
-| 💰 **`cotani-economy`** | Idempotent transactions with exact `BigDecimal` precision. | [Economy Docs](file:///D:/Cotani/cotani-economy/README.md) |
-| 🌀 **`cotani-teleport`** | Async teleport sequences with safety checks, countdowns & combat checks. | [Teleport Docs](file:///D:/Cotani/cotani-teleport/README.md) |
-| ⏳ **`cotani-cooldown`** | Persistent database and in-memory rate limiting and action cooldowns. | [Cooldown Docs](file:///D:/Cotani/cotani-cooldown/README.md) |
-| 📢 **`cotani-event`** | Reflection-free, prioritized event publishing bus with subscription controls. | [Event Docs](file:///D:/Cotani/cotani-event/README.md) |
+| 🚀 **`cotani-core`** | Bootstrap container, ordered service shutdown, lifecycle management. | [Core Docs](cotani-core/README.md) |
+| ⚡ **`cotani-task`** | Thread switching (`TaskChain`), retries, timeouts, and scheduler wrappers. | [Task Docs](cotani-task/README.md) |
+| 💾 **`cotani-cache`** | Caffeine-backed caching with automated dirty tracking & background saves. | [Cache Docs](cotani-cache/README.md) |
+| 📝 **`cotani-config`** | Immutable configuration mapping from YAML directly into Java `record`s. | [Config Docs](cotani-config/README.md) |
+| 🗄️ **`cotani-storage`** | Off-thread SQL driver engine (SQLite/MySQL/MariaDB) with automated migrations. | [Storage Docs](cotani-storage/README.md) |
+| 🎨 **`cotani-text`** | MiniMessage formatting, dynamic placeholder pipelines & audience delivery. | [Text Docs](cotani-text/README.md) |
+| ⚔️ **`cotani-item`** | Fluent `ItemStack` & skull builders with MiniMessage lore/name support. | [Item Docs](cotani-item/README.md) |
+| 👤 **`cotani-user`** | Async session resolution, player data loading, and cache flushes. | [User Docs](cotani-user/README.md) |
+| 💰 **`cotani-economy`** | Idempotent transactions with exact `BigDecimal` precision. | [Economy Docs](cotani-economy/README.md) |
+| 🌀 **`cotani-teleport`** | Async teleport sequences with safety checks, countdowns & combat checks. | [Teleport Docs](cotani-teleport/README.md) |
+| ⏳ **`cotani-cooldown`** | Persistent database and in-memory rate limiting and action cooldowns. | [Cooldown Docs](cotani-cooldown/README.md) |
+| 📢 **`cotani-event`** | Reflection-free, prioritized event publishing bus with subscription controls. | [Event Docs](cotani-event/README.md) |
+| 📊 **`cotani-metrics`** | Micrometer metrics for Cotani services and storage. | [Metrics Docs](cotani-metrics/README.md) |
+| 🪟 **`cotani-gui`** | Declarative, reactive inventory interfaces with interaction guards. | [GUI Docs](cotani-gui/README.md) |
 
 ---
 
@@ -254,30 +260,30 @@ dependencies {
 > **Entity Isolation**: Never store live `Player`, `World`, or `Entity` references inside long-lived services or capture them inside async lambdas. Always extract immutable identifiers (`UUID`, `Location` copies) first.
 
 > [!TIP]
-> **Defensive API Design**: All Cotani public APIs return unmodifiable collections (`List.copyOf`, `Set.copyOf`) and use Java `Optional` instead of returning `null`.
+> **Defensive API Design**: Cotani APIs use defensive collection copies and Java `Optional` for expected absence instead of returning `null`.
 
 For detailed architecture guides and developer cookbooks, check out:
-- 📖 [Repository Rules (`AGENTS.md`)](file:///D:/Cotani/AGENTS.md)
-- 🍳 [Cotani Developer Cookbook](file:///D:/Cotani/docs/ai/cotani-cookbook.md)
-- 📐 [Java Engineering Standards](file:///D:/Cotani/.agents/skills/java-engineering-standards/SKILL.md)
-- ⚡ [Java Async Standards](file:///D:/Cotani/.agents/skills/java-async-standards/SKILL.md)
-- 🏗️ [Paper Plugin Architecture](file:///D:/Cotani/.agents/skills/paper-plugin-architecture/SKILL.md)
+- 📖 [Repository Rules (`AGENTS.md`)](AGENTS.md)
+- 🍳 [Cotani Developer Cookbook](docs/ai/cotani-cookbook.md)
+- 📐 [Java Engineering Standards](.agents/skills/java-engineering-standards/SKILL.md)
+- ⚡ [Java Async Standards](.agents/skills/java-async-standards/SKILL.md)
+- 🏗️ [Paper Plugin Architecture](.agents/skills/paper-plugin-architecture/SKILL.md)
 
 ---
 
 ## 🤝 Contributing & Security
 
-Contributions are welcome! Please review our [Contributing Guide](file:///D:/Cotani/CONTRIBUTING.md) before submitting Pull Requests.
+Contributions are welcome! Please review our [Contributing Guide](CONTRIBUTING.md) before submitting Pull Requests.
 
 - 🐛 **Found a bug?** Open a [Bug Report](https://github.com/HanielCota/Cotani/issues/new?template=bug_report.yml).
 - ✨ **Have an idea?** Submit a [Feature Request](https://github.com/HanielCota/Cotani/issues/new?template=feature_request.yml).
-- 🔒 **Security Vulnerability?** Read our [Security Policy](file:///D:/Cotani/SECURITY.md).
+- 🔒 **Security Vulnerability?** Read our [Security Policy](SECURITY.md).
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](file:///D:/Cotani/LICENSE) file for details.
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
 <div align="center">
 <sub>Crafted with ❤️ for high-performance PaperSpigot server networks.</sub>

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
+@com.cotani.api.InternalApi
 public interface EconomyAccountRepository {
 
     CompletionStage<EconomyAccount> getOrCreate(UUID userId, CurrencyId currencyId);
