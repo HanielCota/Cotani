@@ -22,7 +22,7 @@ Thread-safe, non-blocking cooldown manager. Tracks actions, remaining duration, 
 Check and start a daily cooldown for a user in-memory:
 
 ```java
-CooldownService cooldowns = DefaultCooldownService.inMemory();
+CooldownService cooldowns = CotaniCooldowns.inMemory();
 
 CooldownResult result = cooldowns.user(userId)
     .action("daily.reward")

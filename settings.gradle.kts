@@ -16,6 +16,7 @@ dependencyResolutionManagement {
 rootProject.name = "cotani"
 
 include(
+    "bom",
     "cache",
     "config",
     "core",
@@ -29,9 +30,11 @@ include(
     "cooldown",
     "event",
     "metrics",
-    "gui"
+    "gui",
+    "examples"
 )
 
+project(":bom").projectDir = file("cotani-bom")
 project(":cache").projectDir = file("cotani-cache")
 project(":config").projectDir = file("cotani-config")
 project(":core").projectDir = file("cotani-core")
@@ -46,4 +49,4 @@ project(":cooldown").projectDir = file("cotani-cooldown")
 project(":event").projectDir = file("cotani-event")
 project(":metrics").projectDir = file("cotani-metrics")
 project(":gui").projectDir = file("cotani-gui")
-
+project(":examples").projectDir = file("docs-examples")

@@ -118,11 +118,7 @@ public final class Row {
     /** @deprecated use {@link #getInstantOptional(String)} */
     @Deprecated(forRemoval = false)
     public @Nullable Instant getInstant(String column) throws SQLException {
-        var raw = resultSet.getString(column);
-        if (raw == null) {
-            return null;
-        }
-        return Instant.parse(raw);
+        return JdbcInstantCodec.read(resultSet, column);
     }
 
     public Optional<Instant> getInstantOptional(String column) throws SQLException {

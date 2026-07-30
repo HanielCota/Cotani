@@ -26,7 +26,7 @@ class RowTest {
     @Test
     void optionalTypedGettersMapPresentValues() throws Exception {
         ResultSet resultSet = mock(ResultSet.class);
-        when(resultSet.getString("created_at")).thenReturn("2026-01-01T00:00:00Z");
+        when(resultSet.getObject("created_at")).thenReturn("2026-01-01T00:00:00Z");
         when(resultSet.getLong("count")).thenReturn(42L);
         when(resultSet.wasNull()).thenReturn(false);
         var row = new Row(resultSet, new ValueSerializerRegistry());

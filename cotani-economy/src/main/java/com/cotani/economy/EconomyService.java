@@ -33,12 +33,28 @@ public interface EconomyService {
 
     CompletionStage<EconomyBalance> balance(UUID userId);
 
+    default CompletionStage<EconomyBalance> balanceAsync(UUID userId) {
+        return balance(userId);
+    }
+
     CompletionStage<EconomyBalance> balance(UUID userId, CurrencyId currencyId);
+
+    default CompletionStage<EconomyBalance> balanceAsync(UUID userId, CurrencyId currencyId) {
+        return balance(userId, currencyId);
+    }
 
     CompletionStage<Boolean> has(UUID userId, BigDecimal amount);
 
+    default CompletionStage<Boolean> hasAsync(UUID userId, BigDecimal amount) {
+        return has(userId, amount);
+    }
+
     CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount);
 
+    default CompletionStage<Boolean> hasAsync(UUID userId, CurrencyId currencyId, BigDecimal amount) {
+        return has(userId, currencyId, amount);
+    }
+
     CompletionStage<EconomyTransaction> deposit(
             UUID userId,
             CurrencyId currencyId,
@@ -46,8 +62,22 @@ public interface EconomyService {
             EconomyReason reason,
             EconomyOperationId operationId);
 
+    default CompletionStage<EconomyTransaction> depositAsync(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return deposit(userId, currencyId, amount, reason, operationId);
+    }
+
     CompletionStage<EconomyTransaction> deposit(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId);
+
+    default CompletionStage<EconomyTransaction> depositAsync(
+            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return deposit(userId, amount, reason, operationId);
+    }
 
     CompletionStage<EconomyTransaction> withdraw(
             UUID userId,
@@ -56,8 +86,22 @@ public interface EconomyService {
             EconomyReason reason,
             EconomyOperationId operationId);
 
+    default CompletionStage<EconomyTransaction> withdrawAsync(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return withdraw(userId, currencyId, amount, reason, operationId);
+    }
+
     CompletionStage<EconomyTransaction> withdraw(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId);
+
+    default CompletionStage<EconomyTransaction> withdrawAsync(
+            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return withdraw(userId, amount, reason, operationId);
+    }
 
     CompletionStage<EconomyTransaction> set(
             UUID userId,
@@ -66,8 +110,22 @@ public interface EconomyService {
             EconomyReason reason,
             EconomyOperationId operationId);
 
+    default CompletionStage<EconomyTransaction> setAsync(
+            UUID userId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return set(userId, currencyId, amount, reason, operationId);
+    }
+
     CompletionStage<EconomyTransaction> set(
             UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId);
+
+    default CompletionStage<EconomyTransaction> setAsync(
+            UUID userId, BigDecimal amount, EconomyReason reason, EconomyOperationId operationId) {
+        return set(userId, amount, reason, operationId);
+    }
 
     CompletionStage<EconomyTransaction> transfer(
             UUID sourceUserId,
@@ -77,10 +135,29 @@ public interface EconomyService {
             EconomyReason reason,
             EconomyOperationId operationId);
 
+    default CompletionStage<EconomyTransaction> transferAsync(
+            UUID sourceUserId,
+            UUID targetUserId,
+            CurrencyId currencyId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return transfer(sourceUserId, targetUserId, currencyId, amount, reason, operationId);
+    }
+
     CompletionStage<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId);
+
+    default CompletionStage<EconomyTransaction> transferAsync(
+            UUID sourceUserId,
+            UUID targetUserId,
+            BigDecimal amount,
+            EconomyReason reason,
+            EconomyOperationId operationId) {
+        return transfer(sourceUserId, targetUserId, amount, reason, operationId);
+    }
 }

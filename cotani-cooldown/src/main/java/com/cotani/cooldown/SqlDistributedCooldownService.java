@@ -28,10 +28,10 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
 
     private static final Logger LOGGER = Logger.getLogger(SqlDistributedCooldownService.class.getName());
     private static final String SELECT_BY_ID = """
-            SELECT target_type, target_id, action_name, started_at, expires_at, lease_token
-            FROM cotani_cooldowns
-            WHERE cooldown_id = ?
-            """;
+        SELECT target_type, target_id, action_name, started_at, expires_at, lease_token
+        FROM cotani_cooldowns
+        WHERE cooldown_id = ?
+        """;
 
     private final CotaniStorage storage;
     private final Clock clock;
@@ -174,9 +174,12 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
                     (cooldown_id, target_type, target_id, action_name, started_at, expires_at, lease_token)
                 VALUES (?, ?, ?, ?, ?, ?, ?) AS incoming
                 ON DUPLICATE KEY UPDATE
-                    lease_token = IF(expires_at <= incoming.started_at, incoming.lease_token, lease_token),
-                    started_at = IF(expires_at <= incoming.started_at, incoming.started_at, started_at),
-                    expires_at = IF(expires_at <= incoming.started_at, incoming.expires_at, expires_at)
+                    lease_token = IF(cotani_cooldowns.expires_at <= incoming.started_at,
+                        incoming.lease_token, cotani_cooldowns.lease_token),
+                    started_at = IF(cotani_cooldowns.expires_at <= incoming.started_at,
+                        incoming.started_at, cotani_cooldowns.started_at),
+                    expires_at = IF(cotani_cooldowns.expires_at <= incoming.started_at,
+                        incoming.expires_at, cotani_cooldowns.expires_at)
                 """;
             case "mariadb" -> """
                 INSERT INTO cotani_cooldowns

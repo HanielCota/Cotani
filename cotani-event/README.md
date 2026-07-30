@@ -23,7 +23,10 @@ A lightweight, reflection-free Java Event Bus for asynchronous and synchronous e
 Register listeners and publish event data:
 
 ```java
-EventBus eventBus = DefaultEventBus.createDefault();
+EventBus eventBus = DefaultEventBus.create(
+    LoggingEventExceptionHandler.usingJavaLogger(),
+    scheduler.asyncExecutor()
+);
 
 // Subscribe to a custom event
 EventSubscription subscription = eventBus.subscribe(UserLoadedEvent.class, event -> {

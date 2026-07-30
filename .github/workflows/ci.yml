@@ -35,8 +35,11 @@ jobs:
       - name: Grant Execute Permission for Gradle Wrapper
         run: chmod +x gradlew
 
+      - name: Verify Docker for Integration Tests
+        run: docker info
+
       - name: Build & Check (Spotless, ErrorProne, Tests, Architecture)
-        run: ./gradlew check
+        run: ./gradlew check integrationTest
 
       - name: Upload Test Results
         if: always()
@@ -44,4 +47,4 @@ jobs:
         with:
           name: test-results
           path: '**/build/reports/tests/'
-          retire-if-empty: true
+          if-no-files-found: ignore

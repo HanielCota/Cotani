@@ -8,6 +8,11 @@ import org.jspecify.annotations.NullMarked;
 public interface TeleportService {
     CompletionStage<TeleportResult> teleport(TeleportRequest request);
 
+    /** Async-suffixed alias that makes the execution contract explicit at call sites. */
+    default CompletionStage<TeleportResult> teleportAsync(TeleportRequest request) {
+        return teleport(request);
+    }
+
     default boolean hasIndeterminateTeleport(UUID playerId) {
         java.util.Objects.requireNonNull(playerId, "playerId");
         return false;

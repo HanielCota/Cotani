@@ -1,11 +1,11 @@
-package br.com.cotani.storage.example;
+package com.cotani.examples.storage;
 
-import br.com.cotani.storage.migration.Migration;
-import br.com.cotani.storage.schema.ColumnType;
-import br.com.cotani.storage.schema.Schema;
+import com.cotani.storage.migration.Migration;
+import com.cotani.storage.schema.ColumnType;
+import com.cotani.storage.schema.Schema;
 import java.util.concurrent.CompletionStage;
 
-public final class CreateUsersTableMigration implements Migration {
+public final class CreateExampleUsersTable implements Migration {
 
     @Override
     public int version() {
@@ -14,7 +14,7 @@ public final class CreateUsersTableMigration implements Migration {
 
     @Override
     public String description() {
-        return "Create users table";
+        return "Create example users table";
     }
 
     @Override

@@ -75,6 +75,14 @@ dependencies {
 > [!NOTE]
 > The current source tree is `1.0.1-SNAPSHOT`. The `cotani-gui` and `cotani-metrics` modules were added after tag `1.0.0`; use a commit-based JitPack version only when intentionally testing unreleased code.
 
+Starting with `1.0.1`, `cotani-bom` can align module versions:
+
+```kotlin
+implementation(platform("com.github.HanielCota.Cotani:cotani-bom:1.0.1"))
+implementation("com.github.HanielCota.Cotani:cotani-task")
+implementation("com.github.HanielCota.Cotani:cotani-storage")
+```
+
 JitPack also provides the equivalent Maven and Groovy DSL snippets on the [Cotani package page](https://jitpack.io/#HanielCota/Cotani).
 
 ## Modules
@@ -92,7 +100,7 @@ JitPack also provides the equivalent Maven and Groovy DSL snippets on the [Cotan
 | [`cotani-cooldown`](cotani-cooldown/README.md) | Local and distributed cooldown acquisition |
 | [`cotani-event`](cotani-event/README.md) | Reflection-free event dispatch and subscriptions |
 | [`cotani-gui`](cotani-gui/README.md) | Declarative inventory UIs with reactive state and exploit guards |
-| [`cotani-metrics`](cotani-metrics/) | Micrometer metrics and optional Prometheus export |
+| [`cotani-metrics`](cotani-metrics/README.md) | Micrometer metrics and optional Prometheus export |
 | [`cotani-text`](cotani-text/README.md) | Adventure and MiniMessage formatting helpers |
 | [`cotani-item`](cotani-item/README.md) | Fluent Paper data-component item builders |
 
@@ -156,6 +164,12 @@ scheduler.chain(userService.findAsync(playerId))
 
 Detailed usage examples live in each module README. The [Cotani cookbook](docs/ai/cotani-cookbook.md) collects end-to-end plugin recipes.
 
+Execution and compatibility references:
+
+- [Asynchronous API contracts](docs/async-contracts.md)
+- [Cotani 1.x migration notes](docs/migration-1.x.md)
+- [Compile-checked examples](docs-examples/src/main/java/com/cotani/examples/CotaniExamples.java)
+
 ## Development
 
 Clone the repository and run the checks with the included wrapper:
@@ -167,7 +181,13 @@ cd Cotani
 ./gradlew check
 ```
 
-`check` runs unit tests, formatting validation, Error Prone, NullAway and module-boundary checks. With Docker available, it also exercises the MySQL and MariaDB integration suites.
+`check` runs unit tests, formatting validation, Error Prone, NullAway, compile-checked documentation examples and module-boundary checks. Database integration tests are deliberately separate:
+
+```bash
+./gradlew integrationTest
+```
+
+The integration task uses Docker-backed MySQL and MariaDB containers. CI verifies Docker first so a missing daemon cannot produce a false-green build.
 
 Additional project references:
 

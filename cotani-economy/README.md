@@ -48,7 +48,7 @@ Perform a currency transfer between players, dealing with logical errors within 
 
 ```java
 EconomyOperationId operationId = EconomyOperationId.random();
-EconomyReason reason = EconomyReason.player("pay");
+EconomyReason reason = EconomyReason.player("pay", sourceId);
 
 economy.transfer(sourceId, targetId, BigDecimal.valueOf(50), reason, operationId)
     .whenComplete((transaction, error) -> {

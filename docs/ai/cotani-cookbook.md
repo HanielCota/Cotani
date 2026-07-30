@@ -23,13 +23,18 @@ public final class MyPlugin extends JavaPlugin {
         scheduler = SchedulerFactory.create(this);
 
         cotani = Cotani.forPlugin(this)
-            .with(scheduler)
+            .withAsync(scheduler::closeAsync)
             .build();
     }
 
     @Override
     public void onDisable() {
-        cotani.close();
+        if (cotani != null) {
+            cotani.closeAsync().exceptionally(error -> {
+                getLogger().log(java.util.logging.Level.SEVERE, "Could not close Cotani", error);
+                return null;
+            });
+        }
     }
 }
 ```
@@ -61,16 +66,23 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
         return true;
     }
 
+    UUID playerId = player.getUniqueId();
     configs.reloadAsync()
-        .thenRun(() -> this.settings = configs.file("config.yml").bindOrThrow(PluginSettings.class))
-        .toCompletionStage()
-        .whenComplete((_, error) -> {
-            if (error != null) {
-                player.sendMessage(Component.text("Reload failed.", NamedTextColor.RED));
-            } else {
-                player.sendMessage(Component.text("Reloaded.", NamedTextColor.GREEN));
+        .thenAsync(_ -> configs.file("config.yml").bindOrThrow(PluginSettings.class))
+        .consumeEntity(playerId, updated -> {
+            this.settings = updated;
+            Player current = Bukkit.getPlayer(playerId);
+            if (current != null) {
+                current.sendMessage(Component.text("Reloaded.", NamedTextColor.GREEN));
             }
-        });
+        })
+        .onError(error -> scheduler.entity(playerId, () -> {
+            Player current = Bukkit.getPlayer(playerId);
+            if (current != null) {
+                current.sendMessage(Component.text("Reload failed.", NamedTextColor.RED));
+            }
+        }))
+        .toCompletionStage();
 
     return true;
 }
@@ -88,17 +100,26 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
     }
 
     EconomyOperationId operationId = EconomyOperationId.random();
-    EconomyReason reason = EconomyReason.player("pay");
+    UUID playerId = player.getUniqueId();
+    EconomyReason reason = EconomyReason.player("pay", playerId);
 
-    economy.withdraw(player.getUniqueId(), BigDecimal.valueOf(50), reason, operationId)
+    economy.withdrawAsync(playerId, BigDecimal.valueOf(50), reason, operationId)
         .whenComplete((transaction, error) -> {
-            if (error instanceof InsufficientFundsException) {
-                player.sendMessage(Component.text("Insufficient funds.", NamedTextColor.RED));
-            } else if (error != null) {
-                player.sendMessage(Component.text("Transaction failed.", NamedTextColor.RED));
-            } else {
-                player.sendMessage(Component.text("Paid 50 coins.", NamedTextColor.GREEN));
-            }
+            scheduler.entity(playerId, () -> {
+                Player current = Bukkit.getPlayer(playerId);
+                if (current == null) {
+                    return;
+                }
+                Throwable cause = error instanceof java.util.concurrent.CompletionException wrapper
+                    && wrapper.getCause() != null ? wrapper.getCause() : error;
+                if (cause instanceof InsufficientFundsException) {
+                    current.sendMessage(Component.text("Insufficient funds.", NamedTextColor.RED));
+                } else if (error != null) {
+                    current.sendMessage(Component.text("Transaction failed.", NamedTextColor.RED));
+                } else {
+                    current.sendMessage(Component.text("Paid 50 coins.", NamedTextColor.GREEN));
+                }
+            });
         });
 
     return true;
@@ -116,22 +137,29 @@ public boolean onCommand(CommandSender sender, Command command, String label, St
         return true;
     }
 
-    Location target = resolveTarget(args); // capture immutable data
+    UUID playerId = player.getUniqueId();
+    Location target = resolveTarget(args).clone(); // create the request on the entity thread
 
-    teleportModule.teleportService().teleport(
+    scheduler.chain(teleportModule.teleportService().teleportAsync(
         TeleportRequest.builder()
-            .playerId(player.getUniqueId())
+            .playerId(playerId)
             .target(target)
             .cause(TeleportCause.COMMAND)
             .source("mycommand")
             .options(TeleportOptions.defaults())
             .build()
-    ).thenAccept(result -> switch (result) {
-        case TeleportResult.Success success ->
-            player.sendMessage(Component.text("Teleported!", NamedTextColor.GREEN));
-        case TeleportResult.Failure failure ->
-            player.sendMessage(Component.text("Failed: " + failure.reason(), NamedTextColor.RED));
-    });
+    )).consumeEntity(playerId, result -> {
+        Player current = Bukkit.getPlayer(playerId);
+        if (current == null) {
+            return;
+        }
+        switch (result) {
+            case TeleportResult.Success success ->
+                current.sendMessage(Component.text("Teleported!", NamedTextColor.GREEN));
+            case TeleportResult.Failure failure ->
+                current.sendMessage(Component.text("Failed: " + failure.reason(), NamedTextColor.RED));
+        }
+    }).toCompletionStage();
 
     return true;
 }
@@ -167,7 +195,7 @@ public final class UserRepository extends CotaniRepository {
 
     private User map(Row row) {
         return new User(
-            row.getUuid("uuid"),
+            row.getUuidOptional("uuid").orElseThrow(),
             row.getString("username")
         );
     }
@@ -196,7 +224,7 @@ public final class PlayerKillListener implements Listener {
 
         UUID killerId = killer.getUniqueId();
 
-        economy.deposit(
+        economy.depositAsync(
                 killerId,
                 BigDecimal.valueOf(10),
                 EconomyReason.system("pvp_kill"),

@@ -1,17 +1,16 @@
-package br.com.cotani.storage.example;
+package com.cotani.examples.storage;
 
-import br.com.cotani.storage.api.CotaniStorage;
-import br.com.cotani.storage.query.EntityMapper;
-import br.com.cotani.storage.query.Row;
-import br.com.cotani.storage.repository.PlayerDataRepository;
+import com.cotani.storage.api.CotaniStorage;
+import com.cotani.storage.query.EntityMapper;
+import com.cotani.storage.query.Row;
+import com.cotani.storage.repository.PlayerDataRepository;
 import java.sql.SQLException;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-public final class UserRepository extends PlayerDataRepository<User> {
+public final class ExampleUserRepository extends PlayerDataRepository<ExampleUser> {
 
-    public UserRepository(CotaniStorage storage) {
+    public ExampleUserRepository(CotaniStorage storage) {
         super(storage);
     }
 
@@ -26,18 +25,18 @@ public final class UserRepository extends PlayerDataRepository<User> {
     }
 
     @Override
-    protected EntityMapper<User> mapper() {
+    protected EntityMapper<ExampleUser> mapper() {
         return this::map;
     }
 
     @Override
-    protected CompletionStage<User> create(UUID playerId, String name) {
-        User user = new User(playerId, name, 0L);
+    protected CompletionStage<ExampleUser> create(UUID playerId, String name) {
+        var user = new ExampleUser(playerId, name, 0L);
         return save(user).thenApply(_ -> user);
     }
 
     @Override
-    public CompletionStage<Void> save(User user) {
+    public CompletionStage<Void> save(ExampleUser user) {
         return table("users")
                 .upsert()
                 .value("unique_id", user.uniqueId())
@@ -48,16 +47,15 @@ public final class UserRepository extends PlayerDataRepository<User> {
                 .execute();
     }
 
-    public CompletionStage<Void> addCoins(UUID playerId, String name, long amount) {
+    public CompletionStage<Void> addCoinsAsync(UUID playerId, String name, long amount) {
         return findOrCreate(playerId, name)
                 .thenApply(user -> user.addCoins(amount))
                 .thenCompose(this::save);
     }
 
-    private User map(Row row) throws SQLException {
-        return new User(
-                row.getUuidOptional("unique_id")
-                        .orElseThrow(() -> new IllegalStateException("unique_id is SQL NULL")),
+    private ExampleUser map(Row row) throws SQLException {
+        return new ExampleUser(
+                row.getUuidOptional("unique_id").orElseThrow(() -> new IllegalStateException("unique_id is SQL NULL")),
                 row.getString("name"),
                 row.getLong("coins"));
     }
