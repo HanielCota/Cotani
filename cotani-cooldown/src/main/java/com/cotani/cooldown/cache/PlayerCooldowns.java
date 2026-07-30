@@ -1,6 +1,7 @@
 package com.cotani.cooldown.cache;
 
 import com.cotani.cooldown.api.CooldownEntry;
+import com.cotani.cooldown.api.CooldownKey;
 import com.cotani.cooldown.api.CooldownResult;
 import java.time.Duration;
 import java.time.Instant;
@@ -44,7 +45,7 @@ public record PlayerCooldowns(UUID playerId, Map<String, CooldownEntry> activeCo
         activeCooldowns.remove(action);
     }
 
-    public CooldownResult checkAndStart(com.cotani.cooldown.api.CooldownKey key, Duration duration, Instant now) {
+    public CooldownResult checkAndStart(CooldownKey key, Duration duration, Instant now) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(duration, "duration");
         Objects.requireNonNull(now, "now");

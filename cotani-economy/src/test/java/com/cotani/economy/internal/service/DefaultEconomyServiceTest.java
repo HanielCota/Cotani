@@ -41,7 +41,7 @@ class DefaultEconomyServiceTest {
     private final EconomyEventPublisher eventPublisher = Mockito.mock(EconomyEventPublisher.class);
 
     private DefaultEconomyService newService() {
-        return new DefaultEconomyService(
+        return DefaultEconomyService.create(
                 SETTINGS, new DefaultEconomyGuard(SETTINGS), accountRepository, transferRepository, eventPublisher);
     }
 

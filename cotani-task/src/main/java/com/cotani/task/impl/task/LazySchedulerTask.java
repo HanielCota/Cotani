@@ -1,5 +1,6 @@
 package com.cotani.task.impl.task;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.SchedulerTask;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -8,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class LazySchedulerTask implements SchedulerTask {
 
     private final AtomicReference<@Nullable SchedulerTask> setupTask;

@@ -1,5 +1,6 @@
 package com.cotani.teleport.impl;
 
+import com.cotani.api.InternalApi;
 import com.cotani.teleport.api.TeleportContext;
 import com.cotani.teleport.api.TeleportFailureReason;
 import com.cotani.teleport.api.TeleportResult;
@@ -9,7 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class TeleportValidator {
     private TeleportValidator() {}
 

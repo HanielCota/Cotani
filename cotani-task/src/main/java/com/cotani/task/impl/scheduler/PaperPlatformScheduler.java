@@ -1,5 +1,6 @@
 package com.cotani.task.impl.scheduler;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.PlatformScheduler;
 import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskMetadata;
@@ -17,15 +18,19 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class PaperPlatformScheduler implements PlatformScheduler, AutoCloseable {
 
     private final Plugin plugin;
     private final VirtualThreadExecutor virtualThreadExecutor;
 
-    public PaperPlatformScheduler(Plugin plugin, VirtualThreadExecutor virtualThreadExecutor) {
+    private PaperPlatformScheduler(Plugin plugin, VirtualThreadExecutor virtualThreadExecutor) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.virtualThreadExecutor = Objects.requireNonNull(virtualThreadExecutor, "virtualThreadExecutor");
+    }
+
+    public static PaperPlatformScheduler create(Plugin plugin, VirtualThreadExecutor virtualThreadExecutor) {
+        return new PaperPlatformScheduler(plugin, virtualThreadExecutor);
     }
 
     @Override

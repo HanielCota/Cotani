@@ -1,5 +1,6 @@
 package com.cotani.event.bus;
 
+import com.cotani.api.InternalApi;
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.api.EventBus;
 import com.cotani.event.api.EventDispatchPolicy;
@@ -13,28 +14,34 @@ import com.cotani.event.registry.EventRegistry;
 import com.cotani.event.subscription.DefaultEventSubscription;
 import com.cotani.event.subscription.EventSubscription;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+@InternalApi
 public final class DefaultEventBus implements EventBus {
 
     private final EventRegistry registry;
     private final EventDispatcher dispatcher;
     private final Executor asyncExecutor;
-    private final java.util.Optional<ExecutorService> ownedListenerExecutor;
+    private final Optional<ExecutorService> ownedListenerExecutor;
 
-    public DefaultEventBus(EventRegistry registry, EventDispatcher dispatcher, Executor asyncExecutor) {
-        this(registry, dispatcher, asyncExecutor, java.util.Optional.empty());
+    private DefaultEventBus(EventRegistry registry, EventDispatcher dispatcher, Executor asyncExecutor) {
+        this(registry, dispatcher, asyncExecutor, Optional.empty());
+    }
+
+    public static DefaultEventBus create(EventRegistry registry, EventDispatcher dispatcher, Executor asyncExecutor) {
+        return new DefaultEventBus(registry, dispatcher, asyncExecutor);
     }
 
     private DefaultEventBus(
             EventRegistry registry,
             EventDispatcher dispatcher,
             Executor asyncExecutor,
-            java.util.Optional<ExecutorService> ownedListenerExecutor) {
+            Optional<ExecutorService> ownedListenerExecutor) {
         this.registry = Objects.requireNonNull(registry, "registry cannot be null");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher cannot be null");
         this.asyncExecutor = Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
@@ -56,7 +63,7 @@ public final class DefaultEventBus implements EventBus {
                 new DefaultEventRegistry(),
                 new DefaultEventDispatcher(exceptionHandler, listenerExecutor, policy),
                 asyncExecutor,
-                java.util.Optional.of(listenerExecutor));
+                Optional.of(listenerExecutor));
     }
 
     @Override

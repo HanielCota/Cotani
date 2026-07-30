@@ -82,13 +82,13 @@ class RetryPolicyTest {
     @Test
     @SuppressWarnings("NullAway")
     void rejectsNullDelay() {
-        assertThrows(NullPointerException.class, () -> new RetryPolicy(1, null, 1.0, 0.0, error -> true, false));
+        assertThrows(NullPointerException.class, () -> RetryPolicy.create(1, null, 1.0, 0.0, error -> true, false));
     }
 
     @Test
     @SuppressWarnings("NullAway")
     void rejectsNullRetryIf() {
-        assertThrows(NullPointerException.class, () -> new RetryPolicy(1, Duration.ZERO, 1.0, 0.0, null, false));
+        assertThrows(NullPointerException.class, () -> RetryPolicy.create(1, Duration.ZERO, 1.0, 0.0, null, false));
     }
 
     @Test
@@ -109,6 +109,6 @@ class RetryPolicyTest {
     void rejectsZeroBackoffMultiplier() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new RetryPolicy(2, Duration.ofMillis(10), 0, 0, error -> true, false));
+                () -> RetryPolicy.create(2, Duration.ofMillis(10), 0, 0, error -> true, false));
     }
 }

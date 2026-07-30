@@ -1,12 +1,13 @@
 package com.cotani.user.internal.mapper;
 
+import com.cotani.api.InternalApi;
 import com.cotani.storage.query.Row;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import java.sql.SQLException;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class UserMapper {
 
     public SimpleCotaniUser toUser(Row row, UUID fallbackUniqueId, @Nullable String fallbackUsername, long now)

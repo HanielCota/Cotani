@@ -1,5 +1,7 @@
 package com.cotani.storage.api;
 
+import com.cotani.storage.backend.MariaDbBackend;
+import com.cotani.storage.backend.MySqlBackend;
 import com.cotani.storage.backend.SQLiteBackend;
 import com.cotani.storage.backend.StorageBackend;
 import com.cotani.storage.config.StorageConfigReader;
@@ -84,7 +86,7 @@ public final class CotaniStorage implements AutoCloseable {
         this.queryTimeoutSeconds = queryTimeoutSeconds;
         this.dialect = new DialectFactory().create(backend);
         Executor guardedExecutor = this::executeStorageOperation;
-        this.executor = new QueryExecutor(provider, guardedExecutor, serializers, queryTimeoutSeconds);
+        this.executor = QueryExecutor.create(provider, guardedExecutor, serializers, queryTimeoutSeconds);
         this.schema = new Schema(executor, dialect);
         this.transactions = new TransactionManager(provider, guardedExecutor, serializers, queryTimeoutSeconds);
     }
@@ -100,15 +102,13 @@ public final class CotaniStorage implements AutoCloseable {
                 ? Executors.newThreadPerTaskExecutor(
                         Thread.ofVirtual().name("cotani-storage-vt-", 0).factory())
                 : Executors.newFixedThreadPool(concurrencyLimit, platformFactory);
-        return new AdmissionControlledExecutorService(workers, concurrencyLimit, admissionQueueCapacity);
+        return AdmissionControlledExecutorService.create(workers, concurrencyLimit, admissionQueueCapacity);
     }
 
     private static int connectionLimit(StorageBackend backend) {
         return switch (backend) {
-            case com.cotani.storage.backend.MySqlBackend mysql ->
-                mysql.credentials().pool().maximumPoolSize();
-            case com.cotani.storage.backend.MariaDbBackend mariaDb ->
-                mariaDb.credentials().value().pool().maximumPoolSize();
+            case MySqlBackend mysql -> mysql.credentials().pool().maximumPoolSize();
+            case MariaDbBackend mariaDb -> mariaDb.credentials().value().pool().maximumPoolSize();
             case SQLiteBackend _ -> 1;
         };
     }
@@ -298,8 +298,8 @@ public final class CotaniStorage implements AutoCloseable {
         if (migrations.isEmpty()) {
             return CompletionStages.completedVoid();
         }
-        var migrationExecutor = new QueryExecutor(provider, storageExecutor, serializers, queryTimeoutSeconds);
-        var runner = new MigrationRunner(migrationExecutor, new Schema(migrationExecutor, dialect));
+        var migrationExecutor = QueryExecutor.create(provider, storageExecutor, serializers, queryTimeoutSeconds);
+        var runner = MigrationRunner.create(migrationExecutor, new Schema(migrationExecutor, dialect));
         for (var migration : migrations) {
             runner.add(migration);
         }

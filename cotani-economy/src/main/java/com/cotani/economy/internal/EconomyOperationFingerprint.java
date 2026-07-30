@@ -1,5 +1,6 @@
 package com.cotani.economy.internal;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.transaction.EconomyOperationId;
@@ -12,7 +13,7 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 /** Immutable identity of the request associated with an idempotency key. */
-@com.cotani.api.InternalApi
+@InternalApi
 public record EconomyOperationFingerprint(
         EconomyTransactionType type,
         @Nullable UUID sourceUserId,

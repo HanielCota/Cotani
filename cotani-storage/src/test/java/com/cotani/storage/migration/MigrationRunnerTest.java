@@ -3,6 +3,7 @@ package com.cotani.storage.migration;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.cotani.storage.dialect.SqlDialect;
 import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.provider.StorageProvider;
 import com.cotani.storage.schema.Schema;
@@ -10,12 +11,12 @@ import com.cotani.storage.serializer.ValueSerializerRegistry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class MigrationRunnerTest {
 
     private final QueryExecutor executor = createExecutor();
-    private final Schema schema =
-            new Schema(executor, org.mockito.Mockito.mock(com.cotani.storage.dialect.SqlDialect.class));
+    private final Schema schema = new Schema(executor, Mockito.mock(SqlDialect.class));
 
     @SuppressWarnings("NullAway")
     private static Migration migration(int version, String description) {
@@ -38,27 +39,27 @@ class MigrationRunnerTest {
     }
 
     private static QueryExecutor createExecutor() {
-        var provider = org.mockito.Mockito.mock(StorageProvider.class);
-        return new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
+        var provider = Mockito.mock(StorageProvider.class);
+        return QueryExecutor.create(provider, Runnable::run, new ValueSerializerRegistry());
     }
 
     @Test
     void rejectsDuplicateVersions() {
-        var runner = new MigrationRunner(executor, schema);
+        var runner = MigrationRunner.create(executor, schema);
         runner.add(migration(1, "first"));
         assertThrows(IllegalArgumentException.class, () -> runner.add(migration(1, "duplicate")));
     }
 
     @Test
     void acceptsDifferentVersions() {
-        var runner = new MigrationRunner(executor, schema);
+        var runner = MigrationRunner.create(executor, schema);
         runner.add(migration(1, "first"));
         assertDoesNotThrow(() -> runner.add(migration(2, "second")));
     }
 
     @Test
     void acceptsSameVersionInDifferentNamespaces() {
-        var runner = new MigrationRunner(executor, schema);
+        var runner = MigrationRunner.create(executor, schema);
         runner.add(migration(1, "first"));
         var otherNamespace = new Migration() {
             @Override

@@ -1,4 +1,4 @@
 @NullMarked
-package com.cotani.user.internal.repository;
+package com.cotani.api;
 
 import org.jspecify.annotations.NullMarked;

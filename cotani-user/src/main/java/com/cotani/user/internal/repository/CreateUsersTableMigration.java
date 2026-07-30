@@ -1,11 +1,12 @@
 package com.cotani.user.internal.repository;
 
+import com.cotani.api.InternalApi;
 import com.cotani.storage.migration.Migration;
 import com.cotani.storage.schema.ColumnType;
 import com.cotani.storage.schema.Schema;
 import java.util.concurrent.CompletionStage;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class CreateUsersTableMigration implements Migration {
 
     @Override

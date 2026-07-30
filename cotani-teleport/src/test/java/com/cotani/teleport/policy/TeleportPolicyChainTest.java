@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.cotani.teleport.api.TeleportContext;
 import com.cotani.teleport.api.TeleportFailureReason;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class TeleportPolicyChainTest {
 
-    private static final TeleportContext CONTEXT = org.mockito.Mockito.mock(TeleportContext.class);
+    private static final TeleportContext CONTEXT = Mockito.mock(TeleportContext.class);
 
     @Test
     void allowsWhenAllPoliciesAllow() {
@@ -32,8 +34,8 @@ class TeleportPolicyChainTest {
 
     @Test
     void shortCircuitsOnFirstDenial() {
-        var first = new java.util.concurrent.atomic.AtomicBoolean();
-        var second = new java.util.concurrent.atomic.AtomicBoolean();
+        var first = new AtomicBoolean();
+        var second = new AtomicBoolean();
         var chain = new TeleportPolicyChain(List.of(
                 ctx -> {
                     first.set(true);

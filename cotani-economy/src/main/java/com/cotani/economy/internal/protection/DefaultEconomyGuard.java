@@ -1,5 +1,6 @@
 package com.cotani.economy.internal.protection;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.InvalidAmountException;
@@ -11,7 +12,7 @@ import java.math.RoundingMode;
 import java.util.Objects;
 import java.util.UUID;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultEconomyGuard implements EconomyGuard {
 
     private static final String CURRENCY_ID_PARAM = "currencyId";

@@ -1,6 +1,7 @@
 package com.cotani.economy;
 
 import com.cotani.economy.api.EconomyModule;
+import com.cotani.economy.internal.DefaultEconomyModule;
 import org.jspecify.annotations.NullMarked;
 
 /**
@@ -14,6 +15,6 @@ public final class CotaniEconomy {
     private CotaniEconomy() {}
 
     public static EconomyModule create(EconomyModule.Context context) {
-        return com.cotani.economy.internal.DefaultEconomyModule.create(context);
+        return DefaultEconomyModule.create(context);
     }
 }

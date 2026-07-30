@@ -15,13 +15,18 @@ public final class ConfigSection {
     private final ConfigSerializerRegistry serializers;
     private final ConfigBinder binder;
 
-    public ConfigSection(
+    private ConfigSection(
             String file, String path, ConfigSource source, ConfigSerializerRegistry serializers, ConfigBinder binder) {
         this.file = Objects.requireNonNull(file, "file");
         this.path = Objects.requireNonNull(path, "path");
         this.source = Objects.requireNonNull(source, "source");
         this.serializers = Objects.requireNonNull(serializers, "serializers");
         this.binder = Objects.requireNonNull(binder, "binder");
+    }
+
+    public static ConfigSection create(
+            String file, String path, ConfigSource source, ConfigSerializerRegistry serializers, ConfigBinder binder) {
+        return new ConfigSection(file, path, source, serializers, binder);
     }
 
     public String file() {
@@ -43,11 +48,11 @@ public final class ConfigSection {
     public ConfigValue value(String childPath) {
         var fullPath = join(childPath);
         var entry = source.entry(fullPath);
-        return new ConfigValue(file, fullPath, entry.raw(), entry.exists(), serializers);
+        return ConfigValue.create(file, fullPath, entry.raw(), entry.exists(), serializers);
     }
 
     public ConfigSection section(String childPath) {
-        return new ConfigSection(file, join(childPath), source, serializers, binder);
+        return ConfigSection.create(file, join(childPath), source, serializers, binder);
     }
 
     public <T> T bind(Class<T> type) {

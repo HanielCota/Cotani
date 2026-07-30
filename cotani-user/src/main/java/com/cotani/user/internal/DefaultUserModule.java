@@ -1,10 +1,12 @@
 package com.cotani.user.internal;
 
 import com.cotani.Cotani;
+import com.cotani.api.InternalApi;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.migration.Migration;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
+import com.cotani.user.api.UserModule;
 import com.cotani.user.api.UserModuleOptions;
 import com.cotani.user.api.UserService;
 import com.cotani.user.internal.cache.UserCache;
@@ -23,8 +25,8 @@ import java.util.logging.Level;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
-@com.cotani.api.InternalApi
-public final class DefaultUserModule implements com.cotani.user.api.UserModule {
+@InternalApi
+public final class DefaultUserModule implements UserModule {
 
     private final Cotani cotani;
     private final SimpleUserService userService;

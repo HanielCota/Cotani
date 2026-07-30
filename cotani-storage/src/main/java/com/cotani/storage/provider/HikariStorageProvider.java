@@ -17,7 +17,11 @@ public final class HikariStorageProvider implements StorageProvider {
     private final MySqlCredentials credentials;
     private final AtomicReference<@Nullable HikariDataSource> dataSource = new AtomicReference<>();
 
-    public HikariStorageProvider(String jdbcUrl, MySqlCredentials credentials) {
+    public static HikariStorageProvider create(String jdbcUrl, MySqlCredentials credentials) {
+        return new HikariStorageProvider(jdbcUrl, credentials);
+    }
+
+    private HikariStorageProvider(String jdbcUrl, MySqlCredentials credentials) {
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl, "jdbcUrl");
         this.credentials = Objects.requireNonNull(credentials, "credentials");
     }

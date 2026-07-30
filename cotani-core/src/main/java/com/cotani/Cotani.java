@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,16 +24,17 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
     private static final String ASYNC_CLOSEABLE_NULL_MSG = "Parameter 'asyncCloseable' must not be null";
 
     private final Plugin plugin;
-    private final CopyOnWriteArrayList<AutoCloseable> closeables;
-    private final CopyOnWriteArrayList<Supplier<CompletionStage<Void>>> asyncCloseables;
+    private final List<AutoCloseable> closeables;
+    private final List<Supplier<CompletionStage<Void>>> asyncCloseables;
     private final AtomicBoolean closed;
     private final AtomicReference<@Nullable CompletableFuture<Void>> closeFuture;
+    private final Object lock = new Object();
 
     private Cotani(
             Plugin plugin, List<AutoCloseable> closeables, List<Supplier<CompletionStage<Void>>> asyncCloseables) {
         this.plugin = plugin;
-        this.closeables = new CopyOnWriteArrayList<>(closeables);
-        this.asyncCloseables = new CopyOnWriteArrayList<>(asyncCloseables);
+        this.closeables = new ArrayList<>(closeables);
+        this.asyncCloseables = new ArrayList<>(asyncCloseables);
         this.closed = new AtomicBoolean();
         this.closeFuture = new AtomicReference<>();
     }
@@ -61,31 +61,35 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
     public Cotani register(AutoCloseable closeable) {
         Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
-        ensureNotClosed();
-
-        closeables.add(closeable);
+        synchronized (lock) {
+            ensureNotClosed();
+            closeables.add(closeable);
+        }
         return this;
     }
 
     public Cotani deregister(AutoCloseable closeable) {
         Objects.requireNonNull(closeable, CLOSEABLE_NULL_MSG);
-
-        closeables.remove(closeable);
+        synchronized (lock) {
+            closeables.remove(closeable);
+        }
         return this;
     }
 
     public Cotani registerAsync(Supplier<CompletionStage<Void>> asyncCloseable) {
         Objects.requireNonNull(asyncCloseable, ASYNC_CLOSEABLE_NULL_MSG);
-        ensureNotClosed();
-
-        asyncCloseables.add(asyncCloseable);
+        synchronized (lock) {
+            ensureNotClosed();
+            asyncCloseables.add(asyncCloseable);
+        }
         return this;
     }
 
     public Cotani deregisterAsync(Supplier<CompletionStage<Void>> asyncCloseable) {
         Objects.requireNonNull(asyncCloseable, ASYNC_CLOSEABLE_NULL_MSG);
-
-        asyncCloseables.remove(asyncCloseable);
+        synchronized (lock) {
+            asyncCloseables.remove(asyncCloseable);
+        }
         return this;
     }
 
@@ -109,12 +113,16 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
         if (!closeFuture.compareAndSet(null, result)) {
             return Objects.requireNonNull(closeFuture.get(), "closeFuture");
         }
-        closed.set(true);
 
-        var asyncSnapshot = List.copyOf(asyncCloseables);
-        var syncSnapshot = List.copyOf(closeables);
-        asyncCloseables.clear();
-        closeables.clear();
+        List<Supplier<CompletionStage<Void>>> asyncSnapshot;
+        List<AutoCloseable> syncSnapshot;
+        synchronized (lock) {
+            closed.set(true);
+            asyncSnapshot = List.copyOf(asyncCloseables);
+            syncSnapshot = List.copyOf(closeables);
+            asyncCloseables.clear();
+            closeables.clear();
+        }
 
         executeAsyncCloseables(asyncSnapshot).whenComplete((firstFailure, asyncErr) -> {
             var combinedFailure = firstFailure;

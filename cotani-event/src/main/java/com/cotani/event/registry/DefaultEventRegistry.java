@@ -1,5 +1,6 @@
 package com.cotani.event.registry;
 
+import com.cotani.api.InternalApi;
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.subscription.EventSubscription;
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+@InternalApi
 public final class DefaultEventRegistry implements EventRegistry {
 
     private final CopyOnWriteArrayList<EventSubscription> subscriptions = new CopyOnWriteArrayList<>();

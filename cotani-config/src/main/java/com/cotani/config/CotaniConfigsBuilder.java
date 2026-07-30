@@ -21,9 +21,13 @@ public final class CotaniConfigsBuilder {
     private boolean createMissingFiles = true;
     private boolean copyDefaults = true;
 
-    public CotaniConfigsBuilder(Plugin plugin) {
+    private CotaniConfigsBuilder(Plugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.folder = plugin.getDataFolder().toPath();
+    }
+
+    public static CotaniConfigsBuilder create(Plugin plugin) {
+        return new CotaniConfigsBuilder(plugin);
     }
 
     public CotaniConfigsBuilder folder(Path folder) {
@@ -67,8 +71,8 @@ public final class CotaniConfigsBuilder {
         requireNonPrimaryThread();
         PaperTaskScheduler resolvedScheduler = requireScheduler();
         ConfigSerializerRegistry registry = ConfigSerializerRegistry.defaults(plugin);
-        DefaultCotaniConfigs configs =
-                new DefaultCotaniConfigs(plugin, folder, resolvedScheduler, registry, createMissingFiles, copyDefaults);
+        DefaultCotaniConfigs configs = DefaultCotaniConfigs.create(
+                plugin, folder, resolvedScheduler, registry, createMissingFiles, copyDefaults);
         files.forEach(configs::register);
         configs.reload();
         return configs;
@@ -82,8 +86,8 @@ public final class CotaniConfigsBuilder {
     public CompletionStage<CotaniConfigs> loadAsync() {
         PaperTaskScheduler resolvedScheduler = requireScheduler();
         ConfigSerializerRegistry registry = ConfigSerializerRegistry.defaults(plugin);
-        DefaultCotaniConfigs configs =
-                new DefaultCotaniConfigs(plugin, folder, resolvedScheduler, registry, createMissingFiles, copyDefaults);
+        DefaultCotaniConfigs configs = DefaultCotaniConfigs.create(
+                plugin, folder, resolvedScheduler, registry, createMissingFiles, copyDefaults);
         files.forEach(configs::register);
         return configs.reloadAsync().toCompletionStage().thenApply(_ -> configs);
     }

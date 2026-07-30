@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import com.cotani.cache.api.PlayerDataCache;
 import com.cotani.cache.api.PlayerValueFactory;
+import com.cotani.cache.exception.CacheException;
 import com.cotani.cache.policy.CacheSettings;
 import com.cotani.cache.repository.CacheRepository;
 import com.cotani.task.api.PaperTaskScheduler;
@@ -48,8 +49,8 @@ class CaffeinePlayerDataCacheTest {
 
     private PlayerDataCache<String> createCache() {
         var dataCache =
-                new CaffeineDataCache<>(repository, key -> "default-" + key, scheduler, CacheSettings.playerData());
-        return new CaffeinePlayerDataCache<>(dataCache, repository, factory, scheduler);
+                CaffeineDataCache.create(repository, key -> "default-" + key, scheduler, CacheSettings.playerData());
+        return CaffeinePlayerDataCache.create(dataCache, repository, factory, scheduler);
     }
 
     @Test
@@ -57,7 +58,7 @@ class CaffeinePlayerDataCacheTest {
         PlayerDataCache<String> cache = createCache();
         UUID id = UUID.randomUUID();
 
-        assertThrows(com.cotani.cache.exception.CacheException.class, () -> cache.get(id));
+        assertThrows(CacheException.class, () -> cache.get(id));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.cotani.teleport.impl;
 
 import com.cotani.Cotani;
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.adapter.CombatAdapter;
 import com.cotani.teleport.adapter.RegionProtectionAdapter;
@@ -25,7 +26,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.jspecify.annotations.Nullable;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultTeleportModule implements TeleportModule {
     private final Cotani cotani;
     private final PaperTaskScheduler scheduler;

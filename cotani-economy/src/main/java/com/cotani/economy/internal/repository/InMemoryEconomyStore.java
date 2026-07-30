@@ -1,8 +1,10 @@
 package com.cotani.economy.internal.repository;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
+import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.internal.EconomyOperationFingerprint;
 import com.cotani.economy.transaction.EconomyOperationId;
@@ -10,6 +12,7 @@ import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -30,7 +33,7 @@ import java.util.function.Supplier;
  * <p>Operations are idempotent: repeating the same {@link EconomyOperationId} returns the original
  * transaction without applying the balance change again.
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class InMemoryEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
 
     private final Executor executor;
@@ -203,7 +206,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
     public CompletableFuture<List<EconomyTransaction>> recentTransactions(int limit) {
         return CompletableFuture.supplyAsync(
                 () -> {
-                    var result = new java.util.ArrayList<EconomyTransaction>(Math.min(limit, transactions.size()));
+                    var result = new ArrayList<EconomyTransaction>(Math.min(limit, transactions.size()));
                     var iterator = transactions.descendingIterator();
                     while (iterator.hasNext() && result.size() < limit) {
                         result.add(iterator.next());
@@ -228,8 +231,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         var selected = selectInFlightOperation(operationId, fingerprint);
 
         if (!selected.fingerprint().sameRequest(fingerprint)) {
-            return CompletableFuture.failedFuture(
-                    new com.cotani.economy.exception.DuplicateEconomyOperationException(operationId));
+            return CompletableFuture.failedFuture(new DuplicateEconomyOperationException(operationId));
         }
 
         attachCleanup(operationId, selected);

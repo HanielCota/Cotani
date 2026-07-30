@@ -1,11 +1,16 @@
 package com.cotani.config.source;
 
 import com.cotani.config.exception.ConfigException;
+import com.cotani.config.security.ConfigPaths;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
@@ -14,6 +19,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.bukkit.configuration.ConfigurationSection;
@@ -36,12 +42,17 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     private final AtomicBoolean defaultsApplied = new AtomicBoolean(false);
     private YamlConfiguration yaml = new YamlConfiguration();
 
-    public BukkitYamlConfigSource(
+    private BukkitYamlConfigSource(
             Plugin plugin, String resourceName, Path path, boolean createMissing, boolean copyDefaults) {
         this(plugin, resourceName, path, parentOf(path), createMissing, copyDefaults);
     }
 
-    public BukkitYamlConfigSource(
+    public static BukkitYamlConfigSource create(
+            Plugin plugin, String resourceName, Path path, boolean createMissing, boolean copyDefaults) {
+        return new BukkitYamlConfigSource(plugin, resourceName, path, createMissing, copyDefaults);
+    }
+
+    private BukkitYamlConfigSource(
             Plugin plugin, String resourceName, Path path, Path root, boolean createMissing, boolean copyDefaults) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.resourceName = Objects.requireNonNull(resourceName, "resourceName");
@@ -49,6 +60,11 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         this.root = Objects.requireNonNull(root, "root");
         this.createMissing = createMissing;
         this.copyDefaults = copyDefaults;
+    }
+
+    public static BukkitYamlConfigSource create(
+            Plugin plugin, String resourceName, Path path, Path root, boolean createMissing, boolean copyDefaults) {
+        return new BukkitYamlConfigSource(plugin, resourceName, path, root, createMissing, copyDefaults);
     }
 
     @Override
@@ -170,7 +186,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
             if (section == null) {
                 return Map.of();
             }
-            return new LinkedHashMap<>(section.getValues(false));
+            return Map.copyOf(section.getValues(false));
         } finally {
             lock.readLock().unlock();
         }
@@ -218,14 +234,14 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     private void copyResourceOrCreateEmpty() throws IOException {
         try (InputStream input = plugin.getResource(resourceName)) {
             byte[] content = input == null ? new byte[0] : readBounded(input);
-            var verified = com.cotani.config.security.ConfigPaths.requireContained(path, root);
+            var verified = ConfigPaths.requireContained(path, root);
             try (var channel = Files.newByteChannel(
                     verified,
-                    java.util.Set.<OpenOption>of(
+                    Set.<OpenOption>of(
                             StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS))) {
                 writeFully(channel, content);
             }
-            com.cotani.config.security.ConfigPaths.requireContained(path, root);
+            ConfigPaths.requireContained(path, root);
         }
     }
 
@@ -276,7 +292,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     }
 
     private String readContainedFile(Path candidate) throws IOException {
-        var verified = com.cotani.config.security.ConfigPaths.requireContained(candidate, root);
+        var verified = ConfigPaths.requireContained(candidate, root);
         if (!Files.exists(verified, LinkOption.NOFOLLOW_LINKS)) {
             throw new FileNotFoundException(verified.toString());
         }
@@ -287,11 +303,11 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         }
         byte[] bytes;
         try (var channel = Files.newByteChannel(
-                        verified, java.util.Set.<OpenOption>of(StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS));
-                var input = java.nio.channels.Channels.newInputStream(channel)) {
+                        verified, Set.<OpenOption>of(StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS));
+                var input = Channels.newInputStream(channel)) {
             bytes = readBounded(input);
         }
-        com.cotani.config.security.ConfigPaths.requireContained(candidate, root);
+        ConfigPaths.requireContained(candidate, root);
         var after = Files.readAttributes(verified, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         if (!Objects.equals(before.fileKey(), after.fileKey()) || before.size() != after.size()) {
             throw new ConfigException("Config file changed while it was being read: " + verified);
@@ -304,26 +320,26 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         if (bytes.length > MAX_CONFIG_FILE_BYTES) {
             throw new ConfigException("Serialized config exceeds " + MAX_CONFIG_FILE_BYTES + " bytes: " + path);
         }
-        var verified = com.cotani.config.security.ConfigPaths.requireContained(path, root);
+        var verified = ConfigPaths.requireContained(path, root);
         var parent = Objects.requireNonNull(verified.getParent(), "config parent");
-        com.cotani.config.security.ConfigPaths.requireContained(parent, root);
+        ConfigPaths.requireContained(parent, root);
         var temporary = Files.createTempFile(parent, ".cotani-config-", ".tmp");
         try {
             try (var channel = Files.newByteChannel(
                     temporary,
-                    java.util.Set.<OpenOption>of(
+                    Set.<OpenOption>of(
                             StandardOpenOption.WRITE,
                             StandardOpenOption.TRUNCATE_EXISTING,
                             LinkOption.NOFOLLOW_LINKS))) {
                 writeFully(channel, bytes);
             }
-            com.cotani.config.security.ConfigPaths.requireContained(path, root);
+            ConfigPaths.requireContained(path, root);
             try {
                 Files.move(temporary, verified, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-            } catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
+            } catch (AtomicMoveNotSupportedException unsupported) {
                 Files.move(temporary, verified, StandardCopyOption.REPLACE_EXISTING);
             }
-            com.cotani.config.security.ConfigPaths.requireContained(path, root);
+            ConfigPaths.requireContained(path, root);
         } finally {
             Files.deleteIfExists(temporary);
         }
@@ -349,8 +365,8 @@ public final class BukkitYamlConfigSource implements ConfigSource {
                 Objects.requireNonNull(path, "path").toAbsolutePath().getParent(), "path parent");
     }
 
-    private static void writeFully(java.nio.channels.SeekableByteChannel channel, byte[] content) throws IOException {
-        var buffer = java.nio.ByteBuffer.wrap(content);
+    private static void writeFully(SeekableByteChannel channel, byte[] content) throws IOException {
+        var buffer = ByteBuffer.wrap(content);
         while (buffer.hasRemaining()) {
             channel.write(buffer);
         }

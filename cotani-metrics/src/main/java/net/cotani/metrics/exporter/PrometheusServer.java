@@ -1,5 +1,6 @@
 package net.cotani.metrics.exporter;
 
+import com.cotani.api.InternalApi;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
@@ -16,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * Embedded HTTP server providing a Prometheus scrape endpoint.
  */
+@InternalApi
 public final class PrometheusServer implements AutoCloseable {
 
     private final PrometheusMeterRegistry registry;

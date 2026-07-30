@@ -1,12 +1,13 @@
 package com.cotani.task.impl.scheduler;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.PlatformScheduler;
 import com.cotani.task.api.SchedulerOptions;
 import com.cotani.task.impl.executor.VirtualThreadExecutor;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class PlatformSchedulerFactory {
 
     private static final int DEFAULT_MAX_CONCURRENT = 256;
@@ -26,7 +27,7 @@ public final class PlatformSchedulerFactory {
 
         var executor = VirtualThreadExecutor.create(maxConcurrentVirtualThreads, useVirtualThreads);
 
-        return new PaperPlatformScheduler(plugin, executor);
+        return PaperPlatformScheduler.create(plugin, executor);
     }
 
     public static PlatformScheduler create(Plugin plugin, SchedulerOptions options) {
@@ -36,6 +37,6 @@ public final class PlatformSchedulerFactory {
         var executor = VirtualThreadExecutor.create(
                 options.maxConcurrentVirtualThreads(), options.useVirtualThreads(), options);
 
-        return new PaperPlatformScheduler(plugin, executor);
+        return PaperPlatformScheduler.create(plugin, executor);
     }
 }

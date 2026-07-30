@@ -1,5 +1,6 @@
 package com.cotani.config.impl;
 
+import com.cotani.api.InternalApi;
 import com.cotani.config.CotaniConfig;
 import com.cotani.config.binder.ConfigBinder;
 import com.cotani.config.exception.ConfigValidationException;
@@ -20,7 +21,7 @@ import java.util.Optional;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultCotaniConfig implements CotaniConfig {
 
     private final String name;
@@ -29,7 +30,7 @@ public final class DefaultCotaniConfig implements CotaniConfig {
     private final ConfigBinder binder;
     private final TaskChainFactory chainFactory;
 
-    public DefaultCotaniConfig(
+    private DefaultCotaniConfig(
             String name,
             ConfigSource source,
             ConfigSerializerRegistry serializers,
@@ -38,7 +39,16 @@ public final class DefaultCotaniConfig implements CotaniConfig {
         this(name, source, serializers, binder, (TaskChainFactory) scheduler);
     }
 
-    public DefaultCotaniConfig(
+    public static DefaultCotaniConfig create(
+            String name,
+            ConfigSource source,
+            ConfigSerializerRegistry serializers,
+            ConfigBinder binder,
+            PaperTaskScheduler scheduler) {
+        return new DefaultCotaniConfig(name, source, serializers, binder, scheduler);
+    }
+
+    private DefaultCotaniConfig(
             String name,
             ConfigSource source,
             ConfigSerializerRegistry serializers,
@@ -49,6 +59,15 @@ public final class DefaultCotaniConfig implements CotaniConfig {
         this.serializers = Objects.requireNonNull(serializers, "serializers");
         this.binder = Objects.requireNonNull(binder, "binder");
         this.chainFactory = Objects.requireNonNull(chainFactory, "chainFactory");
+    }
+
+    public static DefaultCotaniConfig create(
+            String name,
+            ConfigSource source,
+            ConfigSerializerRegistry serializers,
+            ConfigBinder binder,
+            TaskChainFactory chainFactory) {
+        return new DefaultCotaniConfig(name, source, serializers, binder, chainFactory);
     }
 
     @Override
@@ -107,12 +126,12 @@ public final class DefaultCotaniConfig implements CotaniConfig {
     @Override
     public ConfigValue value(String path) {
         var entry = source.entry(path);
-        return new ConfigValue(name, path, entry.raw(), entry.exists(), serializers);
+        return ConfigValue.create(name, path, entry.raw(), entry.exists(), serializers);
     }
 
     @Override
     public ConfigSection section(String path) {
-        return new ConfigSection(name, path, source, serializers, binder);
+        return ConfigSection.create(name, path, source, serializers, binder);
     }
 
     @Override
@@ -121,7 +140,8 @@ public final class DefaultCotaniConfig implements CotaniConfig {
         if (!entry.exists() || entry.raw() == null) {
             return Optional.empty();
         }
-        return Optional.of(new ConfigValue(name, path, entry.raw(), true, serializers).asString());
+        return Optional.of(
+                ConfigValue.create(name, path, entry.raw(), true, serializers).asString());
     }
 
     @Override
@@ -165,13 +185,14 @@ public final class DefaultCotaniConfig implements CotaniConfig {
         if (!entry.exists() || entry.raw() == null) {
             return fallback;
         }
-        return new ConfigValue(name, path, entry.raw(), true, serializers).as(type);
+        return ConfigValue.create(name, path, entry.raw(), true, serializers).as(type);
     }
 
     @Override
     public <T> List<T> getList(String path, Class<T> type) {
         return source.list(path).stream()
-                .map(raw -> new ConfigValue(name, path, raw, true, serializers).as(type))
+                .map(raw ->
+                        ConfigValue.create(name, path, raw, true, serializers).as(type))
                 .toList();
     }
 

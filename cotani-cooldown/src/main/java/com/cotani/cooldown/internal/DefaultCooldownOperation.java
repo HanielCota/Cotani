@@ -1,5 +1,6 @@
 package com.cotani.cooldown.internal;
 
+import com.cotani.api.InternalApi;
 import com.cotani.cooldown.api.*;
 import com.cotani.cooldown.paper.CotaniCooldownDenyEvent;
 import com.cotani.cooldown.paper.CotaniCooldownStartEvent;
@@ -11,7 +12,7 @@ import java.util.Optional;
 import org.bukkit.Bukkit;
 import org.jspecify.annotations.Nullable;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultCooldownOperation implements CooldownOperation {
 
     private final CooldownStore store;

@@ -8,6 +8,7 @@ import com.cotani.task.impl.executor.VirtualThreadExecutor;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -21,7 +22,7 @@ class VirtualThreadExecutorTest {
 
     @Test
     void executesAndShutsDown() throws ExecutionException, InterruptedException, TimeoutException {
-        VirtualThreadExecutor executor = new VirtualThreadExecutor();
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create();
         AtomicBoolean executed = new AtomicBoolean(false);
 
         var future = executor.submit(METADATA, () -> executed.set(true));
@@ -34,7 +35,7 @@ class VirtualThreadExecutorTest {
 
     @Test
     void closeShutsDownExecutor() {
-        VirtualThreadExecutor executor = new VirtualThreadExecutor();
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create();
 
         executor.close();
 
@@ -43,7 +44,7 @@ class VirtualThreadExecutorTest {
 
     @Test
     void rejectsAfterShutdown() {
-        VirtualThreadExecutor executor = new VirtualThreadExecutor();
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create();
         executor.close();
 
         assertThrows(RejectedExecutionException.class, () -> executor.submit(METADATA, () -> {}));
@@ -51,7 +52,7 @@ class VirtualThreadExecutorTest {
 
     @Test
     void namesThreadWithTaskName() throws ExecutionException, InterruptedException, TimeoutException {
-        VirtualThreadExecutor executor = new VirtualThreadExecutor();
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create();
         AtomicReference<String> capturedName = new AtomicReference<>();
         TaskMetadata metadata = TaskMetadata.named("custom-task-name", ExecutionTarget.async());
 
@@ -68,7 +69,7 @@ class VirtualThreadExecutorTest {
 
     @Test
     void restoresThreadNameAfterExecution() throws ExecutionException, InterruptedException, TimeoutException {
-        VirtualThreadExecutor executor = new VirtualThreadExecutor();
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create();
         AtomicReference<String> capturedName = new AtomicReference<>();
         String originalName = Thread.currentThread().getName();
 
@@ -88,7 +89,7 @@ class VirtualThreadExecutorTest {
 
     @Test
     void saturationRejectsWithoutBlockingOrRunningOnCaller() throws InterruptedException {
-        VirtualThreadExecutor executor = new VirtualThreadExecutor(1, true);
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create(1, true);
         var started = new CountDownLatch(1);
         var release = new CountDownLatch(1);
         try {
@@ -103,7 +104,7 @@ class VirtualThreadExecutorTest {
             assertTrue(started.await(5, TimeUnit.SECONDS));
             assertFalse(running.isDone());
 
-            var queued = new ArrayList<java.util.concurrent.Future<Void>>(4_096);
+            var queued = new ArrayList<Future<Void>>(4_096);
             for (int index = 0; index < 4_096; index++) {
                 queued.add(executor.submit(METADATA, () -> {}));
             }

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cotani.storage.error.StorageException;
 import com.cotani.storage.provider.StorageProvider;
 import com.cotani.storage.serializer.ValueSerializerRegistry;
 import java.sql.Connection;
@@ -17,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 @SuppressWarnings("NullAway")
 class TransactionManagerTest {
@@ -82,7 +84,7 @@ class TransactionManagerTest {
     @Test
     void commitFailureStillRestoresAndClosesConnection() throws Exception {
         var commitFailure = new SQLException("commit failed");
-        org.mockito.Mockito.doThrow(commitFailure).when(connection).commit();
+        Mockito.doThrow(commitFailure).when(connection).commit();
 
         var failure = assertThrows(
                 CompletionException.class,
@@ -91,7 +93,7 @@ class TransactionManagerTest {
                         .toCompletableFuture()
                         .join());
 
-        assertInstanceOf(com.cotani.storage.error.StorageException.class, failure.getCause());
+        assertInstanceOf(StorageException.class, failure.getCause());
         verify(connection).setAutoCommit(true);
         verify(connection).close();
     }
@@ -99,9 +101,7 @@ class TransactionManagerTest {
     @Test
     void rollbackFailureIsSuppressedOnOriginalFailure() throws Exception {
         var operationFailure = new IllegalStateException("operation failed");
-        org.mockito.Mockito.doThrow(new SQLException("rollback failed"))
-                .when(connection)
-                .rollback();
+        Mockito.doThrow(new SQLException("rollback failed")).when(connection).rollback();
 
         var failure = assertThrows(
                 CompletionException.class,

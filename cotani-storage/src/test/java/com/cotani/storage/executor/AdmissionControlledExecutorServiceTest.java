@@ -8,6 +8,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class AdmissionControlledExecutorServiceTest {
@@ -16,7 +17,8 @@ class AdmissionControlledExecutorServiceTest {
     void boundsActiveWorkAndQueueWithoutRunningOnCaller() throws InterruptedException {
         var release = new CountDownLatch(1);
         var started = new CountDownLatch(2);
-        try (var executor = new AdmissionControlledExecutorService(Executors.newVirtualThreadPerTaskExecutor(), 2, 1)) {
+        try (var executor =
+                AdmissionControlledExecutorService.create(Executors.newVirtualThreadPerTaskExecutor(), 2, 1)) {
             Runnable blocked = () -> {
                 started.countDown();
                 try {
@@ -30,7 +32,7 @@ class AdmissionControlledExecutorServiceTest {
             executor.execute(blocked);
             executor.execute(blocked);
 
-            org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(Duration.ofSeconds(1), () -> {
+            Assertions.assertTimeoutPreemptively(Duration.ofSeconds(1), () -> {
                 assertThrows(RejectedExecutionException.class, () -> executor.execute(blocked));
             });
             started.await(1, TimeUnit.SECONDS);

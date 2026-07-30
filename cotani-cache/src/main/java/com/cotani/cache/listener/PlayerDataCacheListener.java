@@ -30,10 +30,15 @@ public final class PlayerDataCacheListener<V> implements Listener {
     private final Logger logger;
     private final ConcurrentHashMap<UUID, AtomicLong> generations = new ConcurrentHashMap<>();
 
-    public PlayerDataCacheListener(PlayerDataCache<V> cache, CacheSettings settings, Logger logger) {
+    private PlayerDataCacheListener(PlayerDataCache<V> cache, CacheSettings settings, Logger logger) {
         this.cache = Objects.requireNonNull(cache, "cache");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.logger = Objects.requireNonNull(logger, "logger");
+    }
+
+    public static <V> PlayerDataCacheListener<V> create(
+            PlayerDataCache<V> cache, CacheSettings settings, Logger logger) {
+        return new PlayerDataCacheListener<>(cache, settings, logger);
     }
 
     @EventHandler
@@ -45,7 +50,10 @@ public final class PlayerDataCacheListener<V> implements Listener {
             return;
         }
 
-        cache.loadAsync(playerId);
+        cache.loadAsync(playerId).exceptionally(error -> {
+            logger.log(Level.SEVERE, error, () -> "Could not load player cache entry for " + playerId);
+            return null;
+        });
     }
 
     @EventHandler
@@ -67,13 +75,12 @@ public final class PlayerDataCacheListener<V> implements Listener {
     }
 
     private void unloadIfNeeded(UUID playerId, long generation) {
-        if (!settings.unloadOnQuit()) {
-            return;
-        }
         if (currentGeneration(playerId) != generation) {
             return;
         }
-        cache.unload(playerId);
+        if (settings.unloadOnQuit()) {
+            cache.unload(playerId);
+        }
         generations.remove(playerId);
     }
 

@@ -67,6 +67,7 @@ public final class SchedulerFactory {
 
         var platformScheduler = PlatformSchedulerFactory.create(plugin, options);
 
-        return new ModernPaperTaskScheduler(platformScheduler, exceptionHandler, options, metrics, persistentTaskStore);
+        return ModernPaperTaskScheduler.create(
+                platformScheduler, exceptionHandler, options, metrics, persistentTaskStore);
     }
 }

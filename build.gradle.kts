@@ -48,6 +48,7 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
                 val source = file.readText()
                 if (Regex("""(?m)^public\s+(?:final\s+|abstract\s+)?(?:class|record|interface|enum|sealed\s+interface)\s+""")
                         .containsMatchIn(source) &&
+                    !source.contains("@InternalApi") &&
                     !source.contains("@com.cotani.api.InternalApi")) {
                     violations +=
                         "${file.relativeTo(root)} exposes an unmarked implementation; add @InternalApi or move the contract out of impl/internal"

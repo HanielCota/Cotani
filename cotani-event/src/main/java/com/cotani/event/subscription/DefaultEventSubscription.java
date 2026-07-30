@@ -1,5 +1,6 @@
 package com.cotani.event.subscription;
 
+import com.cotani.api.InternalApi;
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.api.EventListener;
 import com.cotani.event.api.EventPriority;
@@ -7,6 +8,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@InternalApi
 public final class DefaultEventSubscription implements EventSubscription {
 
     private final UUID id;

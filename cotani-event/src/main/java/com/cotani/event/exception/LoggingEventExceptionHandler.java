@@ -1,9 +1,11 @@
 package com.cotani.event.exception;
 
+import com.cotani.api.InternalApi;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+@InternalApi
 public final class LoggingEventExceptionHandler implements EventExceptionHandler {
 
     private final Logger logger;

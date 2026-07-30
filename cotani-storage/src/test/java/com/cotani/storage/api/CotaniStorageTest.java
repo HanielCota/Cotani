@@ -7,11 +7,13 @@ import com.cotani.storage.backend.SQLiteBackend;
 import com.cotani.storage.backend.SQLiteCredentials;
 import com.cotani.storage.migration.Migration;
 import com.cotani.storage.repository.CotaniRepository;
+import com.cotani.storage.schema.Schema;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import org.bukkit.plugin.Plugin;
@@ -104,7 +106,7 @@ class CotaniStorageTest {
             }
 
             @Override
-            public java.util.concurrent.CompletionStage<Void> migrate(com.cotani.storage.schema.Schema schema) {
+            public CompletionStage<Void> migrate(Schema schema) {
                 return migrationGate;
             }
         };
@@ -158,7 +160,7 @@ class CotaniStorageTest {
             }
 
             @Override
-            public java.util.concurrent.CompletionStage<Void> migrate(com.cotani.storage.schema.Schema schema) {
+            public CompletionStage<Void> migrate(Schema schema) {
                 return CompletableFuture.failedFuture(new IllegalStateException("migration failed"));
             }
         };

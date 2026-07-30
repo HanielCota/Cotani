@@ -8,6 +8,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.TaskChain;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class CotaniConfigsBuilderTest {
         when(scheduler.supplyAsync(any(Supplier.class))).thenReturn(chain);
 
         CotaniConfigsBuilder builder =
-                new CotaniConfigsBuilder(plugin).scheduler(scheduler).file("config.yml");
+                CotaniConfigsBuilder.create(plugin).scheduler(scheduler).file("config.yml");
 
         var stage = builder.loadAsync();
         var future = stage.toCompletableFuture();
@@ -51,12 +52,12 @@ class CotaniConfigsBuilderTest {
         when(scheduler.supplyAsync(any(Supplier.class))).thenReturn(chain);
 
         CotaniConfigsBuilder builder =
-                new CotaniConfigsBuilder(plugin).scheduler(scheduler).file("config.yml");
+                CotaniConfigsBuilder.create(plugin).scheduler(scheduler).file("config.yml");
 
         var future = builder.loadAsync().toCompletableFuture();
 
         assertTrue(future.isCompletedExceptionally());
-        var exception = assertThrows(java.util.concurrent.CompletionException.class, future::join);
+        var exception = assertThrows(CompletionException.class, future::join);
         assertSame(reloadFailure, exception.getCause());
     }
 
@@ -69,7 +70,7 @@ class CotaniConfigsBuilderTest {
         when(scheduler.supplyAsync(any(Supplier.class))).thenReturn(chain);
 
         CotaniConfigsBuilder builder =
-                new CotaniConfigsBuilder(plugin).scheduler(scheduler).file("config.yml");
+                CotaniConfigsBuilder.create(plugin).scheduler(scheduler).file("config.yml");
 
         builder.loadAsync().toCompletableFuture().join();
 
@@ -79,7 +80,7 @@ class CotaniConfigsBuilderTest {
     @Test
     void loadWithoutSchedulerThrows(@TempDir Path tempDir) {
         Plugin plugin = mockPlugin(tempDir);
-        CotaniConfigsBuilder builder = new CotaniConfigsBuilder(plugin).file("config.yml");
+        CotaniConfigsBuilder builder = CotaniConfigsBuilder.create(plugin).file("config.yml");
 
         assertThrows(IllegalStateException.class, builder::load);
     }

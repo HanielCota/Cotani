@@ -27,7 +27,7 @@ class ModernPaperTaskSchedulerTest {
     private final TaskMetrics metrics = mock(TaskMetrics.class);
     private final SchedulerOptions options = SchedulerOptions.defaults();
     private final ModernPaperTaskScheduler scheduler =
-            new ModernPaperTaskScheduler(platformScheduler, exceptionHandler, options, metrics);
+            ModernPaperTaskScheduler.create(platformScheduler, exceptionHandler, options, metrics);
 
     @Test
     void debounceReturnsTask() {
@@ -96,7 +96,7 @@ class ModernPaperTaskSchedulerTest {
     void cancellingPersistedTaskRemovesItsRecoveryRecord() {
         var store = mock(PersistentTaskStore.class);
         var persistentScheduler =
-                new ModernPaperTaskScheduler(platformScheduler, exceptionHandler, options, metrics, store);
+                ModernPaperTaskScheduler.create(platformScheduler, exceptionHandler, options, metrics, store);
         var setupTask = mock(SchedulerTask.class);
         var delayedTask = mock(SchedulerTask.class);
         when(platformScheduler.runAsync(any(TaskMetadata.class), any(Runnable.class)))
@@ -120,7 +120,7 @@ class ModernPaperTaskSchedulerTest {
     void cancellationBeforePersistenceIsRemovedAfterSave() {
         var store = mock(PersistentTaskStore.class);
         var persistentScheduler =
-                new ModernPaperTaskScheduler(platformScheduler, exceptionHandler, options, metrics, store);
+                ModernPaperTaskScheduler.create(platformScheduler, exceptionHandler, options, metrics, store);
         var setupTask = mock(SchedulerTask.class);
         var saveRunnable = ArgumentCaptor.forClass(Runnable.class);
         when(platformScheduler.runAsync(any(TaskMetadata.class), saveRunnable.capture()))

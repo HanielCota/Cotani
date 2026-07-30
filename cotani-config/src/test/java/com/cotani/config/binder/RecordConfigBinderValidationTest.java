@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 class RecordConfigBinderValidationTest {
 
     private final ConfigSerializerRegistry serializers = serializers();
-    private final RecordConfigBinder binder = new RecordConfigBinder(serializers);
+    private final RecordConfigBinder binder = RecordConfigBinder.create(serializers);
 
     private static ConfigSerializerRegistry serializers() {
         var registry = new ConfigSerializerRegistry();
@@ -81,7 +81,7 @@ class RecordConfigBinderValidationTest {
     private record PrivateConfigRecord(@Required String message) {}
 
     private ConfigSection section(Map<String, Object> values) {
-        return new ConfigSection("test.yml", "", new MapConfigSource(values), serializers, binder);
+        return ConfigSection.create("test.yml", "", new MapConfigSource(values), serializers, binder);
     }
 
     private static final class MapConfigSource implements ConfigSource {

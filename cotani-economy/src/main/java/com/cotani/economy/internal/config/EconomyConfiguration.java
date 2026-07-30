@@ -1,5 +1,6 @@
 package com.cotani.economy.internal.config;
 
+import com.cotani.api.InternalApi;
 import com.cotani.config.CotaniConfig;
 import com.cotani.config.CotaniConfigs;
 import com.cotani.economy.EconomySettings;
@@ -11,7 +12,7 @@ import java.math.RoundingMode;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class EconomyConfiguration implements AutoCloseable {
 
     private final CotaniConfigs configs;
@@ -23,7 +24,7 @@ public final class EconomyConfiguration implements AutoCloseable {
     }
 
     public static EconomyConfiguration load(Plugin plugin, PaperTaskScheduler scheduler) {
-        CotaniConfigs configs = CotaniConfigs.create(plugin)
+        CotaniConfigs configs = CotaniConfigs.builder(plugin)
                 .scheduler(scheduler)
                 .file("economy.yml")
                 .load();

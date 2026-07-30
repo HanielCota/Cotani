@@ -20,7 +20,7 @@ public final class TeleportConfiguration implements AutoCloseable {
     }
 
     public static TeleportConfiguration load(Plugin plugin, PaperTaskScheduler scheduler) {
-        CotaniConfigs configs = CotaniConfigs.create(plugin)
+        CotaniConfigs configs = CotaniConfigs.builder(plugin)
                 .scheduler(scheduler)
                 .file("config.yml")
                 .file("messages.yml")

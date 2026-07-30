@@ -27,7 +27,7 @@ public final class CotaniCache {
      * @return a new builder
      */
     public static <K, V> DataCacheBuilder<K, V> data(Class<K> keyType, Class<V> valueType) {
-        return new DataCacheBuilder<>(keyType, valueType);
+        return DataCacheBuilder.create(keyType, valueType);
     }
 
     /**
@@ -38,7 +38,7 @@ public final class CotaniCache {
      * @return a new builder
      */
     public static <V> PlayerDataCacheBuilder<V> players(Class<V> valueType) {
-        return new PlayerDataCacheBuilder<>(valueType);
+        return PlayerDataCacheBuilder.create(valueType);
     }
 
     /**

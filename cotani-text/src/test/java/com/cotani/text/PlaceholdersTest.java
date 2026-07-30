@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
+import java.util.Map;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -106,7 +107,7 @@ class PlaceholdersTest {
 
     @Test
     void createsUnparsedMapPlaceholders() {
-        var map = java.util.Map.of("player", "Steve", "world", "Nether");
+        var map = Map.of("player", "Steve", "world", "Nether");
         var resolver = Placeholders.unparsed(map);
         var component = MiniMessages.parse("<player> in <world>", resolver);
 
@@ -115,7 +116,7 @@ class PlaceholdersTest {
 
     @Test
     void createsComponentMapPlaceholders() {
-        var map = java.util.Map.of(
+        var map = Map.of(
                 "player", Component.text("Steve", NamedTextColor.YELLOW),
                 "rank", Component.text("VIP", NamedTextColor.GREEN));
         var resolver = Placeholders.component(map);

@@ -33,7 +33,7 @@ final class TargetTaskDispatcher implements NamedAsyncTaskScheduler {
         this.platformScheduler = Objects.requireNonNull(platformScheduler, "platformScheduler");
         this.taskRunner = Objects.requireNonNull(taskRunner, "taskRunner");
         this.taskErrorReporter = Objects.requireNonNull(taskErrorReporter, "taskErrorReporter");
-        this.taskDispatcher = new TaskDispatcher(platformScheduler, taskRunner);
+        this.taskDispatcher = TaskDispatcher.create(platformScheduler, taskRunner);
         this.metadataFactory = Objects.requireNonNull(metadataFactory, "metadataFactory");
     }
 

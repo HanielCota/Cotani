@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.cotani.cooldown.api.CooldownAction;
 import com.cotani.cooldown.api.CooldownKey;
+import com.cotani.cooldown.api.CooldownResult;
 import com.cotani.cooldown.api.CooldownTargets;
 import com.cotani.cooldown.api.DistributedCooldownService;
 import com.cotani.cooldown.internal.InMemoryCooldownStore;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,8 +42,7 @@ class DistributedCooldownServiceTest {
                 DistributedCooldownService second =
                         CotaniCooldowns.distributed(storage, scheduler, clock, Duration.ofMinutes(1))) {
             var key = new CooldownKey(CooldownTargets.user(UUID.randomUUID()), CooldownAction.of("daily.reward"));
-            var attempts =
-                    new ArrayList<java.util.concurrent.CompletionStage<com.cotani.cooldown.api.CooldownResult>>();
+            var attempts = new ArrayList<CompletionStage<CooldownResult>>();
             for (int i = 0; i < 64; i++) {
                 attempts.add(
                         (i & 1) == 0
@@ -51,7 +52,7 @@ class DistributedCooldownServiceTest {
 
             long allowed = attempts.stream()
                     .map(stage -> stage.toCompletableFuture().join())
-                    .filter(com.cotani.cooldown.api.CooldownResult::allowed)
+                    .filter(CooldownResult::allowed)
                     .count();
 
             assertEquals(1, allowed);

@@ -16,9 +16,11 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -98,7 +100,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
             if (entry.isPresent() && entry.get().expired(now)) {
                 return removeExpired(target.cooldownId(), now).thenApply(_ -> Optional.empty());
             }
-            return java.util.concurrent.CompletableFuture.completedFuture(entry);
+            return CompletableFuture.completedFuture(entry);
         });
     }
 
@@ -168,7 +170,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
     }
 
     private String upsertSql() {
-        return switch (storage.dialect().name().toLowerCase(java.util.Locale.ROOT)) {
+        return switch (storage.dialect().name().toLowerCase(Locale.ROOT)) {
             case "mysql" -> """
                 INSERT INTO cotani_cooldowns
                     (cooldown_id, target_type, target_id, action_name, started_at, expires_at, lease_token)

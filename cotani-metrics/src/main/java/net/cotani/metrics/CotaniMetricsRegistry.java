@@ -1,5 +1,6 @@
 package net.cotani.metrics;
 
+import com.cotani.api.InternalApi;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
@@ -15,6 +16,7 @@ import net.cotani.metrics.api.MetricsRegistry;
 /**
  * Micrometer-backed implementation of {@link MetricsRegistry}.
  */
+@InternalApi
 public final class CotaniMetricsRegistry implements MetricsRegistry {
 
     private final MeterRegistry meterRegistry;

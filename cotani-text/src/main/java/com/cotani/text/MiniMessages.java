@@ -2,6 +2,7 @@ package com.cotani.text;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -20,7 +21,7 @@ public final class MiniMessages {
     private static final int PARSE_CACHE_MAX_SIZE = 512;
     private static final int MAX_TEMPLATE_LENGTH = 32_768;
     private static final Map<String, Component> parseCache =
-            Collections.synchronizedMap(new java.util.LinkedHashMap<>(16, 0.75f, true) {
+            Collections.synchronizedMap(new LinkedHashMap<>(16, 0.75f, true) {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, Component> eldest) {
                     return size() > PARSE_CACHE_MAX_SIZE;

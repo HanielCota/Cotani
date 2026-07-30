@@ -1,5 +1,6 @@
 package net.cotani.metrics.api;
 
+import com.cotani.api.InternalApi;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.Objects;
@@ -10,6 +11,7 @@ import java.util.function.Supplier;
  * Zero-allocation, zero-overhead no-op implementation of {@link MetricsRegistry}.
  * Used when metrics collection is disabled.
  */
+@InternalApi
 public final class NoOpMetricsRegistry implements MetricsRegistry {
 
     /**

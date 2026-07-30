@@ -21,6 +21,7 @@ import com.cotani.task.api.TaskMetadata;
 import com.cotani.task.impl.scheduler.ModernPaperTaskScheduler;
 import com.cotani.task.metrics.TaskMetrics;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -38,7 +39,7 @@ class SchedulerCapabilityInterfacesTest {
         when(platform.runAsyncLater(any(TaskMetadata.class), any(Runnable.class), any(Duration.class)))
                 .thenReturn(task);
         PaperTaskScheduler scheduler =
-                new ModernPaperTaskScheduler(platform, exceptionHandler, SchedulerOptions.defaults(), metrics);
+                ModernPaperTaskScheduler.create(platform, exceptionHandler, SchedulerOptions.defaults(), metrics);
 
         AsyncTaskExecutor executor = scheduler;
         DelayedTaskScheduler delays = scheduler;
@@ -54,7 +55,7 @@ class SchedulerCapabilityInterfacesTest {
         assertEquals(ExecutionTarget.async(), asyncMetadata.getValue().target());
         assertEquals(
                 "value",
-                chains.chain(java.util.concurrent.CompletableFuture.completedFuture("value"))
+                chains.chain(CompletableFuture.completedFuture("value"))
                         .toCompletionStage()
                         .toCompletableFuture()
                         .getNow(null));

@@ -9,7 +9,7 @@ class TokenBucketRateLimiterTest {
 
     @Test
     void firstAcquireSucceeds() {
-        RateLimiter limiter = new TokenBucketRateLimiter(2, Duration.ofSeconds(1));
+        RateLimiter limiter = TokenBucketRateLimiter.create(2, Duration.ofSeconds(1));
 
         assertTrue(limiter.tryAcquire());
         assertTrue(limiter.tryAcquire());
@@ -18,18 +18,18 @@ class TokenBucketRateLimiterTest {
 
     @Test
     void rejectsZeroCapacity() {
-        assertThrows(IllegalArgumentException.class, () -> new TokenBucketRateLimiter(0, Duration.ofSeconds(1)));
+        assertThrows(IllegalArgumentException.class, () -> TokenBucketRateLimiter.create(0, Duration.ofSeconds(1)));
     }
 
     @Test
     void rejectsZeroRefillPeriod() {
-        assertThrows(IllegalArgumentException.class, () -> new TokenBucketRateLimiter(1, Duration.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> TokenBucketRateLimiter.create(1, Duration.ZERO));
     }
 
     @Test
     @SuppressWarnings("java:S2925")
     void respectsRefillRate() throws InterruptedException {
-        RateLimiter limiter = new TokenBucketRateLimiter(1, Duration.ofMillis(100));
+        RateLimiter limiter = TokenBucketRateLimiter.create(1, Duration.ofMillis(100));
 
         assertTrue(limiter.tryAcquire());
         assertFalse(limiter.tryAcquire());

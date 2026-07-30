@@ -1,10 +1,14 @@
 package com.cotani.cooldown.internal;
 
+import com.cotani.api.InternalApi;
+import com.cotani.cache.api.PlayerDataCache;
 import com.cotani.cooldown.api.*;
+import com.cotani.cooldown.cache.CacheCooldownStore;
+import com.cotani.cooldown.cache.PlayerCooldowns;
 import java.time.Clock;
 import java.util.Objects;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultCooldownService implements CooldownService {
 
     private final CooldownStore store;
@@ -19,10 +23,8 @@ public final class DefaultCooldownService implements CooldownService {
         return new DefaultCooldownService(new InMemoryCooldownStore(), new MonotonicClock());
     }
 
-    public static DefaultCooldownService cacheBacked(
-            com.cotani.cache.api.PlayerDataCache<com.cotani.cooldown.cache.PlayerCooldowns> playerCache) {
-        return new DefaultCooldownService(
-                new com.cotani.cooldown.cache.CacheCooldownStore(playerCache), Clock.systemUTC());
+    public static DefaultCooldownService cacheBacked(PlayerDataCache<PlayerCooldowns> playerCache) {
+        return new DefaultCooldownService(new CacheCooldownStore(playerCache), Clock.systemUTC());
     }
 
     @Override

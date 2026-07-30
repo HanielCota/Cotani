@@ -8,13 +8,14 @@ import com.cotani.storage.executor.QueryExecutor;
 import com.cotani.storage.provider.StorageProvider;
 import com.cotani.storage.serializer.ValueSerializerRegistry;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class UpsertQueryTest {
 
     private static QueryExecutor createExecutor() {
-        var provider = org.mockito.Mockito.mock(StorageProvider.class);
-        org.mockito.Mockito.when(provider.available()).thenReturn(true);
-        return new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
+        var provider = Mockito.mock(StorageProvider.class);
+        Mockito.when(provider.available()).thenReturn(true);
+        return QueryExecutor.create(provider, Runnable::run, new ValueSerializerRegistry());
     }
 
     @Test

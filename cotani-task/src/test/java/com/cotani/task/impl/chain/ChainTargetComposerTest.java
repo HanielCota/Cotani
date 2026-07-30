@@ -12,6 +12,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class ChainTargetComposerTest {
@@ -32,6 +33,6 @@ class ChainTargetComposerTest {
         assertEquals(4, composed.future().getNow(null));
         assertEquals(6, composed.newAttempt().getNow(null));
         verify(scheduler, times(2))
-                .supply(any(ExecutionTarget.class), org.mockito.ArgumentMatchers.eq("double"), any(Supplier.class));
+                .supply(any(ExecutionTarget.class), ArgumentMatchers.eq("double"), any(Supplier.class));
     }
 }

@@ -22,7 +22,7 @@ class BukkitYamlConfigSourceTest {
             output.write(new byte[4 * 1024 * 1024 + 1]);
         }
 
-        var source = new BukkitYamlConfigSource(mock(Plugin.class), "oversized.yml", path, false, false);
+        var source = BukkitYamlConfigSource.create(mock(Plugin.class), "oversized.yml", path, false, false);
 
         assertThrows(ConfigException.class, source::load);
     }
@@ -35,7 +35,7 @@ class BukkitYamlConfigSourceTest {
             yaml.append("  ".repeat(depth)).append("level").append(depth).append(":\n");
         }
         Files.writeString(path, yaml);
-        var source = new BukkitYamlConfigSource(mock(Plugin.class), "deep.yml", path, directory, false, false);
+        var source = BukkitYamlConfigSource.create(mock(Plugin.class), "deep.yml", path, directory, false, false);
 
         assertThrows(ConfigException.class, source::load);
     }
@@ -48,7 +48,7 @@ class BukkitYamlConfigSourceTest {
             yaml.append("alias").append(alias).append(": *base\n");
         }
         Files.writeString(path, yaml);
-        var source = new BukkitYamlConfigSource(mock(Plugin.class), "aliases.yml", path, directory, false, false);
+        var source = BukkitYamlConfigSource.create(mock(Plugin.class), "aliases.yml", path, directory, false, false);
 
         assertThrows(ConfigException.class, source::load);
     }
@@ -64,7 +64,7 @@ class BukkitYamlConfigSourceTest {
         } catch (UnsupportedOperationException | IOException unsupported) {
             Assumptions.abort("symbolic links are unavailable: " + unsupported.getMessage());
         }
-        var source = new BukkitYamlConfigSource(mock(Plugin.class), "config.yml", link, root, false, false);
+        var source = BukkitYamlConfigSource.create(mock(Plugin.class), "config.yml", link, root, false, false);
         source.set("safe", false);
 
         assertThrows(ConfigException.class, source::save);

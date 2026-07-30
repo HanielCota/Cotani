@@ -1,12 +1,13 @@
 package com.cotani.user.internal.repository;
 
+import com.cotani.api.InternalApi;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public interface UserRepository {
 
     CompletionStage<Optional<SimpleCotaniUser>> find(UUID uniqueId, String username);

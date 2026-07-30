@@ -3,6 +3,7 @@ package com.cotani.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.time.Duration;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -87,9 +88,9 @@ class AudienceMessagesTest {
     @Test
     void sendsTitleWithDuration() {
         var audience = new CapturingAudience();
-        var fadeIn = java.time.Duration.ofSeconds(1);
-        var stay = java.time.Duration.ofSeconds(2);
-        var fadeOut = java.time.Duration.ofSeconds(3);
+        var fadeIn = Duration.ofSeconds(1);
+        var stay = Duration.ofSeconds(2);
+        var fadeOut = Duration.ofSeconds(3);
 
         AudienceMessages.sendTitle(audience, "<red>Title", "<yellow>Subtitle", fadeIn, stay, fadeOut);
 
@@ -149,9 +150,9 @@ class AudienceMessagesTest {
         var audience = new CapturingAudience();
         var title = Component.text("Title", NamedTextColor.RED);
         var subtitle = Component.text("Subtitle", NamedTextColor.YELLOW);
-        var fadeIn = java.time.Duration.ofSeconds(1);
-        var stay = java.time.Duration.ofSeconds(2);
-        var fadeOut = java.time.Duration.ofSeconds(3);
+        var fadeIn = Duration.ofSeconds(1);
+        var stay = Duration.ofSeconds(2);
+        var fadeOut = Duration.ofSeconds(3);
 
         AudienceMessages.sendTitle(audience, title, subtitle, fadeIn, stay, fadeOut);
 
@@ -201,7 +202,7 @@ class AudienceMessagesTest {
         }
 
         @Override
-        public void showTitle(net.kyori.adventure.title.Title title) {
+        public void showTitle(Title title) {
             lastTitle = title;
         }
     }

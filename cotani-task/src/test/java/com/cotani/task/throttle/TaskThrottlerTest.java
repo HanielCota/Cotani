@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 class TaskThrottlerTest {
@@ -25,15 +26,15 @@ class TaskThrottlerTest {
         when(limiter.retryDelay()).thenReturn(Duration.ofMillis(10));
 
         // When scheduler.supplyAsync is called, mock it to run immediately
-        when(scheduler.supplyAsync(any(java.util.function.Supplier.class))).thenAnswer(invocation -> {
-            java.util.function.Supplier<?> supplier = invocation.getArgument(0);
+        when(scheduler.supplyAsync(any(Supplier.class))).thenAnswer(invocation -> {
+            Supplier<?> supplier = invocation.getArgument(0);
             try {
                 Object result = supplier.get();
-                return new DefaultTaskChain<>(CompletableFuture.completedFuture(result), scheduler);
+                return DefaultTaskChain.create(CompletableFuture.completedFuture(result), scheduler);
             } catch (Throwable t) {
                 CompletableFuture<Object> future = new CompletableFuture<>();
                 future.completeExceptionally(t);
-                return new DefaultTaskChain<>(future, scheduler);
+                return DefaultTaskChain.create(future, scheduler);
             }
         });
 
@@ -43,10 +44,10 @@ class TaskThrottlerTest {
         // Mock scheduler.chain
         when(scheduler.chain(any(CompletionStage.class))).thenAnswer(invocation -> {
             CompletionStage<?> stage = invocation.getArgument(0);
-            return new DefaultTaskChain<>(stage.toCompletableFuture(), scheduler);
+            return DefaultTaskChain.create(stage.toCompletableFuture(), scheduler);
         });
 
-        TaskThrottler throttler = new TaskThrottler(scheduler);
+        TaskThrottler throttler = TaskThrottler.create(scheduler);
         AtomicInteger counter = new AtomicInteger();
 
         TaskChain<Integer> chain = throttler.throttle(counter::incrementAndGet, limiter);

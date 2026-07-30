@@ -1,20 +1,25 @@
 package com.cotani.task.impl.dispatch;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PlatformScheduler;
 import com.cotani.task.api.TaskMetadata;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class TaskDispatcher {
 
     private final PlatformScheduler platformScheduler;
     private final TaskRunner taskRunner;
 
-    public TaskDispatcher(PlatformScheduler platformScheduler, TaskRunner taskRunner) {
+    private TaskDispatcher(PlatformScheduler platformScheduler, TaskRunner taskRunner) {
         this.platformScheduler = Objects.requireNonNull(platformScheduler, "platformScheduler");
         this.taskRunner = Objects.requireNonNull(taskRunner, "taskRunner");
+    }
+
+    public static TaskDispatcher create(PlatformScheduler platformScheduler, TaskRunner taskRunner) {
+        return new TaskDispatcher(platformScheduler, taskRunner);
     }
 
     public <T> void dispatch(

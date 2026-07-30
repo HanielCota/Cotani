@@ -16,8 +16,10 @@ import com.cotani.task.api.PaperTaskScheduler;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
@@ -84,7 +86,7 @@ class SqlEconomyStoreIntegrationTest {
 
         int successes = 0;
         int insufficient = 0;
-        for (var operation : java.util.List.of(first, second)) {
+        for (var operation : List.of(first, second)) {
             try {
                 operation.toCompletableFuture().join();
                 successes++;
@@ -124,7 +126,7 @@ class SqlEconomyStoreIntegrationTest {
 
     private static Throwable unwrap(Throwable failure) {
         var current = failure;
-        while ((current instanceof CompletionException || current instanceof java.util.concurrent.ExecutionException)
+        while ((current instanceof CompletionException || current instanceof ExecutionException)
                 && current.getCause() != null) {
             current = current.getCause();
         }

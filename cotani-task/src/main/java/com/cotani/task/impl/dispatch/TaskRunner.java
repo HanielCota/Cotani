@@ -1,5 +1,6 @@
 package com.cotani.task.impl.dispatch;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.TaskContext;
 import com.cotani.task.api.TaskContextHolder;
 import com.cotani.task.api.TaskExceptionHandler;
@@ -10,15 +11,19 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class TaskRunner {
 
     private final TaskExceptionHandler exceptionHandler;
     private final TaskMetrics metrics;
 
-    public TaskRunner(TaskExceptionHandler exceptionHandler, TaskMetrics metrics) {
+    private TaskRunner(TaskExceptionHandler exceptionHandler, TaskMetrics metrics) {
         this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
         this.metrics = Objects.requireNonNull(metrics, "metrics");
+    }
+
+    public static TaskRunner create(TaskExceptionHandler exceptionHandler, TaskMetrics metrics) {
+        return new TaskRunner(exceptionHandler, metrics);
     }
 
     private static Duration elapsed(TaskContext context) {

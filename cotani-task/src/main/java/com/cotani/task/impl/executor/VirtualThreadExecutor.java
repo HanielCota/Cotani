@@ -1,5 +1,6 @@
 package com.cotani.task.impl.executor;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.SchedulerOptions;
 import com.cotani.task.api.TaskMetadata;
 import java.time.Duration;
@@ -7,7 +8,7 @@ import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class VirtualThreadExecutor implements AutoCloseable {
 
     private static final String THREAD_NAME = "cotani-task-";
@@ -24,19 +25,19 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     private final Duration shutdownTimeout;
     private final AtomicReference<CompletableFuture<Void>> closeFuture = new AtomicReference<>();
 
-    public VirtualThreadExecutor() {
+    private VirtualThreadExecutor() {
         this(DEFAULT_MAX_CONCURRENT, true);
     }
 
-    public VirtualThreadExecutor(int maxConcurrent) {
+    private VirtualThreadExecutor(int maxConcurrent) {
         this(maxConcurrent, true);
     }
 
-    public VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads) {
+    private VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads) {
         this(maxConcurrent, useVirtualThreads, Duration.ofSeconds(5));
     }
 
-    public VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads, Duration shutdownTimeout) {
+    private VirtualThreadExecutor(int maxConcurrent, boolean useVirtualThreads, Duration shutdownTimeout) {
         if (maxConcurrent <= 0) {
             throw new IllegalArgumentException("maxConcurrent must be positive");
         }
@@ -53,6 +54,18 @@ public final class VirtualThreadExecutor implements AutoCloseable {
 
     public static VirtualThreadExecutor create(int maxConcurrent, boolean useVirtualThreads, SchedulerOptions options) {
         return new VirtualThreadExecutor(maxConcurrent, useVirtualThreads, options.defaultShutdownTimeout());
+    }
+
+    public static VirtualThreadExecutor create() {
+        return new VirtualThreadExecutor();
+    }
+
+    public static VirtualThreadExecutor create(int maxConcurrent) {
+        return new VirtualThreadExecutor(maxConcurrent);
+    }
+
+    public static VirtualThreadExecutor create(int maxConcurrent, boolean useVirtualThreads, Duration shutdownTimeout) {
+        return new VirtualThreadExecutor(maxConcurrent, useVirtualThreads, shutdownTimeout);
     }
 
     private static ExecutorService createTaskExecutor(int maxConcurrent, boolean useVirtualThreads) {

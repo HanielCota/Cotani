@@ -12,8 +12,12 @@ public final class ConfigValidator {
 
     private final ConfigSerializerRegistry serializers;
 
-    public ConfigValidator(ConfigSerializerRegistry serializers) {
+    private ConfigValidator(ConfigSerializerRegistry serializers) {
         this.serializers = Objects.requireNonNull(serializers, "serializers");
+    }
+
+    public static ConfigValidator create(ConfigSerializerRegistry serializers) {
+        return new ConfigValidator(serializers);
     }
 
     public ValidationResult validateComponent(ConfigValue value, RecordComponent component) {

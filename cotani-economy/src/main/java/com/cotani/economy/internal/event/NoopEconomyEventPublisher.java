@@ -1,10 +1,11 @@
 package com.cotani.economy.internal.event;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.event.EconomyEventPublisher;
 import com.cotani.economy.event.EconomyTransactionEvent;
 import java.util.Objects;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class NoopEconomyEventPublisher implements EconomyEventPublisher {
 
     @Override

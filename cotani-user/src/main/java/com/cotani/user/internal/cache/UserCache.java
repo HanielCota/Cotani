@@ -1,5 +1,6 @@
 package com.cotani.user.internal.cache;
 
+import com.cotani.api.InternalApi;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
@@ -17,7 +18,7 @@ import java.util.function.UnaryOperator;
  * <p>The cache uses a bounded map that evicts the least-recently-used entry when the maximum size is
  * exceeded, preventing unbounded growth on long-running servers.
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class UserCache {
 
     private static final int DEFAULT_MAX_CACHED_USERS = 10_000;

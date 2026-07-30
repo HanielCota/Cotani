@@ -5,6 +5,7 @@ import com.cotani.cooldown.api.CooldownService;
 import com.cotani.cooldown.api.DistributedCooldownService;
 import com.cotani.cooldown.cache.PlayerCooldowns;
 import com.cotani.cooldown.internal.DefaultCooldownService;
+import com.cotani.cooldown.internal.InMemoryCooldownStore;
 import com.cotani.cooldown.storage.AddCooldownLeaseTokenMigration;
 import com.cotani.cooldown.storage.CreateCooldownsTableMigration;
 import com.cotani.storage.api.CotaniStorage;
@@ -25,9 +26,9 @@ public final class CotaniCooldowns {
         return DefaultCooldownService.inMemory();
     }
 
-    public static CooldownService inMemory(java.time.Clock clock) {
+    public static CooldownService inMemory(Clock clock) {
         Objects.requireNonNull(clock, "clock");
-        return new DefaultCooldownService(new com.cotani.cooldown.internal.InMemoryCooldownStore(), clock);
+        return new DefaultCooldownService(new InMemoryCooldownStore(), clock);
     }
 
     public static CooldownService cacheBacked(PlayerDataCache<PlayerCooldowns> playerCache) {

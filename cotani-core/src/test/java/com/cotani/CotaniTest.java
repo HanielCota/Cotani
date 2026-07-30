@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
@@ -222,7 +225,7 @@ class CotaniTest {
                 .with(() -> syncExecuted.set(true))
                 .withAsync(() -> {
                     asyncExecuted.set(true);
-                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                    return CompletableFuture.completedFuture(null);
                 })
                 .build();
 
@@ -235,7 +238,7 @@ class CotaniTest {
     @Test
     void concurrentCloseAsyncCallsShareCompletion() {
         var plugin = pluginWithLogger();
-        var closeGate = new java.util.concurrent.CompletableFuture<Void>();
+        var closeGate = new CompletableFuture<Void>();
         var cotani = Cotani.forPlugin(plugin).withAsync(() -> closeGate).build();
 
         var first = cotani.closeAsync();
@@ -251,9 +254,9 @@ class CotaniTest {
     void registerAsyncAndDeregisterAsync() {
         var plugin = pluginWithLogger();
         var executed = new AtomicBoolean();
-        java.util.function.Supplier<java.util.concurrent.CompletionStage<Void>> asyncSupplier = () -> {
+        Supplier<CompletionStage<Void>> asyncSupplier = () -> {
             executed.set(true);
-            return java.util.concurrent.CompletableFuture.completedFuture(null);
+            return CompletableFuture.completedFuture(null);
         };
 
         var cotani = Cotani.forPlugin(plugin).build();
@@ -293,7 +296,7 @@ class CotaniTest {
         var plugin = pluginWithLogger();
         var cotani = Cotani.forPlugin(plugin)
                 .withAsync(() -> {
-                    var failed = new java.util.concurrent.CompletableFuture<Void>();
+                    var failed = new CompletableFuture<Void>();
                     failed.completeExceptionally(new IllegalStateException("stage boom"));
                     return failed;
                 })
@@ -310,7 +313,7 @@ class CotaniTest {
     void closeRestoresInterruptFlag() {
         var plugin = pluginWithLogger();
         var cotani = Cotani.forPlugin(plugin)
-                .withAsync(java.util.concurrent.CompletableFuture::new) // never completes
+                .withAsync(CompletableFuture::new) // never completes
                 .build();
 
         Thread.currentThread().interrupt();

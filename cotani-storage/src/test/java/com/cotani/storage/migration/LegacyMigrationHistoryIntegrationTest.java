@@ -7,11 +7,13 @@ import static org.mockito.Mockito.when;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.backend.SQLiteBackend;
 import com.cotani.storage.backend.SQLiteCredentials;
+import com.cotani.storage.schema.Schema;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.nio.file.Path;
 import java.sql.DriverManager;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
@@ -54,7 +56,7 @@ class LegacyMigrationHistoryIntegrationTest {
             }
 
             @Override
-            public java.util.concurrent.CompletionStage<Void> migrate(com.cotani.storage.schema.Schema schema) {
+            public CompletionStage<Void> migrate(Schema schema) {
                 executions.incrementAndGet();
                 return CompletableFuture.completedStage(null);
             }

@@ -73,7 +73,7 @@ public final class TransactionManager {
             boolean previousAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             var transactional =
-                    new QueryExecutor(provider, Runnable::run, serializers, queryTimeoutSeconds, connection);
+                    QueryExecutor.create(provider, Runnable::run, serializers, queryTimeoutSeconds, connection);
             return new TransactionState(connection, previousAutoCommit, new TransactionContext(transactional));
         } catch (SQLException exception) {
             if (connection != null) {

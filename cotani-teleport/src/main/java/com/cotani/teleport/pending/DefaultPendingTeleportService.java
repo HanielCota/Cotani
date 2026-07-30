@@ -1,5 +1,6 @@
 package com.cotani.teleport.pending;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.api.*;
 import com.cotani.teleport.api.PlayerResolver;
@@ -14,6 +15,7 @@ import java.util.logging.Logger;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+@InternalApi
 public final class DefaultPendingTeleportService implements PendingTeleportService, AutoCloseable {
     private static final Logger LOGGER = Logger.getLogger(DefaultPendingTeleportService.class.getName());
 

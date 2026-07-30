@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,7 +79,7 @@ final class BoundedAsyncWorkCoordinator<T> {
     private void recordCompletedFuture(CompletableFuture<Void> future) {
         try {
             future.getNow(null);
-        } catch (java.util.concurrent.CompletionException | CancellationException failure) {
+        } catch (CompletionException | CancellationException failure) {
             recordFailure(failure.getCause() == null ? failure : failure.getCause());
         }
     }

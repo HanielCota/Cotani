@@ -15,19 +15,19 @@ class ConfigSerializerRegistryTest {
     @Test
     void convertReturnsRegisteredSerializerResult() {
         registry.register(new IntegerSerializer());
-        var value = new ConfigValue("test.yml", "n", "42", true, registry);
+        var value = ConfigValue.create("test.yml", "n", "42", true, registry);
         assertEquals(42, registry.convert(value, Integer.class));
     }
 
     @Test
     void convertThrowsForUnsupportedType() {
-        var value = new ConfigValue("test.yml", "x", "hello", true, registry);
+        var value = ConfigValue.create("test.yml", "x", "hello", true, registry);
         assertThrows(ConfigException.class, () -> registry.convert(value, getClass()));
     }
 
     @Test
     void convertFallsBackToRawCast() {
-        var value = new ConfigValue("test.yml", "x", "hello", true, registry);
+        var value = ConfigValue.create("test.yml", "x", "hello", true, registry);
         assertEquals("hello", registry.convert(value, String.class));
     }
 
@@ -67,7 +67,7 @@ class ConfigSerializerRegistryTest {
                 Thread.currentThread().interrupt();
             }
         }
-        var value = new ConfigValue("test.yml", "n", "42", true, localRegistry);
+        var value = ConfigValue.create("test.yml", "n", "42", true, localRegistry);
         assertEquals(42, localRegistry.convert(value, Integer.class));
     }
 }

@@ -1,5 +1,6 @@
 package com.cotani.event.dispatcher;
 
+import com.cotani.api.InternalApi;
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.api.EventDispatchPolicy;
 import com.cotani.event.api.EventListener;
@@ -7,15 +8,19 @@ import com.cotani.event.cancellable.CancellableEvent;
 import com.cotani.event.exception.EventExceptionHandler;
 import com.cotani.event.exception.EventListenerException;
 import com.cotani.event.subscription.EventSubscription;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+@InternalApi
 public final class DefaultEventDispatcher implements EventDispatcher {
 
     private final EventExceptionHandler exceptionHandler;
@@ -121,7 +126,7 @@ public final class DefaultEventDispatcher implements EventDispatcher {
                 || !cancellable.cancelled();
     }
 
-    private static long timeoutMillis(java.time.Duration timeout) {
+    private static long timeoutMillis(Duration timeout) {
         try {
             return Math.max(1L, timeout.toMillis());
         } catch (ArithmeticException overflow) {
@@ -131,8 +136,7 @@ public final class DefaultEventDispatcher implements EventDispatcher {
 
     private static Throwable unwrap(Throwable error) {
         Throwable current = error;
-        while ((current instanceof java.util.concurrent.CompletionException
-                        || current instanceof java.util.concurrent.ExecutionException)
+        while ((current instanceof CompletionException || current instanceof ExecutionException)
                 && current.getCause() != null) {
             current = current.getCause();
         }

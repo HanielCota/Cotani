@@ -1,5 +1,6 @@
 package com.cotani.cache.repository;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.util.CompletionStages;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -11,6 +12,7 @@ import java.util.concurrent.CompletionStage;
  * <p>All operations complete immediately with empty or null results.
  * Useful for caches that only need in-memory storage.
  */
+@InternalApi
 public final class NoopCacheRepository<K, V> implements CacheRepository<K, V> {
 
     @Override

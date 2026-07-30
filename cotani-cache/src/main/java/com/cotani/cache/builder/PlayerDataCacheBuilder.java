@@ -38,8 +38,12 @@ public final class PlayerDataCacheBuilder<V> {
     private CacheInvalidationBus<UUID> invalidationBus = new NoopCacheInvalidationBus<>();
     private int maximumConcurrentSaves = 16;
 
-    public PlayerDataCacheBuilder(Class<V> valueType) {
+    private PlayerDataCacheBuilder(Class<V> valueType) {
         this.valueType = Objects.requireNonNull(valueType, "valueType");
+    }
+
+    public static <V> PlayerDataCacheBuilder<V> create(Class<V> valueType) {
+        return new PlayerDataCacheBuilder<>(valueType);
     }
 
     public PlayerDataCacheBuilder<V> repository(CacheRepository<UUID, V> repository) {
@@ -146,7 +150,8 @@ public final class PlayerDataCacheBuilder<V> {
         var resolvedRepository = resolveRepository();
         var resolvedDefaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
         var dataCache = createDataCache(resolvedRepository, scheduler, resolvedDefaultValue);
-        var playerCache = new CaffeinePlayerDataCache<>(dataCache, resolvedRepository, resolvedDefaultValue, scheduler);
+        var playerCache =
+                CaffeinePlayerDataCache.create(dataCache, resolvedRepository, resolvedDefaultValue, scheduler);
 
         registerListener(plugin, playerCache);
         loadOnlinePlayers(plugin, playerCache);
@@ -156,7 +161,7 @@ public final class PlayerDataCacheBuilder<V> {
 
     private DataCache<UUID, V> createDataCache(
             CacheRepository<UUID, V> repository, PaperTaskScheduler scheduler, PlayerValueFactory<V> defaultValue) {
-        return new CaffeineDataCache<>(
+        return CaffeineDataCache.create(
                 repository,
                 defaultValue::create,
                 scheduler,
@@ -169,7 +174,7 @@ public final class PlayerDataCacheBuilder<V> {
         plugin.getServer()
                 .getPluginManager()
                 .registerEvents(
-                        new PlayerDataCacheListener<>(playerCache, settingsBuilder.build(), plugin.getLogger()),
+                        PlayerDataCacheListener.create(playerCache, settingsBuilder.build(), plugin.getLogger()),
                         plugin);
     }
 

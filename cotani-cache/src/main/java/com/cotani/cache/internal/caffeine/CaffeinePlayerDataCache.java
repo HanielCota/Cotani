@@ -1,5 +1,6 @@
 package com.cotani.cache.internal.caffeine;
 
+import com.cotani.api.InternalApi;
 import com.cotani.cache.api.DataCache;
 import com.cotani.cache.api.PlayerDataCache;
 import com.cotani.cache.api.PlayerValueFactory;
@@ -18,14 +19,14 @@ import org.bukkit.entity.Player;
  *
  * @param <V> the player data type
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     private static final String PLAYER_PARAM = "player";
 
     private final DataCache<UUID, V> delegate;
 
-    public CaffeinePlayerDataCache(
+    private CaffeinePlayerDataCache(
             DataCache<UUID, V> delegate,
             CacheRepository<UUID, V> repository,
             PlayerValueFactory<V> defaultValue,
@@ -34,6 +35,14 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
         Objects.requireNonNull(defaultValue, "defaultValue");
         Objects.requireNonNull(repository, "repository");
         Objects.requireNonNull(scheduler, "scheduler");
+    }
+
+    public static <V> CaffeinePlayerDataCache<V> create(
+            DataCache<UUID, V> delegate,
+            CacheRepository<UUID, V> repository,
+            PlayerValueFactory<V> defaultValue,
+            PaperTaskScheduler scheduler) {
+        return new CaffeinePlayerDataCache<>(delegate, repository, defaultValue, scheduler);
     }
 
     @Override

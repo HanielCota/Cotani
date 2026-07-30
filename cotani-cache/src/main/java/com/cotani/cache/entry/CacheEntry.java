@@ -21,9 +21,13 @@ public final class CacheEntry<V> {
     private final AtomicReference<EntryState<V>> state;
     private final Instant loadedAt;
 
-    public CacheEntry(V value) {
+    private CacheEntry(V value) {
         this.state = new AtomicReference<>(new EntryState<>(Objects.requireNonNull(value, "value"), false, null, 0));
         this.loadedAt = Instant.now();
+    }
+
+    public static <V> CacheEntry<V> of(V value) {
+        return new CacheEntry<>(value);
     }
 
     public V value() {

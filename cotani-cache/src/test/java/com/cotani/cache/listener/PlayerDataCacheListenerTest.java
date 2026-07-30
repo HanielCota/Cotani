@@ -8,6 +8,7 @@ import com.cotani.cache.policy.CacheSettings;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -38,8 +39,8 @@ class PlayerDataCacheListenerTest {
     @Test
     void onJoinLoadsDataWhenEnabled() {
         var settings = CacheSettings.playerData();
-        var listener = new PlayerDataCacheListener<>(cache, settings, logger);
-        var event = new PlayerJoinEvent(player, (net.kyori.adventure.text.Component) null);
+        var listener = PlayerDataCacheListener.create(cache, settings, logger);
+        var event = new PlayerJoinEvent(player, (Component) null);
 
         listener.onJoin(event);
 
@@ -49,9 +50,8 @@ class PlayerDataCacheListenerTest {
     @Test
     void onQuitSavesAndUnloadsData() {
         var settings = CacheSettings.playerData();
-        var listener = new PlayerDataCacheListener<>(cache, settings, logger);
-        var event = new PlayerQuitEvent(
-                player, (net.kyori.adventure.text.Component) null, PlayerQuitEvent.QuitReason.DISCONNECTED);
+        var listener = PlayerDataCacheListener.create(cache, settings, logger);
+        var event = new PlayerQuitEvent(player, (Component) null, PlayerQuitEvent.QuitReason.DISCONNECTED);
 
         listener.onQuit(event);
 
@@ -66,9 +66,8 @@ class PlayerDataCacheListenerTest {
         when(cache.saveAsync(playerId)).thenReturn(failedFuture);
 
         var settings = CacheSettings.playerData();
-        var listener = new PlayerDataCacheListener<>(cache, settings, logger);
-        var event = new PlayerQuitEvent(
-                player, (net.kyori.adventure.text.Component) null, PlayerQuitEvent.QuitReason.DISCONNECTED);
+        var listener = PlayerDataCacheListener.create(cache, settings, logger);
+        var event = new PlayerQuitEvent(player, (Component) null, PlayerQuitEvent.QuitReason.DISCONNECTED);
 
         listener.onQuit(event);
 

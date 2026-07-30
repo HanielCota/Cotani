@@ -21,6 +21,7 @@ import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 import org.bukkit.plugin.Plugin;
@@ -62,7 +63,7 @@ class MySqlMariaDbDistributedCooldownIntegrationTest {
         try (DistributedCooldownService first = CotaniCooldowns.distributed(firstStorage, scheduler);
                 DistributedCooldownService second = CotaniCooldowns.distributed(secondStorage, scheduler)) {
             var key = new CooldownKey(CooldownTargets.resource("world:spawn"), CooldownAction.of("reward:daily"));
-            var attempts = new ArrayList<java.util.concurrent.CompletionStage<CooldownResult>>();
+            var attempts = new ArrayList<CompletionStage<CooldownResult>>();
             for (int i = 0; i < 32; i++) {
                 attempts.add(((i & 1) == 0 ? first : second).checkAndStartAsync(key, Duration.ofMinutes(5)));
             }

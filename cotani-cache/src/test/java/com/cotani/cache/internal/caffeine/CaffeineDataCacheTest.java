@@ -12,6 +12,7 @@ import com.cotani.cache.repository.CacheRepository;
 import com.cotani.cache.stats.CacheStatsView;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -49,7 +50,7 @@ class CaffeineDataCacheTest {
     }
 
     private DataCache<String, String> createCache(CacheSettings settings) {
-        return new CaffeineDataCache<>(repository, key -> "default", scheduler, settings);
+        return CaffeineDataCache.create(repository, key -> "default", scheduler, settings);
     }
 
     private DataCache<String, String> createCache() {
@@ -410,13 +411,13 @@ class CaffeineDataCacheTest {
         cache.markDirty("key");
         var newerSave = cache.save("key").toCompletableFuture();
 
-        assertEquals(java.util.List.of("old"), savedValues);
+        assertEquals(List.of("old"), savedValues);
         assertFalse(newerSave.isDone());
 
         firstSave.complete(null);
         newerSave.join();
 
-        assertEquals(java.util.List.of("old", "new"), savedValues);
+        assertEquals(List.of("old", "new"), savedValues);
         assertEquals(0, cache.dirtyCount());
     }
 

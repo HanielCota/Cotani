@@ -1,12 +1,13 @@
 package com.cotani.economy.internal.protection;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public interface EconomyGuard {
 
     BigDecimal normalizeAmount(BigDecimal amount);

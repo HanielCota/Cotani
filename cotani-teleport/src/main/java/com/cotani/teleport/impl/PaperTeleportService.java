@@ -1,8 +1,10 @@
 package com.cotani.teleport.impl;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.teleport.api.*;
+import com.cotani.teleport.api.TeleportService;
 import com.cotani.teleport.event.CotaniPreTeleportEvent;
 import com.cotani.teleport.policy.PolicyResult;
 import com.cotani.teleport.policy.TeleportCooldownService;
@@ -10,14 +12,18 @@ import com.cotani.teleport.policy.TeleportPolicyChain;
 import com.cotani.teleport.safety.SafeLocationResolver;
 import com.cotani.text.AudienceMessages;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,8 +41,8 @@ import org.jspecify.annotations.Nullable;
  * and the teleport is executed in one continuation.
  */
 @SuppressWarnings("resource")
-@com.cotani.api.InternalApi
-public final class PaperTeleportService implements com.cotani.teleport.api.TeleportService {
+@InternalApi
+public final class PaperTeleportService implements TeleportService {
 
     private static final Logger LOGGER = Logger.getLogger(PaperTeleportService.class.getName());
 
@@ -285,9 +291,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
      * followed by a late world mutation and a second operation for the same player.
      */
     private CompletionStage<PhysicalTeleportOutcome> observePhysicalTeleport(
-            CompletableFuture<Boolean> teleportFuture,
-            java.time.Duration timeout,
-            java.time.Duration reconciliationTimeout) {
+            CompletableFuture<Boolean> teleportFuture, Duration timeout, Duration reconciliationTimeout) {
         return withTimeout(teleportFuture, timeout)
                 .thenApply(success -> (PhysicalTeleportOutcome) new PhysicalTeleportOutcome.Confirmed(success))
                 .exceptionallyCompose(error -> {
@@ -352,8 +356,7 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
         });
     }
 
-    private static CompletableFuture<Boolean> withTimeout(
-            CompletableFuture<Boolean> teleportFuture, java.time.Duration timeout) {
+    private static CompletableFuture<Boolean> withTimeout(CompletableFuture<Boolean> teleportFuture, Duration timeout) {
         long timeoutMillis;
         try {
             timeoutMillis = Math.max(1L, timeout.toMillis());
@@ -365,14 +368,13 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
 
     private static boolean isTimeout(Throwable error) {
         Throwable cause = error;
-        while (cause instanceof java.util.concurrent.CompletionException
-                || cause instanceof java.util.concurrent.ExecutionException) {
+        while (cause instanceof CompletionException || cause instanceof ExecutionException) {
             if (cause.getCause() == null) {
                 break;
             }
             cause = cause.getCause();
         }
-        return cause instanceof java.util.concurrent.TimeoutException;
+        return cause instanceof TimeoutException;
     }
 
     private static <T> CompletionStage<T> flatten(CompletionStage<? extends CompletionStage<T>> nested) {

@@ -26,9 +26,10 @@ class CaffeineDataCacheCoordinationTest {
     void sharedBusInvalidatesCleanEntriesAcrossCacheInstances() {
         var repository = new MapRepository();
         var bus = new LocalCacheInvalidationBus<String>();
-        var first = new CaffeineDataCache<>(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
+        var first =
+                CaffeineDataCache.create(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
         var second =
-                new CaffeineDataCache<>(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
+                CaffeineDataCache.create(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
 
         repository.values.put("key", "old");
         assertEquals("old", first.getOrLoad("key").toCompletableFuture().join());
@@ -47,9 +48,10 @@ class CaffeineDataCacheCoordinationTest {
     void remoteInvalidationNeverDropsDirtyLocalState() {
         var repository = new MapRepository();
         var bus = new LocalCacheInvalidationBus<String>();
-        var first = new CaffeineDataCache<>(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
+        var first =
+                CaffeineDataCache.create(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
         var second =
-                new CaffeineDataCache<>(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
+                CaffeineDataCache.create(repository, _ -> "missing", scheduler(), CacheSettings.temporary(), 4, bus);
         repository.values.put("key", "old");
         first.getOrLoad("key").toCompletableFuture().join();
         second.getOrLoad("key").toCompletableFuture().join();
@@ -67,7 +69,7 @@ class CaffeineDataCacheCoordinationTest {
     @Test
     void saveAllKeepsRepositoryConcurrencyWithinConfiguredLimit() {
         var repository = new ControlledRepository();
-        var cache = new CaffeineDataCache<>(
+        var cache = CaffeineDataCache.create(
                 repository,
                 _ -> "missing",
                 scheduler(),

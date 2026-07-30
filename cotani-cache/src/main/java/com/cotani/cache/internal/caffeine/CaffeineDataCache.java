@@ -1,5 +1,6 @@
 package com.cotani.cache.internal.caffeine;
 
+import com.cotani.api.InternalApi;
 import com.cotani.cache.api.DataCache;
 import com.cotani.cache.entry.CacheEntry;
 import com.cotani.cache.exception.CacheException;
@@ -46,7 +47,7 @@ import org.jspecify.annotations.Nullable;
  * @param <K> the key type
  * @param <V> the value type
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     private static final Logger LOGGER = Logger.getLogger(CaffeineDataCache.class.getName());
@@ -65,7 +66,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     private volatile boolean closing;
     private @Nullable CompletableFuture<Void> closeFuture;
 
-    public CaffeineDataCache(
+    private CaffeineDataCache(
             CacheRepository<K, V> repository,
             Function<K, V> defaultValue,
             PaperTaskScheduler scheduler,
@@ -73,7 +74,15 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         this(repository, defaultValue, scheduler, settings, 16, new NoopCacheInvalidationBus<>());
     }
 
-    public CaffeineDataCache(
+    public static <K, V> CaffeineDataCache<K, V> create(
+            CacheRepository<K, V> repository,
+            Function<K, V> defaultValue,
+            PaperTaskScheduler scheduler,
+            CacheSettings settings) {
+        return new CaffeineDataCache<>(repository, defaultValue, scheduler, settings);
+    }
+
+    private CaffeineDataCache(
             CacheRepository<K, V> repository,
             Function<K, V> defaultValue,
             PaperTaskScheduler scheduler,
@@ -81,6 +90,17 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             int maximumConcurrentSaves,
             CacheInvalidationBus<K> invalidationBus) {
         this(repository, defaultValue, scheduler, scheduler, settings, maximumConcurrentSaves, invalidationBus);
+    }
+
+    public static <K, V> CaffeineDataCache<K, V> create(
+            CacheRepository<K, V> repository,
+            Function<K, V> defaultValue,
+            PaperTaskScheduler scheduler,
+            CacheSettings settings,
+            int maximumConcurrentSaves,
+            CacheInvalidationBus<K> invalidationBus) {
+        return new CaffeineDataCache<>(
+                repository, defaultValue, scheduler, settings, maximumConcurrentSaves, invalidationBus);
     }
 
     private CaffeineDataCache(

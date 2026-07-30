@@ -17,6 +17,10 @@ public interface PlayerResolver {
     @Nullable
     Player resolve(UUID playerId);
 
+    default java.util.Optional<Player> find(UUID playerId) {
+        return java.util.Optional.ofNullable(resolve(playerId));
+    }
+
     static PlayerResolver bukkit() {
         return Bukkit::getPlayer;
     }

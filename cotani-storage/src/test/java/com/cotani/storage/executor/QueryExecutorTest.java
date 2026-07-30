@@ -24,6 +24,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 
 class QueryExecutorTest {
 
@@ -42,7 +43,7 @@ class QueryExecutorTest {
     void batchCopiesCallerListAndClearsParametersBetweenBinders() throws Exception {
         AtomicReference<Runnable> queued = new AtomicReference<>();
         Executor controlled = queued::set;
-        QueryExecutor executor = new QueryExecutor(provider, controlled, new ValueSerializerRegistry());
+        QueryExecutor executor = QueryExecutor.create(provider, controlled, new ValueSerializerRegistry());
         List<SqlConsumer<ParameterBinder>> binders = new ArrayList<>();
         binders.add(binder -> binder.set("first").set("second"));
         binders.add(binder -> binder.set("third"));
@@ -53,15 +54,14 @@ class QueryExecutorTest {
         result.join();
 
         verify(statement, times(2)).clearParameters();
-        verify(statement, times(3))
-                .setObject(org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.any());
+        verify(statement, times(3)).setObject(ArgumentMatchers.anyInt(), ArgumentMatchers.any());
         verify(statement).executeBatch();
         verify(statement).clearBatch();
     }
 
     @Test
     void batchClearsDriverBatchAfterEachThousandRows() throws Exception {
-        QueryExecutor executor = new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
+        QueryExecutor executor = QueryExecutor.create(provider, Runnable::run, new ValueSerializerRegistry());
         List<SqlConsumer<ParameterBinder>> binders = new ArrayList<>();
         for (int index = 0; index < 1_001; index++) {
             binders.add(binder -> binder.set("value"));
@@ -79,7 +79,7 @@ class QueryExecutorTest {
         ResultSet resultSet = mock(ResultSet.class);
         when(statement.executeQuery()).thenReturn(resultSet);
         when(resultSet.next()).thenReturn(true, false);
-        QueryExecutor executor = new QueryExecutor(provider, Runnable::run, new ValueSerializerRegistry());
+        QueryExecutor executor = QueryExecutor.create(provider, Runnable::run, new ValueSerializerRegistry());
 
         List<String> values = executor.queryMany("SELECT", _ -> {}, _ -> "value")
                 .toCompletableFuture()

@@ -1,10 +1,12 @@
 package com.cotani.teleport.pending;
 
+import com.cotani.api.InternalApi;
 import com.cotani.teleport.api.PendingTeleportState;
 import com.cotani.teleport.api.TeleportCancelReason;
 import java.util.Objects;
 import java.util.UUID;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -13,6 +15,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
+@InternalApi
 public final class PendingTeleportListener implements Listener {
     private final DefaultPendingTeleportService pendingService;
 
@@ -49,8 +52,7 @@ public final class PendingTeleportListener implements Listener {
             return;
         }
 
-        if (event.getDamager() instanceof org.bukkit.entity.Projectile projectile
-                && projectile.getShooter() instanceof Player player) {
+        if (event.getDamager() instanceof Projectile projectile && projectile.getShooter() instanceof Player player) {
             pendingService.cancel(player.getUniqueId(), TeleportCancelReason.COMBAT);
         }
     }

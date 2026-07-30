@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Duration;
+import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class CotaniStorageBuilderTest {
 
@@ -22,7 +24,7 @@ class CotaniStorageBuilderTest {
 
     @Test
     void negativeAdmissionQueueCapacityIsRejected() {
-        var plugin = org.mockito.Mockito.mock(org.bukkit.plugin.Plugin.class);
+        var plugin = Mockito.mock(Plugin.class);
 
         assertThrows(
                 IllegalArgumentException.class,

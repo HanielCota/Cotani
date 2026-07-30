@@ -1,5 +1,6 @@
 package com.cotani.config.impl;
 
+import com.cotani.api.InternalApi;
 import com.cotani.config.CotaniConfig;
 import com.cotani.config.CotaniConfigs;
 import com.cotani.config.binder.ConfigBinder;
@@ -21,7 +22,7 @@ import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultCotaniConfigs implements CotaniConfigs {
 
     private final Plugin plugin;
@@ -33,7 +34,7 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
     private final boolean copyDefaults;
     private final Map<String, CotaniConfig> files = new ConcurrentHashMap<>();
 
-    public DefaultCotaniConfigs(
+    private DefaultCotaniConfigs(
             Plugin plugin,
             Path folder,
             PaperTaskScheduler scheduler,
@@ -43,7 +44,17 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
         this(plugin, folder, (TaskChainFactory) scheduler, serializers, createMissingFiles, copyDefaults);
     }
 
-    public DefaultCotaniConfigs(
+    public static DefaultCotaniConfigs create(
+            Plugin plugin,
+            Path folder,
+            PaperTaskScheduler scheduler,
+            ConfigSerializerRegistry serializers,
+            boolean createMissingFiles,
+            boolean copyDefaults) {
+        return new DefaultCotaniConfigs(plugin, folder, scheduler, serializers, createMissingFiles, copyDefaults);
+    }
+
+    private DefaultCotaniConfigs(
             Plugin plugin,
             Path folder,
             TaskChainFactory chainFactory,
@@ -54,16 +65,26 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
         this.folder = Objects.requireNonNull(folder, "folder").toAbsolutePath().normalize();
         this.chainFactory = Objects.requireNonNull(chainFactory, "chainFactory");
         this.serializers = Objects.requireNonNull(serializers, "serializers");
-        this.binder = new RecordConfigBinder(serializers);
+        this.binder = RecordConfigBinder.create(serializers);
         this.createMissingFiles = createMissingFiles;
         this.copyDefaults = copyDefaults;
+    }
+
+    public static DefaultCotaniConfigs create(
+            Plugin plugin,
+            Path folder,
+            TaskChainFactory chainFactory,
+            ConfigSerializerRegistry serializers,
+            boolean createMissingFiles,
+            boolean copyDefaults) {
+        return new DefaultCotaniConfigs(plugin, folder, chainFactory, serializers, createMissingFiles, copyDefaults);
     }
 
     public void register(String name) {
         Objects.requireNonNull(name, "name");
         var resolved = ConfigPaths.requireContained(folder.resolve(name), folder);
-        var source = new BukkitYamlConfigSource(plugin, name, resolved, folder, createMissingFiles, copyDefaults);
-        files.put(name, new DefaultCotaniConfig(name, source, serializers, binder, chainFactory));
+        var source = BukkitYamlConfigSource.create(plugin, name, resolved, folder, createMissingFiles, copyDefaults);
+        files.put(name, DefaultCotaniConfig.create(name, source, serializers, binder, chainFactory));
     }
 
     @Override

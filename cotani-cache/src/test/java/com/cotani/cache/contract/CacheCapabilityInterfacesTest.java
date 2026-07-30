@@ -32,7 +32,7 @@ class CacheCapabilityInterfacesTest {
         CacheRepository<String, String> repository = repository();
         when(repository.save("key", "value")).thenReturn(CompletableFuture.completedFuture(null));
         DataCache<String, String> cache =
-                new CaffeineDataCache<>(repository, _ -> "default", scheduler, CacheSettings.temporary());
+                CaffeineDataCache.create(repository, _ -> "default", scheduler, CacheSettings.temporary());
 
         CacheReader<String, String> reader = cache;
         CacheMutator<String, String> mutator = cache;

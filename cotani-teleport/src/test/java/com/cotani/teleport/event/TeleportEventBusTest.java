@@ -11,6 +11,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class TeleportEventBusTest {
 
@@ -30,15 +31,12 @@ class TeleportEventBusTest {
 
     @BeforeEach
     void setUp() {
-        var scheduler = org.mockito.Mockito.mock(PaperTaskScheduler.class);
-        org.mockito.Mockito.when(scheduler.supply(
-                        org.mockito.Mockito.any(),
-                        org.mockito.Mockito.anyString(),
-                        org.mockito.Mockito.<Supplier<Void>>any()))
+        var scheduler = Mockito.mock(PaperTaskScheduler.class);
+        Mockito.when(scheduler.supply(Mockito.any(), Mockito.anyString(), Mockito.<Supplier<Void>>any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
         eventBus = new TeleportEventBus(scheduler);
-        entity = org.mockito.Mockito.mock(Entity.class);
-        org.mockito.Mockito.when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
+        entity = Mockito.mock(Entity.class);
+        Mockito.when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
     }
 
     @Test

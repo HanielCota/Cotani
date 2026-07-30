@@ -23,7 +23,7 @@ class SQLiteStorageProviderTest {
     void setUp() {
         Path dbFile = tempDir.resolve("test.db");
         var credentials = new SQLiteCredentials(dbFile);
-        provider = new SQLiteStorageProvider(credentials);
+        provider = SQLiteStorageProvider.create(credentials);
     }
 
     @AfterEach

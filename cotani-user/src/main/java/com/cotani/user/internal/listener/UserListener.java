@@ -1,5 +1,6 @@
 package com.cotani.user.internal.listener;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.util.VoidResult;
 import com.cotani.user.internal.service.InternalUserService;
@@ -16,7 +17,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class UserListener implements Listener {
 
     private final Plugin plugin;

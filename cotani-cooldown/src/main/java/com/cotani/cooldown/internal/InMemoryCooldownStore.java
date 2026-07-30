@@ -1,5 +1,6 @@
 package com.cotani.cooldown.internal;
 
+import com.cotani.api.InternalApi;
 import com.cotani.cooldown.api.*;
 import java.time.Clock;
 import java.time.Duration;
@@ -12,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class InMemoryCooldownStore implements CooldownStore {
 
     private static final String KEY_NULL_MSG = "key cannot be null";

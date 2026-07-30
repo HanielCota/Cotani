@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -59,6 +60,6 @@ class PersistentTaskCoordinatorTest {
 
         var task = ArgumentCaptor.forClass(PersistentTask.class);
         verify(store).save(task.capture());
-        org.junit.jupiter.api.Assertions.assertEquals(now, task.getValue().scheduledAt());
+        Assertions.assertEquals(now, task.getValue().scheduledAt());
     }
 }

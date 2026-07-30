@@ -1,5 +1,6 @@
 package com.cotani.task.bucket;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.AsyncTaskExecutor;
 import com.cotani.task.api.DelayedTaskScheduler;
 import com.cotani.task.api.PaperTaskScheduler;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
+@InternalApi
 public final class DefaultTaskBucket implements TaskBucket {
 
     private final AsyncTaskExecutor executor;
@@ -21,19 +23,19 @@ public final class DefaultTaskBucket implements TaskBucket {
     private final long defaultCapacity;
     private final Duration defaultRefillPeriod;
 
-    public DefaultTaskBucket(PaperTaskScheduler scheduler) {
+    private DefaultTaskBucket(PaperTaskScheduler scheduler) {
         this(scheduler, scheduler, 10, Duration.ofSeconds(1));
     }
 
-    public DefaultTaskBucket(PaperTaskScheduler scheduler, long defaultCapacity, Duration defaultRefillPeriod) {
+    private DefaultTaskBucket(PaperTaskScheduler scheduler, long defaultCapacity, Duration defaultRefillPeriod) {
         this(scheduler, scheduler, defaultCapacity, defaultRefillPeriod);
     }
 
-    public DefaultTaskBucket(AsyncTaskExecutor executor, DelayedTaskScheduler delays) {
+    private DefaultTaskBucket(AsyncTaskExecutor executor, DelayedTaskScheduler delays) {
         this(executor, delays, 10, Duration.ofSeconds(1));
     }
 
-    public DefaultTaskBucket(
+    private DefaultTaskBucket(
             AsyncTaskExecutor executor,
             DelayedTaskScheduler delays,
             long defaultCapacity,
@@ -47,6 +49,27 @@ public final class DefaultTaskBucket implements TaskBucket {
 
         this.defaultCapacity = defaultCapacity;
         this.defaultRefillPeriod = Objects.requireNonNull(defaultRefillPeriod, "defaultRefillPeriod");
+    }
+
+    public static DefaultTaskBucket create(PaperTaskScheduler scheduler) {
+        return new DefaultTaskBucket(scheduler);
+    }
+
+    public static DefaultTaskBucket create(
+            PaperTaskScheduler scheduler, long defaultCapacity, Duration defaultRefillPeriod) {
+        return new DefaultTaskBucket(scheduler, defaultCapacity, defaultRefillPeriod);
+    }
+
+    public static DefaultTaskBucket create(AsyncTaskExecutor executor, DelayedTaskScheduler delays) {
+        return new DefaultTaskBucket(executor, delays);
+    }
+
+    public static DefaultTaskBucket create(
+            AsyncTaskExecutor executor,
+            DelayedTaskScheduler delays,
+            long defaultCapacity,
+            Duration defaultRefillPeriod) {
+        return new DefaultTaskBucket(executor, delays, defaultCapacity, defaultRefillPeriod);
     }
 
     @Override
@@ -78,7 +101,7 @@ public final class DefaultTaskBucket implements TaskBucket {
         Objects.requireNonNull(bucketName, "bucketName");
 
         return limiters.computeIfAbsent(
-                bucketName, ignored -> new TokenBucketRateLimiter(defaultCapacity, defaultRefillPeriod));
+                bucketName, ignored -> TokenBucketRateLimiter.create(defaultCapacity, defaultRefillPeriod));
     }
 
     private SchedulerTask runThrottled(

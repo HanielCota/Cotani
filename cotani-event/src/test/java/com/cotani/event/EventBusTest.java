@@ -10,6 +10,7 @@ import com.cotani.event.api.EventDispatchPolicy;
 import com.cotani.event.api.EventPriority;
 import com.cotani.event.bus.DefaultEventBus;
 import com.cotani.event.cancellable.AbstractCancellableEvent;
+import com.cotani.event.exception.EventListenerException;
 import com.cotani.event.exception.LoggingEventExceptionHandler;
 import com.cotani.event.subscription.CompositeEventSubscription;
 import com.cotani.event.subscription.EventSubscription;
@@ -139,7 +140,7 @@ final class EventBusTest {
 
     @Test
     void asyncDispatchTimesOutUnsubscribesAndContinuesAfterBlockingListener() throws Exception {
-        var failures = new CopyOnWriteArrayList<com.cotani.event.exception.EventListenerException>();
+        var failures = new CopyOnWriteArrayList<EventListenerException>();
         var policy = new EventDispatchPolicy(Duration.ofMillis(20), true);
         try (var eventBus = DefaultEventBus.create(failures::add, Runnable::run, policy)) {
             var blocker = new CountDownLatch(1);

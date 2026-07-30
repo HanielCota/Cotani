@@ -1,5 +1,6 @@
 package com.cotani.gui.safety;
 
+import com.cotani.api.InternalApi;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Enforces per-player click debounce timing independently of Bukkit event listeners.
  */
+@InternalApi
 public final class ClickDebouncer {
 
     private final long debounceNanos;

@@ -19,6 +19,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class CooldownServiceTest {
@@ -137,7 +138,7 @@ class CooldownServiceTest {
             executor.shutdownNow();
         }
 
-        org.junit.jupiter.api.Assertions.assertEquals(1, allowed.get());
+        Assertions.assertEquals(1, allowed.get());
         verify(playerCache, times(1)).markDirty(userId);
     }
 

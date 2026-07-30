@@ -15,19 +15,19 @@ class CacheEntryTest {
 
     @Test
     void valueReturnsInitialValue() {
-        CacheEntry<String> entry = new CacheEntry<>("hello");
+        CacheEntry<String> entry = CacheEntry.of("hello");
 
         assertEquals("hello", entry.value());
     }
 
     @Test
     void constructorRejectsNull() {
-        assertThrows(NullPointerException.class, () -> new CacheEntry<>(null));
+        assertThrows(NullPointerException.class, () -> CacheEntry.of(null));
     }
 
     @Test
     void updateReturnsBecameDirty() {
-        CacheEntry<String> entry = new CacheEntry<>("old");
+        CacheEntry<String> entry = CacheEntry.of("old");
 
         assertTrue(entry.update(v -> v + "-new"));
         assertEquals("old-new", entry.value());
@@ -35,7 +35,7 @@ class CacheEntryTest {
 
     @Test
     void updateOnAlreadyDirtyEntryDoesNotReportBecameDirty() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
         entry.markDirty();
 
         assertFalse(entry.update(v -> v + "-new"));
@@ -44,21 +44,21 @@ class CacheEntryTest {
 
     @Test
     void updateRejectsNullResult() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         assertThrows(NullPointerException.class, () -> entry.update(v -> null));
     }
 
     @Test
     void updateRejectsNullUpdater() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         assertThrows(NullPointerException.class, () -> entry.update(null));
     }
 
     @Test
     void mutateReturnsBecameDirty() {
-        CacheEntry<StringBuilder> entry = new CacheEntry<>(new StringBuilder("hello"));
+        CacheEntry<StringBuilder> entry = CacheEntry.of(new StringBuilder("hello"));
 
         assertTrue(entry.mutate(sb -> sb.append(" world")));
         assertEquals("hello world", entry.value().toString());
@@ -66,7 +66,7 @@ class CacheEntryTest {
 
     @Test
     void mutateOnAlreadyDirtyEntryDoesNotReportBecameDirty() {
-        CacheEntry<StringBuilder> entry = new CacheEntry<>(new StringBuilder("hello"));
+        CacheEntry<StringBuilder> entry = CacheEntry.of(new StringBuilder("hello"));
         entry.markDirty();
 
         assertFalse(entry.mutate(sb -> sb.append(" world")));
@@ -75,21 +75,21 @@ class CacheEntryTest {
 
     @Test
     void mutateRejectsNullMutator() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         assertThrows(NullPointerException.class, () -> entry.mutate(null));
     }
 
     @Test
     void dirtyReturnsFalseInitially() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         assertFalse(entry.dirty());
     }
 
     @Test
     void markDirtySetsDirtyFlagAndReturnsBecameDirty() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         assertTrue(entry.markDirty());
         assertTrue(entry.dirty());
@@ -97,7 +97,7 @@ class CacheEntryTest {
 
     @Test
     void markDirtyOnAlreadyDirtyEntryDoesNotReportBecameDirty() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
         entry.markDirty();
 
         assertFalse(entry.markDirty());
@@ -106,7 +106,7 @@ class CacheEntryTest {
 
     @Test
     void updateSetsDirtyFlag() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         entry.update(v -> v + "-updated");
 
@@ -115,7 +115,7 @@ class CacheEntryTest {
 
     @Test
     void mutateSetsDirtyFlag() {
-        CacheEntry<StringBuilder> entry = new CacheEntry<>(new StringBuilder("hello"));
+        CacheEntry<StringBuilder> entry = CacheEntry.of(new StringBuilder("hello"));
 
         entry.mutate(sb -> sb.append(" world"));
 
@@ -124,7 +124,7 @@ class CacheEntryTest {
 
     @Test
     void markSavedClearsDirtyFlag() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         entry.markDirty();
         assertTrue(entry.dirty());
@@ -136,7 +136,7 @@ class CacheEntryTest {
     @Test
     void loadedAtIsSetOnCreation() {
         Instant before = Instant.now();
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
         Instant after = Instant.now();
 
         assertFalse(entry.loadedAt().isBefore(before));
@@ -145,7 +145,7 @@ class CacheEntryTest {
 
     @Test
     void lastSavedAtIsEmptyInitially() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         Optional<Instant> lastSaved = entry.lastSavedAt();
 
@@ -154,7 +154,7 @@ class CacheEntryTest {
 
     @Test
     void lastSavedAtIsPresentAfterMarkSaved() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         entry.markSaved();
         Optional<Instant> lastSaved = entry.lastSavedAt();
@@ -164,7 +164,7 @@ class CacheEntryTest {
 
     @Test
     void dirtyFlagSurvivesMultipleUpdates() {
-        CacheEntry<String> entry = new CacheEntry<>("a");
+        CacheEntry<String> entry = CacheEntry.of("a");
 
         assertTrue(entry.update(v -> v + "b"));
         assertFalse(entry.update(v -> v + "c"));
@@ -175,7 +175,7 @@ class CacheEntryTest {
 
     @Test
     void versionIncrementsOnUpdateAndMarkDirty() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         assertEquals(0L, entry.version());
 
@@ -188,7 +188,7 @@ class CacheEntryTest {
 
     @Test
     void markSavedIfVersionMatchesClearsDirtyWhenVersionMatches() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
         entry.markDirty();
         long versionAtStart = entry.version();
 
@@ -198,7 +198,7 @@ class CacheEntryTest {
 
     @Test
     void markSavedIfVersionMatchesReturnsFalseWhenVersionChanged() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
         entry.markDirty();
         long versionAtStart = entry.version();
 
@@ -210,14 +210,14 @@ class CacheEntryTest {
 
     @Test
     void markSavedIfVersionMatchesReturnsFalseWhenAlreadyClean() {
-        CacheEntry<String> entry = new CacheEntry<>("value");
+        CacheEntry<String> entry = CacheEntry.of("value");
 
         assertFalse(entry.markSavedIfVersionMatches(entry.version()));
     }
 
     @Test
     void mutableUpdaterExecutesExactlyOncePerConcurrentOperation() throws InterruptedException {
-        CacheEntry<AtomicInteger> entry = new CacheEntry<>(new AtomicInteger());
+        CacheEntry<AtomicInteger> entry = CacheEntry.of(new AtomicInteger());
         AtomicInteger invocations = new AtomicInteger();
         int threads = 8;
         int operationsPerThread = 1_000;

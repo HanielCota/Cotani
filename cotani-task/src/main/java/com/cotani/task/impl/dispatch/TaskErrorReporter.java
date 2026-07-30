@@ -1,17 +1,22 @@
 package com.cotani.task.impl.dispatch;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.TaskContext;
 import com.cotani.task.api.TaskExceptionHandler;
 import com.cotani.task.api.TaskMetadata;
 import java.util.Objects;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class TaskErrorReporter {
 
     private final TaskExceptionHandler exceptionHandler;
 
-    public TaskErrorReporter(TaskExceptionHandler exceptionHandler) {
+    private TaskErrorReporter(TaskExceptionHandler exceptionHandler) {
         this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
+    }
+
+    public static TaskErrorReporter create(TaskExceptionHandler exceptionHandler) {
+        return new TaskErrorReporter(exceptionHandler);
     }
 
     public void handleRetired(TaskMetadata metadata) {

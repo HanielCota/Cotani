@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.net.URI;
@@ -33,9 +34,8 @@ class SkullTextureResolverTest {
         var noArg = SkullTextureResolver.class.getDeclaredConstructor();
         assertTrue(Modifier.isPublic(noArg.getModifiers()));
 
-        assertTrue(Modifier.isPublic(SkullTextureResolver.class
-                .getDeclaredConstructor(com.github.benmanes.caffeine.cache.Cache.class)
-                .getModifiers()));
+        assertTrue(Modifier.isPublic(
+                SkullTextureResolver.class.getDeclaredConstructor(Cache.class).getModifiers()));
 
         assertTrue(AutoCloseable.class.isAssignableFrom(SkullTextureResolver.class));
         SkullTextureResolver.class.getMethod("close");

@@ -1,5 +1,6 @@
 package com.cotani.task.impl.chain;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.RetryPolicy;
@@ -17,7 +18,7 @@ import java.util.function.Supplier;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     private static final String ACTION_PARAM = "action";
@@ -27,11 +28,11 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     private final ChainTargetComposer targetComposer;
     private final TaskTimeoutController timeoutController;
 
-    public DefaultTaskChain(CompletableFuture<T> future, PaperTaskScheduler scheduler) {
+    private DefaultTaskChain(CompletableFuture<T> future, PaperTaskScheduler scheduler) {
         this(ChainState.external(future), new ChainExecutionContext(scheduler, scheduler));
     }
 
-    public DefaultTaskChain(
+    private DefaultTaskChain(
             CompletableFuture<T> future, PaperTaskScheduler scheduler, Supplier<CompletableFuture<T>> futureFactory) {
         this(ChainState.repeatable(future, futureFactory), new ChainExecutionContext(scheduler, scheduler));
     }
@@ -41,6 +42,15 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
         this.executionContext = Objects.requireNonNull(executionContext, "executionContext");
         this.targetComposer = new ChainTargetComposer(executionContext.executor());
         this.timeoutController = new TaskTimeoutController();
+    }
+
+    public static <T> DefaultTaskChain<T> create(CompletableFuture<T> future, PaperTaskScheduler scheduler) {
+        return new DefaultTaskChain<>(future, scheduler);
+    }
+
+    public static <T> DefaultTaskChain<T> create(
+            CompletableFuture<T> future, PaperTaskScheduler scheduler, Supplier<CompletableFuture<T>> futureFactory) {
+        return new DefaultTaskChain<>(future, scheduler, futureFactory);
     }
 
     @Override

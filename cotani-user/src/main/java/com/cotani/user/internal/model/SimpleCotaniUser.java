@@ -1,10 +1,11 @@
 package com.cotani.user.internal.model;
 
+import com.cotani.api.InternalApi;
 import com.cotani.user.api.CotaniUser;
 import java.util.Objects;
 import java.util.UUID;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public record SimpleCotaniUser(
         UUID uniqueId,
         UUID sessionId,

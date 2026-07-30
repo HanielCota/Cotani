@@ -1,4 +1,4 @@
 @NullMarked
-package com.cotani.user.internal.repository;
+package com.cotani.cache.invalidation;
 
 import org.jspecify.annotations.NullMarked;

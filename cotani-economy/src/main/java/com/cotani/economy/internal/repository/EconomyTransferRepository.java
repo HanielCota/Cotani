@@ -1,5 +1,6 @@
 package com.cotani.economy.internal.repository;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
@@ -8,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public interface EconomyTransferRepository {
 
     CompletionStage<EconomyTransaction> transfer(

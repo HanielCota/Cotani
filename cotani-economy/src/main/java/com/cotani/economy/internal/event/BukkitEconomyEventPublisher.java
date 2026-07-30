@@ -1,7 +1,9 @@
 package com.cotani.economy.internal.event;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.event.EconomyEventPublisher;
 import com.cotani.economy.event.EconomyTransactionEvent;
+import com.cotani.economy.transaction.EconomyTransaction;
 import com.cotani.economy.transaction.EconomyTransactionType;
 import java.util.Objects;
 import org.bukkit.Bukkit;
@@ -18,7 +20,7 @@ import org.bukkit.event.HandlerList;
  * <p><b>API Note:</b> Always publish from the main thread. If you are on an async thread, hand the event back to the
  * main thread (for example via {@code PaperTaskScheduler#global}) before calling {@code publish}.
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class BukkitEconomyEventPublisher implements EconomyEventPublisher {
 
     private BukkitEconomyEventPublisher() {}
@@ -39,9 +41,9 @@ public final class BukkitEconomyEventPublisher implements EconomyEventPublisher 
 
     public static final class BukkitEconomyTransactionEvent extends Event {
         private static final HandlerList HANDLERS = new HandlerList();
-        private final com.cotani.economy.transaction.EconomyTransaction transaction;
+        private final EconomyTransaction transaction;
 
-        public BukkitEconomyTransactionEvent(com.cotani.economy.transaction.EconomyTransaction transaction) {
+        public BukkitEconomyTransactionEvent(EconomyTransaction transaction) {
             this.transaction = Objects.requireNonNull(transaction, "transaction");
         }
 
@@ -49,7 +51,7 @@ public final class BukkitEconomyEventPublisher implements EconomyEventPublisher 
             return HANDLERS;
         }
 
-        public com.cotani.economy.transaction.EconomyTransaction transaction() {
+        public EconomyTransaction transaction() {
             return transaction;
         }
 

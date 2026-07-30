@@ -29,9 +29,13 @@ public final class DataCacheBuilder<K, V> {
     private CacheInvalidationBus<K> invalidationBus = new NoopCacheInvalidationBus<>();
     private int maximumConcurrentSaves = 16;
 
-    public DataCacheBuilder(Class<K> keyType, Class<V> valueType) {
+    private DataCacheBuilder(Class<K> keyType, Class<V> valueType) {
         this.keyType = Objects.requireNonNull(keyType, "keyType");
         this.valueType = Objects.requireNonNull(valueType, "valueType");
+    }
+
+    public static <K, V> DataCacheBuilder<K, V> create(Class<K> keyType, Class<V> valueType) {
+        return new DataCacheBuilder<>(keyType, valueType);
     }
 
     public DataCacheBuilder<K, V> repository(CacheRepository<K, V> repository) {
@@ -116,7 +120,7 @@ public final class DataCacheBuilder<K, V> {
 
         var resolvedRepository = resolveRepository();
         var resolvedDefaultValue = Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
-        return new CaffeineDataCache<>(
+        return CaffeineDataCache.create(
                 resolvedRepository,
                 resolvedDefaultValue,
                 scheduler,

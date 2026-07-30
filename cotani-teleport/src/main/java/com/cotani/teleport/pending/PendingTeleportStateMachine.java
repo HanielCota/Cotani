@@ -1,5 +1,6 @@
 package com.cotani.teleport.pending;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.SchedulerTask;
 import com.cotani.teleport.api.PendingTeleportState;
 import com.cotani.teleport.api.TeleportCancelReason;
@@ -8,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
+@InternalApi
 public final class PendingTeleportStateMachine {
     private final PendingTeleportData data;
     private final AtomicReference<PendingTeleportState> state = new AtomicReference<>(PendingTeleportState.WAITING);

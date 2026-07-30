@@ -1,5 +1,6 @@
 package com.cotani.economy.internal.service;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.EconomyService;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.account.EconomyBalance;
@@ -20,7 +21,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultEconomyService implements EconomyService {
 
     private static final Logger LOGGER = Logger.getLogger(DefaultEconomyService.class.getName());
@@ -31,7 +32,7 @@ public final class DefaultEconomyService implements EconomyService {
     private final EconomyTransferRepository transferRepository;
     private final EconomyEventPublisher eventPublisher;
 
-    public DefaultEconomyService(
+    private DefaultEconomyService(
             EconomySettings settings,
             EconomyGuard guard,
             EconomyAccountRepository accountRepository,
@@ -42,6 +43,15 @@ public final class DefaultEconomyService implements EconomyService {
         this.accountRepository = Objects.requireNonNull(accountRepository, "accountRepository");
         this.transferRepository = Objects.requireNonNull(transferRepository, "transferRepository");
         this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher");
+    }
+
+    public static DefaultEconomyService create(
+            EconomySettings settings,
+            EconomyGuard guard,
+            EconomyAccountRepository accountRepository,
+            EconomyTransferRepository transferRepository,
+            EconomyEventPublisher eventPublisher) {
+        return new DefaultEconomyService(settings, guard, accountRepository, transferRepository, eventPublisher);
     }
 
     @Override

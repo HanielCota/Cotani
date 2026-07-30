@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -72,7 +74,7 @@ class MiniMessagesTest {
 
     @Test
     void parsesAndSerializesList() {
-        var inputs = java.util.List.of("<green>Hello", "<red>World");
+        var inputs = List.of("<green>Hello", "<red>World");
         var components = MiniMessages.parseList(inputs);
 
         assertEquals(2, components.size());
@@ -85,8 +87,8 @@ class MiniMessagesTest {
 
     @Test
     void parsesListWithAudienceAndResolvers() {
-        var inputs = java.util.List.of("<green>Hello <name>");
-        var audience = net.kyori.adventure.audience.Audience.empty();
+        var inputs = List.of("<green>Hello <name>");
+        var audience = Audience.empty();
         var components = MiniMessages.parseList(inputs, audience, Placeholders.unparsed("name", "World"));
 
         assertEquals(1, components.size());

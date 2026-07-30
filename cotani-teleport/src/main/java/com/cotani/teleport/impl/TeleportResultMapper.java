@@ -1,5 +1,6 @@
 package com.cotani.teleport.impl;
 
+import com.cotani.api.InternalApi;
 import com.cotani.teleport.api.TeleportContext;
 import com.cotani.teleport.api.TeleportFailureReason;
 import com.cotani.teleport.api.TeleportResult;
@@ -12,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.bukkit.Location;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class TeleportResultMapper {
     private static final String CONTEXT_PARAM = "context";
 

@@ -1,5 +1,6 @@
 package com.cotani.task.impl.task;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.SchedulerTask;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -9,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>Used when a task must first run on the global region thread to resolve a Bukkit object
  * (World/Entity by UUID) before scheduling the real work on a region/entity thread.
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class CompositeSchedulerTask implements SchedulerTask {
 
     private final SchedulerTask setupTask;

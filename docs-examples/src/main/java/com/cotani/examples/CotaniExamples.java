@@ -33,7 +33,7 @@ public final class CotaniExamples {
     }
 
     public static CompletionStage<CotaniConfigs> loadConfigAsync(Plugin plugin, PaperTaskScheduler scheduler) {
-        return CotaniConfigs.create(plugin, scheduler).file("config.yml").loadAsync();
+        return CotaniConfigs.builder(plugin, scheduler).file("config.yml").loadAsync();
     }
 
     public static CompletionStage<EconomyTransaction> rewardAsync(

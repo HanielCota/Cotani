@@ -1,5 +1,6 @@
 package com.cotani.task.impl.scheduler;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.*;
 import com.cotani.task.impl.dispatch.TaskErrorReporter;
 import com.cotani.task.impl.dispatch.TaskRunner;
@@ -19,7 +20,7 @@ import java.util.function.Supplier;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     private final TaskExceptionHandler exceptionHandler;
@@ -30,7 +31,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     private final SchedulerTaskChainFactory chainFactory;
     private final SchedulerLifecycleCoordinator lifecycle;
 
-    public ModernPaperTaskScheduler(
+    private ModernPaperTaskScheduler(
             PlatformScheduler platformScheduler,
             TaskExceptionHandler exceptionHandler,
             SchedulerOptions options,
@@ -38,7 +39,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         this(platformScheduler, exceptionHandler, options, metrics, new NoopPersistentTaskStore());
     }
 
-    public ModernPaperTaskScheduler(
+    private ModernPaperTaskScheduler(
             PlatformScheduler platformScheduler,
             TaskExceptionHandler exceptionHandler,
             SchedulerOptions options,
@@ -50,13 +51,30 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
         this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
         this.lifecycle =
                 new SchedulerLifecycleCoordinator(validatedPlatform, validatedOptions.cancelPaperTasksOnClose());
-        var taskRunner = new TaskRunner(exceptionHandler, metrics);
-        var taskErrorReporter = new TaskErrorReporter(exceptionHandler);
+        var taskRunner = TaskRunner.create(exceptionHandler, metrics);
+        var taskErrorReporter = TaskErrorReporter.create(exceptionHandler);
         this.dispatcher =
                 new TargetTaskDispatcher(validatedPlatform, taskRunner, taskErrorReporter, lifecycle::metadata);
         this.debounceCoordinator = new DebounceCoordinator(dispatcher);
         this.persistentTaskCoordinator = new PersistentTaskCoordinator(persistentTaskStore, dispatcher);
         this.chainFactory = new SchedulerTaskChainFactory(this, dispatcher);
+    }
+
+    public static ModernPaperTaskScheduler create(
+            PlatformScheduler platformScheduler,
+            TaskExceptionHandler exceptionHandler,
+            SchedulerOptions options,
+            TaskMetrics metrics) {
+        return new ModernPaperTaskScheduler(platformScheduler, exceptionHandler, options, metrics);
+    }
+
+    public static ModernPaperTaskScheduler create(
+            PlatformScheduler platformScheduler,
+            TaskExceptionHandler exceptionHandler,
+            SchedulerOptions options,
+            TaskMetrics metrics,
+            PersistentTaskStore persistentTaskStore) {
+        return new ModernPaperTaskScheduler(platformScheduler, exceptionHandler, options, metrics, persistentTaskStore);
     }
 
     @Override

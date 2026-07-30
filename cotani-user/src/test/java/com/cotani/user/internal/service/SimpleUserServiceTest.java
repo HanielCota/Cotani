@@ -8,11 +8,15 @@ import com.cotani.user.api.UserNotLoadedException;
 import com.cotani.user.internal.cache.UserCache;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings("NullAway")
 class SimpleUserServiceTest {
@@ -65,7 +69,7 @@ class SimpleUserServiceTest {
         when(cache.findInternal(uniqueId)).thenReturn(Optional.of(user));
         when(cache.updateIfSession(eq(uniqueId), eq(user.sessionId()), any()))
                 .thenAnswer(invocation -> Optional.of(invocation
-                        .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
+                        .<UnaryOperator<SimpleCotaniUser>>getArgument(2)
                         .apply(user)));
         when(repository.save(any(SimpleCotaniUser.class))).thenReturn(CompletableFuture.completedFuture(null));
         when(cache.remove(uniqueId, user.sessionId())).thenReturn(true);
@@ -95,7 +99,7 @@ class SimpleUserServiceTest {
         when(cache.findInternal(uniqueId)).thenReturn(Optional.of(user));
         when(cache.updateIfSession(eq(uniqueId), eq(user.sessionId()), any()))
                 .thenAnswer(invocation -> Optional.of(invocation
-                        .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
+                        .<UnaryOperator<SimpleCotaniUser>>getArgument(2)
                         .apply(user)));
         when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
 
@@ -109,10 +113,10 @@ class SimpleUserServiceTest {
         UUID uniqueId = UUID.randomUUID();
         SimpleCotaniUser user =
                 SimpleCotaniUser.createNew(uniqueId, "Steve", 1_000L).withVersion(1L);
-        when(cache.allInternal()).thenReturn(java.util.List.of(user));
+        when(cache.allInternal()).thenReturn(List.of(user));
         when(cache.updateIfSession(eq(uniqueId), eq(user.sessionId()), any()))
                 .thenAnswer(invocation -> Optional.of(invocation
-                        .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
+                        .<UnaryOperator<SimpleCotaniUser>>getArgument(2)
                         .apply(user)));
         when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
 
@@ -130,9 +134,8 @@ class SimpleUserServiceTest {
         when(cache.updateIfSession(eq(uniqueId), any(UUID.class), any())).thenAnswer(invocation -> {
             var expectedSession = invocation.<UUID>getArgument(1);
             var current = expectedSession.equals(oldSession.sessionId()) ? oldSession : newSession;
-            return Optional.of(invocation
-                    .<java.util.function.UnaryOperator<SimpleCotaniUser>>getArgument(2)
-                    .apply(current));
+            return Optional.of(
+                    invocation.<UnaryOperator<SimpleCotaniUser>>getArgument(2).apply(current));
         });
         var oldSave = new CompletableFuture<Void>();
         var newSave = new CompletableFuture<Void>();
@@ -150,7 +153,7 @@ class SimpleUserServiceTest {
 
         assertDoesNotThrow(unloading::join);
         assertDoesNotThrow(savingNewSession::join);
-        var savedUsers = org.mockito.ArgumentCaptor.forClass(SimpleCotaniUser.class);
+        var savedUsers = ArgumentCaptor.forClass(SimpleCotaniUser.class);
         verify(repository, times(2)).save(savedUsers.capture());
         assertEquals(
                 oldSession.sessionId(), savedUsers.getAllValues().getFirst().sessionId());
@@ -177,7 +180,7 @@ class SimpleUserServiceTest {
         when(repository.findByUniqueId(uniqueId)).thenReturn(CompletableFuture.completedFuture(Optional.empty()));
 
         var exception = assertThrows(
-                java.util.concurrent.CompletionException.class,
+                CompletionException.class,
                 () -> service.getOrThrowAsync(uniqueId).toCompletableFuture().join());
 
         assertTrue(exception.getCause() instanceof UserNotLoadedException);

@@ -14,13 +14,18 @@ public final class ConfigValue {
     private final boolean exists;
     private final ConfigSerializerRegistry serializers;
 
-    public ConfigValue(
+    private ConfigValue(
             String file, String path, @Nullable Object raw, boolean exists, ConfigSerializerRegistry serializers) {
         this.file = Objects.requireNonNull(file, "file");
         this.path = Objects.requireNonNull(path, "path");
         this.raw = raw;
         this.exists = exists;
         this.serializers = Objects.requireNonNull(serializers, "serializers");
+    }
+
+    public static ConfigValue create(
+            String file, String path, @Nullable Object raw, boolean exists, ConfigSerializerRegistry serializers) {
+        return new ConfigValue(file, path, raw, exists, serializers);
     }
 
     public String file() {

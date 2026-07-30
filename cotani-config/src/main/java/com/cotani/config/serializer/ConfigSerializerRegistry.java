@@ -42,12 +42,12 @@ public final class ConfigSerializerRegistry {
         registry.register(new FloatSerializer());
         registry.register(new BooleanSerializer());
         registry.register(new DurationSerializer());
-        registry.register(new PathSerializer(plugin.getDataFolder().toPath()));
+        registry.register(PathSerializer.create(plugin.getDataFolder().toPath()));
         registry.register(new UuidSerializer());
         registry.register(new ComponentSerializer());
         registry.register(new MaterialSerializer());
         registry.register(new SoundSerializer());
-        registry.register(new NamespacedKeySerializer(plugin));
+        registry.register(NamespacedKeySerializer.create(plugin));
         registry.register(new KeySerializer());
         return registry;
     }

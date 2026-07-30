@@ -11,8 +11,12 @@ public final class NamespacedKeySerializer implements ConfigSerializer<Namespace
 
     private final Plugin plugin;
 
-    public NamespacedKeySerializer(Plugin plugin) {
+    private NamespacedKeySerializer(Plugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
+    }
+
+    public static NamespacedKeySerializer create(Plugin plugin) {
+        return new NamespacedKeySerializer(plugin);
     }
 
     @Override

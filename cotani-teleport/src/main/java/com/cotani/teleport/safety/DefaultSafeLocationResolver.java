@@ -19,7 +19,7 @@ import org.bukkit.World;
  * <p>To respect Folia region affinity, horizontal search candidate coordinates are clamped to the chunk
  * of the target location.
  */
-public final class DefaultSafeLocationResolver implements com.cotani.teleport.safety.SafeLocationResolver {
+public final class DefaultSafeLocationResolver implements SafeLocationResolver {
 
     private static final Map<Long, List<Offset>> OFFSET_CACHE = new ConcurrentHashMap<>();
 

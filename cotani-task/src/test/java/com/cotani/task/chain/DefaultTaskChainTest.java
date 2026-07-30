@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class DefaultTaskChainTest {
 
@@ -30,17 +31,17 @@ class DefaultTaskChainTest {
     void setUp() {
         when(scheduler.asyncExecutor()).thenReturn(Runnable::run);
         when(scheduler.chain(any()))
-                .thenAnswer(invocation -> new DefaultTaskChain<>(invocation.getArgument(0), scheduler));
+                .thenAnswer(invocation -> DefaultTaskChain.create(invocation.getArgument(0), scheduler));
     }
 
     @Test
     void onStartRunsAtChainStart() throws Exception {
         AtomicBoolean started = new AtomicBoolean(false);
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture("value"), scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(CompletableFuture.completedFuture("value"), scheduler);
 
         when(scheduler.supplyAsync(any(), any())).thenAnswer(invocation -> {
             var supplier = invocation.<Supplier<Object>>getArgument(1);
-            return new DefaultTaskChain<>(CompletableFuture.completedFuture(supplier.get()), scheduler);
+            return DefaultTaskChain.create(CompletableFuture.completedFuture(supplier.get()), scheduler);
         });
 
         chain.onStart(() -> started.set(true))
@@ -54,7 +55,7 @@ class DefaultTaskChainTest {
     @Test
     void onCompleteRunsOnSuccess() throws Exception {
         AtomicBoolean completed = new AtomicBoolean(false);
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture("value"), scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(CompletableFuture.completedFuture("value"), scheduler);
 
         chain.onComplete(() -> completed.set(true));
         chain.toCompletionStage().toCompletableFuture().get();
@@ -66,7 +67,7 @@ class DefaultTaskChainTest {
     void onCompleteRunsOnFailure() throws Exception {
         AtomicBoolean completed = new AtomicBoolean(false);
         DefaultTaskChain<String> chain =
-                new DefaultTaskChain<>(CompletableFuture.failedFuture(new RuntimeException("boom")), scheduler);
+                DefaultTaskChain.create(CompletableFuture.failedFuture(new RuntimeException("boom")), scheduler);
 
         chain.onComplete(() -> completed.set(true));
 
@@ -78,7 +79,7 @@ class DefaultTaskChainTest {
     void onCancelRunsWhenCancelled() {
         AtomicBoolean cancelled = new AtomicBoolean(false);
         CompletableFuture<String> future = new CompletableFuture<>();
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(future, scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(future, scheduler);
 
         chain.onCancel(() -> cancelled.set(true));
         chain.cancel();
@@ -89,7 +90,7 @@ class DefaultTaskChainTest {
     @Test
     void timeoutFailsWhenFutureDoesNotComplete() {
         CompletableFuture<String> future = new CompletableFuture<>();
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(future, scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(future, scheduler);
 
         ExecutionException exception = assertThrows(
                 ExecutionException.class,
@@ -103,7 +104,7 @@ class DefaultTaskChainTest {
 
     @Test
     void timeoutDoesNotAffectFastChain() throws Exception {
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture("value"), scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(CompletableFuture.completedFuture("value"), scheduler);
 
         String result = chain.timeout(Duration.ofSeconds(1))
                 .toCompletionStage()
@@ -116,7 +117,7 @@ class DefaultTaskChainTest {
     @Test
     void timeoutPreservesOriginalException() {
         IllegalStateException cause = new IllegalStateException("db failed");
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(CompletableFuture.failedFuture(cause), scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(CompletableFuture.failedFuture(cause), scheduler);
 
         ExecutionException exception = assertThrows(
                 ExecutionException.class,
@@ -131,7 +132,7 @@ class DefaultTaskChainTest {
     @Test
     void timeoutDoesNotCompleteSharedSource() throws Exception {
         CompletableFuture<String> source = new CompletableFuture<>();
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(source, scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(source, scheduler);
 
         assertThrows(
                 ExecutionException.class,
@@ -147,7 +148,7 @@ class DefaultTaskChainTest {
 
     @Test
     void timeoutRejectsNonPositiveAndExcessiveDurations() {
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(new CompletableFuture<>(), scheduler);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(new CompletableFuture<>(), scheduler);
 
         assertThrows(IllegalArgumentException.class, () -> chain.timeout(Duration.ZERO));
         assertThrows(IllegalArgumentException.class, () -> chain.timeout(Duration.ofSeconds(-1)));
@@ -169,7 +170,7 @@ class DefaultTaskChainTest {
                     return SchedulerTask.noop();
                 });
 
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(factory.get(), scheduler, factory);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(factory.get(), scheduler, factory);
         String result = chain.retry(RetryPolicy.fixed(3, Duration.ZERO))
                 .toCompletionStage()
                 .toCompletableFuture()
@@ -182,7 +183,7 @@ class DefaultTaskChainTest {
     @Test
     void retryRejectsExternalNonRepeatableStage() {
         DefaultTaskChain<String> chain =
-                new DefaultTaskChain<>(CompletableFuture.failedFuture(new IllegalStateException("boom")), scheduler);
+                DefaultTaskChain.create(CompletableFuture.failedFuture(new IllegalStateException("boom")), scheduler);
 
         assertThrows(IllegalStateException.class, () -> chain.retry(RetryPolicy.fixed(3, Duration.ZERO)));
     }
@@ -194,18 +195,18 @@ class DefaultTaskChainTest {
                 .thenReturn(pending);
         Supplier<CompletableFuture<String>> factory =
                 () -> CompletableFuture.failedFuture(new IllegalStateException("boom"));
-        DefaultTaskChain<String> chain = new DefaultTaskChain<>(factory.get(), scheduler, factory);
+        DefaultTaskChain<String> chain = DefaultTaskChain.create(factory.get(), scheduler, factory);
 
         TaskChain<String> retried = chain.retry(RetryPolicy.fixed(3, Duration.ofSeconds(1)));
         retried.cancel();
 
-        org.mockito.Mockito.verify(pending).cancel();
+        Mockito.verify(pending).cancel();
     }
 
     @Test
     void allOfCollectsResults() throws Exception {
-        TaskChain<String> a = new DefaultTaskChain<>(CompletableFuture.completedFuture("a"), scheduler);
-        TaskChain<String> b = new DefaultTaskChain<>(CompletableFuture.completedFuture("b"), scheduler);
+        TaskChain<String> a = DefaultTaskChain.create(CompletableFuture.completedFuture("a"), scheduler);
+        TaskChain<String> b = DefaultTaskChain.create(CompletableFuture.completedFuture("b"), scheduler);
 
         List<String> result = TaskChain.allOf(scheduler, a, b)
                 .toCompletionStage()
@@ -219,8 +220,8 @@ class DefaultTaskChainTest {
 
     @Test
     void anyOfReturnsFirstResult() throws Exception {
-        TaskChain<String> a = new DefaultTaskChain<>(CompletableFuture.completedFuture("a"), scheduler);
-        TaskChain<String> b = new DefaultTaskChain<>(CompletableFuture.completedFuture("b"), scheduler);
+        TaskChain<String> a = DefaultTaskChain.create(CompletableFuture.completedFuture("a"), scheduler);
+        TaskChain<String> b = DefaultTaskChain.create(CompletableFuture.completedFuture("b"), scheduler);
 
         String result = TaskChain.anyOf(scheduler, a, b)
                 .toCompletionStage()
@@ -237,7 +238,7 @@ class DefaultTaskChainTest {
 
     @Test
     void filterKeepsMatchingValue() throws Exception {
-        DefaultTaskChain<Integer> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture(10), scheduler);
+        DefaultTaskChain<Integer> chain = DefaultTaskChain.create(CompletableFuture.completedFuture(10), scheduler);
 
         Integer result = chain.filter(value -> value > 5)
                 .toCompletionStage()
@@ -249,7 +250,7 @@ class DefaultTaskChainTest {
 
     @Test
     void filterRejectsNonMatchingValue() {
-        DefaultTaskChain<Integer> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture(2), scheduler);
+        DefaultTaskChain<Integer> chain = DefaultTaskChain.create(CompletableFuture.completedFuture(2), scheduler);
 
         ExecutionException exception = assertThrows(
                 ExecutionException.class,
@@ -263,10 +264,10 @@ class DefaultTaskChainTest {
 
     @Test
     void flatMapFlattensInnerChain() throws Exception {
-        DefaultTaskChain<Integer> chain = new DefaultTaskChain<>(CompletableFuture.completedFuture(2), scheduler);
+        DefaultTaskChain<Integer> chain = DefaultTaskChain.create(CompletableFuture.completedFuture(2), scheduler);
 
         Integer result = chain.flatMap(
-                        value -> new DefaultTaskChain<>(CompletableFuture.completedFuture(value * 3), scheduler))
+                        value -> DefaultTaskChain.create(CompletableFuture.completedFuture(value * 3), scheduler))
                 .toCompletionStage()
                 .toCompletableFuture()
                 .get();

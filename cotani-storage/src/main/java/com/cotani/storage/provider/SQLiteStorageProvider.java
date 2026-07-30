@@ -3,6 +3,7 @@ package com.cotani.storage.provider;
 import com.cotani.storage.backend.SQLiteCredentials;
 import com.cotani.storage.error.ConnectionError;
 import com.cotani.storage.error.StorageException;
+import com.cotani.storage.security.Paths;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -13,6 +14,7 @@ import java.sql.*;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
@@ -25,7 +27,11 @@ public final class SQLiteStorageProvider implements StorageProvider {
     private final AtomicReference<@Nullable Connection> realConnection = new AtomicReference<>();
     private final AtomicReference<@Nullable Connection> connection = new AtomicReference<>();
 
-    public SQLiteStorageProvider(SQLiteCredentials credentials) {
+    public static SQLiteStorageProvider create(SQLiteCredentials credentials) {
+        return new SQLiteStorageProvider(credentials);
+    }
+
+    private SQLiteStorageProvider(SQLiteCredentials credentials) {
         this.credentials = Objects.requireNonNull(credentials, "credentials");
     }
 
@@ -36,16 +42,16 @@ public final class SQLiteStorageProvider implements StorageProvider {
         }
         final BasicFileAttributes beforeOpen;
         try {
-            var verifiedPath = com.cotani.storage.security.Paths.requireNoSymbolicLinks(credentials.path());
+            var verifiedPath = Paths.requireNoSymbolicLinks(credentials.path());
             var parent = verifiedPath.getParent();
             if (parent != null) {
                 Files.createDirectories(parent);
             }
-            com.cotani.storage.security.Paths.requireNoSymbolicLinks(verifiedPath);
+            Paths.requireNoSymbolicLinks(verifiedPath);
             if (!Files.exists(verifiedPath, LinkOption.NOFOLLOW_LINKS)) {
                 try (var _ = Files.newByteChannel(
                         verifiedPath,
-                        java.util.Set.<OpenOption>of(
+                        Set.<OpenOption>of(
                                 StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS))) {
                     // Create the final path without following a link before JDBC opens it.
                 }
@@ -62,7 +68,7 @@ public final class SQLiteStorageProvider implements StorageProvider {
         @Nullable Connection opened = null;
         try {
             opened = DriverManager.getConnection(configuredJdbcUrl());
-            var verifiedPath = com.cotani.storage.security.Paths.requireNoSymbolicLinks(credentials.path());
+            var verifiedPath = Paths.requireNoSymbolicLinks(credentials.path());
             var afterOpen = Files.readAttributes(verifiedPath, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
             if (!Objects.equals(beforeOpen.fileKey(), afterOpen.fileKey())) {
                 throw new StorageException(new ConnectionError("SQLite path changed while it was being opened.", null));

@@ -6,19 +6,22 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import com.cotani.teleport.api.*;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
 import org.bukkit.Location;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 class TeleportResultMapperTest {
 
     private TeleportResultMapper mapper;
 
     private static TeleportContext createContext() {
-        var location = org.mockito.Mockito.mock(Location.class);
-        org.mockito.Mockito.when(location.clone()).thenReturn(location);
+        var location = Mockito.mock(Location.class);
+        Mockito.when(location.clone()).thenReturn(location);
         return new TeleportContext(
                 UUID.randomUUID(),
                 location,
@@ -31,11 +34,9 @@ class TeleportResultMapperTest {
 
     @BeforeEach
     void setUp() {
-        var notifier = org.mockito.Mockito.mock(TeleportEventNotifier.class);
-        org.mockito.Mockito.when(notifier.fireFailure(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
-        org.mockito.Mockito.when(notifier.elapsedMillis(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(0L);
+        var notifier = Mockito.mock(TeleportEventNotifier.class);
+        Mockito.when(notifier.fireFailure(ArgumentMatchers.any())).thenReturn(CompletableFuture.completedFuture(null));
+        Mockito.when(notifier.elapsedMillis(ArgumentMatchers.any())).thenReturn(0L);
         mapper = new TeleportResultMapper(notifier);
     }
 

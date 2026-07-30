@@ -1,5 +1,6 @@
 package com.cotani.economy.internal.storage;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
@@ -24,7 +25,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 /**
@@ -34,7 +37,7 @@ import java.util.function.Function;
  * {@link EconomyOperationId} returns the previously committed transaction without mutating balances
  * again.
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class SqlEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
 
     private static final String USER_ID_PARAM = "userId";
@@ -328,8 +331,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     private static Throwable unwrap(Throwable error) {
         Throwable cause = error;
         while (cause.getCause() != null
-                && (cause instanceof java.util.concurrent.CompletionException
-                        || cause instanceof java.util.concurrent.ExecutionException)) {
+                && (cause instanceof CompletionException || cause instanceof ExecutionException)) {
             cause = cause.getCause();
         }
         return cause;

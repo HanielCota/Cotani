@@ -74,6 +74,6 @@ class DurationSerializerTest {
     }
 
     private ConfigValue valueOf(String raw) {
-        return new ConfigValue("test.yml", "duration", raw, true, registry);
+        return ConfigValue.create("test.yml", "duration", raw, true, registry);
     }
 }

@@ -3,6 +3,7 @@ package net.cotani.metrics.binder;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.cache.stats.CacheStatsView;
+import com.cotani.task.api.TaskMetadata;
 import com.cotani.task.metrics.TaskMetricSnapshot;
 import com.cotani.task.metrics.TaskMetrics;
 import io.micrometer.core.instrument.Gauge;
@@ -109,7 +110,7 @@ class MetricsBinderTest {
         TaskMetricSnapshot snapshot = new TaskMetricSnapshot("user_save", 50L, 2L, Duration.ofSeconds(5));
         TaskMetrics mockTaskMetrics = new TaskMetrics() {
             @Override
-            public void record(com.cotani.task.api.TaskMetadata metadata, boolean success, Duration elapsed) {
+            public void record(TaskMetadata metadata, boolean success, Duration elapsed) {
                 // Intentionally empty for test mock
             }
 

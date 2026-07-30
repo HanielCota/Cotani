@@ -1,9 +1,11 @@
 package com.cotani.event.subscription;
 
+import com.cotani.api.InternalApi;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+@InternalApi
 public final class CompositeEventSubscription implements AutoCloseable {
 
     private final Set<EventSubscription> subscriptions = ConcurrentHashMap.newKeySet();

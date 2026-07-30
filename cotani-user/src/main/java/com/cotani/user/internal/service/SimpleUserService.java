@@ -1,11 +1,13 @@
 package com.cotani.user.internal.service;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.util.CompletionStages;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.api.UserNotLoadedException;
 import com.cotani.user.internal.cache.UserCache;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class SimpleUserService implements InternalUserService {
 
     private static final String UNIQUE_ID_PARAM = "uniqueId";
@@ -167,7 +169,7 @@ public final class SimpleUserService implements InternalUserService {
             return CompletionStages.completedVoid();
         }
 
-        var saves = new java.util.ArrayList<CompletionStage<Void>>(snapshot.size());
+        var saves = new ArrayList<CompletionStage<Void>>(snapshot.size());
         for (SimpleCotaniUser original : snapshot) {
             var updated = cache.updateIfSession(
                     original.uniqueId(), original.sessionId(), current -> current.withIncrementedVersion());

@@ -130,6 +130,22 @@ public sealed interface EconomyTransaction
         return null;
     }
 
+    default Optional<BigDecimal> optionalSourceBalanceBefore() {
+        return Optional.ofNullable(sourceBalanceBefore());
+    }
+
+    default Optional<BigDecimal> optionalSourceBalanceAfter() {
+        return Optional.ofNullable(sourceBalanceAfter());
+    }
+
+    default Optional<BigDecimal> optionalTargetBalanceBefore() {
+        return Optional.ofNullable(targetBalanceBefore());
+    }
+
+    default Optional<BigDecimal> optionalTargetBalanceAfter() {
+        return Optional.ofNullable(targetBalanceAfter());
+    }
+
     @SuppressWarnings("java:S107")
     record Deposit(
             EconomyTransactionId id,

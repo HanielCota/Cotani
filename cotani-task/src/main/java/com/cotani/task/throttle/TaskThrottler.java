@@ -7,7 +7,9 @@ import com.cotani.task.api.TaskChainFactory;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 public final class TaskThrottler {
@@ -18,19 +20,19 @@ public final class TaskThrottler {
     private final DelayedTaskScheduler delays;
     private final int maxAttempts;
 
-    public TaskThrottler(PaperTaskScheduler scheduler) {
+    private TaskThrottler(PaperTaskScheduler scheduler) {
         this(scheduler, scheduler, DEFAULT_MAX_ATTEMPTS);
     }
 
-    public TaskThrottler(PaperTaskScheduler scheduler, int maxAttempts) {
+    private TaskThrottler(PaperTaskScheduler scheduler, int maxAttempts) {
         this(scheduler, scheduler, maxAttempts);
     }
 
-    public TaskThrottler(TaskChainFactory chainFactory, DelayedTaskScheduler delays) {
+    private TaskThrottler(TaskChainFactory chainFactory, DelayedTaskScheduler delays) {
         this(chainFactory, delays, DEFAULT_MAX_ATTEMPTS);
     }
 
-    public TaskThrottler(TaskChainFactory chainFactory, DelayedTaskScheduler delays, int maxAttempts) {
+    private TaskThrottler(TaskChainFactory chainFactory, DelayedTaskScheduler delays, int maxAttempts) {
         this.chainFactory = Objects.requireNonNull(chainFactory, "chainFactory");
         this.delays = Objects.requireNonNull(delays, "delays");
 
@@ -39,6 +41,22 @@ public final class TaskThrottler {
         }
 
         this.maxAttempts = maxAttempts;
+    }
+
+    public static TaskThrottler create(PaperTaskScheduler scheduler) {
+        return new TaskThrottler(scheduler);
+    }
+
+    public static TaskThrottler create(PaperTaskScheduler scheduler, int maxAttempts) {
+        return new TaskThrottler(scheduler, maxAttempts);
+    }
+
+    public static TaskThrottler create(TaskChainFactory chainFactory, DelayedTaskScheduler delays) {
+        return new TaskThrottler(chainFactory, delays);
+    }
+
+    public static TaskThrottler create(TaskChainFactory chainFactory, DelayedTaskScheduler delays, int maxAttempts) {
+        return new TaskThrottler(chainFactory, delays, maxAttempts);
     }
 
     public int maxAttempts() {
@@ -77,8 +95,7 @@ public final class TaskThrottler {
 
     private static Throwable unwrap(Throwable throwable) {
         Throwable current = throwable;
-        while (current instanceof java.util.concurrent.CompletionException
-                || current instanceof java.util.concurrent.ExecutionException) {
+        while (current instanceof CompletionException || current instanceof ExecutionException) {
             Throwable cause = current.getCause();
             if (cause == null || cause.equals(current)) {
                 break;

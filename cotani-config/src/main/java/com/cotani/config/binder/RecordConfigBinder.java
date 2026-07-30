@@ -16,6 +16,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
@@ -26,9 +27,13 @@ public final class RecordConfigBinder implements ConfigBinder {
     private final ConfigValidator validator;
     private final Map<Class<?>, RecordBindingPlan<?>> plans = new ConcurrentHashMap<>();
 
-    public RecordConfigBinder(ConfigSerializerRegistry serializers) {
+    private RecordConfigBinder(ConfigSerializerRegistry serializers) {
         this.serializers = Objects.requireNonNull(serializers, "serializers");
-        this.validator = new ConfigValidator(serializers);
+        this.validator = ConfigValidator.create(serializers);
+    }
+
+    public static RecordConfigBinder create(ConfigSerializerRegistry serializers) {
+        return new RecordConfigBinder(serializers);
     }
 
     private static String pathFor(RecordComponent component) {
@@ -39,9 +44,8 @@ public final class RecordConfigBinder implements ConfigBinder {
         return toKebabCase(component.getName());
     }
 
-    private static final java.util.regex.Pattern KEBAB_FIRST = java.util.regex.Pattern.compile("([a-z0-9])([A-Z])");
-    private static final java.util.regex.Pattern KEBAB_SECOND =
-            java.util.regex.Pattern.compile("([A-Z]+?)([A-Z][a-z])");
+    private static final Pattern KEBAB_FIRST = Pattern.compile("([a-z0-9])([A-Z])");
+    private static final Pattern KEBAB_SECOND = Pattern.compile("([A-Z]+?)([A-Z][a-z])");
 
     private static String toKebabCase(String input) {
         return KEBAB_SECOND
@@ -169,7 +173,7 @@ public final class RecordConfigBinder implements ConfigBinder {
         if (defaultValue == null) {
             return value;
         }
-        return new ConfigValue(value.file(), value.path(), defaultValue.value(), true, serializers);
+        return ConfigValue.create(value.file(), value.path(), defaultValue.value(), true, serializers);
     }
 
     private List<?> readList(Type genericType, ConfigValue value) {
@@ -184,7 +188,7 @@ public final class RecordConfigBinder implements ConfigBinder {
         return IntStream.range(0, list.size())
                 .mapToObj(index -> {
                     var element = list.get(index);
-                    ConfigValue elementValue = new ConfigValue(
+                    ConfigValue elementValue = ConfigValue.create(
                             value.file(), value.path() + "[" + index + "]", element, element != null, serializers);
                     return convertElement(elementValue, itemType);
                 })
@@ -203,7 +207,7 @@ public final class RecordConfigBinder implements ConfigBinder {
         return map.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(entry -> String.valueOf(entry.getKey()), entry -> {
                     var entryValue = entry.getValue();
-                    ConfigValue configValue = new ConfigValue(
+                    ConfigValue configValue = ConfigValue.create(
                             value.file(),
                             value.path() + "." + entry.getKey(),
                             entryValue,
@@ -232,7 +236,7 @@ public final class RecordConfigBinder implements ConfigBinder {
 
         Map<String, Object> values = new LinkedHashMap<>();
         map.forEach((key, value) -> values.put(String.valueOf(key), value));
-        return new ConfigSection(
+        return ConfigSection.create(
                 elementValue.file(),
                 elementValue.path(),
                 new InMemoryConfigSource(elementValue.file(), elementValue.path(), values),

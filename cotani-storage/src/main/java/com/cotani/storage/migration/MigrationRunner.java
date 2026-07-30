@@ -37,7 +37,11 @@ public final class MigrationRunner {
     private final List<Migration> migrations = new ArrayList<>();
     private final Set<MigrationKey> versions = new HashSet<>();
 
-    public MigrationRunner(QueryExecutor executor, Schema schema) {
+    public static MigrationRunner create(QueryExecutor executor, Schema schema) {
+        return new MigrationRunner(executor, schema);
+    }
+
+    private MigrationRunner(QueryExecutor executor, Schema schema) {
         this.executor = Objects.requireNonNull(executor, "executor");
         this.schema = Objects.requireNonNull(schema, "schema");
     }

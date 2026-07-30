@@ -12,7 +12,7 @@ final class DirtyEntryTracker<K, V> {
     private final AtomicLong nextGeneration = new AtomicLong();
 
     CacheEntry<V> createEntry(V value) {
-        var entry = new CacheEntry<>(value);
+        var entry = CacheEntry.of(value);
         entryGenerations.put(entry, nextGeneration.incrementAndGet());
         return entry;
     }

@@ -16,8 +16,10 @@ import com.cotani.task.impl.dispatch.TaskErrorReporter;
 import com.cotani.task.impl.dispatch.TaskRunner;
 import com.cotani.task.metrics.TaskMetrics;
 import java.time.Duration;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class TargetTaskDispatcherTest {
@@ -33,8 +35,8 @@ class TargetTaskDispatcherTest {
         when(platform.runAsync(metadata.capture(), runnable.capture())).thenReturn(task);
         var dispatcher = new TargetTaskDispatcher(
                 platform,
-                new TaskRunner(exceptionHandler, metrics),
-                new TaskErrorReporter(exceptionHandler),
+                TaskRunner.create(exceptionHandler, metrics),
+                TaskErrorReporter.create(exceptionHandler),
                 TaskMetadata::named);
 
         dispatcher.async("cache-refresh", () -> {});
@@ -42,7 +44,7 @@ class TargetTaskDispatcherTest {
 
         assertEquals("cache-refresh", metadata.getValue().name());
         assertEquals(ExecutionTarget.async(), metadata.getValue().target());
-        verify(metrics).record(any(TaskMetadata.class), org.mockito.ArgumentMatchers.eq(true), any());
+        verify(metrics).record(any(TaskMetadata.class), ArgumentMatchers.eq(true), any());
     }
 
     @Test
@@ -55,8 +57,8 @@ class TargetTaskDispatcherTest {
                 .thenReturn(Mockito.mock(SchedulerTask.class));
         var dispatcher = new TargetTaskDispatcher(
                 platform,
-                new TaskRunner(exceptionHandler, metrics),
-                new TaskErrorReporter(exceptionHandler),
+                TaskRunner.create(exceptionHandler, metrics),
+                TaskErrorReporter.create(exceptionHandler),
                 TaskMetadata::named);
         var failure = new IllegalStateException("supply failed");
 
@@ -65,7 +67,7 @@ class TargetTaskDispatcherTest {
         });
         runnable.getValue().run();
 
-        org.junit.jupiter.api.Assertions.assertTrue(result.isCompletedExceptionally());
+        Assertions.assertTrue(result.isCompletedExceptionally());
         verify(metrics, times(1)).record(any(TaskMetadata.class), eq(false), any(Duration.class));
         verify(exceptionHandler, times(1)).handle(any(), eq(failure));
     }

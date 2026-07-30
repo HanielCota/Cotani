@@ -17,7 +17,7 @@ public final class RetryPolicy {
     private final boolean symmetricJitter;
     private final Predicate<Throwable> retryable;
 
-    public RetryPolicy(
+    private RetryPolicy(
             int maxAttempts,
             Duration baseDelay,
             double multiplier,
@@ -43,12 +43,22 @@ public final class RetryPolicy {
         this.retryable = Objects.requireNonNull(retryable, "retryable");
     }
 
+    public static RetryPolicy create(
+            int maxAttempts,
+            Duration baseDelay,
+            double multiplier,
+            double jitter,
+            Predicate<Throwable> retryable,
+            boolean symmetricJitter) {
+        return new RetryPolicy(maxAttempts, baseDelay, multiplier, jitter, retryable, symmetricJitter);
+    }
+
     public static RetryPolicy fixed(int maxAttempts, Duration baseDelay) {
-        return new RetryPolicy.Builder(maxAttempts, baseDelay).build();
+        return RetryPolicy.Builder.create(maxAttempts, baseDelay).build();
     }
 
     public static RetryPolicy exponential(int maxAttempts, Duration baseDelay) {
-        return new RetryPolicy.Builder(maxAttempts, baseDelay).exponential().build();
+        return RetryPolicy.Builder.create(maxAttempts, baseDelay).exponential().build();
     }
 
     public static RetryPolicy exponentialWithJitter(int maxAttempts, Duration baseDelay, double jitter) {
@@ -103,15 +113,16 @@ public final class RetryPolicy {
     public RetryPolicy retryIf(Predicate<Throwable> predicate) {
         Objects.requireNonNull(predicate, "predicate");
 
-        return new RetryPolicy(maxAttempts, baseDelay, multiplier, jitter, predicate, symmetricJitter);
+        return RetryPolicy.create(maxAttempts, baseDelay, multiplier, jitter, predicate, symmetricJitter);
     }
 
     public RetryPolicy withJitter(double jitter) {
-        return new RetryPolicy(maxAttempts, baseDelay, multiplier, validateJitter(jitter), retryable, symmetricJitter);
+        return RetryPolicy.create(
+                maxAttempts, baseDelay, multiplier, validateJitter(jitter), retryable, symmetricJitter);
     }
 
     public RetryPolicy withSymmetricJitter() {
-        return new RetryPolicy(maxAttempts, baseDelay, multiplier, jitter, retryable, true);
+        return RetryPolicy.create(maxAttempts, baseDelay, multiplier, jitter, retryable, true);
     }
 
     public int maxAttempts() {
@@ -147,13 +158,17 @@ public final class RetryPolicy {
         private boolean symmetricJitter;
         private Predicate<Throwable> retryable = error -> true;
 
-        public Builder(int maxAttempts, Duration baseDelay) {
+        private Builder(int maxAttempts, Duration baseDelay) {
             if (maxAttempts <= 0) {
                 throw new IllegalArgumentException("maxAttempts must be positive");
             }
 
             this.maxAttempts = maxAttempts;
             this.baseDelay = Objects.requireNonNull(baseDelay, "baseDelay");
+        }
+
+        public static Builder create(int maxAttempts, Duration baseDelay) {
+            return new Builder(maxAttempts, baseDelay);
         }
 
         public Builder exponential() {
@@ -191,7 +206,7 @@ public final class RetryPolicy {
         }
 
         public RetryPolicy build() {
-            return new RetryPolicy(maxAttempts, baseDelay, multiplier, jitter, retryable, symmetricJitter);
+            return RetryPolicy.create(maxAttempts, baseDelay, multiplier, jitter, retryable, symmetricJitter);
         }
     }
 }

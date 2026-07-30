@@ -9,6 +9,7 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.cotani.metrics.api.MeterBinder;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ class CotaniMetricsRegistryTest {
                 simpleRegistry.find("app.request_duration").tag("path", "/api").timer();
         assertNotNull(timer);
         assertEquals(1, timer.count());
-        assertEquals(250.0, timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS));
+        assertEquals(250.0, timer.totalTime(TimeUnit.MILLISECONDS));
     }
 
     @Test

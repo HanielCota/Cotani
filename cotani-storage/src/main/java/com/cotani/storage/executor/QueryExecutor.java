@@ -1,7 +1,9 @@
 package com.cotani.storage.executor;
 
+import com.cotani.storage.error.MappingError;
 import com.cotani.storage.error.QueryError;
 import com.cotani.storage.error.StorageException;
+import com.cotani.storage.error.TransactionError;
 import com.cotani.storage.provider.StorageProvider;
 import com.cotani.storage.query.EntityMapper;
 import com.cotani.storage.query.ParameterBinder;
@@ -34,16 +36,35 @@ public final class QueryExecutor {
     private final int queryTimeoutSeconds;
     private final @Nullable Connection transactionConnection;
 
-    public QueryExecutor(StorageProvider provider, Executor executor, ValueSerializerRegistry serializers) {
+    public static QueryExecutor create(
+            StorageProvider provider, Executor executor, ValueSerializerRegistry serializers) {
+        return new QueryExecutor(provider, executor, serializers);
+    }
+
+    public static QueryExecutor create(
+            StorageProvider provider, Executor executor, ValueSerializerRegistry serializers, int queryTimeoutSeconds) {
+        return new QueryExecutor(provider, executor, serializers, queryTimeoutSeconds);
+    }
+
+    public static QueryExecutor create(
+            StorageProvider provider,
+            Executor executor,
+            ValueSerializerRegistry serializers,
+            int queryTimeoutSeconds,
+            @Nullable Connection transactionConnection) {
+        return new QueryExecutor(provider, executor, serializers, queryTimeoutSeconds, transactionConnection);
+    }
+
+    private QueryExecutor(StorageProvider provider, Executor executor, ValueSerializerRegistry serializers) {
         this(provider, executor, serializers, DEFAULT_QUERY_TIMEOUT_SECONDS, null);
     }
 
-    public QueryExecutor(
+    private QueryExecutor(
             StorageProvider provider, Executor executor, ValueSerializerRegistry serializers, int queryTimeoutSeconds) {
         this(provider, executor, serializers, queryTimeoutSeconds, null);
     }
 
-    public QueryExecutor(
+    private QueryExecutor(
             StorageProvider provider,
             Executor executor,
             ValueSerializerRegistry serializers,
@@ -142,8 +163,7 @@ public final class QueryExecutor {
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not execute update query.", exception));
         } catch (RuntimeException exception) {
-            throw new StorageException(
-                    new com.cotani.storage.error.MappingError("Could not bind update parameters.", exception));
+            throw new StorageException(new MappingError("Could not bind update parameters.", exception));
         }
     }
 
@@ -162,8 +182,7 @@ public final class QueryExecutor {
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not execute select query.", exception));
         } catch (RuntimeException exception) {
-            throw new StorageException(
-                    new com.cotani.storage.error.MappingError("Could not map result row.", exception));
+            throw new StorageException(new MappingError("Could not map result row.", exception));
         }
     }
 
@@ -182,8 +201,7 @@ public final class QueryExecutor {
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not execute list query.", exception));
         } catch (RuntimeException exception) {
-            throw new StorageException(
-                    new com.cotani.storage.error.MappingError("Could not map result row.", exception));
+            throw new StorageException(new MappingError("Could not map result row.", exception));
         }
     }
 
@@ -198,8 +216,7 @@ public final class QueryExecutor {
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not execute exists query.", exception));
         } catch (RuntimeException exception) {
-            throw new StorageException(
-                    new com.cotani.storage.error.MappingError("Could not bind exists parameters.", exception));
+            throw new StorageException(new MappingError("Could not bind exists parameters.", exception));
         }
     }
 
@@ -219,8 +236,7 @@ public final class QueryExecutor {
                 if (failure instanceof SQLException sqlException) {
                     throw new StorageException(new QueryError("Could not execute batch query.", sqlException));
                 }
-                throw new StorageException(
-                        new com.cotani.storage.error.MappingError("Could not bind batch parameters.", failure));
+                throw new StorageException(new MappingError("Could not bind batch parameters.", failure));
             } finally {
                 restoreAutoCommit(connection, previousAutoCommit);
             }
@@ -282,8 +298,7 @@ public final class QueryExecutor {
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not execute batch query.", exception));
         } catch (RuntimeException exception) {
-            throw new StorageException(
-                    new com.cotani.storage.error.MappingError("Could not bind batch parameters.", exception));
+            throw new StorageException(new MappingError("Could not bind batch parameters.", exception));
         }
     }
 
@@ -315,8 +330,7 @@ public final class QueryExecutor {
                 connection.commit();
             }
         } catch (SQLException failure) {
-            var wrapped = new StorageException(
-                    new com.cotani.storage.error.TransactionError("Could not finish transaction.", failure));
+            var wrapped = new StorageException(new TransactionError("Could not finish transaction.", failure));
             if (error != null) {
                 error.addSuppressed(wrapped);
             } else {
@@ -335,8 +349,8 @@ public final class QueryExecutor {
         try {
             connection.rollback();
         } catch (SQLException rollbackFailure) {
-            failure.addSuppressed(new StorageException(
-                    new com.cotani.storage.error.TransactionError("Could not rollback transaction.", rollbackFailure)));
+            failure.addSuppressed(
+                    new StorageException(new TransactionError("Could not rollback transaction.", rollbackFailure)));
         }
     }
 
@@ -352,8 +366,8 @@ public final class QueryExecutor {
         try {
             connection.close();
         } catch (SQLException closeFailure) {
-            var wrapped = new StorageException(new com.cotani.storage.error.TransactionError(
-                    "Could not close transaction connection.", closeFailure));
+            var wrapped =
+                    new StorageException(new TransactionError("Could not close transaction connection.", closeFailure));
             if (error != null) {
                 error.addSuppressed(wrapped);
                 return;

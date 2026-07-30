@@ -11,12 +11,12 @@ public final class TaskBucketFactory {
     public static TaskBucket create(PaperTaskScheduler scheduler) {
         Objects.requireNonNull(scheduler, "scheduler");
 
-        return new DefaultTaskBucket(scheduler);
+        return DefaultTaskBucket.create(scheduler);
     }
 
     public static TaskBucket create(PaperTaskScheduler scheduler, long defaultCapacity, Duration defaultRefillPeriod) {
         Objects.requireNonNull(scheduler, "scheduler");
 
-        return new DefaultTaskBucket(scheduler, defaultCapacity, defaultRefillPeriod);
+        return DefaultTaskBucket.create(scheduler, defaultCapacity, defaultRefillPeriod);
     }
 }

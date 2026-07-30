@@ -1,8 +1,10 @@
 package com.cotani.teleport.pending;
 
+import com.cotani.api.InternalApi;
 import com.cotani.teleport.util.Locations;
 import org.bukkit.Location;
 
+@InternalApi
 public final class PendingTeleportCancellationPolicy {
     private PendingTeleportCancellationPolicy() {}
 

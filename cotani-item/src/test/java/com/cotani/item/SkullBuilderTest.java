@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import java.lang.reflect.Modifier;
 import java.net.URI;
+import java.util.Arrays;
 import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
@@ -36,7 +37,7 @@ class SkullBuilderTest {
         SkullBuilder.class.getMethod("customName", String.class);
         SkullBuilder.class.getMethod("build");
 
-        assertTrue(java.util.Arrays.stream(SkullBuilder.class.getDeclaredFields())
+        assertTrue(Arrays.stream(SkullBuilder.class.getDeclaredFields())
                 .noneMatch(field -> Modifier.isStatic(field.getModifiers())
                         && field.getType().equals(SkullTextureResolver.class)));
     }

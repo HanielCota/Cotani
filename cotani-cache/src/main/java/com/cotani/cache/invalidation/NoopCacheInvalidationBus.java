@@ -1,11 +1,13 @@
 package com.cotani.cache.invalidation;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.util.CompletionStages;
 import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 /** Local-only invalidation policy used when no distributed transport is configured. */
+@InternalApi
 public final class NoopCacheInvalidationBus<K> implements CacheInvalidationBus<K> {
 
     @Override

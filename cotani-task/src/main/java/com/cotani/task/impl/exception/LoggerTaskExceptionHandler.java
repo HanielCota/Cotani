@@ -1,12 +1,13 @@
 package com.cotani.task.impl.exception;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.TaskContext;
 import com.cotani.task.api.TaskExceptionHandler;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public record LoggerTaskExceptionHandler(Logger logger) implements TaskExceptionHandler {
 
     public LoggerTaskExceptionHandler {

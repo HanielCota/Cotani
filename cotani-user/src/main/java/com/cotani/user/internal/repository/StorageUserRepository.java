@@ -1,5 +1,6 @@
 package com.cotani.user.internal.repository;
 
+import com.cotani.api.InternalApi;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.query.SqlConsumer;
@@ -9,7 +10,7 @@ import com.cotani.user.internal.model.SimpleCotaniUser;
 import java.util.*;
 import java.util.concurrent.CompletionStage;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class StorageUserRepository implements UserRepository {
 
     private static final String UNIQUE_ID_COL = "unique_id";

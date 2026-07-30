@@ -1,11 +1,12 @@
 package com.cotani.economy.internal.storage;
 
+import com.cotani.api.InternalApi;
 import com.cotani.storage.migration.Migration;
 import com.cotani.storage.schema.ColumnType;
 import com.cotani.storage.schema.Schema;
 import java.util.concurrent.CompletionStage;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class CreateEconomyTablesMigration implements Migration {
 
     private static final String CURRENCY_ID_COLUMN = "currency_id";

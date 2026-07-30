@@ -1,5 +1,6 @@
 package com.cotani.config.serializer.defaults;
 
+import com.cotani.config.exception.ConfigException;
 import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
 import java.util.Locale;
@@ -27,8 +28,8 @@ public final class BooleanSerializer implements ConfigSerializer<Boolean> {
         if (FALSE_VALUES.contains(text)) {
             return false;
         }
-        throw new com.cotani.config.exception.ConfigException("Invalid boolean value '" + value.raw() + "' at "
-                + value.location() + ". Accepted: true/false, yes/no, on/off, 1/0");
+        throw new ConfigException("Invalid boolean value '" + value.raw() + "' at " + value.location()
+                + ". Accepted: true/false, yes/no, on/off, 1/0");
     }
 
     @Override

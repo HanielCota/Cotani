@@ -1,5 +1,6 @@
 package com.cotani.economy.internal.event;
 
+import com.cotani.api.InternalApi;
 import com.cotani.economy.event.EconomyEventPublisher;
 import com.cotani.economy.event.EconomyTransactionEvent;
 import com.cotani.task.api.AsyncTaskExecutor;
@@ -13,7 +14,7 @@ import java.util.logging.Logger;
 /**
  * Publishes economy events on the server main thread.
  */
-@com.cotani.api.InternalApi
+@InternalApi
 public final class MainThreadEconomyEventPublisher implements EconomyEventPublisher {
 
     private final AsyncTaskExecutor scheduler;

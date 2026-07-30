@@ -33,7 +33,7 @@ public final class EconomyBootstrap implements AutoCloseable {
         var guard = new DefaultEconomyGuard(settings);
         var store = new InMemoryEconomyStore(executor, Clock.systemUTC(), settings);
         var publisher = new NoopEconomyEventPublisher();
-        var service = new DefaultEconomyService(settings, guard, store, store, publisher);
+        var service = DefaultEconomyService.create(settings, guard, store, store, publisher);
 
         return new EconomyBootstrap(service, executor::close);
     }
@@ -46,7 +46,7 @@ public final class EconomyBootstrap implements AutoCloseable {
 
         var guard = new DefaultEconomyGuard(settings);
         var store = new InMemoryEconomyStore(executor, Clock.systemUTC(), settings);
-        var service = new DefaultEconomyService(settings, guard, store, store, eventPublisher);
+        var service = DefaultEconomyService.create(settings, guard, store, store, eventPublisher);
 
         return new EconomyBootstrap(service, () -> {});
     }

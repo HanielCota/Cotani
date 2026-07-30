@@ -1,11 +1,12 @@
 package com.cotani.task.impl.task;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.SchedulerTask;
 import java.util.Objects;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public final class FutureSchedulerTask implements SchedulerTask {
 
     private final Future<Void> future;

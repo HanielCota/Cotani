@@ -1,11 +1,13 @@
 package com.cotani.teleport.pending;
 
+import com.cotani.api.InternalApi;
 import com.cotani.teleport.api.TeleportCause;
 import com.cotani.teleport.api.TeleportOptions;
 import java.time.Duration;
 import java.util.UUID;
 import org.bukkit.Location;
 
+@InternalApi
 public record PendingTeleportData(
         UUID id,
         UUID playerId,

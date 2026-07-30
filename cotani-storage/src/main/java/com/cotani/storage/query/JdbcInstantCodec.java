@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import org.jspecify.annotations.Nullable;
@@ -46,7 +47,7 @@ final class JdbcInstantCodec {
         if (raw instanceof LocalDateTime localDateTime) {
             return localDateTime.toInstant(ZoneOffset.UTC);
         }
-        if (raw instanceof java.util.Date date) {
+        if (raw instanceof Date date) {
             return date.toInstant();
         }
         if (raw instanceof CharSequence text) {

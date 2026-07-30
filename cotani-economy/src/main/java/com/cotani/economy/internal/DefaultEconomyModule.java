@@ -1,6 +1,7 @@
 package com.cotani.economy.internal;
 
 import com.cotani.Cotani;
+import com.cotani.api.InternalApi;
 import com.cotani.economy.EconomyService;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.api.EconomyModule;
@@ -19,7 +20,7 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings("resource")
-@com.cotani.api.InternalApi
+@InternalApi
 public final class DefaultEconomyModule implements EconomyModule {
 
     private final EconomyService service;
@@ -50,7 +51,7 @@ public final class DefaultEconomyModule implements EconomyModule {
                 new MainThreadEconomyEventPublisher(scheduler, bukkitPublisher, plugin.getLogger());
 
         DefaultEconomyService coreService =
-                new DefaultEconomyService(settings, guard, store, store, mainThreadPublisher);
+                DefaultEconomyService.create(settings, guard, store, store, mainThreadPublisher);
         Cotani cotani = resolveCotani(context.cotani(), plugin);
         cotani.register(configuration);
 

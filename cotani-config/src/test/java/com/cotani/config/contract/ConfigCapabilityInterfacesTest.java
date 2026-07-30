@@ -35,7 +35,7 @@ class ConfigCapabilityInterfacesTest {
         when(serializers.serialize(true)).thenReturn(true);
         ConfigBinder binder = Mockito.mock(ConfigBinder.class);
         TaskChainFactory chains = Mockito.mock(TaskChainFactory.class);
-        CotaniConfig config = new DefaultCotaniConfig("config.yml", source, serializers, binder, chains);
+        CotaniConfig config = DefaultCotaniConfig.create("config.yml", source, serializers, binder, chains);
 
         ConfigReader reader = config;
         ConfigWriter writer = config;
@@ -53,14 +53,16 @@ class ConfigCapabilityInterfacesTest {
     }
 
     @Test
-    void legacySchedulerConstructorRemainsAvailable() throws NoSuchMethodException {
-        assertNotNull(DefaultCotaniConfig.class.getConstructor(
+    void legacySchedulerFactoryMethodRemainsAvailable() throws NoSuchMethodException {
+        assertNotNull(DefaultCotaniConfig.class.getMethod(
+                "create",
                 String.class,
                 ConfigSource.class,
                 ConfigSerializerRegistry.class,
                 ConfigBinder.class,
                 PaperTaskScheduler.class));
-        assertNotNull(DefaultCotaniConfigs.class.getConstructor(
+        assertNotNull(DefaultCotaniConfigs.class.getMethod(
+                "create",
                 Plugin.class,
                 Path.class,
                 PaperTaskScheduler.class,

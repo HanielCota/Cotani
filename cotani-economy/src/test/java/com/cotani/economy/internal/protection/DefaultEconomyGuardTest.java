@@ -9,6 +9,8 @@ import com.cotani.economy.currency.EconomyCurrency;
 import com.cotani.economy.exception.InvalidAmountException;
 import com.cotani.economy.exception.SameEconomyAccountTransferException;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -105,7 +107,7 @@ class DefaultEconomyGuardTest {
         var gems = new EconomyCurrency(CurrencyId.of("gems"), "Gems", "G", 0);
         var tokens = new EconomyCurrency(CurrencyId.of("tokens"), "Tokens", "T", 4);
         var coins = EconomyCurrency.coins();
-        var settings = EconomySettings.defaultSettings(coins, java.util.List.of(gems, tokens));
+        var settings = EconomySettings.defaultSettings(coins, List.of(gems, tokens));
         var guard = new DefaultEconomyGuard(settings);
 
         var normalizedGems = guard.normalizeAmount(gems.id(), BigDecimal.TEN);
@@ -127,8 +129,8 @@ class DefaultEconomyGuardTest {
         var disabled = new EconomyCurrency(CurrencyId.of("legacy"), "Legacy", "L", 2);
         var settings = new EconomySettings(
                 coins,
-                java.util.Map.of(coins.id(), coins, gems.id(), gems, tokens.id(), tokens, disabled.id(), disabled),
-                java.util.Map.of(
+                Map.of(coins.id(), coins, gems.id(), gems, tokens.id(), tokens, disabled.id(), disabled),
+                Map.of(
                         gems.id(),
                         new CurrencyDefinition(
                                 gems,

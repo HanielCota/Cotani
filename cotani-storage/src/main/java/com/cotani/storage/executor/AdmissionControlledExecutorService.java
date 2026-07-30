@@ -28,7 +28,12 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
     private int activeOperations;
     private boolean shutdown;
 
-    public AdmissionControlledExecutorService(ExecutorService workers, int concurrencyLimit, int queueCapacity) {
+    public static AdmissionControlledExecutorService create(
+            ExecutorService workers, int concurrencyLimit, int queueCapacity) {
+        return new AdmissionControlledExecutorService(workers, concurrencyLimit, queueCapacity);
+    }
+
+    private AdmissionControlledExecutorService(ExecutorService workers, int concurrencyLimit, int queueCapacity) {
         this.workers = Objects.requireNonNull(workers, "workers");
         if (concurrencyLimit <= 0) {
             throw new IllegalArgumentException("concurrencyLimit must be positive");

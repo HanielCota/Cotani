@@ -1,10 +1,11 @@
 package com.cotani.task.impl.task;
 
+import com.cotani.api.InternalApi;
 import com.cotani.task.api.SchedulerTask;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import java.util.Objects;
 
-@com.cotani.api.InternalApi
+@InternalApi
 public record PaperSchedulerTask(ScheduledTask task) implements SchedulerTask {
 
     public PaperSchedulerTask {
