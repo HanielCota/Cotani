@@ -1,5 +1,7 @@
 package com.cotani.task.bucket;
 
+import com.cotani.task.api.AsyncTaskExecutor;
+import com.cotani.task.api.DelayedTaskScheduler;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.throttle.RateLimiter;
@@ -13,17 +15,31 @@ import org.jspecify.annotations.Nullable;
 
 public final class DefaultTaskBucket implements TaskBucket {
 
-    private final PaperTaskScheduler scheduler;
+    private final AsyncTaskExecutor executor;
+    private final DelayedTaskScheduler delays;
     private final Map<String, RateLimiter> limiters = new ConcurrentHashMap<>();
     private final long defaultCapacity;
     private final Duration defaultRefillPeriod;
 
     public DefaultTaskBucket(PaperTaskScheduler scheduler) {
-        this(scheduler, 10, Duration.ofSeconds(1));
+        this(scheduler, scheduler, 10, Duration.ofSeconds(1));
     }
 
     public DefaultTaskBucket(PaperTaskScheduler scheduler, long defaultCapacity, Duration defaultRefillPeriod) {
-        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this(scheduler, scheduler, defaultCapacity, defaultRefillPeriod);
+    }
+
+    public DefaultTaskBucket(AsyncTaskExecutor executor, DelayedTaskScheduler delays) {
+        this(executor, delays, 10, Duration.ofSeconds(1));
+    }
+
+    public DefaultTaskBucket(
+            AsyncTaskExecutor executor,
+            DelayedTaskScheduler delays,
+            long defaultCapacity,
+            Duration defaultRefillPeriod) {
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.delays = Objects.requireNonNull(delays, "delays");
 
         if (defaultCapacity <= 0) {
             throw new IllegalArgumentException("defaultCapacity must be positive");
@@ -47,7 +63,7 @@ public final class DefaultTaskBucket implements TaskBucket {
         RateLimiter limiter = limiterFor(bucketName);
         AtomicReference<@Nullable SchedulerTask> rescheduled = new AtomicReference<>();
 
-        SchedulerTask immediate = scheduler.async(taskName, () -> {
+        SchedulerTask immediate = executor.async(taskName, () -> {
             SchedulerTask later = runThrottled(limiter, runnable, rescheduled);
             if (later != null) {
                 rescheduled.set(later);
@@ -76,7 +92,7 @@ public final class DefaultTaskBucket implements TaskBucket {
         if (delay.isZero() || delay.isNegative()) {
             delay = Duration.ofMillis(1);
         }
-        return scheduler.asyncLater(
+        return delays.asyncLater(
                 () -> {
                     SchedulerTask next = runThrottled(limiter, runnable, holder);
                     holder.set(next);

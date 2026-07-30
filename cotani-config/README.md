@@ -13,6 +13,12 @@ YAML configuration mapping framework. Binds files to immutable Java `record`s wi
 - **Asynchronous Reloads**: Supports reloading configuration directories asynchronously to keep the main server thread lag-free.
 - **Custom Serializers**: Built-in support for mapping game-specific types like `Duration`, `Location`, and colors.
 
+## Capability-oriented injection
+
+`CotaniConfig` remains the complete facade. Focused consumers can depend on `ConfigReader`, `ConfigWriter`, `ConfigBinderView`, `ConfigValidationView` or `ReloadableConfig`. For example, a service that only reads already-loaded settings should receive `ConfigReader`; it does not need file-write or reload authority.
+
+The default implementation now depends only on `TaskChainFactory` for asynchronous save and reload. Builders still accept `PaperTaskScheduler`, so existing bootstrap code remains unchanged.
+
 ## Usage
 
 ### 1. Declaring a Config Record

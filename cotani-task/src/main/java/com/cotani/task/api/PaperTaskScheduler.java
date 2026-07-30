@@ -1,5 +1,6 @@
 package com.cotani.task.api;
 
+import com.cotani.AsyncCloseable;
 import com.cotani.task.metrics.TaskMetrics;
 import com.cotani.task.persistence.PersistentTask;
 import java.time.Duration;
@@ -14,7 +15,27 @@ import java.util.function.Supplier;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
-public interface PaperTaskScheduler extends AutoCloseable {
+/**
+ * Complete scheduling facade for Paper and Folia.
+ *
+ * <p>Dispatch methods never block the caller and preserve the ownership rules of their target.
+ * Inputs must be non-null and durations must satisfy the delegated platform contract. Cancellation
+ * is best effort: work already running may finish. Once {@link #closeAsync()} begins, new work is
+ * rejected and concurrent close calls share one logical completion. Prefer a capability
+ * superinterface when a consumer does not need this complete surface.
+ */
+@SuppressWarnings("MissingOverride") // Keep declarations on the compatibility facade's binary surface.
+public interface PaperTaskScheduler
+        extends AsyncTaskExecutor,
+                DelayedTaskScheduler,
+                GlobalTaskScheduler,
+                RegionTaskScheduler,
+                EntityTaskScheduler,
+                TaskChainFactory,
+                PersistentTaskScheduler,
+                SchedulerDiagnostics,
+                AsyncCloseable,
+                AutoCloseable {
 
     SchedulerTask async(Runnable runnable);
 
@@ -128,6 +149,7 @@ public interface PaperTaskScheduler extends AutoCloseable {
      * Cancels owned tasks and closes scheduler resources without waiting on the calling thread.
      * Concurrent calls return the same completion.
      */
+    @Override
     CompletionStage<Void> closeAsync();
 
     @Override

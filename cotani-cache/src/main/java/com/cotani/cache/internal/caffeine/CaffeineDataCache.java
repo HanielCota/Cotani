@@ -3,7 +3,6 @@ package com.cotani.cache.internal.caffeine;
 import com.cotani.cache.api.DataCache;
 import com.cotani.cache.entry.CacheEntry;
 import com.cotani.cache.exception.CacheException;
-import com.cotani.cache.exception.CacheLoadException;
 import com.cotani.cache.exception.CacheSaveException;
 import com.cotani.cache.invalidation.CacheInvalidation;
 import com.cotani.cache.invalidation.CacheInvalidationBus;
@@ -12,8 +11,9 @@ import com.cotani.cache.invalidation.NoopCacheInvalidationBus;
 import com.cotani.cache.policy.CacheSettings;
 import com.cotani.cache.repository.CacheRepository;
 import com.cotani.cache.stats.CacheStatsView;
+import com.cotani.task.api.AsyncTaskExecutor;
+import com.cotani.task.api.DelayedTaskScheduler;
 import com.cotani.task.api.PaperTaskScheduler;
-import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.util.CompletionStages;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -23,24 +23,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.bukkit.Bukkit;
 import org.jspecify.annotations.Nullable;
 
@@ -57,27 +50,17 @@ import org.jspecify.annotations.Nullable;
 public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     private static final Logger LOGGER = Logger.getLogger(CaffeineDataCache.class.getName());
-    private static final String REPOSITORY_SAVE_NULL_MSG = "repository.save returned null";
     private static final String VALUE_PARAM = "value";
 
     private final AsyncLoadingCache<K, CacheEntry<V>> cache;
-    private final CacheRepository<K, V> repository;
-    private final Function<K, V> defaultValue;
-    private final PaperTaskScheduler scheduler;
     private final CacheSettings settings;
-    private final int maximumConcurrentSaves;
     private final UUID cacheId = UUID.randomUUID();
-    private final CacheInvalidationBus<K> invalidationBus;
     private final CacheInvalidationSubscription invalidationSubscription;
-    private final SchedulerTask autosaveTask;
     private final TrackedExecutor cacheExecutor;
-    private final ConcurrentHashMap<K, PendingSave<V>> pendingSaves = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<K, CacheEntry<V>> dirtyEntries = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<CacheEntry<V>, Long> entryGenerations = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<K, SaveLane> saveLanes = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<SaveOrder, CompletableFuture<Void>> evictionWork = new ConcurrentHashMap<>();
-    private final AtomicLong nextGeneration = new AtomicLong();
-    private final AtomicBoolean autosaveInProgress = new AtomicBoolean(false);
+    private final DirtyEntryTracker<K, V> entryTracker;
+    private final CacheEntryLoader<K, V> entryLoader;
+    private final CacheSaveCoordinator<K, V> saveCoordinator;
+    private final CacheAutosaveCoordinator autosaveCoordinator;
     private final Object closeLock = new Object();
     private volatile boolean closing;
     private @Nullable CompletableFuture<Void> closeFuture;
@@ -97,24 +80,30 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             CacheSettings settings,
             int maximumConcurrentSaves,
             CacheInvalidationBus<K> invalidationBus) {
-        this.repository = Objects.requireNonNull(repository, "repository");
-        this.defaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
-        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
-        this.settings = Objects.requireNonNull(settings, "settings");
-        if (maximumConcurrentSaves <= 0) {
-            throw new IllegalArgumentException("maximumConcurrentSaves must be positive");
-        }
-        this.maximumConcurrentSaves = maximumConcurrentSaves;
-        this.invalidationBus = Objects.requireNonNull(invalidationBus, "invalidationBus");
-        this.cacheExecutor = new TrackedExecutor(scheduler.asyncExecutor());
-        this.cache = createCache(settings);
-        this.invalidationSubscription = invalidationBus.subscribe(this::onInvalidation);
-        this.autosaveTask = startAutosave(settings);
+        this(repository, defaultValue, scheduler, scheduler, settings, maximumConcurrentSaves, invalidationBus);
     }
 
-    private static CompletionStage<Void> allOf(Stream<? extends CompletionStage<Void>> stages) {
-        var array = stages.map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
-        return array.length == 0 ? CompletionStages.completedVoid() : CompletableFuture.allOf(array);
+    private CaffeineDataCache(
+            CacheRepository<K, V> repository,
+            Function<K, V> defaultValue,
+            AsyncTaskExecutor asyncExecutor,
+            DelayedTaskScheduler delayedTaskScheduler,
+            CacheSettings settings,
+            int maximumConcurrentSaves,
+            CacheInvalidationBus<K> invalidationBus) {
+        this.settings = Objects.requireNonNull(settings, "settings");
+        var validatedExecutor = Objects.requireNonNull(asyncExecutor, "asyncExecutor");
+        var validatedDelays = Objects.requireNonNull(delayedTaskScheduler, "delayedTaskScheduler");
+        var validatedInvalidationBus = Objects.requireNonNull(invalidationBus, "invalidationBus");
+        this.cacheExecutor = new TrackedExecutor(validatedExecutor.asyncExecutor());
+        this.entryTracker = new DirtyEntryTracker<>();
+        this.entryLoader = new CacheEntryLoader<>(repository, defaultValue, entryTracker::createEntry);
+        this.saveCoordinator =
+                new CacheSaveCoordinator<>(repository, validatedInvalidationBus, cacheId, maximumConcurrentSaves);
+        this.cache = createCache(settings);
+        this.invalidationSubscription = validatedInvalidationBus.subscribe(this::onInvalidation);
+        this.autosaveCoordinator = new CacheAutosaveCoordinator(
+                validatedDelays, settings, () -> saveDirtyEntries().thenCompose(_ -> saveCoordinator.savePending()));
     }
 
     @Override
@@ -150,7 +139,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         var entry = getRequiredEntry(key);
         synchronized (entry) {
             if (entry.update(updater)) {
-                dirtyEntries.put(key, entry);
+                entryTracker.markDirty(key, entry);
             }
         }
         return CompletableFuture.completedFuture(entry.value());
@@ -162,7 +151,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         var entry = getRequiredEntry(key);
         synchronized (entry) {
             if (entry.mutate(mutator)) {
-                dirtyEntries.put(key, entry);
+                entryTracker.markDirty(key, entry);
             }
         }
         return CompletableFuture.completedFuture(entry.value());
@@ -178,13 +167,16 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             synchronized (previous) {
                 if (previous.dirty()) {
                     // Capture dirty value before replace; mark clean so onRemoval cannot save it twice.
-                    enqueuePendingSave(key, previous);
+                    saveCoordinator.queue(
+                            key,
+                            previous.value(),
+                            new SaveOrder(entryTracker.generationOf(previous), previous.version()));
                     previous.markSavedIfVersionMatches(previous.version());
-                    dirtyEntries.remove(key, previous);
+                    entryTracker.markClean(key, previous);
                 }
             }
         }
-        cache.synchronous().put(key, createEntry(value));
+        cache.synchronous().put(key, entryTracker.createEntry(value));
     }
 
     @Override
@@ -198,15 +190,16 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                 .map(entry -> {
                     final SaveSnapshot<V> snapshot;
                     synchronized (entry) {
-                        snapshot =
-                                new SaveSnapshot<>(entry.value(), new SaveOrder(generationOf(entry), entry.version()));
+                        snapshot = new SaveSnapshot<>(
+                                entry.value(), new SaveOrder(entryTracker.generationOf(entry), entry.version()));
                     }
-                    return persist(key, snapshot.value(), snapshot.order())
+                    return saveCoordinator
+                            .persist(key, snapshot.value(), snapshot.order())
                             .thenRun(() -> {
                                 synchronized (entry) {
                                     if (entry.markSavedIfVersionMatches(
                                             snapshot.order().version())) {
-                                        dirtyEntries.remove(key, entry);
+                                        entryTracker.markClean(key, entry);
                                     }
                                 }
                             })
@@ -224,14 +217,14 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     }
 
     private CompletionStage<Void> saveDirtyEntries() {
-        var keys = List.copyOf(dirtyEntries.keySet());
-        return runBounded(keys, this::saveEntry);
+        return saveCoordinator.runBounded(entryTracker.dirtyKeys(), this::saveEntry);
     }
 
     @Override
     public CompletionStage<Void> saveAll() {
         ensureOpen();
-        return runBounded(List.copyOf(cache.synchronous().asMap().keySet()), this::saveEntry);
+        return saveCoordinator.runBounded(
+                List.copyOf(cache.synchronous().asMap().keySet()), this::saveEntry);
     }
 
     @Override
@@ -251,14 +244,14 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         CacheEntry<V> entry = getRequiredEntry(key);
         synchronized (entry) {
             if (entry.markDirty()) {
-                dirtyEntries.put(key, entry);
+                entryTracker.markDirty(key, entry);
             }
         }
     }
 
     @Override
     public int dirtyCount() {
-        return dirtyEntries.size();
+        return entryTracker.dirtyCount();
     }
 
     @Override
@@ -282,7 +275,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                 stats.missCount(),
                 stats.hitRate(),
                 stats.evictionCount(),
-                dirtyEntries.size());
+                entryTracker.dirtyCount());
     }
 
     @Override
@@ -294,14 +287,14 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             closing = true;
             var result = new CompletableFuture<Void>();
             closeFuture = result;
-            cancelAutosave();
+            CompletionStage<Void> autosaveIdle = autosaveCoordinator.cancelAndAwait();
             cache.synchronous().cleanUp();
-            cacheExecutor
-                    .whenIdle()
-                    .thenCompose(_ -> awaitEvictionWork())
-                    .thenCompose(_ -> savePending())
+            autosaveIdle
+                    .thenCompose(_ -> cacheExecutor.whenIdle())
+                    .thenCompose(_ -> saveCoordinator.awaitEvictionWork())
+                    .thenCompose(_ -> saveCoordinator.savePending())
                     .thenCompose(_ -> saveDirtyEntries())
-                    .thenCompose(_ -> awaitSaveLanes())
+                    .thenCompose(_ -> saveCoordinator.awaitSaveLanes())
                     .thenCompose(_ -> {
                         cache.synchronous().invalidateAll();
                         cache.synchronous().cleanUp();
@@ -310,7 +303,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                     .whenComplete((_, error) -> {
                         invalidationSubscription.close();
                         if (error == null) {
-                            entryGenerations.clear();
+                            entryTracker.clearGenerations();
                             result.complete(null);
                         } else {
                             result.completeExceptionally(error);
@@ -331,17 +324,13 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             LOGGER.log(
                     Level.SEVERE,
                     "Cache close timed out after 30s; some dirty entries may not have been persisted: "
-                            + dirtyEntries.size() + " dirty entries remain");
+                            + entryTracker.dirtyCount() + " dirty entries remain");
         } catch (ExecutionException error) {
             LOGGER.log(Level.SEVERE, "Cache close failed", error.getCause());
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             LOGGER.log(Level.SEVERE, "Cache close was interrupted; dirty entries may not have been persisted");
         }
-    }
-
-    private void cancelAutosave() {
-        autosaveTask.cancel();
     }
 
     private AsyncLoadingCache<K, CacheEntry<V>> createCache(CacheSettings settings) {
@@ -363,42 +352,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             builder.recordStats();
         }
 
-        return builder.buildAsync(this::loadEntry);
-    }
-
-    private CompletableFuture<CacheEntry<V>> loadEntry(K key, Executor ignored) {
-        return repository
-                .find(key)
-                .thenApply(optional -> optional.orElseGet(() -> defaultValue.apply(key)))
-                .thenApply(value -> {
-                    Objects.requireNonNull(value, "defaultValue must not return null");
-                    return createEntry(value);
-                })
-                .toCompletableFuture()
-                .exceptionally(throwable -> {
-                    throw new CacheLoadException("Could not load cache entry: " + key, throwable);
-                });
-    }
-
-    private SchedulerTask startAutosave(CacheSettings settings) {
-        if (!settings.autosaveEnabled()) {
-            return SchedulerTask.noop();
-        }
-
-        return scheduler.asyncTimer(this::runAutosave, settings.autosaveInterval(), settings.autosaveInterval());
-    }
-
-    private void runAutosave() {
-        if (!autosaveInProgress.compareAndSet(false, true)) {
-            return;
-        }
-
-        saveDirtyEntries().thenCompose(_ -> savePending()).whenComplete((_, error) -> {
-            autosaveInProgress.set(false);
-            if (error != null) {
-                LOGGER.log(Level.SEVERE, "Could not auto-save dirty cache entries", error);
-            }
-        });
+        return builder.buildAsync((key, _) -> entryLoader.load(key));
     }
 
     @SuppressWarnings("java:S2445") // CacheEntry is internally owned and deliberately acts as the per-entry lock.
@@ -409,108 +363,30 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
         final V value;
         final SaveOrder order;
-        long generation = generationOf(entry);
+        long generation = entryTracker.generationOf(entry);
         synchronized (entry) {
             if (!entry.dirty()) {
-                entryGenerations.remove(entry);
+                entryTracker.forget(entry);
                 return;
             }
-            dirtyEntries.remove(key, entry);
+            entryTracker.markClean(key, entry);
             value = entry.value();
             order = new SaveOrder(generation, entry.version());
         }
-        entryGenerations.remove(entry);
+        entryTracker.forget(entry);
 
         if (!settings.saveOnEvict()) {
-            enqueuePendingSave(key, new PendingSave<>(value, order));
+            saveCoordinator.queue(key, value, order);
             return;
         }
 
-        var work = new CompletableFuture<Void>();
-        evictionWork.put(order, work);
-        persist(key, value, order).whenComplete((_, error) -> {
-            if (error != null) {
-                LOGGER.log(
-                        Level.SEVERE,
-                        error,
-                        () -> "Could not save evicted cache entry: " + key + ". Queuing for retry.");
-                enqueuePendingSave(key, new PendingSave<>(value, order));
-            }
-            work.complete(null);
-            evictionWork.remove(order, work);
-        });
-    }
-
-    private void enqueuePendingSave(K key, CacheEntry<V> entry) {
-        enqueuePendingSave(key, new PendingSave<>(entry.value(), new SaveOrder(generationOf(entry), entry.version())));
-    }
-
-    private void enqueuePendingSave(K key, PendingSave<V> candidate) {
-        pendingSaves.compute(
-                key,
-                (_, current) ->
-                        current == null || candidate.order().compareTo(current.order()) > 0 ? candidate : current);
-    }
-
-    private CompletionStage<Void> savePending() {
-        if (pendingSaves.isEmpty()) {
-            return CompletionStages.completedVoid();
-        }
-
-        var entries = Map.copyOf(pendingSaves);
-        return runBounded(List.copyOf(entries.entrySet()), e -> savePendingEntry(e.getKey(), e.getValue()));
-    }
-
-    private CompletionStage<Void> savePendingEntry(K key, PendingSave<V> pending) {
-        return persist(key, pending.value(), pending.order())
-                .thenRun(() -> {
-                    pendingSaves.remove(key, pending);
-                    // A pending save belongs to an evicted entry. It must never clear a newer
-                    // in-cache entry even when both entries happen to have the same local version.
-                })
-                .exceptionallyCompose(error -> {
-                    LOGGER.log(
-                            Level.SEVERE,
-                            error,
-                            () -> "Could not save pending cache entry: " + key + ". Re-queueing for retry.");
-                    return CompletableFuture.failedFuture(
-                            new CacheSaveException("Could not save pending cache entry: " + key, error));
-                })
-                .toCompletableFuture();
+        saveCoordinator.saveEvicted(key, value, order);
     }
 
     private CacheEntry<V> getRequiredEntry(K key) {
         return Optional.ofNullable(cache.synchronous().getIfPresent(key))
                 .orElseThrow(() -> new CacheException(
                         "Cache entry is not loaded: " + key + ". Use getOrLoad(key) or load(key) first."));
-    }
-
-    private CacheEntry<V> createEntry(V value) {
-        var entry = new CacheEntry<>(value);
-        entryGenerations.put(entry, nextGeneration.incrementAndGet());
-        return entry;
-    }
-
-    private long generationOf(CacheEntry<V> entry) {
-        return entryGenerations.computeIfAbsent(entry, _ -> nextGeneration.incrementAndGet());
-    }
-
-    private CompletionStage<Void> persist(K key, V value, SaveOrder order) {
-        var ticketRef = new AtomicReference<SaveTicket>();
-        var laneRef = new AtomicReference<SaveLane>();
-        saveLanes.compute(key, (_, current) -> {
-            var lane = current == null ? new SaveLane(key) : current;
-            laneRef.set(lane);
-            ticketRef.set(lane.enqueue(value, order));
-            return lane;
-        });
-
-        var ticket = Objects.requireNonNull(ticketRef.get(), "save ticket");
-        var result = ticket.result();
-        var lane = Objects.requireNonNull(laneRef.get(), "save lane");
-        var _ = result.whenComplete((_, _) -> saveLanes.computeIfPresent(
-                key, (_, current) -> current.equals(lane) && current.isIdle(ticket.sequence()) ? null : current));
-        return result;
     }
 
     private void onInvalidation(CacheInvalidation<K> invalidation) {
@@ -530,70 +406,9 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         }
     }
 
-    private <T> CompletionStage<Void> runBounded(List<T> items, Function<T, CompletionStage<Void>> operation) {
-        if (items.isEmpty()) {
-            return CompletionStages.completedVoid();
-        }
-        return new AsyncWorkCoordinator<>(items, maximumConcurrentSaves, operation).start();
-    }
-
-    private CompletionStage<Void> awaitSaveLanes() {
-        return allOf(saveLanes.values().stream().map(SaveLane::tail));
-    }
-
-    private CompletionStage<Void> awaitEvictionWork() {
-        return allOf(List.copyOf(evictionWork.values()).stream());
-    }
-
     private void ensureOpen() {
         if (closing) {
             throw new IllegalStateException("DataCache is closing or already closed.");
-        }
-    }
-
-    private final class SaveLane {
-
-        private final K key;
-        private CompletableFuture<Void> tail = CompletableFuture.completedFuture(null);
-        private SaveOrder newestOrder = SaveOrder.NONE;
-        private long tailSequence;
-
-        private SaveLane(K key) {
-            this.key = key;
-        }
-
-        synchronized SaveTicket enqueue(V value, SaveOrder order) {
-            if (order.compareTo(newestOrder) > 0) {
-                newestOrder = order;
-            }
-            tail = tail.handle((_, _) -> null)
-                    .thenCompose(_ -> {
-                        synchronized (this) {
-                            if (order.compareTo(newestOrder) < 0) {
-                                return CompletionStages.completedVoid();
-                            }
-                        }
-                        return Objects.requireNonNull(repository.save(key, value), REPOSITORY_SAVE_NULL_MSG)
-                                .thenCompose(_ -> invalidationBus.publish(new CacheInvalidation<>(cacheId, key)));
-                    })
-                    .toCompletableFuture();
-            tailSequence++;
-            return new SaveTicket(tail, tailSequence);
-        }
-
-        synchronized CompletableFuture<Void> tail() {
-            return tail;
-        }
-
-        synchronized boolean isIdle(long completedSequence) {
-            return tailSequence == completedSequence && tail.isDone();
-        }
-    }
-
-    private record PendingSave<V>(V value, SaveOrder order) {
-        PendingSave {
-            Objects.requireNonNull(value, VALUE_PARAM);
-            Objects.requireNonNull(order, "order");
         }
     }
 
@@ -601,165 +416,6 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         SaveSnapshot {
             Objects.requireNonNull(value, VALUE_PARAM);
             Objects.requireNonNull(order, "order");
-        }
-    }
-
-    private record SaveOrder(long generation, long version) implements Comparable<SaveOrder> {
-
-        private static final SaveOrder NONE = new SaveOrder(Long.MIN_VALUE, Long.MIN_VALUE);
-
-        @Override
-        public int compareTo(SaveOrder other) {
-            int generationComparison = Long.compare(generation, other.generation);
-            return generationComparison != 0 ? generationComparison : Long.compare(version, other.version);
-        }
-    }
-
-    private record SaveTicket(CompletableFuture<Void> result, long sequence) {}
-
-    private static final class AsyncWorkCoordinator<T> {
-
-        private final List<T> items;
-        private final int workerCount;
-        private final Function<T, CompletionStage<Void>> operation;
-        private final AtomicLong nextIndex = new AtomicLong();
-        private final java.util.concurrent.atomic.AtomicInteger remainingWorkers;
-        private final AtomicReference<@Nullable Throwable> firstFailure = new AtomicReference<>();
-        private final CompletableFuture<Void> result = new CompletableFuture<>();
-
-        private AsyncWorkCoordinator(
-                List<T> items, int maximumConcurrency, Function<T, CompletionStage<Void>> operation) {
-            this.items = List.copyOf(items);
-            this.workerCount = Math.min(maximumConcurrency, items.size());
-            this.operation = Objects.requireNonNull(operation, "operation");
-            this.remainingWorkers = new java.util.concurrent.atomic.AtomicInteger(workerCount);
-        }
-
-        CompletionStage<Void> start() {
-            for (int worker = 0; worker < workerCount; worker++) {
-                advance();
-            }
-            return result;
-        }
-
-        private void advance() {
-            while (advanceSynchronously()) {
-                // Keep consuming already-completed work without recursive callbacks.
-            }
-        }
-
-        private boolean advanceSynchronously() {
-            long index = nextIndex.getAndIncrement();
-            if (index >= items.size()) {
-                workerFinished();
-                return false;
-            }
-            var future = invoke(items.get(Math.toIntExact(index)));
-            if (future.isDone()) {
-                recordCompletedFuture(future);
-                return true;
-            }
-            var _ = future.whenComplete((_, error) -> {
-                if (error != null) {
-                    recordFailure(error);
-                }
-                advance();
-            });
-            return false;
-        }
-
-        private CompletableFuture<Void> invoke(T item) {
-            return CompletableFuture.completedFuture(item)
-                    .thenCompose(
-                            current -> Objects.requireNonNull(operation.apply(current), "bulk operation returned null"))
-                    .toCompletableFuture();
-        }
-
-        private void recordCompletedFuture(CompletableFuture<Void> future) {
-            try {
-                future.getNow(null);
-            } catch (java.util.concurrent.CompletionException | CancellationException failure) {
-                recordFailure(failure.getCause() == null ? failure : failure.getCause());
-            }
-        }
-
-        private void recordFailure(Throwable failure) {
-            Throwable previous = firstFailure.get();
-            if (previous == null) {
-                if (firstFailure.compareAndSet(null, failure)) {
-                    return;
-                }
-                previous = firstFailure.get();
-            }
-            if (previous != null && !previous.equals(failure)) {
-                previous.addSuppressed(failure);
-            }
-        }
-
-        private void workerFinished() {
-            if (remainingWorkers.decrementAndGet() != 0) {
-                return;
-            }
-            Throwable failure = firstFailure.get();
-            if (failure == null) {
-                result.complete(null);
-            } else {
-                result.completeExceptionally(failure);
-            }
-        }
-    }
-
-    private static final class TrackedExecutor implements Executor {
-
-        private final Executor delegate;
-        private final Object lock = new Object();
-        private int activeTasks;
-        private CompletableFuture<Void> idle = CompletableFuture.completedFuture(null);
-
-        private TrackedExecutor(Executor delegate) {
-            this.delegate = Objects.requireNonNull(delegate, "delegate");
-        }
-
-        @Override
-        public void execute(Runnable command) {
-            Objects.requireNonNull(command, "command");
-            synchronized (lock) {
-                if (activeTasks == 0) {
-                    idle = new CompletableFuture<>();
-                }
-                activeTasks++;
-            }
-            try {
-                delegate.execute(() -> {
-                    try {
-                        command.run();
-                    } finally {
-                        taskFinished();
-                    }
-                });
-            } catch (RuntimeException schedulingFailure) {
-                taskFinished();
-                throw schedulingFailure;
-            }
-        }
-
-        CompletionStage<Void> whenIdle() {
-            synchronized (lock) {
-                return idle;
-            }
-        }
-
-        private void taskFinished() {
-            CompletableFuture<Void> completed = null;
-            synchronized (lock) {
-                activeTasks--;
-                if (activeTasks == 0) {
-                    completed = idle;
-                }
-            }
-            if (completed != null) {
-                completed.complete(null);
-            }
         }
     }
 }

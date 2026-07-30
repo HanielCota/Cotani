@@ -10,6 +10,7 @@ import com.cotani.config.validation.ValidationResult;
 import com.cotani.config.value.ConfigValue;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.TaskChain;
+import com.cotani.task.api.TaskChainFactory;
 import com.cotani.task.util.VoidResult;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -26,7 +27,7 @@ public final class DefaultCotaniConfig implements CotaniConfig {
     private final ConfigSource source;
     private final ConfigSerializerRegistry serializers;
     private final ConfigBinder binder;
-    private final PaperTaskScheduler scheduler;
+    private final TaskChainFactory chainFactory;
 
     public DefaultCotaniConfig(
             String name,
@@ -34,11 +35,20 @@ public final class DefaultCotaniConfig implements CotaniConfig {
             ConfigSerializerRegistry serializers,
             ConfigBinder binder,
             PaperTaskScheduler scheduler) {
+        this(name, source, serializers, binder, (TaskChainFactory) scheduler);
+    }
+
+    public DefaultCotaniConfig(
+            String name,
+            ConfigSource source,
+            ConfigSerializerRegistry serializers,
+            ConfigBinder binder,
+            TaskChainFactory chainFactory) {
         this.name = Objects.requireNonNull(name, "name");
         this.source = Objects.requireNonNull(source, "source");
         this.serializers = Objects.requireNonNull(serializers, "serializers");
         this.binder = Objects.requireNonNull(binder, "binder");
-        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this.chainFactory = Objects.requireNonNull(chainFactory, "chainFactory");
     }
 
     @Override
@@ -59,7 +69,7 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     @Override
     public TaskChain<Void> reloadAsync() {
-        return scheduler.supplyAsync(() -> {
+        return chainFactory.supplyAsync(() -> {
             source.load();
             return VoidResult.nullValue();
         });
@@ -73,7 +83,7 @@ public final class DefaultCotaniConfig implements CotaniConfig {
 
     @Override
     public TaskChain<Void> saveAsync() {
-        return scheduler.supplyAsync(() -> {
+        return chainFactory.supplyAsync(() -> {
             source.save();
             return VoidResult.nullValue();
         });

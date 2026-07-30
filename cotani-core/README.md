@@ -9,6 +9,7 @@ Core bootstrapping, lifecycle management, and shared exceptions for the Cotani f
 ## Features
 
 - **Centralized Lifecycle Control**: Easy registration and ordered shutdown of `AutoCloseable` services.
+- **Async Lifecycle Contract**: `AsyncCloseable` lets modules expose coalesced, non-blocking shutdown without requiring their full API.
 - **Reverse-Order Shutdown**: Automatically closes registered resources in the reverse order they were registered.
 - **Framework Exceptions**: Shared base exception types (such as `CotaniCloseException`) for robust error handling.
 

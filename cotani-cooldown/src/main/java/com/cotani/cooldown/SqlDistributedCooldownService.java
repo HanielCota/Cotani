@@ -10,7 +10,7 @@ import com.cotani.cooldown.api.ResourceCooldownTarget;
 import com.cotani.cooldown.api.UserCooldownTarget;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.query.Row;
-import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.api.DelayedTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import java.sql.SQLException;
 import java.time.Clock;
@@ -39,7 +39,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
     private final AtomicBoolean cleanupInProgress = new AtomicBoolean();
 
     SqlDistributedCooldownService(
-            CotaniStorage storage, PaperTaskScheduler scheduler, Clock clock, Duration cleanupInterval) {
+            CotaniStorage storage, DelayedTaskScheduler scheduler, Clock clock, Duration cleanupInterval) {
         this.storage = Objects.requireNonNull(storage, "storage");
         Objects.requireNonNull(scheduler, "scheduler");
         this.clock = Objects.requireNonNull(clock, "clock");
