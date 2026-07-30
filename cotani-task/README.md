@@ -13,6 +13,19 @@ Scheduler and async execution framework for Paper and Folia. Manages global, reg
 - **Fault-Tolerant Utilities**: Build retry mechanisms and timeouts directly into your asynchronous task pipelines.
 - **Explicit Executors**: Enforces the use of explicit, configured schedulers rather than implicit/default threads.
 
+## Capability-oriented injection
+
+`PaperTaskScheduler` remains the complete compatibility facade. Internal services and focused application components can depend on a smaller contract instead:
+
+- `AsyncTaskExecutor` for named async work, target dispatch and the async executor adapter;
+- `DelayedTaskScheduler` for delay, timer and retry scheduling;
+- `GlobalTaskScheduler`, `RegionTaskScheduler` or `EntityTaskScheduler` for one Paper/Folia ownership boundary;
+- `TaskChainFactory` for creating or adapting chains;
+- `PersistentTaskScheduler` for crash-recoverable tasks;
+- `SchedulerDiagnostics` for metrics and failure reporting.
+
+For example, a component that only publishes on the global thread should accept `GlobalTaskScheduler`, not the complete `PaperTaskScheduler`. Existing code can keep injecting `PaperTaskScheduler` because it extends every capability interface.
+
 ## Usage
 
 ### 1. Scheduler Creation

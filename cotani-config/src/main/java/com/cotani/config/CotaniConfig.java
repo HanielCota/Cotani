@@ -10,7 +10,18 @@ import java.util.List;
 import java.util.Optional;
 import net.kyori.adventure.text.Component;
 
-public interface CotaniConfig {
+/**
+ * Complete facade for one loaded configuration file.
+ *
+ * <p>In-memory reads, binding and mutation run on the calling thread. Synchronous save/reload
+ * methods perform file I/O and reject Paper's primary thread; their asynchronous counterparts use
+ * the configured explicit executor. Paths and required values must be non-null. Prefer a
+ * capability superinterface when a consumer needs only read, write, bind, validate or reload
+ * access.
+ */
+@SuppressWarnings("MissingOverride") // Keep declarations on the compatibility facade's binary surface.
+public interface CotaniConfig
+        extends ConfigReader, ConfigWriter, ConfigBinderView, ConfigValidationView, ReloadableConfig {
 
     String name();
 

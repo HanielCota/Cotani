@@ -1,49 +1,34 @@
 package com.cotani.task.impl.scheduler;
 
 import com.cotani.task.api.*;
-import com.cotani.task.impl.chain.DefaultTaskChain;
-import com.cotani.task.impl.dispatch.TaskDispatcher;
 import com.cotani.task.impl.dispatch.TaskErrorReporter;
 import com.cotani.task.impl.dispatch.TaskRunner;
-import com.cotani.task.impl.task.LazySchedulerTask;
 import com.cotani.task.metrics.TaskMetrics;
 import com.cotani.task.persistence.NoopPersistentTaskStore;
 import com.cotani.task.persistence.PersistentTask;
 import com.cotani.task.persistence.PersistentTaskStore;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
 @com.cotani.api.InternalApi
 public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
-    private final PlatformScheduler platformScheduler;
-    private final SchedulerOptions options;
-    private final TaskRunner taskRunner;
-    private final TaskErrorReporter taskErrorReporter;
     private final TaskExceptionHandler exceptionHandler;
-    private final TaskDispatcher taskDispatcher;
     private final TaskMetrics metrics;
-    private final PersistentTaskStore persistentTaskStore;
-    private final Map<String, DebounceTask> pendingDebounces = new ConcurrentHashMap<>();
-    private final Executor cachedAsyncExecutor;
-    private final Executor cachedGlobalExecutor;
-    private final AtomicBoolean closed = new AtomicBoolean();
-    private final AtomicReference<CompletableFuture<Void>> closeFuture = new AtomicReference<>();
+    private final TargetTaskDispatcher dispatcher;
+    private final DebounceCoordinator debounceCoordinator;
+    private final PersistentTaskCoordinator persistentTaskCoordinator;
+    private final SchedulerTaskChainFactory chainFactory;
+    private final SchedulerLifecycleCoordinator lifecycle;
 
     public ModernPaperTaskScheduler(
             PlatformScheduler platformScheduler,
@@ -59,16 +44,19 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
             SchedulerOptions options,
             TaskMetrics metrics,
             PersistentTaskStore persistentTaskStore) {
-        this.platformScheduler = Objects.requireNonNull(platformScheduler, "platformScheduler");
-        this.options = Objects.requireNonNull(options, "options");
+        var validatedPlatform = Objects.requireNonNull(platformScheduler, "platformScheduler");
+        var validatedOptions = Objects.requireNonNull(options, "options");
         this.metrics = Objects.requireNonNull(metrics, "metrics");
-        this.persistentTaskStore = Objects.requireNonNull(persistentTaskStore, "persistentTaskStore");
         this.exceptionHandler = Objects.requireNonNull(exceptionHandler, "exceptionHandler");
-        this.taskRunner = new TaskRunner(exceptionHandler, metrics);
-        this.taskErrorReporter = new TaskErrorReporter(exceptionHandler);
-        this.taskDispatcher = new TaskDispatcher(platformScheduler, taskRunner);
-        this.cachedAsyncExecutor = command -> async("executor-async", command);
-        this.cachedGlobalExecutor = command -> global("executor-global", command);
+        this.lifecycle =
+                new SchedulerLifecycleCoordinator(validatedPlatform, validatedOptions.cancelPaperTasksOnClose());
+        var taskRunner = new TaskRunner(exceptionHandler, metrics);
+        var taskErrorReporter = new TaskErrorReporter(exceptionHandler);
+        this.dispatcher =
+                new TargetTaskDispatcher(validatedPlatform, taskRunner, taskErrorReporter, lifecycle::metadata);
+        this.debounceCoordinator = new DebounceCoordinator(dispatcher);
+        this.persistentTaskCoordinator = new PersistentTaskCoordinator(persistentTaskStore, dispatcher);
+        this.chainFactory = new SchedulerTaskChainFactory(this, dispatcher);
     }
 
     @Override
@@ -78,9 +66,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask async(String name, Runnable runnable) {
-        var metadata = metadata(name, ExecutionTarget.async());
-
-        return platformScheduler.runAsync(metadata, taskRunner.wrap(metadata, runnable));
+        return dispatcher.async(name, runnable);
     }
 
     @Override
@@ -90,16 +76,12 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask asyncLater(String name, Runnable runnable, Duration delay) {
-        var metadata = metadata(name, ExecutionTarget.async());
-
-        return platformScheduler.runAsyncLater(metadata, taskRunner.wrap(metadata, runnable), delay);
+        return dispatcher.asyncLater(name, runnable, delay);
     }
 
     @Override
     public SchedulerTask asyncTimer(Runnable runnable, Duration initialDelay, Duration period) {
-        var metadata = metadata("async-timer-task", ExecutionTarget.async());
-
-        return platformScheduler.runAsyncTimer(metadata, taskRunner.wrap(metadata, runnable), initialDelay, period);
+        return dispatcher.asyncTimer("async-timer-task", runnable, initialDelay, period);
     }
 
     @Override
@@ -109,9 +91,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask global(String name, Runnable runnable) {
-        var metadata = metadata(name, ExecutionTarget.global());
-
-        return platformScheduler.runGlobal(metadata, taskRunner.wrap(metadata, runnable));
+        return dispatcher.global(name, runnable);
     }
 
     @Override
@@ -121,16 +101,12 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask globalLater(String name, Runnable runnable, Duration delay) {
-        var metadata = metadata(name, ExecutionTarget.global());
-
-        return platformScheduler.runGlobalLater(metadata, taskRunner.wrap(metadata, runnable), delay);
+        return dispatcher.globalLater(name, runnable, delay);
     }
 
     @Override
     public SchedulerTask globalTimer(Runnable runnable, Duration initialDelay, Duration period) {
-        var metadata = metadata("global-timer-task", ExecutionTarget.global());
-
-        return platformScheduler.runGlobalTimer(metadata, taskRunner.wrap(metadata, runnable), initialDelay, period);
+        return dispatcher.globalTimer("global-timer-task", runnable, initialDelay, period);
     }
 
     @Override
@@ -140,9 +116,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask region(String name, Location location, Runnable runnable) {
-        var metadata = metadata(name, ExecutionTarget.region(location));
-
-        return platformScheduler.runRegion(metadata, location, taskRunner.wrap(metadata, runnable));
+        return dispatcher.region(name, location, runnable);
     }
 
     @Override
@@ -152,10 +126,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask region(String name, UUID worldId, int chunkX, int chunkZ, Runnable runnable) {
-        var target = ExecutionTarget.region(worldId, chunkX, chunkZ);
-        var metadata = metadata(name, target);
-
-        return platformScheduler.runRegion(metadata, worldId, chunkX, chunkZ, taskRunner.wrap(metadata, runnable));
+        return dispatcher.region(name, worldId, chunkX, chunkZ, runnable);
     }
 
     @Override
@@ -165,9 +136,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask regionLater(String name, Location location, Runnable runnable, Duration delay) {
-        var metadata = metadata(name, ExecutionTarget.region(location));
-
-        return platformScheduler.runRegionLater(metadata, location, taskRunner.wrap(metadata, runnable), delay);
+        return dispatcher.regionLater(name, location, runnable, delay);
     }
 
     @Override
@@ -178,10 +147,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     @Override
     public SchedulerTask regionTimer(
             String name, Location location, Runnable runnable, Duration initialDelay, Duration period) {
-        var metadata = metadata(name, ExecutionTarget.region(location));
-
-        return platformScheduler.runRegionTimer(
-                metadata, location, taskRunner.wrap(metadata, runnable), initialDelay, period);
+        return dispatcher.regionTimer(name, location, runnable, initialDelay, period);
     }
 
     @Override
@@ -191,10 +157,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask entity(String name, Entity entity, Runnable runnable) {
-        var metadata = metadata(name, ExecutionTarget.entity(entity));
-
-        return platformScheduler.runEntity(
-                metadata, entity, taskRunner.wrap(metadata, runnable), () -> taskErrorReporter.handleRetired(metadata));
+        return dispatcher.entity(name, entity, runnable);
     }
 
     @Override
@@ -204,14 +167,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask entity(String name, UUID entityId, Runnable runnable) {
-        var target = ExecutionTarget.entity(entityId);
-        var metadata = metadata(name, target);
-
-        return platformScheduler.runEntity(
-                metadata,
-                entityId,
-                taskRunner.wrap(metadata, runnable),
-                () -> taskErrorReporter.handleRetired(metadata));
+        return dispatcher.entity(name, entityId, runnable);
     }
 
     @Override
@@ -221,14 +177,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public SchedulerTask entityLater(String name, Entity entity, Runnable runnable, Duration delay) {
-        var metadata = metadata(name, ExecutionTarget.entity(entity));
-
-        return platformScheduler.runEntityLater(
-                metadata,
-                entity,
-                taskRunner.wrap(metadata, runnable),
-                () -> taskErrorReporter.handleRetired(metadata),
-                delay);
+        return dispatcher.entityLater(name, entity, runnable, delay);
     }
 
     @Override
@@ -239,97 +188,23 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
     @Override
     public SchedulerTask entityTimer(
             String name, Entity entity, Runnable runnable, Duration initialDelay, Duration period) {
-        var metadata = metadata(name, ExecutionTarget.entity(entity));
-
-        return platformScheduler.runEntityTimer(
-                metadata,
-                entity,
-                taskRunner.wrap(metadata, runnable),
-                () -> taskErrorReporter.handleRetired(metadata),
-                initialDelay,
-                period);
+        return dispatcher.entityTimer(name, entity, runnable, initialDelay, period);
     }
 
     @Override
     public SchedulerTask debounce(String name, Runnable runnable, Duration quietPeriod) {
-        Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(runnable, "runnable");
-        Objects.requireNonNull(quietPeriod, "quietPeriod");
-
-        var metadata = metadata("debounce-" + name, ExecutionTarget.async());
-        var debounce = new DebounceTask(name, runnable);
-        pendingDebounces.compute(name, (_, current) -> {
-            if (current != null) {
-                current.supersede();
-            }
-            return debounce;
-        });
-
-        try {
-            SchedulerTask scheduled = platformScheduler.runAsyncLater(
-                    metadata, taskRunner.wrap(metadata, debounce::executeIfCurrent), quietPeriod);
-            debounce.attach(scheduled);
-            return debounce;
-        } catch (Throwable failure) {
-            pendingDebounces.remove(name, debounce);
-            debounce.cancel();
-            throw failure;
-        }
+        return debounceCoordinator.debounce(name, runnable, quietPeriod);
     }
 
     @Override
     public SchedulerTask persistAndRun(String name, Duration delay, byte[] payload, Consumer<byte[]> executor) {
-        Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(delay, "delay");
-        Objects.requireNonNull(payload, "payload");
-        Objects.requireNonNull(executor, "executor");
-
-        var task = new PersistentTask(UUID.randomUUID(), name, Instant.now(), delay, payload);
-        var lazyTask = new LazySchedulerTask();
-        var persistentHandle = new PersistentSchedulerTask(task, lazyTask);
-
-        SchedulerTask saveTask = async("persist-save-" + name, () -> {
-            SchedulerTask execTask;
-
-            try {
-                persistentTaskStore.save(task);
-            } catch (Throwable failure) {
-                lazyTask.failSetup(failure);
-
-                return;
-            }
-            persistentHandle.markPersisted();
-
-            if (lazyTask.cancelled()) {
-                persistentHandle.completePersistence();
-                lazyTask.completeSetup(SchedulerTask.noop());
-
-                return;
-            }
-
-            execTask = asyncLater(
-                    "persist-run-" + name,
-                    () -> {
-                        try {
-                            executor.accept(task.payload());
-                        } finally {
-                            persistentHandle.completePersistence();
-                        }
-                    },
-                    delay);
-
-            lazyTask.setDelegate(execTask);
-            lazyTask.completeSetup(execTask);
-        });
-
-        lazyTask.setSetupTask(saveTask);
-
-        return persistentHandle;
+        return persistentTaskCoordinator.persistAndRun(name, delay, payload, executor);
     }
 
     @Override
     public CompletionStage<List<PersistentTask>> recoverPendingTasksAsync() {
-        return supplyAsync("recover-pending", persistentTaskStore::loadPending).toCompletionStage();
+        return supplyAsync("recover-pending", persistentTaskCoordinator::loadPending)
+                .toCompletionStage();
     }
 
     @Override
@@ -339,58 +214,47 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public <T> TaskChain<T> supplyAsync(String name, Supplier<T> supplier) {
-        Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(supplier, "supplier");
-        Supplier<CompletableFuture<T>> factory = () -> supply(ExecutionTarget.async(), name, supplier);
-        var future = factory.get();
-
-        return new DefaultTaskChain<>(future, this, factory);
+        return chainFactory.supplyAsync(name, supplier);
     }
 
     @Override
     public <T> CompletableFuture<T> supply(ExecutionTarget target, String name, Supplier<T> supplier) {
-        var future = new CompletableFuture<T>();
-        var metadata = metadata(name, target);
-        Runnable runnable = () -> taskRunner.complete(metadata, supplier, future);
-
-        taskDispatcher.dispatch(target, metadata, runnable, future);
-
-        return future;
+        return dispatcher.supply(target, name, supplier);
     }
 
     @Override
     public <T> TaskChain<T> chain(CompletionStage<T> stage) {
-        return new DefaultTaskChain<>(stage.toCompletableFuture(), this);
+        return chainFactory.chain(stage);
     }
 
     @Override
     public Executor asyncExecutor() {
-        return cachedAsyncExecutor;
+        return dispatcher.asyncExecutor();
     }
 
     @Override
     public Executor globalExecutor() {
-        return cachedGlobalExecutor;
+        return dispatcher.globalExecutor();
     }
 
     @Override
     public Executor regionExecutor(Location location) {
-        return command -> region("executor-region", location, command);
+        return dispatcher.regionExecutor(location);
     }
 
     @Override
     public Executor regionExecutor(UUID worldId, int chunkX, int chunkZ) {
-        return command -> region("executor-region", worldId, chunkX, chunkZ, command);
+        return dispatcher.regionExecutor(worldId, chunkX, chunkZ);
     }
 
     @Override
     public Executor entityExecutor(Entity entity) {
-        return command -> entity("executor-entity", entity, command);
+        return dispatcher.entityExecutor(entity);
     }
 
     @Override
     public Executor entityExecutor(UUID entityId) {
-        return command -> entity("executor-entity", entityId, command);
+        return dispatcher.entityExecutor(entityId);
     }
 
     @Override
@@ -405,204 +269,11 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
 
     @Override
     public CompletionStage<Void> closeAsync() {
-        var existing = closeFuture.get();
-        if (existing != null) {
-            return existing;
-        }
-
-        var promise = new CompletableFuture<Void>();
-        if (!closeFuture.compareAndSet(null, promise)) {
-            return Objects.requireNonNull(closeFuture.get(), "closeFuture");
-        }
-
-        beginClose();
-        CompletionStage<Void> platformClose;
-        if (platformScheduler instanceof PaperPlatformScheduler paperScheduler) {
-            platformClose = paperScheduler.closeAsync();
-        } else if (platformScheduler instanceof AutoCloseable closeable) {
-            platformClose = closeOnDedicatedThread(closeable);
-        } else {
-            platformClose = CompletableFuture.completedFuture(null);
-        }
-        var _ = platformClose.whenComplete((_, failure) -> {
-            if (failure == null) {
-                promise.complete(null);
-            } else {
-                promise.completeExceptionally(failure);
-            }
-        });
-        return promise;
+        return lifecycle.closeAsync(debounceCoordinator::cancelAll);
     }
 
     @Override
     public void close() {
-        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
-            throw new IllegalStateException(
-                    "PaperTaskScheduler.close() blocks; use closeAsync() on the server thread.");
-        }
-        var promise = new CompletableFuture<Void>();
-        if (!closeFuture.compareAndSet(null, promise)) {
-            beginClose();
-            return;
-        }
-        beginClose();
-        if (platformScheduler instanceof AutoCloseable closeable) {
-            try {
-                closeable.close();
-                promise.complete(null);
-            } catch (RuntimeException failure) {
-                promise.completeExceptionally(failure);
-                throw failure;
-            } catch (Exception failure) {
-                promise.completeExceptionally(failure);
-                throw new IllegalStateException("Could not close scheduler resources", failure);
-            }
-        } else {
-            promise.complete(null);
-        }
-    }
-
-    private void beginClose() {
-        if (!closed.compareAndSet(false, true)) {
-            return;
-        }
-        pendingDebounces.values().forEach(SchedulerTask::cancel);
-        pendingDebounces.clear();
-        if (options.cancelPaperTasksOnClose()) {
-            platformScheduler.cancelOwnedTasks();
-        }
-    }
-
-    private static CompletionStage<Void> closeOnDedicatedThread(AutoCloseable closeable) {
-        var promise = new CompletableFuture<Void>();
-        Thread.ofPlatform().daemon(true).name("cotani-task-platform-shutdown").start(() -> {
-            try {
-                closeable.close();
-                promise.complete(null);
-            } catch (Throwable failure) {
-                promise.completeExceptionally(failure);
-            }
-        });
-        return promise;
-    }
-
-    private TaskMetadata metadata(String name, ExecutionTarget target) {
-        if (closed.get()) {
-            throw new java.util.concurrent.RejectedExecutionException("PaperTaskScheduler is closed.");
-        }
-        return TaskMetadata.named(name, target);
-    }
-
-    private final class DebounceTask implements SchedulerTask {
-
-        private final String name;
-        private final Runnable runnable;
-        private final AtomicReference<SchedulerTask> delegate = new AtomicReference<>();
-        private final java.util.concurrent.atomic.AtomicBoolean cancelled =
-                new java.util.concurrent.atomic.AtomicBoolean();
-        private final java.util.concurrent.atomic.AtomicBoolean executed =
-                new java.util.concurrent.atomic.AtomicBoolean();
-
-        private DebounceTask(String name, Runnable runnable) {
-            this.name = name;
-            this.runnable = runnable;
-        }
-
-        private void attach(SchedulerTask task) {
-            delegate.set(Objects.requireNonNull(task, "task"));
-            if (cancelled.get() || executed.get()) {
-                task.cancel();
-            }
-        }
-
-        private void executeIfCurrent() {
-            if (!pendingDebounces.remove(name, this) || cancelled.get() || !executed.compareAndSet(false, true)) {
-                return;
-            }
-            runnable.run();
-        }
-
-        @Override
-        public boolean cancel() {
-            boolean changed = supersede();
-            pendingDebounces.remove(name, this);
-            return changed;
-        }
-
-        private boolean supersede() {
-            boolean changed = cancelled.compareAndSet(false, true);
-            SchedulerTask task = delegate.get();
-            if (task != null) {
-                task.cancel();
-            }
-            return changed;
-        }
-
-        @Override
-        public boolean cancelled() {
-            SchedulerTask task = delegate.get();
-            return cancelled.get() || (task != null && task.cancelled());
-        }
-    }
-
-    private final class PersistentSchedulerTask implements SchedulerTask {
-
-        private final PersistentTask persistentTask;
-        private final LazySchedulerTask delegate;
-        private final java.util.concurrent.atomic.AtomicBoolean persisted =
-                new java.util.concurrent.atomic.AtomicBoolean();
-        private final java.util.concurrent.atomic.AtomicBoolean cancelled =
-                new java.util.concurrent.atomic.AtomicBoolean();
-        private final java.util.concurrent.atomic.AtomicBoolean completionScheduled =
-                new java.util.concurrent.atomic.AtomicBoolean();
-        private boolean persistenceCompleted;
-
-        private PersistentSchedulerTask(PersistentTask persistentTask, LazySchedulerTask delegate) {
-            this.persistentTask = persistentTask;
-            this.delegate = delegate;
-        }
-
-        private void markPersisted() {
-            persisted.set(true);
-        }
-
-        private synchronized void completePersistence() {
-            if (persistenceCompleted) {
-                return;
-            }
-            persistentTaskStore.markCompleted(persistentTask);
-            persistenceCompleted = true;
-        }
-
-        private void scheduleCancellationPersistence() {
-            if (!persisted.get() || !completionScheduled.compareAndSet(false, true)) {
-                return;
-            }
-            try {
-                async("persist-cancel-" + persistentTask.taskName(), () -> {
-                    try {
-                        completePersistence();
-                    } finally {
-                        completionScheduled.set(false);
-                    }
-                });
-            } catch (RuntimeException schedulingFailure) {
-                completionScheduled.set(false);
-                throw schedulingFailure;
-            }
-        }
-
-        @Override
-        public boolean cancel() {
-            boolean changed = cancelled.compareAndSet(false, true);
-            delegate.cancel();
-            scheduleCancellationPersistence();
-            return changed;
-        }
-
-        @Override
-        public boolean cancelled() {
-            return cancelled.get() || delegate.cancelled();
-        }
+        lifecycle.close(debounceCoordinator::cancelAll);
     }
 }

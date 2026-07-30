@@ -18,7 +18,7 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 @NullMarked
-public final class Cotani implements AutoCloseable {
+public final class Cotani implements AutoCloseable, AsyncCloseable {
 
     private static final Duration ASYNC_CLOSE_TIMEOUT = Duration.ofSeconds(10);
     private static final String CLOSEABLE_NULL_MSG = "Parameter 'closeable' must not be null";
@@ -103,6 +103,7 @@ public final class Cotani implements AutoCloseable {
      *
      * @return a stage completing when all teardown steps finish
      */
+    @Override
     public CompletionStage<Void> closeAsync() {
         var result = new CompletableFuture<Void>();
         if (!closeFuture.compareAndSet(null, result)) {

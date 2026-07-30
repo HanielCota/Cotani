@@ -58,12 +58,16 @@ public final class TaskRunner {
         Objects.requireNonNull(future, "future");
 
         var context = TaskContext.start(metadata);
+        ScopedValue.where(TaskContextHolder.CURRENT, context)
+                .run(() -> completeWithinContext(context, supplier, future));
+    }
 
+    private <T> void completeWithinContext(TaskContext context, Supplier<T> supplier, CompletableFuture<T> future) {
         try {
             future.complete(supplier.get());
-            metrics.record(metadata, true, elapsed(context));
+            metrics.record(context.metadata(), true, elapsed(context));
         } catch (Throwable throwable) {
-            metrics.record(metadata, false, elapsed(context));
+            metrics.record(context.metadata(), false, elapsed(context));
             exceptionHandler.handle(context, throwable);
             future.completeExceptionally(throwable);
         }

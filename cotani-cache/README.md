@@ -16,6 +16,18 @@ Caffeine-backed asynchronous caching. Provides generic `DataCache` and player-fo
 - **Bounded Save Fan-Out**: Bulk flush and shutdown limit concurrent repository saves (16 by default).
 - **Optional Invalidation Bus**: Cache instances can coordinate clean-entry invalidation through a local or distributed bus implementation.
 
+## Capability-oriented injection
+
+`DataCache<K, V>` remains the complete facade and is source-compatible with existing consumers. Components that need only part of the cache can instead accept:
+
+- `CacheReader<K, V>` for lookup and loading;
+- `CacheMutator<K, V>` for in-memory mutation and dirty marking;
+- `CachePersistence<K>` for explicit asynchronous saves;
+- `CacheDiagnostics<K, V>` for immutable snapshots and statistics;
+- `AsyncCloseable` for non-blocking lifecycle ownership.
+
+This keeps read-only services from depending on mutation, persistence or shutdown capabilities they do not use.
+
 ## Usage
 
 ### 1. Building a Player Data Cache

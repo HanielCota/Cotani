@@ -19,20 +19,24 @@ public final class TaskDispatcher {
 
     public <T> void dispatch(
             ExecutionTarget target, TaskMetadata metadata, Runnable runnable, CompletableFuture<T> future) {
+        dispatchPrepared(target, metadata, taskRunner.wrap(metadata, runnable), future);
+    }
+
+    /** Dispatches work that already owns its metrics and exception-reporting lifecycle. */
+    public <T> void dispatchPrepared(
+            ExecutionTarget target, TaskMetadata metadata, Runnable runnable, CompletableFuture<T> future) {
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(metadata, "metadata");
         Objects.requireNonNull(runnable, "runnable");
         Objects.requireNonNull(future, "future");
 
-        Runnable wrapped = taskRunner.wrap(metadata, runnable);
-
         switch (target) {
-            case ExecutionTarget.Async() -> platformScheduler.runAsync(metadata, wrapped);
-            case ExecutionTarget.Global() -> platformScheduler.runGlobal(metadata, wrapped);
+            case ExecutionTarget.Async() -> platformScheduler.runAsync(metadata, runnable);
+            case ExecutionTarget.Global() -> platformScheduler.runGlobal(metadata, runnable);
             case ExecutionTarget.Region region ->
-                platformScheduler.runRegion(metadata, region.worldId(), region.chunkX(), region.chunkZ(), wrapped);
+                platformScheduler.runRegion(metadata, region.worldId(), region.chunkX(), region.chunkZ(), runnable);
             case ExecutionTarget.EntityTarget entityTarget ->
-                platformScheduler.runEntity(metadata, entityTarget.entityId(), wrapped, () -> retire(future));
+                platformScheduler.runEntity(metadata, entityTarget.entityId(), runnable, () -> retire(future));
         }
     }
 

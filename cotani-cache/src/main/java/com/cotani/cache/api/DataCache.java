@@ -1,5 +1,6 @@
 package com.cotani.cache.api;
 
+import com.cotani.AsyncCloseable;
 import com.cotani.cache.stats.CacheStatsView;
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +25,14 @@ import java.util.function.UnaryOperator;
  * @param <K> the key type
  * @param <V> the value type
  */
-public interface DataCache<K, V> extends AutoCloseable {
+@SuppressWarnings("MissingOverride") // Keep declarations on the compatibility facade's binary surface.
+public interface DataCache<K, V>
+        extends CacheReader<K, V>,
+                CacheMutator<K, V>,
+                CachePersistence<K>,
+                CacheDiagnostics<K, V>,
+                AsyncCloseable,
+                AutoCloseable {
 
     /**
      * Returns the cached value for the given key.
@@ -155,6 +163,7 @@ public interface DataCache<K, V> extends AutoCloseable {
     /**
      * Gracefully closes the cache asynchronously, saving dirty entries.
      */
+    @Override
     CompletionStage<Void> closeAsync();
 
     /**

@@ -1,7 +1,9 @@
 package com.cotani.task.throttle;
 
+import com.cotani.task.api.DelayedTaskScheduler;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.TaskChain;
+import com.cotani.task.api.TaskChainFactory;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -12,15 +14,25 @@ public final class TaskThrottler {
 
     private static final int DEFAULT_MAX_ATTEMPTS = 10;
 
-    private final PaperTaskScheduler scheduler;
+    private final TaskChainFactory chainFactory;
+    private final DelayedTaskScheduler delays;
     private final int maxAttempts;
 
     public TaskThrottler(PaperTaskScheduler scheduler) {
-        this(scheduler, DEFAULT_MAX_ATTEMPTS);
+        this(scheduler, scheduler, DEFAULT_MAX_ATTEMPTS);
     }
 
     public TaskThrottler(PaperTaskScheduler scheduler, int maxAttempts) {
-        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this(scheduler, scheduler, maxAttempts);
+    }
+
+    public TaskThrottler(TaskChainFactory chainFactory, DelayedTaskScheduler delays) {
+        this(chainFactory, delays, DEFAULT_MAX_ATTEMPTS);
+    }
+
+    public TaskThrottler(TaskChainFactory chainFactory, DelayedTaskScheduler delays, int maxAttempts) {
+        this.chainFactory = Objects.requireNonNull(chainFactory, "chainFactory");
+        this.delays = Objects.requireNonNull(delays, "delays");
 
         if (maxAttempts <= 0) {
             throw new IllegalArgumentException("maxAttempts must be positive");
@@ -37,11 +49,11 @@ public final class TaskThrottler {
         Objects.requireNonNull(supplier, "supplier");
         Objects.requireNonNull(limiter, "limiter");
 
-        return scheduler.chain(throttleStage(supplier, limiter, 1));
+        return chainFactory.chain(throttleStage(supplier, limiter, 1));
     }
 
     private <T> CompletionStage<T> throttleStage(Supplier<T> supplier, RateLimiter limiter, int attempt) {
-        return scheduler
+        return chainFactory
                 .supplyAsync(() -> {
                     if (limiter.tryAcquire()) {
                         return supplier.get();
@@ -56,8 +68,7 @@ public final class TaskThrottler {
                             return CompletableFuture.failedStage(new RateLimitExceededException(maxAttempts));
                         }
 
-                        return scheduler
-                                .delayAsync(rejected.retryDelay())
+                        return delays.delayAsync(rejected.retryDelay())
                                 .thenCompose(_ -> throttleStage(supplier, limiter, attempt + 1));
                     }
                     return CompletableFuture.failedStage(error);
