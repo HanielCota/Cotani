@@ -13,7 +13,7 @@ mockito = "5.23.0"
 mysql = "9.3.0"
 nullaway = "0.13.8"
 paper = "26.2.build.85-stable"
-spotless = "8.8.0"
+spotless = "8.9.0"
 sqlite = "3.53.2.1"
 testcontainers = "2.0.5"
 
