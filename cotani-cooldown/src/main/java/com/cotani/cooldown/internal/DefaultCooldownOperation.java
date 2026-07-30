@@ -11,6 +11,7 @@ import java.util.Optional;
 import org.bukkit.Bukkit;
 import org.jspecify.annotations.Nullable;
 
+@com.cotani.api.InternalApi
 public final class DefaultCooldownOperation implements CooldownOperation {
 
     private final CooldownStore store;

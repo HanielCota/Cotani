@@ -4,6 +4,7 @@ import com.cotani.cooldown.api.*;
 import java.time.Clock;
 import java.util.Objects;
 
+@com.cotani.api.InternalApi
 public final class DefaultCooldownService implements CooldownService {
 
     private final CooldownStore store;
@@ -15,7 +16,7 @@ public final class DefaultCooldownService implements CooldownService {
     }
 
     public static DefaultCooldownService inMemory() {
-        return new DefaultCooldownService(new InMemoryCooldownStore(), Clock.systemUTC());
+        return new DefaultCooldownService(new InMemoryCooldownStore(), new MonotonicClock());
     }
 
     public static DefaultCooldownService cacheBacked(

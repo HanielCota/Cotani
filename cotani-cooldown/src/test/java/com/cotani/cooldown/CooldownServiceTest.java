@@ -15,6 +15,10 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class CooldownServiceTest {
@@ -91,6 +95,50 @@ class CooldownServiceTest {
                 .denied());
 
         verify(playerCache, atLeastOnce()).markDirty(userId);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void cachedPlayerCooldownCheckAndStartIsAtomic() throws InterruptedException {
+        PlayerDataCache<PlayerCooldowns> playerCache = mock(PlayerDataCache.class);
+        var userId = UUID.randomUUID();
+        var playerCooldowns = new PlayerCooldowns(userId);
+        when(playerCache.find(userId)).thenReturn(Optional.of(playerCooldowns));
+        var store = new CacheCooldownStore(playerCache);
+        var key = new CooldownKey(new UserCooldownTarget(userId), CooldownAction.of("atomic"));
+        var clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("UTC"));
+        int callers = 32;
+        var ready = new CountDownLatch(callers);
+        var start = new CountDownLatch(1);
+        var done = new CountDownLatch(callers);
+        var allowed = new AtomicInteger();
+        var executor = Executors.newFixedThreadPool(callers);
+        try {
+            for (int i = 0; i < callers; i++) {
+                var _ = executor.submit(() -> {
+                    ready.countDown();
+                    try {
+                        start.await();
+                        if (store.checkAndStart(key, Duration.ofSeconds(30), clock)
+                                .allowed()) {
+                            allowed.incrementAndGet();
+                        }
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+            assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+            assertTrue(done.await(5, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+        }
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, allowed.get());
+        verify(playerCache, times(1)).markDirty(userId);
     }
 
     private static class MutableClock extends Clock {

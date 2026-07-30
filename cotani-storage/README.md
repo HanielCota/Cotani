@@ -74,8 +74,9 @@ storage.transactions().run(context -> {
 1. **Non-Blocking Startup**: Always start the storage system using `.startAsync()`. Never invoke `.join()` or `.get()` to wait for initialization during startup.
 2. **Off-Thread Operations**: Keep all persistence I/O operations away from the Minecraft server main thread. Compose queries using `CompletionStage`.
 3. **Transaction Safety**: Always use the `TransactionManager` when modifying multiple rows or tables to maintain database state integrity.
-4. **Migration Sequence**: Register migration scripts in sequential, creation order. Never modify already executed migrations or skip version indices.
-5. **Decoupled Architecture**: Encapsulate persistence logic inside repositories extending `CotaniRepository`.
+4. **Bounded Admission**: Storage concurrency follows the backend connection limit and the waiting queue is bounded. Configure `.admissionQueueCapacity(...)`, observe `storage.executorStats()`, and handle exceptional completion when the queue is saturated.
+5. **Migration Sequence**: Versions are ordered independently per `Migration.namespace()` (the migration package by default). Register scripts in creation order inside each namespace and never modify a migration already executed. History from the legacy global table is backfilled by matching version and description, so existing migrations are not rerun during upgrade.
+6. **Decoupled Architecture**: Encapsulate persistence logic inside repositories extending `CotaniRepository`.
 
 ## Anti-Patterns
 

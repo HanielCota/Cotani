@@ -3,6 +3,7 @@ package com.cotani.config;
 import com.cotani.config.section.ConfigSection;
 import com.cotani.config.validation.ValidationResult;
 import com.cotani.config.value.ConfigValue;
+import com.cotani.task.api.TaskChain;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -17,7 +18,11 @@ public interface CotaniConfig {
 
     void reload();
 
+    TaskChain<Void> reloadAsync();
+
     void save();
+
+    TaskChain<Void> saveAsync();
 
     boolean contains(String path);
 

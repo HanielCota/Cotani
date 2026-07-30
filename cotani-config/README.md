@@ -36,12 +36,13 @@ public record PluginSettings(
 Initialize the configurations builder and bind files:
 
 ```java
-CotaniConfigs configs = CotaniConfigs.create(plugin)
+CotaniConfigs.create(plugin, scheduler)
     .file("config.yml")
-    .load();
-
-// Bind the config file to your settings record
-PluginSettings settings = configs.file("config.yml").bindOrThrow(PluginSettings.class);
+    .loadAsync()
+    .thenAccept(loaded -> {
+        this.configs = loaded;
+        this.settings = loaded.file("config.yml").bindOrThrow(PluginSettings.class);
+    });
 ```
 
 ### 3. Asynchronous Config Reloading
@@ -50,10 +51,10 @@ Reload config directories dynamically and rebind configuration objects asynchron
 
 ```java
 configs.reloadAsync()
-    .thenRun(() -> {
-        // Rebind variables inside the completion callback
+    .thenGlobal(ignored -> {
         this.settings = configs.file("config.yml").bindOrThrow(PluginSettings.class);
         plugin.getLogger().info("Configuration reloaded successfully.");
+        return null;
     })
     .toCompletionStage();
 ```

@@ -12,5 +12,6 @@ public enum TeleportFailureReason {
     CANCELLED_BY_EVENT,
     TELEPORT_FAILED,
     TIMEOUT,
+    OUTCOME_INDETERMINATE,
     UNKNOWN_ERROR
 }

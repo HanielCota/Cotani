@@ -43,4 +43,17 @@ class PersistentTaskTest {
 
         assertEquals(1, second[0]);
     }
+
+    @Test
+    void rejectsOversizedPayloadAndUnsafeTaskName() {
+        var oversized = new byte[PersistentTask.MAX_PAYLOAD_BYTES + 1];
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new PersistentTask(UUID.randomUUID(), "test", Instant.now(), Duration.ofMinutes(1), oversized));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new PersistentTask(
+                        UUID.randomUUID(), "line\nbreak", Instant.now(), Duration.ofMinutes(1), new byte[0]));
+    }
 }

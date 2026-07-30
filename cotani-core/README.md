@@ -17,7 +17,9 @@ Core bootstrapping, lifecycle management, and shared exceptions for the Cotani f
 Create the `Cotani` instance during plugin startup (`onEnable`) and register all services. Ensure it is closed during shutdown (`onDisable`).
 
 ```java
-import com.cotani.core.Cotani;
+import com.cotani.Cotani;
+import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.scheduler.SchedulerFactory;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class MyPlugin extends JavaPlugin {
@@ -25,18 +27,19 @@ public final class MyPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // Instantiate and build Cotani lifecycle manager
+        PaperTaskScheduler scheduler = SchedulerFactory.create(this);
         cotani = Cotani.forPlugin(this)
-            .with(scheduler) // Registered closeable resource
-            .with(storage)   // Registered closeable resource
+            .withAsync(scheduler::closeAsync)
             .build();
     }
 
     @Override
     public void onDisable() {
         if (cotani != null) {
-            // Closes all registered resources in reverse order: storage first, then scheduler
-            cotani.close(); 
+            cotani.closeAsync().exceptionally(error -> {
+                getLogger().log(java.util.logging.Level.SEVERE, "Could not close Cotani", error);
+                return null;
+            });
         }
     }
 }
@@ -44,10 +47,10 @@ public final class MyPlugin extends JavaPlugin {
 
 ## Hard Rules & Best Practices
 
-1. **Mandatory Lifecycle Mapping**: Create `Cotani` in `onEnable` and close it in `onDisable`.
+1. **Mandatory Lifecycle Mapping**: Create `Cotani` in `onEnable` and start `closeAsync()` in `onDisable`.
 2. **Register All Closeables**: Every `AutoCloseable` resource created at plugin startup (like schedulers, database drivers, caches) must be registered with `Cotani.forPlugin(plugin).with(resource).build()` to guarantee safe disposal.
 3. **No Service Locator Abuse**: Do not use `Cotani` as a global service locator or singleton. Its sole responsibility is closeable lifecycle management. Use constructor injection instead.
-4. **Exception Integrity**: `CotaniCloseException` is the only exception thrown by `Cotani.close()`. Suppressed resource cleanup failures are gathered and logged rather than causing an incomplete shutdown.
+4. **No Main-Thread Blocking**: `Cotani.close()` is only for non-server threads. On Paper's primary thread, use `closeAsync()` and observe its failed stage.
 
 ## Anti-Patterns
 

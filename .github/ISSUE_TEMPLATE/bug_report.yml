@@ -13,7 +13,7 @@ body:
     attributes:
       label: Environment & Versions
       description: What server software, Java version, and Cotani version are you using?
-      placeholder: e.g. Paper 1.20.4, Java 21, Cotani 1.0.0
+      placeholder: e.g. Paper 26.2, Java 25, Cotani 1.0.0
     validations:
       required: true
 

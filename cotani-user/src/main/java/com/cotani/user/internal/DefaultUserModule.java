@@ -23,6 +23,7 @@ import java.util.logging.Level;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
+@com.cotani.api.InternalApi
 public final class DefaultUserModule implements com.cotani.user.api.UserModule {
 
     private final Cotani cotani;

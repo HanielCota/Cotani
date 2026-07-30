@@ -17,6 +17,7 @@ import java.util.concurrent.CompletionStage;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+@com.cotani.api.InternalApi
 public final class TeleportEventNotifier {
     private final TeleportEventBus eventBus;
     private final Clock clock;

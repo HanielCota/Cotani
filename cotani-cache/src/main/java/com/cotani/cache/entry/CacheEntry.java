@@ -3,7 +3,6 @@ package com.cotani.cache.entry;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -31,34 +30,25 @@ public final class CacheEntry<V> {
         return currentState().value();
     }
 
-    public boolean update(UnaryOperator<V> updater) {
+    public synchronized boolean update(UnaryOperator<V> updater) {
         Objects.requireNonNull(updater, "updater");
-
-        var becameDirty = new AtomicBoolean(false);
-        state.updateAndGet(current -> {
-            var currentValue = current.value();
-            var updated = Objects.requireNonNull(updater.apply(currentValue), "updated");
-            if (Objects.equals(currentValue, updated)) {
-                becameDirty.set(false);
-                return current;
-            }
-            becameDirty.set(!current.dirty());
-            return new EntryState<>(updated, true, current.lastSavedAt(), current.version() + 1);
-        });
-        return becameDirty.get();
+        EntryState<V> current = currentState();
+        V currentValue = current.value();
+        V updated = Objects.requireNonNull(updater.apply(currentValue), "updated");
+        if (Objects.equals(currentValue, updated)) {
+            return false;
+        }
+        state.set(new EntryState<>(updated, true, current.lastSavedAt(), current.version() + 1));
+        return !current.dirty();
     }
 
-    public boolean mutate(Consumer<V> mutator) {
+    public synchronized boolean mutate(Consumer<V> mutator) {
         Objects.requireNonNull(mutator, "mutator");
-
-        var becameDirty = new AtomicBoolean(false);
-        state.updateAndGet(current -> {
-            var value = current.value();
-            mutator.accept(value);
-            becameDirty.set(!current.dirty());
-            return new EntryState<>(value, true, current.lastSavedAt(), current.version() + 1);
-        });
-        return becameDirty.get();
+        EntryState<V> current = currentState();
+        V value = current.value();
+        mutator.accept(value);
+        state.set(new EntryState<>(value, true, current.lastSavedAt(), current.version() + 1));
+        return !current.dirty();
     }
 
     public boolean dirty() {
@@ -68,17 +58,15 @@ public final class CacheEntry<V> {
     /**
      * Marks the entry as dirty and returns {@code true} if it transitioned from clean to dirty.
      */
-    public boolean markDirty() {
-        var becameDirty = new AtomicBoolean(false);
-        state.updateAndGet(current -> {
-            becameDirty.set(!current.dirty());
-            return new EntryState<>(current.value(), true, current.lastSavedAt(), current.version() + 1);
-        });
-        return becameDirty.get();
+    public synchronized boolean markDirty() {
+        EntryState<V> current = currentState();
+        state.set(new EntryState<>(current.value(), true, current.lastSavedAt(), current.version() + 1));
+        return !current.dirty();
     }
 
-    public void markSaved() {
-        state.updateAndGet(current -> new EntryState<>(current.value(), false, Instant.now(), current.version()));
+    public synchronized void markSaved() {
+        EntryState<V> current = currentState();
+        state.set(new EntryState<>(current.value(), false, Instant.now(), current.version()));
     }
 
     /**
@@ -90,17 +78,13 @@ public final class CacheEntry<V> {
      * @param expectedVersion the version observed when the save began
      * @return {@code true} if the entry was marked saved
      */
-    public boolean markSavedIfVersionMatches(long expectedVersion) {
-        while (true) {
-            EntryState<V> current = Objects.requireNonNull(state.get(), "state");
-            if (current.version() != expectedVersion || !current.dirty()) {
-                return false;
-            }
-            EntryState<V> updated = new EntryState<>(current.value(), false, Instant.now(), expectedVersion);
-            if (state.compareAndSet(current, updated)) {
-                return true;
-            }
+    public synchronized boolean markSavedIfVersionMatches(long expectedVersion) {
+        EntryState<V> current = currentState();
+        if (current.version() != expectedVersion || !current.dirty()) {
+            return false;
         }
+        state.set(new EntryState<>(current.value(), false, Instant.now(), expectedVersion));
+        return true;
     }
 
     public long version() {

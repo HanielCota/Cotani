@@ -5,6 +5,7 @@ import com.cotani.storage.schema.ColumnType;
 import com.cotani.storage.schema.Schema;
 import java.util.concurrent.CompletionStage;
 
+@com.cotani.api.InternalApi
 public final class CreateUsersTableMigration implements Migration {
 
     @Override

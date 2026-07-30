@@ -55,4 +55,33 @@ class MigrationRunnerTest {
         runner.add(migration(1, "first"));
         assertDoesNotThrow(() -> runner.add(migration(2, "second")));
     }
+
+    @Test
+    void acceptsSameVersionInDifferentNamespaces() {
+        var runner = new MigrationRunner(executor, schema);
+        runner.add(migration(1, "first"));
+        var otherNamespace = new Migration() {
+            @Override
+            public String namespace() {
+                return "another-module";
+            }
+
+            @Override
+            public int version() {
+                return 1;
+            }
+
+            @Override
+            public String description() {
+                return "other";
+            }
+
+            @Override
+            public CompletionStage<Void> migrate(Schema schema) {
+                return CompletableFuture.completedStage(null);
+            }
+        };
+
+        assertDoesNotThrow(() -> runner.add(otherNamespace));
+    }
 }

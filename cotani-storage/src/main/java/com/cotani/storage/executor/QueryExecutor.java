@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
 public final class QueryExecutor {
@@ -61,7 +62,7 @@ public final class QueryExecutor {
     public CompletionStage<Void> update(String sql, SqlConsumer<ParameterBinder> binder) {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
-        return CompletableFuture.runAsync(() -> runUpdate(sql, binder), executor);
+        return runAsync(() -> runUpdate(sql, binder));
     }
 
     public <T> CompletionStage<Optional<T>> queryOne(
@@ -69,7 +70,7 @@ public final class QueryExecutor {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
         Objects.requireNonNull(mapper, "mapper");
-        return CompletableFuture.supplyAsync(() -> runQueryOne(sql, binder, mapper), executor);
+        return supplyAsync(() -> runQueryOne(sql, binder, mapper));
     }
 
     public <T> CompletionStage<List<T>> queryMany(
@@ -77,28 +78,59 @@ public final class QueryExecutor {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
         Objects.requireNonNull(mapper, "mapper");
-        return CompletableFuture.supplyAsync(() -> runQueryMany(sql, binder, mapper), executor);
+        return supplyAsync(() -> runQueryMany(sql, binder, mapper));
     }
 
     public CompletionStage<Boolean> exists(String sql, SqlConsumer<ParameterBinder> binder) {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
-        return CompletableFuture.supplyAsync(() -> runExists(sql, binder), executor);
+        return supplyAsync(() -> runExists(sql, binder));
     }
 
     public CompletionStage<Void> batch(String sql, List<SqlConsumer<ParameterBinder>> binders) {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binders, "binders");
-        return CompletableFuture.runAsync(() -> runBatch(sql, binders), executor);
+        var snapshot = List.copyOf(binders);
+        return runAsync(() -> runBatch(sql, snapshot));
     }
 
     public <T> CompletionStage<T> transaction(Function<QueryExecutor, CompletionStage<T>> operation) {
         Objects.requireNonNull(operation, "operation");
-        return CompletableFuture.supplyAsync(this::beginTransaction, executor).thenCompose(state -> {
-            var transactional =
-                    new QueryExecutor(provider, Runnable::run, serializers, queryTimeoutSeconds, state.connection);
-            return operation.apply(transactional).whenComplete((_, error) -> finishTransaction(state, error));
+        if (transactionConnection != null) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Nested transactions are not supported."));
+        }
+        return supplyAsync(this::beginTransaction).thenCompose(state -> executeTransactionOperation(state, operation));
+    }
+
+    private CompletionStage<Void> runAsync(Runnable operation) {
+        return supplyAsync(() -> {
+            operation.run();
+            return null;
         });
+    }
+
+    private <T> CompletionStage<T> supplyAsync(Supplier<T> operation) {
+        try {
+            return CompletableFuture.supplyAsync(operation, executor);
+        } catch (RuntimeException schedulingFailure) {
+            return CompletableFuture.failedFuture(schedulingFailure);
+        }
+    }
+
+    private <T> CompletionStage<T> executeTransactionOperation(
+            TransactionState state, Function<QueryExecutor, CompletionStage<T>> operation) {
+        var transactional =
+                new QueryExecutor(provider, Runnable::run, serializers, queryTimeoutSeconds, state.connection);
+        CompletionStage<T> stage = CompletableFuture.completedFuture(transactional)
+                .thenCompose(current ->
+                        Objects.requireNonNull(operation.apply(current), "transaction operation returned null"));
+        if (!stage.toCompletableFuture().isDone()) {
+            var failure = new IllegalStateException(
+                    "Transaction callbacks must not wait for external asynchronous work; compose only operations from the transactional QueryExecutor.");
+            finishTransaction(state, failure);
+            return CompletableFuture.failedFuture(failure);
+        }
+        return stage.whenComplete((_, error) -> finishTransaction(state, error));
     }
 
     private void runUpdate(String sql, SqlConsumer<ParameterBinder> binder) {
@@ -145,7 +177,7 @@ public final class QueryExecutor {
                 while (resultSet.next()) {
                     values.add(mapper.map(new Row(resultSet, serializers)));
                 }
-                return values;
+                return List.copyOf(values);
             }
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not execute list query.", exception));
@@ -203,15 +235,18 @@ public final class QueryExecutor {
             statement.setQueryTimeout(queryTimeoutSeconds);
             int count = 0;
             for (var item : binders) {
+                statement.clearParameters();
                 item.accept(new ParameterBinder(statement, serializers));
                 statement.addBatch();
                 count++;
                 if (count % 1000 == 0) {
                     statement.executeBatch();
+                    statement.clearBatch();
                 }
             }
             if (count % 1000 != 0) {
                 statement.executeBatch();
+                statement.clearBatch();
             }
             connection.commit();
         }
@@ -231,15 +266,18 @@ public final class QueryExecutor {
             statement.setQueryTimeout(queryTimeoutSeconds);
             int count = 0;
             for (var item : binders) {
+                statement.clearParameters();
                 item.accept(new ParameterBinder(statement, serializers));
                 statement.addBatch();
                 count++;
                 if (count % 1000 == 0) {
                     statement.executeBatch();
+                    statement.clearBatch();
                 }
             }
             if (count % 1000 != 0) {
                 statement.executeBatch();
+                statement.clearBatch();
             }
         } catch (SQLException exception) {
             throw new StorageException(new QueryError("Could not execute batch query.", exception));
@@ -250,12 +288,20 @@ public final class QueryExecutor {
     }
 
     private TransactionState beginTransaction() {
+        @Nullable Connection connection = null;
         try {
-            Connection connection = provider.connection();
+            connection = provider.connection();
             boolean previousAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             return new TransactionState(connection, previousAutoCommit);
         } catch (SQLException exception) {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException closeFailure) {
+                    exception.addSuppressed(closeFailure);
+                }
+            }
             throw new StorageException(new QueryError("Could not acquire connection for transaction.", exception));
         }
     }

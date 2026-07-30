@@ -34,6 +34,9 @@ public final class RetryPolicy {
 
         this.maxAttempts = maxAttempts;
         this.baseDelay = Objects.requireNonNull(baseDelay, "baseDelay");
+        if (baseDelay.isNegative()) {
+            throw new IllegalArgumentException("baseDelay must not be negative");
+        }
         this.multiplier = multiplier;
         this.jitter = validateJitter(jitter);
         this.symmetricJitter = symmetricJitter;
@@ -76,8 +79,15 @@ public final class RetryPolicy {
     }
 
     public long delayMillisForAttempt(int attempt) {
+        if (attempt <= 0) {
+            throw new IllegalArgumentException("attempt must be positive");
+        }
         long baseMillis = baseDelay.toMillis();
-        long exponential = (long) (baseMillis * Math.pow(multiplier, (double) attempt - 1.0));
+        double calculated = baseMillis * Math.pow(multiplier, attempt - 1.0);
+        if (!Double.isFinite(calculated) || calculated > Long.MAX_VALUE) {
+            throw new IllegalArgumentException("retry delay is too large for attempt " + attempt);
+        }
+        long exponential = (long) calculated;
 
         if (jitter == MIN_JITTER) {
             return Math.max(0, exponential);

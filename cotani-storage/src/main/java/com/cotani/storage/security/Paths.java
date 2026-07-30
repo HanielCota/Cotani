@@ -14,6 +14,19 @@ public final class Paths {
         if (!startsWith(normalized, normalizedRoot)) {
             throw new IllegalArgumentException("Path must be inside " + normalizedRoot + ": " + normalized);
         }
+        requireNoSymbolicLinks(normalized);
+        return normalized;
+    }
+
+    public static Path requireNoSymbolicLinks(Path path) {
+        var normalized = path.toAbsolutePath().normalize();
+        var current = normalized;
+        while (current != null) {
+            if (Files.isSymbolicLink(current)) {
+                throw new IllegalArgumentException("Symbolic links are not allowed in storage paths: " + current);
+            }
+            current = current.getParent();
+        }
         return normalized;
     }
 
@@ -27,8 +40,8 @@ public final class Paths {
                 var real = candidate.toRealPath();
                 var realRoot = root.toRealPath();
                 return real.startsWith(realRoot);
-            } catch (IOException ignored) {
-                // best-effort: fall back to lexical containment
+            } catch (IOException failure) {
+                throw new IllegalArgumentException("Could not verify path containment: " + candidate, failure);
             }
         }
         // For non-existent paths, walk up and reject symlinked parents.

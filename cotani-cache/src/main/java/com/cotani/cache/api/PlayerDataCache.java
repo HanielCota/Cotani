@@ -39,7 +39,15 @@ public interface PlayerDataCache<V> extends AutoCloseable {
 
     CompletionStage<Void> saveDirty();
 
+    default CompletionStage<Void> saveDirtyAsync() {
+        return saveDirty();
+    }
+
     CompletionStage<Void> saveAll();
+
+    default CompletionStage<Void> saveAllAsync() {
+        return saveAll();
+    }
 
     /**
      * Unloads the cached entry for the given player.

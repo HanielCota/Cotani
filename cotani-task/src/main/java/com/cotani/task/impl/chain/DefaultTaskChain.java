@@ -3,6 +3,7 @@ package com.cotani.task.impl.chain;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.RetryPolicy;
+import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskChain;
 import com.cotani.task.exception.TaskTimeoutException;
 import com.cotani.task.util.VoidResult;
@@ -10,12 +11,15 @@ import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -23,6 +27,7 @@ import java.util.function.Supplier;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
+@com.cotani.api.InternalApi
 public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     private static final String ACTION_PARAM = "action";
@@ -30,16 +35,26 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     private final CompletableFuture<T> future;
     private final PaperTaskScheduler scheduler;
     private final Supplier<CompletableFuture<T>> futureFactory;
+    private final boolean repeatable;
 
     public DefaultTaskChain(CompletableFuture<T> future, PaperTaskScheduler scheduler) {
-        this(future, scheduler, () -> future);
+        this(future, scheduler, () -> future, false);
+    }
+
+    public DefaultTaskChain(
+            CompletableFuture<T> future, PaperTaskScheduler scheduler, Supplier<CompletableFuture<T>> futureFactory) {
+        this(future, scheduler, futureFactory, true);
     }
 
     private DefaultTaskChain(
-            CompletableFuture<T> future, PaperTaskScheduler scheduler, Supplier<CompletableFuture<T>> futureFactory) {
+            CompletableFuture<T> future,
+            PaperTaskScheduler scheduler,
+            Supplier<CompletableFuture<T>> futureFactory,
+            boolean repeatable) {
         this.future = Objects.requireNonNull(future, "future");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.futureFactory = Objects.requireNonNull(futureFactory, "futureFactory");
+        this.repeatable = repeatable;
     }
 
     @Override
@@ -124,7 +139,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
             throw new NoSuchElementException("Value did not match filter predicate");
         });
 
-        return new DefaultTaskChain<>(filtered, scheduler, factory);
+        return new DefaultTaskChain<>(filtered, scheduler, factory, repeatable);
     }
 
     @Override
@@ -143,49 +158,31 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
             return inner.toCompletionStage().toCompletableFuture();
         });
 
-        return new DefaultTaskChain<>(mapped, scheduler, factory);
+        return new DefaultTaskChain<>(mapped, scheduler, factory, repeatable);
     }
 
     @Override
     public TaskChain<T> timeout(Duration duration) {
-        Objects.requireNonNull(duration, "duration");
+        long timeoutNanos = validateTimeout(duration);
+        CompletableFuture<T> timed = withTimeout(future, duration, timeoutNanos);
+        Supplier<CompletableFuture<T>> factory = () -> withTimeout(futureFactory.get(), duration, timeoutNanos);
 
-        CompletableFuture<T> timed = future.orTimeout(duration.toMillis(), TimeUnit.MILLISECONDS)
-                .exceptionallyCompose(throwable -> {
-                    Throwable cause = unwrap(throwable);
-                    if (cause instanceof TimeoutException) {
-                        return CompletableFuture.failedFuture(new TaskTimeoutException(duration));
-                    }
-                    return CompletableFuture.failedFuture(cause);
-                });
-
-        Supplier<CompletableFuture<T>> factory = () -> futureFactory
-                .get()
-                .orTimeout(duration.toMillis(), TimeUnit.MILLISECONDS)
-                .exceptionallyCompose(throwable -> {
-                    Throwable cause = unwrap(throwable);
-                    if (cause instanceof TimeoutException) {
-                        return CompletableFuture.failedFuture(new TaskTimeoutException(duration));
-                    }
-                    return CompletableFuture.failedFuture(cause);
-                });
-
-        return new DefaultTaskChain<>(timed, scheduler, factory);
+        return new DefaultTaskChain<>(timed, scheduler, factory, repeatable);
     }
 
     @Override
     public TaskChain<T> retry(RetryPolicy retryPolicy) {
         Objects.requireNonNull(retryPolicy, "retryPolicy");
+        if (!repeatable) {
+            throw new IllegalStateException(
+                    "Retry requires a repeatable supplier; a chain created from an external CompletionStage cannot be retried");
+        }
 
-        CompletableFuture<T> retried =
-                future.exceptionallyCompose(throwable -> retry(unwrap(throwable), retryPolicy, 1));
+        CompletableFuture<T> retried = retryFuture(future, retryPolicy);
 
-        // Factory must recreate the full retried pipeline so nested retry / re-execution
-        // re-applies the same policy instead of only the pre-retry base future.
-        Supplier<CompletableFuture<T>> factory =
-                () -> futureFactory.get().exceptionallyCompose(throwable -> retry(unwrap(throwable), retryPolicy, 1));
+        Supplier<CompletableFuture<T>> factory = () -> retryFuture(futureFactory.get(), retryPolicy);
 
-        return new DefaultTaskChain<>(retried, scheduler, factory);
+        return new DefaultTaskChain<>(retried, scheduler, factory, true);
     }
 
     @Override
@@ -208,7 +205,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
                         scheduler.asyncExecutor())
                 .thenCompose(ignored -> futureFactory.get());
 
-        return new DefaultTaskChain<>(started, scheduler, factory);
+        return new DefaultTaskChain<>(started, scheduler, factory, repeatable);
     }
 
     @Override
@@ -245,7 +242,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
             consumer.accept(unwrap(throwable));
         });
 
-        return new DefaultTaskChain<>(handled, scheduler, futureFactory);
+        return new DefaultTaskChain<>(handled, scheduler, futureFactory, repeatable);
     }
 
     @Override
@@ -264,7 +261,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
         Supplier<CompletableFuture<U>> factory = () ->
                 futureFactory.get().thenCompose(value -> scheduler.supply(target, name, () -> function.apply(value)));
 
-        return new DefaultTaskChain<>(next, scheduler, factory);
+        return new DefaultTaskChain<>(next, scheduler, factory, repeatable);
     }
 
     private TaskChain<T> consumeTarget(ExecutionTarget target, String name, Consumer<T> consumer) {
@@ -282,32 +279,35 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
                     return value;
                 }));
 
-        return new DefaultTaskChain<>(next, scheduler, factory);
+        return new DefaultTaskChain<>(next, scheduler, factory, repeatable);
     }
 
-    private CompletableFuture<T> retry(Throwable throwable, RetryPolicy policy, int attempt) {
-        if (!policy.shouldRetry(attempt, throwable)) {
-            return CompletableFuture.failedFuture(throwable);
+    private static long validateTimeout(Duration duration) {
+        Objects.requireNonNull(duration, "duration");
+        if (!duration.isPositive()) {
+            throw new IllegalArgumentException("duration must be positive");
         }
+        try {
+            return duration.toNanos();
+        } catch (ArithmeticException overflow) {
+            throw new IllegalArgumentException("duration is too large", overflow);
+        }
+    }
 
-        Duration delay = policy.delayFor(attempt);
-        CompletableFuture<T> retryFuture = new CompletableFuture<>();
+    private CompletableFuture<T> withTimeout(CompletableFuture<T> source, Duration duration, long timeoutNanos) {
+        return source.copy().orTimeout(timeoutNanos, TimeUnit.NANOSECONDS).exceptionallyCompose(throwable -> {
+            Throwable cause = unwrap(throwable);
+            if (cause instanceof TimeoutException) {
+                return CompletableFuture.failedFuture(new TaskTimeoutException(duration));
+            }
+            return CompletableFuture.failedFuture(cause);
+        });
+    }
 
-        scheduler.asyncLater(
-                () -> {
-                    var _ = futureFactory.get().whenComplete((result, error) -> {
-                        if (error != null) {
-                            retryFuture.completeExceptionally(error);
-
-                            return;
-                        }
-
-                        retryFuture.complete(result);
-                    });
-                },
-                delay);
-
-        return retryFuture.exceptionallyCompose(nextThrowable -> retry(unwrap(nextThrowable), policy, attempt + 1));
+    private CompletableFuture<T> retryFuture(CompletableFuture<T> initial, RetryPolicy policy) {
+        var execution = new RetryExecution(policy);
+        execution.observe(initial, 1);
+        return execution.result;
     }
 
     private Throwable unwrap(Throwable throwable) {
@@ -317,5 +317,113 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
             current = current.getCause();
         }
         return current;
+    }
+
+    private final class RetryExecution {
+
+        private final RetryPolicy policy;
+        private final CompletableFuture<T> result = new CompletableFuture<>();
+        private final AtomicReference<SchedulerTask> scheduled = new AtomicReference<>();
+        private final AtomicReference<CompletableFuture<T>> active = new AtomicReference<>();
+
+        private RetryExecution(RetryPolicy policy) {
+            this.policy = policy;
+            var _ = result.whenComplete((_, _) -> {
+                if (!result.isCancelled()) {
+                    return;
+                }
+                SchedulerTask pending = scheduled.getAndSet(null);
+                if (pending != null) {
+                    pending.cancel();
+                }
+                CompletableFuture<T> running = active.getAndSet(null);
+                if (running != null) {
+                    running.cancel(true);
+                }
+            });
+        }
+
+        private void observe(CompletableFuture<T> attemptFuture, int nextRetryAttempt) {
+            Objects.requireNonNull(attemptFuture, "attemptFuture");
+            if (result.isDone()) {
+                attemptFuture.cancel(true);
+                return;
+            }
+
+            active.set(attemptFuture);
+            var _ = attemptFuture.whenComplete((value, error) -> {
+                active.compareAndSet(attemptFuture, null);
+                if (result.isDone()) {
+                    return;
+                }
+                if (error == null) {
+                    result.complete(value);
+                    return;
+                }
+
+                Throwable cause = unwrap(error);
+                if (cause instanceof CancellationException) {
+                    result.cancel(false);
+                    return;
+                }
+                scheduleRetry(cause, nextRetryAttempt);
+            });
+        }
+
+        private void scheduleRetry(Throwable failure, int retryAttempt) {
+            final boolean shouldRetry;
+            final Duration delay;
+            try {
+                shouldRetry = policy.shouldRetry(retryAttempt, failure);
+                if (!shouldRetry) {
+                    result.completeExceptionally(failure);
+                    return;
+                }
+                delay = Objects.requireNonNull(policy.delayFor(retryAttempt), "retry delay");
+                if (delay.isNegative()) {
+                    throw new IllegalArgumentException("retry delay must not be negative");
+                }
+            } catch (Throwable policyFailure) {
+                policyFailure.addSuppressed(failure);
+                result.completeExceptionally(policyFailure);
+                return;
+            }
+
+            var fired = new AtomicBoolean();
+            final SchedulerTask pending;
+            try {
+                pending = scheduler.asyncLater(
+                        "chain-retry-" + retryAttempt,
+                        () -> {
+                            fired.set(true);
+                            scheduled.set(null);
+                            startRetry(retryAttempt + 1);
+                        },
+                        delay);
+            } catch (Throwable schedulingFailure) {
+                schedulingFailure.addSuppressed(failure);
+                result.completeExceptionally(schedulingFailure);
+                return;
+            }
+
+            if (fired.get() || result.isDone() || !scheduled.compareAndSet(null, pending)) {
+                pending.cancel();
+                return;
+            }
+            if (fired.get()) {
+                scheduled.compareAndSet(pending, null);
+            }
+        }
+
+        private void startRetry(int nextRetryAttempt) {
+            if (result.isDone()) {
+                return;
+            }
+            try {
+                observe(Objects.requireNonNull(futureFactory.get(), "retry factory returned null"), nextRetryAttempt);
+            } catch (RuntimeException factoryFailure) {
+                scheduleRetry(unwrap(factoryFailure), nextRetryAttempt);
+            }
+        }
     }
 }

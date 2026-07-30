@@ -71,6 +71,12 @@ public interface PaperTaskScheduler extends AutoCloseable {
 
     SchedulerTask debounce(String name, Runnable runnable, Duration quietPeriod);
 
+    /**
+     * Persists and schedules a task with at-least-once crash-recovery semantics.
+     *
+     * <p>Explicit cancellation removes the persisted record asynchronously. Closing the scheduler
+     * only cancels the platform task and deliberately leaves the record pending for recovery.
+     */
     SchedulerTask persistAndRun(String name, Duration delay, byte[] payload, Consumer<byte[]> executor);
 
     CompletionStage<List<PersistentTask>> recoverPendingTasksAsync();
@@ -117,6 +123,12 @@ public interface PaperTaskScheduler extends AutoCloseable {
     TaskMetrics metrics();
 
     TaskExceptionHandler exceptionHandler();
+
+    /**
+     * Cancels owned tasks and closes scheduler resources without waiting on the calling thread.
+     * Concurrent calls return the same completion.
+     */
+    CompletionStage<Void> closeAsync();
 
     @Override
     void close();

@@ -100,4 +100,19 @@ class UserCacheTest {
         assertEquals(1, successCount);
         assertFalse(cache.contains(uniqueId));
     }
+
+    @Test
+    void oldSessionUpdateCannotOverwriteReconnectedSession() {
+        UUID uniqueId = UUID.randomUUID();
+        SimpleCotaniUser oldSession = SimpleCotaniUser.createNew(uniqueId, "Steve", 1L);
+        cache.put(oldSession);
+        SimpleCotaniUser newSession = oldSession.withNewSessionId();
+        cache.put(newSession);
+
+        Optional<SimpleCotaniUser> updated =
+                cache.updateIfSession(uniqueId, oldSession.sessionId(), user -> user.withLastQuitAt(2L));
+
+        assertTrue(updated.isEmpty());
+        assertEquals(newSession, cache.findInternal(uniqueId).orElseThrow());
+    }
 }

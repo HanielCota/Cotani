@@ -6,6 +6,8 @@ import com.cotani.cache.api.PlayerValueFactory;
 import com.cotani.cache.exception.CacheException;
 import com.cotani.cache.internal.caffeine.CaffeineDataCache;
 import com.cotani.cache.internal.caffeine.CaffeinePlayerDataCache;
+import com.cotani.cache.invalidation.CacheInvalidationBus;
+import com.cotani.cache.invalidation.NoopCacheInvalidationBus;
 import com.cotani.cache.listener.PlayerDataCacheListener;
 import com.cotani.cache.policy.CachePreset;
 import com.cotani.cache.policy.CacheSettings;
@@ -33,6 +35,8 @@ public final class PlayerDataCacheBuilder<V> {
             .recordStats(true);
     private @Nullable CacheRepository<UUID, V> repository;
     private @Nullable PlayerValueFactory<V> defaultValue;
+    private CacheInvalidationBus<UUID> invalidationBus = new NoopCacheInvalidationBus<>();
+    private int maximumConcurrentSaves = 16;
 
     public PlayerDataCacheBuilder(Class<V> valueType) {
         this.valueType = Objects.requireNonNull(valueType, "valueType");
@@ -121,6 +125,19 @@ public final class PlayerDataCacheBuilder<V> {
         return this;
     }
 
+    public PlayerDataCacheBuilder<V> invalidationBus(CacheInvalidationBus<UUID> invalidationBus) {
+        this.invalidationBus = Objects.requireNonNull(invalidationBus, "invalidationBus");
+        return this;
+    }
+
+    public PlayerDataCacheBuilder<V> maximumConcurrentSaves(int maximumConcurrentSaves) {
+        if (maximumConcurrentSaves <= 0) {
+            throw new IllegalArgumentException("maximumConcurrentSaves must be positive");
+        }
+        this.maximumConcurrentSaves = maximumConcurrentSaves;
+        return this;
+    }
+
     public PlayerDataCache<V> build(Plugin plugin, PaperTaskScheduler scheduler) {
         Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(scheduler, "scheduler");
@@ -139,7 +156,13 @@ public final class PlayerDataCacheBuilder<V> {
 
     private DataCache<UUID, V> createDataCache(
             CacheRepository<UUID, V> repository, PaperTaskScheduler scheduler, PlayerValueFactory<V> defaultValue) {
-        return new CaffeineDataCache<>(repository, defaultValue::create, scheduler, settingsBuilder.build());
+        return new CaffeineDataCache<>(
+                repository,
+                defaultValue::create,
+                scheduler,
+                settingsBuilder.build(),
+                maximumConcurrentSaves,
+                invalidationBus);
     }
 
     private void registerListener(Plugin plugin, PlayerDataCache<V> playerCache) {

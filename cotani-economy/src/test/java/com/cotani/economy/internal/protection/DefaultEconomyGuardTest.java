@@ -3,6 +3,7 @@ package com.cotani.economy.internal.protection;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.economy.EconomySettings;
+import com.cotani.economy.currency.CurrencyDefinition;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.currency.EconomyCurrency;
 import com.cotani.economy.exception.InvalidAmountException;
@@ -102,8 +103,9 @@ class DefaultEconomyGuardTest {
     @Test
     void normalizeAmountUsesCurrencySpecificScale() {
         var gems = new EconomyCurrency(CurrencyId.of("gems"), "Gems", "G", 0);
+        var tokens = new EconomyCurrency(CurrencyId.of("tokens"), "Tokens", "T", 4);
         var coins = EconomyCurrency.coins();
-        var settings = EconomySettings.defaultSettings(coins, java.util.List.of(gems));
+        var settings = EconomySettings.defaultSettings(coins, java.util.List.of(gems, tokens));
         var guard = new DefaultEconomyGuard(settings);
 
         var normalizedGems = guard.normalizeAmount(gems.id(), BigDecimal.TEN);
@@ -111,5 +113,59 @@ class DefaultEconomyGuardTest {
 
         assertThrows(InvalidAmountException.class, () -> guard.normalizeAmount(gems.id(), new BigDecimal("1.5")));
         assertDoesNotThrow(() -> guard.normalizeAmount(coins.id(), new BigDecimal("1.50")));
+        assertEquals(
+                4, guard.normalizeAmount(tokens.id(), new BigDecimal("1.2345")).scale());
+        assertEquals(0, settings.startingBalance(gems.id()).scale());
+        assertEquals(4, settings.startingBalance(tokens.id()).scale());
+    }
+
+    @Test
+    void currencyDefinitionsApplyIndependentLimitsAndDisabledState() {
+        var coins = EconomyCurrency.coins();
+        var gems = new EconomyCurrency(CurrencyId.of("gems"), "Gems", "G", 0);
+        var tokens = new EconomyCurrency(CurrencyId.of("tokens"), "Tokens", "T", 4);
+        var disabled = new EconomyCurrency(CurrencyId.of("legacy"), "Legacy", "L", 2);
+        var settings = new EconomySettings(
+                coins,
+                java.util.Map.of(coins.id(), coins, gems.id(), gems, tokens.id(), tokens, disabled.id(), disabled),
+                java.util.Map.of(
+                        gems.id(),
+                        new CurrencyDefinition(
+                                gems,
+                                BigDecimal.ZERO,
+                                new BigDecimal("100"),
+                                new BigDecimal("10"),
+                                BigDecimal.ONE,
+                                true),
+                        tokens.id(),
+                        new CurrencyDefinition(
+                                tokens,
+                                new BigDecimal("0.0000"),
+                                new BigDecimal("5.0000"),
+                                new BigDecimal("1.0000"),
+                                new BigDecimal("0.0001"),
+                                true),
+                        disabled.id(),
+                        new CurrencyDefinition(
+                                disabled,
+                                new BigDecimal("0.00"),
+                                new BigDecimal("10.00"),
+                                new BigDecimal("1.00"),
+                                new BigDecimal("0.01"),
+                                false)),
+                new BigDecimal("0.00"),
+                new BigDecimal("1000000.00"),
+                new BigDecimal("1000.00"),
+                new BigDecimal("1.00"),
+                30,
+                60);
+        var guard = new DefaultEconomyGuard(settings);
+
+        assertEquals(0, guard.normalizeAmount(gems.id(), BigDecimal.TEN).scale());
+        assertThrows(InvalidAmountException.class, () -> guard.normalizeAmount(gems.id(), new BigDecimal("11")));
+        assertEquals(
+                4, guard.normalizeAmount(tokens.id(), new BigDecimal("0.1234")).scale());
+        assertThrows(InvalidAmountException.class, () -> guard.normalizeAmount(tokens.id(), new BigDecimal("1.0001")));
+        assertThrows(IllegalArgumentException.class, () -> guard.validateCurrencyId(disabled.id()));
     }
 }

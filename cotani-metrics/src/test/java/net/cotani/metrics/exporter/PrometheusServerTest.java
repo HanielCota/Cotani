@@ -34,14 +34,13 @@ class PrometheusServerTest {
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         registry.counter("cotani.test.counter").increment(3);
 
-        int testPort = 19091;
-        try (PrometheusServer server = new PrometheusServer(registry, testPort, "/metrics")) {
+        try (PrometheusServer server = new PrometheusServer(registry, 0, "/metrics")) {
             server.start();
             assertTrue(server.isRunning());
 
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://localhost:" + testPort + "/metrics"))
+                    .uri(URI.create("http://127.0.0.1:" + server.port() + "/metrics"))
                     .GET()
                     .build();
 
@@ -51,6 +50,15 @@ class PrometheusServerTest {
             assertTrue(response.headers().firstValue("Content-Type").isPresent());
             assertTrue(response.headers().firstValue("Content-Type").get().contains("text/plain"));
             assertTrue(response.body().contains("cotani_test_counter"));
+
+            HttpRequest prefixedPath = HttpRequest.newBuilder()
+                    .uri(URI.create("http://127.0.0.1:" + server.port() + "/metrics/private"))
+                    .GET()
+                    .build();
+            assertEquals(
+                    404,
+                    client.send(prefixedPath, HttpResponse.BodyHandlers.discarding())
+                            .statusCode());
         }
     }
 }

@@ -6,6 +6,7 @@ import com.cotani.task.impl.executor.VirtualThreadExecutor;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
+@com.cotani.api.InternalApi
 public final class PlatformSchedulerFactory {
 
     private static final int DEFAULT_MAX_CONCURRENT = 256;

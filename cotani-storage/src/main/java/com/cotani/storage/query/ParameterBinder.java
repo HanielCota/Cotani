@@ -23,6 +23,10 @@ public final class ParameterBinder {
     }
 
     public ParameterBinder set(@Nullable Object value) throws SQLException {
+        if (value instanceof Instant instant) {
+            JdbcInstantCodec.bind(statement, index++, instant);
+            return this;
+        }
         var serialized = fastSerialize(value);
         statement.setObject(index++, serialized);
         return this;
@@ -34,9 +38,6 @@ public final class ParameterBinder {
         }
         if (value instanceof UUID uuid) {
             return uuid.toString();
-        }
-        if (value instanceof Instant instant) {
-            return instant.toString();
         }
         if (value instanceof Duration duration) {
             return duration.toMillis();
@@ -72,7 +73,7 @@ public final class ParameterBinder {
 
     public ParameterBinder instant(Instant value) throws SQLException {
         Objects.requireNonNull(value, VALUE_PARAM);
-        statement.setString(index, value.toString());
+        JdbcInstantCodec.bind(statement, index, value);
         index++;
         return this;
     }

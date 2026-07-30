@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.TaskMetadata;
 import com.cotani.task.impl.executor.VirtualThreadExecutor;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -82,5 +84,35 @@ class VirtualThreadExecutorTest {
         assertTrue(Thread.currentThread().getName().contains(originalName));
 
         executor.close();
+    }
+
+    @Test
+    void saturationRejectsWithoutBlockingOrRunningOnCaller() throws InterruptedException {
+        VirtualThreadExecutor executor = new VirtualThreadExecutor(1, true);
+        var started = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        try {
+            var running = executor.submit(METADATA, () -> {
+                started.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            assertFalse(running.isDone());
+
+            var queued = new ArrayList<java.util.concurrent.Future<Void>>(4_096);
+            for (int index = 0; index < 4_096; index++) {
+                queued.add(executor.submit(METADATA, () -> {}));
+            }
+            assertEquals(4_096, queued.size());
+
+            assertThrows(RejectedExecutionException.class, () -> executor.submit(METADATA, () -> {}));
+        } finally {
+            release.countDown();
+            executor.close();
+        }
     }
 }

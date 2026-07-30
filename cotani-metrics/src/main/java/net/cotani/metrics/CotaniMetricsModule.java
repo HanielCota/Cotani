@@ -1,6 +1,7 @@
 package net.cotani.metrics;
 
 import java.util.Objects;
+import java.util.Optional;
 import net.cotani.metrics.api.MetricsRegistry;
 import net.cotani.metrics.api.NoOpMetricsRegistry;
 import net.cotani.metrics.config.MetricsConfig;
@@ -40,7 +41,8 @@ public final class CotaniMetricsModule implements AutoCloseable {
 
         var prometheus = cotaniRegistry.prometheusRegistry();
         if (prometheus.isPresent()) {
-            PrometheusServer pServer = new PrometheusServer(prometheus.get(), config.port(), config.path());
+            PrometheusServer pServer =
+                    new PrometheusServer(prometheus.get(), config.host(), config.port(), config.path());
             try {
                 pServer.start();
                 server = pServer;
@@ -66,8 +68,8 @@ public final class CotaniMetricsModule implements AutoCloseable {
         return config.enabled();
     }
 
-    public @Nullable PrometheusServer prometheusServer() {
-        return prometheusServer;
+    public Optional<PrometheusServer> prometheusServer() {
+        return Optional.ofNullable(prometheusServer);
     }
 
     @Override

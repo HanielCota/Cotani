@@ -5,7 +5,6 @@ import com.cotani.economy.EconomyService;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.api.EconomyModule;
 import com.cotani.economy.event.EconomyEventPublisher;
-import com.cotani.economy.internal.cache.CachedEconomyService;
 import com.cotani.economy.internal.config.EconomyConfiguration;
 import com.cotani.economy.internal.event.BukkitEconomyEventPublisher;
 import com.cotani.economy.internal.event.MainThreadEconomyEventPublisher;
@@ -20,6 +19,7 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings("resource")
+@com.cotani.api.InternalApi
 public final class DefaultEconomyModule implements EconomyModule {
 
     private final EconomyService service;
@@ -51,12 +51,10 @@ public final class DefaultEconomyModule implements EconomyModule {
 
         DefaultEconomyService coreService =
                 new DefaultEconomyService(settings, guard, store, store, mainThreadPublisher);
-        CachedEconomyService cachedService = new CachedEconomyService(coreService, scheduler.asyncExecutor(), settings);
-
         Cotani cotani = resolveCotani(context.cotani(), plugin);
-        cotani.register(cachedService);
+        cotani.register(configuration);
 
-        return new DefaultEconomyModule(cachedService, cotani, context.cotani() == null);
+        return new DefaultEconomyModule(coreService, cotani, context.cotani() == null);
     }
 
     private static Cotani resolveCotani(@Nullable Cotani cotani, Plugin plugin) {

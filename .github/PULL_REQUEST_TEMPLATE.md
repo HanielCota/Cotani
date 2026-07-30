@@ -12,7 +12,7 @@
 
 ## Checklist
 
-- [ ] I have read the project's [AGENTS.md](file:///D:/Cotani/AGENTS.md) and coding standards.
+- [ ] I have read the project's [AGENTS.md](../AGENTS.md) and coding standards.
 - [ ] I have verified that `./gradlew check` passes locally without errors or warnings.
 - [ ] I have applied spotless formatting using `./gradlew spotlessApply`.
 - [ ] My changes follow the non-blocking async rules (no `.join()`, `.get()`, or `Thread.sleep()`).

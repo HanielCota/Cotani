@@ -16,6 +16,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
 
     private static final Logger LOGGER = Logger.getLogger(FilePersistentTaskStore.class.getName());
     private static final String EXTENSION = ".task";
+    private static final long MAX_FILE_BYTES = (PersistentTask.MAX_PAYLOAD_BYTES * 4L / 3L) + 1_024L;
 
     private final Path directory;
 
@@ -47,11 +48,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
 
         try {
             Files.writeString(tempFile, content, StandardCharsets.UTF_8);
-            try {
-                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (IOException atomicMoveFailed) {
-                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING);
-            }
+            moveReplacing(tempFile, file);
         } catch (IOException exception) {
             try {
                 Files.deleteIfExists(tempFile);
@@ -59,6 +56,14 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
                 // Ignore cleanup failure
             }
             throw new IllegalStateException("Failed to save persistent task: " + task.id(), exception);
+        }
+    }
+
+    private static void moveReplacing(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException atomicMoveFailed) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
@@ -102,6 +107,9 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
 
     private Optional<PersistentTask> parse(Path file) {
         try {
+            if (Files.size(file) > MAX_FILE_BYTES) {
+                return Optional.empty();
+            }
             List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
 
             if (lines.size() < 5) {

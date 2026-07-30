@@ -27,18 +27,21 @@ public record PluginSettings(
 ### Load and bind
 
 ```java
-CotaniConfigs configs = CotaniConfigs.create(plugin)
+CotaniConfigs.create(plugin, scheduler)
     .file("config.yml")
-    .load();
-
-PluginSettings settings = configs.file("config.yml").bindOrThrow(PluginSettings.class);
+    .loadAsync()
+    .thenAccept(configs ->
+        this.settings = configs.file("config.yml").bindOrThrow(PluginSettings.class));
 ```
 
 ### Async reload
 
 ```java
 configs.reloadAsync()
-    .thenRun(() -> this.settings = configs.file("config.yml").bindOrThrow(PluginSettings.class))
+    .thenGlobal(_ -> {
+        this.settings = configs.file("config.yml").bindOrThrow(PluginSettings.class);
+        return null;
+    })
     .toCompletionStage();
 ```
 

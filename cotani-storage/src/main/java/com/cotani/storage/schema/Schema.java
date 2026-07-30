@@ -3,6 +3,7 @@ package com.cotani.storage.schema;
 import com.cotani.storage.dialect.SqlDialect;
 import com.cotani.storage.executor.QueryExecutor;
 import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 
 public final class Schema {
 
@@ -20,5 +21,11 @@ public final class Schema {
 
     public SqlDialect dialect() {
         return dialect;
+    }
+
+    /** Executes migration DDL that is not expressible by {@link TableSchema}. */
+    public CompletionStage<Void> execute(String sql) {
+        Objects.requireNonNull(sql, "sql");
+        return executor.update(sql, _ -> {});
     }
 }

@@ -5,6 +5,10 @@ import com.cotani.storage.error.ConnectionError;
 import com.cotani.storage.error.StorageException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.OpenOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.*;
 import java.util.Map;
 import java.util.Objects;
@@ -30,16 +34,39 @@ public final class SQLiteStorageProvider implements StorageProvider {
         if (connection.get() != null) {
             return;
         }
+        final BasicFileAttributes beforeOpen;
         try {
-            var parent = credentials.path().getParent();
+            var verifiedPath = com.cotani.storage.security.Paths.requireNoSymbolicLinks(credentials.path());
+            var parent = verifiedPath.getParent();
             if (parent != null) {
                 Files.createDirectories(parent);
             }
+            com.cotani.storage.security.Paths.requireNoSymbolicLinks(verifiedPath);
+            if (!Files.exists(verifiedPath, LinkOption.NOFOLLOW_LINKS)) {
+                try (var _ = Files.newByteChannel(
+                        verifiedPath,
+                        java.util.Set.<OpenOption>of(
+                                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS))) {
+                    // Create the final path without following a link before JDBC opens it.
+                }
+            }
+            beforeOpen = Files.readAttributes(verifiedPath, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            if (!beforeOpen.isRegularFile()) {
+                throw new IOException("SQLite path is not a regular file: " + verifiedPath);
+            }
         } catch (IOException exception) {
-            throw new StorageException(new ConnectionError("Could not create SQLite directory.", exception));
+            throw new StorageException(new ConnectionError("Could not securely prepare SQLite path.", exception));
+        } catch (IllegalArgumentException invalidPath) {
+            throw new StorageException(new ConnectionError("SQLite path contains a symbolic link.", invalidPath));
         }
+        @Nullable Connection opened = null;
         try {
-            Connection opened = DriverManager.getConnection(configuredJdbcUrl());
+            opened = DriverManager.getConnection(configuredJdbcUrl());
+            var verifiedPath = com.cotani.storage.security.Paths.requireNoSymbolicLinks(credentials.path());
+            var afterOpen = Files.readAttributes(verifiedPath, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            if (!Objects.equals(beforeOpen.fileKey(), afterOpen.fileKey())) {
+                throw new StorageException(new ConnectionError("SQLite path changed while it was being opened.", null));
+            }
             try (Statement statement = opened.createStatement()) {
                 statement.execute(PRAGMA_JOURNAL_MODE);
             }
@@ -50,7 +77,11 @@ public final class SQLiteStorageProvider implements StorageProvider {
             }
 
             realConnection.set(opened);
-        } catch (SQLException exception) {
+        } catch (StorageException failure) {
+            closeQuietly(opened);
+            throw failure;
+        } catch (SQLException | IOException | IllegalArgumentException exception) {
+            closeQuietly(opened);
             throw new StorageException(new ConnectionError("Could not open SQLite connection.", exception));
         }
     }

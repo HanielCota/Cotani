@@ -16,6 +16,11 @@ import java.util.function.UnaryOperator;
  *
  * <p>Keys and values must not be {@code null}.
  *
+ * <p>Without a configured {@code CacheInvalidationBus}, consistency is local and eventual. With a
+ * shared bus, clean entries are invalidated after successful writes. Every out-of-process writer
+ * must participate in that protocol; dirty local entries are deliberately retained to avoid data
+ * loss.
+ *
  * @param <K> the key type
  * @param <V> the value type
  */
@@ -38,10 +43,20 @@ public interface DataCache<K, V> extends AutoCloseable {
      */
     CompletionStage<V> getOrLoad(K key);
 
+    /** Async-suffixed alias for {@link #getOrLoad(Object)}. */
+    default CompletionStage<V> getOrLoadAsync(K key) {
+        return getOrLoad(key);
+    }
+
     /**
      * Invalidates and reloads the entry from the repository.
      */
     CompletionStage<V> load(K key);
+
+    /** Async-suffixed alias for {@link #load(Object)}. */
+    default CompletionStage<V> loadAsync(K key) {
+        return load(key);
+    }
 
     /**
      * Atomically updates the entry using the provided function.
@@ -50,12 +65,22 @@ public interface DataCache<K, V> extends AutoCloseable {
      */
     CompletionStage<V> update(K key, UnaryOperator<V> updater);
 
+    /** Async-suffixed alias for {@link #update(Object, UnaryOperator)}. */
+    default CompletionStage<V> updateAsync(K key, UnaryOperator<V> updater) {
+        return update(key, updater);
+    }
+
     /**
      * Mutates the entry in-place.
      *
      * @return the mutated value
      */
     CompletionStage<V> mutate(K key, Consumer<V> mutator);
+
+    /** Async-suffixed alias for {@link #mutate(Object, Consumer)}. */
+    default CompletionStage<V> mutateAsync(K key, Consumer<V> mutator) {
+        return mutate(key, mutator);
+    }
 
     /**
      * Puts a value into the cache, replacing any existing entry.
@@ -67,15 +92,30 @@ public interface DataCache<K, V> extends AutoCloseable {
      */
     CompletionStage<Void> save(K key);
 
+    /** Async-suffixed alias for {@link #save(Object)}. */
+    default CompletionStage<Void> saveAsync(K key) {
+        return save(key);
+    }
+
     /**
      * Saves all dirty entries.
      */
     CompletionStage<Void> saveDirty();
 
+    /** Async-suffixed alias for {@link #saveDirty()}. */
+    default CompletionStage<Void> saveDirtyAsync() {
+        return saveDirty();
+    }
+
     /**
      * Saves all cached entries.
      */
     CompletionStage<Void> saveAll();
+
+    /** Async-suffixed alias for {@link #saveAll()}. */
+    default CompletionStage<Void> saveAllAsync() {
+        return saveAll();
+    }
 
     /**
      * Removes the entry from the cache without persisting.

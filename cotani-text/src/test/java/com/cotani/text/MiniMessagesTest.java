@@ -2,6 +2,7 @@ package com.cotani.text;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -9,6 +10,18 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.junit.jupiter.api.Test;
 
 class MiniMessagesTest {
+
+    @Test
+    void literalDoesNotInterpretUntrustedTags() {
+        assertEquals(
+                Component.text("<click:run_command:'/op me'>text"),
+                MiniMessages.literal("<click:run_command:'/op me'>text"));
+    }
+
+    @Test
+    void rejectsOversizedTemplatesBeforeParsingOrCaching() {
+        assertThrows(IllegalArgumentException.class, () -> MiniMessages.parse("x".repeat(32_769)));
+    }
 
     @Test
     void parsesSimpleMiniMessage() {

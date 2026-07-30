@@ -5,12 +5,14 @@ import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
+import com.cotani.economy.internal.EconomyOperationFingerprint;
 import com.cotani.economy.internal.repository.EconomyAccountRepository;
 import com.cotani.economy.internal.repository.EconomyTransferRepository;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import com.cotani.storage.api.CotaniStorage;
+import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.query.Row;
 import com.cotani.storage.transaction.TransactionContext;
 import java.math.BigDecimal;
@@ -32,6 +34,7 @@ import java.util.function.Function;
  * {@link EconomyOperationId} returns the previously committed transaction without mutating balances
  * again.
  */
+@com.cotani.api.InternalApi
 public final class SqlEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
 
     private static final String USER_ID_PARAM = "userId";
@@ -39,6 +42,15 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     private static final String AMOUNT_PARAM = "amount";
     private static final String REASON_PARAM = "reason";
     private static final String OPERATION_ID_PARAM = "operationId";
+    private static final String USER_ID_COLUMN = "user_id";
+    private static final String CURRENCY_ID_COLUMN = "currency_id";
+    private static final String BALANCE_COLUMN = "balance";
+    private static final String CREATED_AT_COLUMN = "created_at";
+    private static final String UPDATED_AT_COLUMN = "updated_at";
+    private static final List<String> ACCOUNT_COLUMNS =
+            List.of(USER_ID_COLUMN, CURRENCY_ID_COLUMN, BALANCE_COLUMN, CREATED_AT_COLUMN, UPDATED_AT_COLUMN);
+    private static final List<String> ACCOUNT_KEY_COLUMNS = List.of(USER_ID_COLUMN, CURRENCY_ID_COLUMN);
+    private static final List<String> ACCOUNT_UPDATE_COLUMNS = List.of(BALANCE_COLUMN, UPDATED_AT_COLUMN);
 
     private final CotaniStorage storage;
     private final Clock clock;
@@ -78,6 +90,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Instant now = clock.instant();
         return runIdempotent(
                 operationId,
+                EconomyOperationFingerprint.deposit(userId, currencyId, amount, reason),
                 tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.deposit(amount, now);
                     ensureMaximumBalance(updated);
@@ -105,6 +118,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Instant now = clock.instant();
         return runIdempotent(
                 operationId,
+                EconomyOperationFingerprint.withdraw(userId, currencyId, amount, reason),
                 tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.withdraw(amount, now);
                     EconomyTransaction transaction = EconomyTransaction.withdraw(
@@ -131,6 +145,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Instant now = clock.instant();
         return runIdempotent(
                 operationId,
+                EconomyOperationFingerprint.set(userId, currencyId, amount, reason),
                 tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.setBalance(amount, now);
                     ensureMaximumBalance(updated);
@@ -163,6 +178,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Instant now = clock.instant();
         return runIdempotent(
                 operationId,
+                EconomyOperationFingerprint.transfer(sourceUserId, targetUserId, currencyId, amount, reason),
                 tx -> getOrCreateLocked(tx, firstId, currencyId)
                         .thenCompose(firstAccount -> getOrCreateLocked(tx, secondId, currencyId)
                                 .thenCompose(secondAccount -> {
@@ -195,11 +211,12 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
 
     private CompletionStage<EconomyTransaction> runIdempotent(
             EconomyOperationId operationId,
+            EconomyOperationFingerprint fingerprint,
             Function<TransactionContext, CompletionStage<EconomyTransaction>> mutation) {
         return storage.transactions()
                 .run(tx -> findTransactionByOperationId(tx, operationId).thenCompose(existing -> {
                     if (existing.isPresent()) {
-                        return CompletableFuture.completedStage(existing.get());
+                        return CompletableFuture.completedStage(fingerprint.requireMatch(operationId, existing.get()));
                     }
                     return mutation.apply(tx);
                 }))
@@ -209,7 +226,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                         return CompletableFuture.failedFuture(error);
                     }
                     return findTransactionByOperationIdAsync(operationId)
-                            .thenCompose(found -> found.map(CompletableFuture::completedStage)
+                            .thenCompose(found -> found.map(existing -> CompletableFuture.completedStage(
+                                            fingerprint.requireMatch(operationId, existing)))
                                     .orElseGet(() -> CompletableFuture.failedFuture(
                                             error instanceof DuplicateEconomyOperationException
                                                     ? error
@@ -243,8 +261,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                 .thenCompose(found -> found.map(CompletableFuture::completedStage)
                         .orElseGet(() -> {
                             Instant now = clock.instant();
-                            EconomyAccount created =
-                                    EconomyAccount.create(userId, currencyId, settings.startingBalance(), now);
+                            EconomyAccount created = EconomyAccount.create(
+                                    userId, currencyId, settings.startingBalance(currencyId), now);
                             return insertAccountDoNothing(tx, created)
                                     .thenCompose(_ -> findLocked(tx, userId, currencyId))
                                     .thenApply(reloaded -> reloaded.orElse(created));
@@ -269,35 +287,27 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     }
 
     private CompletionStage<Void> insertAccountDoNothing(TransactionContext tx, EconomyAccount account) {
-        String sql = storage.dialect()
-                .upsert(
-                        "cotani_economy_accounts",
-                        List.of("user_id", "currency_id", "balance", "created_at", "updated_at"),
-                        List.of("user_id", "currency_id"),
-                        List.of());
+        String sql =
+                storage.dialect().upsert("cotani_economy_accounts", ACCOUNT_COLUMNS, ACCOUNT_KEY_COLUMNS, List.of());
         return tx.update(sql, binder -> {
-            binder.set(account.userId());
-            binder.set(account.currencyId().value());
-            binder.set(account.balance().toPlainString());
-            binder.set(account.createdAt().toString());
-            binder.set(account.updatedAt().toString());
+            bindAccount(binder, account);
         });
     }
 
     private CompletionStage<Void> insertAccount(TransactionContext tx, EconomyAccount account) {
         String sql = storage.dialect()
-                .upsert(
-                        "cotani_economy_accounts",
-                        List.of("user_id", "currency_id", "balance", "created_at", "updated_at"),
-                        List.of("user_id", "currency_id"),
-                        List.of("balance", "updated_at"));
+                .upsert("cotani_economy_accounts", ACCOUNT_COLUMNS, ACCOUNT_KEY_COLUMNS, ACCOUNT_UPDATE_COLUMNS);
         return tx.update(sql, binder -> {
-            binder.set(account.userId());
-            binder.set(account.currencyId().value());
-            binder.set(account.balance().toPlainString());
-            binder.set(account.createdAt().toString());
-            binder.set(account.updatedAt().toString());
+            bindAccount(binder, account);
         });
+    }
+
+    static void bindAccount(ParameterBinder binder, EconomyAccount account) throws SQLException {
+        binder.set(account.userId());
+        binder.set(account.currencyId().value());
+        binder.set(account.balance().toPlainString());
+        binder.set(account.createdAt());
+        binder.set(account.updatedAt());
     }
 
     private CompletionStage<Void> upsertAccount(TransactionContext tx, EconomyAccount account) {
@@ -309,8 +319,9 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     }
 
     private void ensureMaximumBalance(EconomyAccount account) {
-        if (account.balance().compareTo(settings.maximumBalance()) > 0) {
-            throw new MaximumBalanceExceededException(account.userId(), account.balance(), settings.maximumBalance());
+        var maximumBalance = settings.maximumBalance(account.currencyId());
+        if (account.balance().compareTo(maximumBalance) > 0) {
+            throw new MaximumBalanceExceededException(account.userId(), account.balance(), maximumBalance);
         }
     }
 

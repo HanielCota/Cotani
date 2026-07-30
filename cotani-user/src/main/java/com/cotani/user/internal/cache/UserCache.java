@@ -5,6 +5,8 @@ import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 
 /**
  * In-memory cache for loaded users.
@@ -15,9 +17,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>The cache uses a bounded map that evicts the least-recently-used entry when the maximum size is
  * exceeded, preventing unbounded growth on long-running servers.
  */
+@com.cotani.api.InternalApi
 public final class UserCache {
 
     private static final int DEFAULT_MAX_CACHED_USERS = 10_000;
+    private static final String UNIQUE_ID_PARAM = "uniqueId";
 
     private final int maxCachedUsers;
     private final Map<UUID, SimpleCotaniUser> users;
@@ -35,12 +39,12 @@ public final class UserCache {
     }
 
     public Optional<SimpleCotaniUser> findInternal(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return Optional.ofNullable(users.get(uniqueId));
     }
 
     public Optional<CotaniUser> find(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return Optional.ofNullable(users.get(uniqueId)).map(CotaniUser.class::cast);
     }
 
@@ -51,7 +55,7 @@ public final class UserCache {
     }
 
     public boolean remove(UUID uniqueId, UUID expectedSessionId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(expectedSessionId, "expectedSessionId");
         boolean[] removed = new boolean[1];
         users.computeIfPresent(uniqueId, (id, current) -> {
@@ -64,12 +68,29 @@ public final class UserCache {
         return removed[0];
     }
 
+    public Optional<SimpleCotaniUser> updateIfSession(
+            UUID uniqueId, UUID expectedSessionId, UnaryOperator<SimpleCotaniUser> updater) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+        Objects.requireNonNull(expectedSessionId, "expectedSessionId");
+        Objects.requireNonNull(updater, "updater");
+        var result = new AtomicReference<>(Optional.<SimpleCotaniUser>empty());
+        users.computeIfPresent(uniqueId, (_, current) -> {
+            if (!current.sessionId().equals(expectedSessionId)) {
+                return current;
+            }
+            SimpleCotaniUser updated = Objects.requireNonNull(updater.apply(current), "updated");
+            result.set(Optional.of(updated));
+            return updated;
+        });
+        return Objects.requireNonNull(result.get());
+    }
+
     public void clear() {
         users.clear();
     }
 
     public boolean contains(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return users.containsKey(uniqueId);
     }
 

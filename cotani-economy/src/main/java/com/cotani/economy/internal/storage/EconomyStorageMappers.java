@@ -5,13 +5,13 @@ import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.transaction.*;
 import com.cotani.storage.error.StorageException;
+import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.query.Row;
 import com.cotani.storage.transaction.TransactionContext;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -49,7 +49,7 @@ final class EconomyStorageMappers {
         EconomyReason reason = new EconomyReason(
                 requireString(row, "reason_key"),
                 requireString(row, "reason_source"),
-                row.getUuid("reason_actor_user_id"));
+                row.getUuidOptional("reason_actor_user_id").orElse(null));
         Instant createdAt = requireInstant(row, CREATED_AT);
 
         return switch (type) {
@@ -113,30 +113,31 @@ final class EconomyStorageMappers {
                     reason_key, reason_source, reason_actor_user_id, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        return tx.update(sql, binder -> {
-                    binder.set(transaction.id().value());
-                    binder.set(transaction.operationId().value());
-                    binder.set(transaction.type().name());
-                    binder.set(transaction.sourceUserId());
-                    binder.set(transaction.targetUserId());
-                    binder.set(transaction.currencyId().value());
-                    binder.set(transaction.amount().toPlainString());
-                    binder.set(plainString(transaction.sourceBalanceBefore()));
-                    binder.set(plainString(transaction.sourceBalanceAfter()));
-                    binder.set(plainString(transaction.targetBalanceBefore()));
-                    binder.set(plainString(transaction.targetBalanceAfter()));
-                    binder.set(transaction.reason().key());
-                    binder.set(transaction.reason().source());
-                    binder.set(transaction.reason().actorUserId());
-                    binder.set(transaction.createdAt().toString());
-                })
-                .exceptionallyCompose(error -> {
-                    if (isUniqueViolation(error)) {
-                        return CompletableFuture.failedFuture(
-                                new DuplicateEconomyOperationException(transaction.operationId()));
-                    }
-                    return CompletableFuture.failedFuture(error);
-                });
+        return tx.update(sql, binder -> bindTransaction(binder, transaction)).exceptionallyCompose(error -> {
+            if (isUniqueViolation(error)) {
+                return CompletableFuture.failedFuture(
+                        new DuplicateEconomyOperationException(transaction.operationId()));
+            }
+            return CompletableFuture.failedFuture(error);
+        });
+    }
+
+    static void bindTransaction(ParameterBinder binder, EconomyTransaction transaction) throws SQLException {
+        binder.set(transaction.id().value());
+        binder.set(transaction.operationId().value());
+        binder.set(transaction.type().name());
+        binder.set(transaction.sourceUserId());
+        binder.set(transaction.targetUserId());
+        binder.set(transaction.currencyId().value());
+        binder.set(transaction.amount().toPlainString());
+        binder.set(plainString(transaction.sourceBalanceBefore()));
+        binder.set(plainString(transaction.sourceBalanceAfter()));
+        binder.set(plainString(transaction.targetBalanceBefore()));
+        binder.set(plainString(transaction.targetBalanceAfter()));
+        binder.set(transaction.reason().key());
+        binder.set(transaction.reason().source());
+        binder.set(transaction.reason().actorUserId());
+        binder.set(transaction.createdAt());
     }
 
     static boolean isUniqueViolation(Throwable error) {
@@ -189,19 +190,20 @@ final class EconomyStorageMappers {
     }
 
     private static String requireString(Row row, String column) throws SQLException {
-        return Objects.requireNonNull(row.getString(column), column);
+        return row.getString(column);
     }
 
     private static UUID requireUuid(Row row, String column) throws SQLException {
-        return Objects.requireNonNull(row.getUuid(column), column);
+        return row.getUuidOptional(column)
+                .orElseThrow(() -> new IllegalStateException("Column is SQL NULL: " + column));
     }
 
     private static Instant requireInstant(Row row, String column) throws SQLException {
-        return Objects.requireNonNull(row.getInstant(column), column);
+        return row.getInstantOptional(column)
+                .orElseThrow(() -> new IllegalStateException("Column is SQL NULL: " + column));
     }
 
     private static BigDecimal requireBigDecimal(Row row, String column) throws SQLException {
-        String raw = Objects.requireNonNull(row.getString(column), column);
-        return new BigDecimal(raw);
+        return new BigDecimal(row.getString(column));
     }
 }

@@ -6,6 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.api.RetryPolicy;
+import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskChain;
 import com.cotani.task.exception.TaskTimeoutException;
 import com.cotani.task.impl.chain.DefaultTaskChain;
@@ -15,6 +17,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -123,6 +126,80 @@ class DefaultTaskChainTest {
                         .get());
 
         assertSame(cause, exception.getCause());
+    }
+
+    @Test
+    void timeoutDoesNotCompleteSharedSource() throws Exception {
+        CompletableFuture<String> source = new CompletableFuture<>();
+        DefaultTaskChain<String> chain = new DefaultTaskChain<>(source, scheduler);
+
+        assertThrows(
+                ExecutionException.class,
+                () -> chain.timeout(Duration.ofMillis(10))
+                        .toCompletionStage()
+                        .toCompletableFuture()
+                        .get());
+
+        assertFalse(source.isDone());
+        source.complete("late-success");
+        assertEquals("late-success", source.get());
+    }
+
+    @Test
+    void timeoutRejectsNonPositiveAndExcessiveDurations() {
+        DefaultTaskChain<String> chain = new DefaultTaskChain<>(new CompletableFuture<>(), scheduler);
+
+        assertThrows(IllegalArgumentException.class, () -> chain.timeout(Duration.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> chain.timeout(Duration.ofSeconds(-1)));
+        assertThrows(IllegalArgumentException.class, () -> chain.timeout(Duration.ofSeconds(Long.MAX_VALUE)));
+    }
+
+    @Test
+    void retryReexecutesRepeatableSupplierExactNumberOfTimes() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        Supplier<CompletableFuture<String>> factory = () -> {
+            int attempt = attempts.incrementAndGet();
+            return attempt < 3
+                    ? CompletableFuture.failedFuture(new IllegalStateException("attempt-" + attempt))
+                    : CompletableFuture.completedFuture("ok");
+        };
+        when(scheduler.asyncLater(any(String.class), any(Runnable.class), any(Duration.class)))
+                .thenAnswer(invocation -> {
+                    invocation.<Runnable>getArgument(1).run();
+                    return SchedulerTask.noop();
+                });
+
+        DefaultTaskChain<String> chain = new DefaultTaskChain<>(factory.get(), scheduler, factory);
+        String result = chain.retry(RetryPolicy.fixed(3, Duration.ZERO))
+                .toCompletionStage()
+                .toCompletableFuture()
+                .get();
+
+        assertEquals("ok", result);
+        assertEquals(3, attempts.get());
+    }
+
+    @Test
+    void retryRejectsExternalNonRepeatableStage() {
+        DefaultTaskChain<String> chain =
+                new DefaultTaskChain<>(CompletableFuture.failedFuture(new IllegalStateException("boom")), scheduler);
+
+        assertThrows(IllegalStateException.class, () -> chain.retry(RetryPolicy.fixed(3, Duration.ZERO)));
+    }
+
+    @Test
+    void cancellingRetryCancelsScheduledAttempt() {
+        SchedulerTask pending = mock(SchedulerTask.class);
+        when(scheduler.asyncLater(any(String.class), any(Runnable.class), any(Duration.class)))
+                .thenReturn(pending);
+        Supplier<CompletableFuture<String>> factory =
+                () -> CompletableFuture.failedFuture(new IllegalStateException("boom"));
+        DefaultTaskChain<String> chain = new DefaultTaskChain<>(factory.get(), scheduler, factory);
+
+        TaskChain<String> retried = chain.retry(RetryPolicy.fixed(3, Duration.ofSeconds(1)));
+        retried.cancel();
+
+        org.mockito.Mockito.verify(pending).cancel();
     }
 
     @Test

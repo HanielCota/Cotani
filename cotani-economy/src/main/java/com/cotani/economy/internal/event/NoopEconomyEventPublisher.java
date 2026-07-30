@@ -4,6 +4,7 @@ import com.cotani.economy.event.EconomyEventPublisher;
 import com.cotani.economy.event.EconomyTransactionEvent;
 import java.util.Objects;
 
+@com.cotani.api.InternalApi
 public final class NoopEconomyEventPublisher implements EconomyEventPublisher {
 
     @Override

@@ -16,6 +16,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 
+@com.cotani.api.InternalApi
 public final class UserListener implements Listener {
 
     private final Plugin plugin;

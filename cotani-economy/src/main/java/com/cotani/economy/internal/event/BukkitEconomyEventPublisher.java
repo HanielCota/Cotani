@@ -18,6 +18,7 @@ import org.bukkit.event.HandlerList;
  * <p><b>API Note:</b> Always publish from the main thread. If you are on an async thread, hand the event back to the
  * main thread (for example via {@code PaperTaskScheduler#global}) before calling {@code publish}.
  */
+@com.cotani.api.InternalApi
 public final class BukkitEconomyEventPublisher implements EconomyEventPublisher {
 
     private BukkitEconomyEventPublisher() {}

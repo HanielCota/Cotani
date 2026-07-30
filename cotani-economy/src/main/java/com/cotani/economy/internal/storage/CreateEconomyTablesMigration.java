@@ -5,7 +5,10 @@ import com.cotani.storage.schema.ColumnType;
 import com.cotani.storage.schema.Schema;
 import java.util.concurrent.CompletionStage;
 
+@com.cotani.api.InternalApi
 public final class CreateEconomyTablesMigration implements Migration {
+
+    private static final String CURRENCY_ID_COLUMN = "currency_id";
 
     @Override
     public int version() {
@@ -21,11 +24,11 @@ public final class CreateEconomyTablesMigration implements Migration {
     public CompletionStage<Void> migrate(Schema schema) {
         return schema.table("cotani_economy_accounts")
                 .required("user_id", ColumnType.UUID)
-                .required("currency_id", ColumnType.STRING)
+                .required(CURRENCY_ID_COLUMN, ColumnType.STRING)
                 .required("balance", ColumnType.STRING)
                 .required("created_at", ColumnType.TIMESTAMP)
                 .required("updated_at", ColumnType.TIMESTAMP)
-                .primaryKey("user_id", "currency_id")
+                .primaryKey("user_id", CURRENCY_ID_COLUMN)
                 .createIfNotExists()
                 .thenCompose(_ -> schema.table("cotani_economy_transactions")
                         .id("transaction_id", ColumnType.UUID)
@@ -33,7 +36,7 @@ public final class CreateEconomyTablesMigration implements Migration {
                         .required("type", ColumnType.STRING)
                         .column("source_user_id", ColumnType.UUID)
                         .column("target_user_id", ColumnType.UUID)
-                        .required("currency_id", ColumnType.STRING)
+                        .required(CURRENCY_ID_COLUMN, ColumnType.STRING)
                         .required("amount", ColumnType.STRING)
                         .column("source_balance_before", ColumnType.STRING)
                         .column("source_balance_after", ColumnType.STRING)

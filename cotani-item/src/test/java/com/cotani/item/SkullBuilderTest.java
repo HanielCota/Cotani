@@ -22,6 +22,7 @@ class SkullBuilderTest {
                 SkullBuilder.class.getGenericSuperclass().toString());
 
         SkullBuilder.class.getMethod("create");
+        SkullBuilder.class.getMethod("create", SkullTextureResolver.class);
         SkullBuilder.class.getMethod("player", Player.class);
         SkullBuilder.class.getMethod("player", OfflinePlayer.class);
         SkullBuilder.class.getMethod("profile", PlayerProfile.class);
@@ -34,5 +35,9 @@ class SkullBuilderTest {
         SkullBuilder.class.getMethod("customName", Component.class);
         SkullBuilder.class.getMethod("customName", String.class);
         SkullBuilder.class.getMethod("build");
+
+        assertTrue(java.util.Arrays.stream(SkullBuilder.class.getDeclaredFields())
+                .noneMatch(field -> Modifier.isStatic(field.getModifiers())
+                        && field.getType().equals(SkullTextureResolver.class)));
     }
 }

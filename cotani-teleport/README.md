@@ -13,6 +13,7 @@ Asynchronous teleport service for Paper. Supports teleport requests with delays,
 - **Cancellation Policies**: Automatically cancels pending teleports if a player moves, takes damage, or quits the server.
 - **Combat & Protection Adapters**: Integrate with external combat-tag and region-protection plugins through custom policy adapters.
 - **Result Mappings**: Leverages Java's pattern matching to process `TeleportResult.Success` and `TeleportResult.Failure`.
+- **Outcome Reconciliation**: A Paper future that never concludes is quarantined after the configured reconciliation deadline instead of keeping the player pipeline pending forever.
 
 ## Usage
 
@@ -77,6 +78,8 @@ module.pendingTeleportService().schedule(
 4. **Instantiate via Factory**: Always create the service using `CotaniTeleports.create(plugin, combatAdapter, regionAdapter, scheduler)`.
 
 5. **Entity Capturing Guidelines**: Capture `UUID` values and clone `Location` instances before starting validations. Do not pass mutable, live `Player` references down async policy stacks.
+6. **Indeterminate Outcomes**: Handle `OUTCOME_INDETERMINATE` separately. While quarantined, `hasIndeterminateTeleport(playerId)` prevents another physical teleport. `releaseIndeterminateTeleport(playerId)` is an administrative acknowledgement that a late physical teleport may still occur.
+7. **Reconciliation Deadline**: Configure `ExecutionSettings.builder().reconciliationTimeout(...)` according to operational latency; a late successful future is reconciled on the entity thread.
 
 ## Anti-Patterns
 

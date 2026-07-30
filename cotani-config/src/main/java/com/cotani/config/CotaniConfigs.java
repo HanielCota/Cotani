@@ -25,7 +25,16 @@ public interface CotaniConfigs extends AutoCloseable {
 
     TaskChain<Void> reloadAsync();
 
+    /**
+     * Saves all registered configuration files synchronously.
+     *
+     * <p>This compatibility method performs file I/O and therefore rejects calls from the Paper
+     * primary thread. Prefer {@link #saveAsync()} in application code.
+     */
     void save();
+
+    /** Saves all registered configuration files on the configured asynchronous executor. */
+    TaskChain<Void> saveAsync();
 
     @Override
     void close();

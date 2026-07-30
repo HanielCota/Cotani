@@ -1,6 +1,7 @@
 package com.cotani.item;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationTargetException;
@@ -75,5 +76,22 @@ class SkullTextureResolverTest {
     @Test
     void escapesJsonSpecialCharacters() throws Exception {
         assertEquals("https://\\\\example.com/\\\"test\\\"", escape("https://\\example.com/\"test\""));
+    }
+
+    @Test
+    void rejectsBlankAndOversizedTextureUrlsBeforeProfileCreation() {
+        var blank = assertThrows(InvocationTargetException.class, () -> normalize("   "));
+        assertTrue(blank.getCause() instanceof IllegalArgumentException);
+
+        var oversized = assertThrows(InvocationTargetException.class, () -> normalize("x".repeat(2_049)));
+        assertTrue(oversized.getCause() instanceof IllegalArgumentException);
+    }
+
+    @Test
+    void rejectsInvalidAndOversizedBase64BeforeProfileCreation() {
+        try (var resolver = new SkullTextureResolver()) {
+            assertThrows(IllegalArgumentException.class, () -> resolver.fromBase64("%%%"));
+            assertThrows(IllegalArgumentException.class, () -> resolver.fromBase64("A".repeat(16_385)));
+        }
     }
 }

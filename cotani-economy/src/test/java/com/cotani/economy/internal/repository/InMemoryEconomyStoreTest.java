@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.currency.EconomyCurrency;
+import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.exception.InsufficientFundsException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.transaction.EconomyOperationId;
@@ -71,7 +72,7 @@ class InMemoryEconomyStoreTest {
         var first = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
                 .toCompletableFuture()
                 .join();
-        var second = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
+        var second = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
                 .toCompletableFuture()
                 .join();
 
@@ -193,7 +194,7 @@ class InMemoryEconomyStoreTest {
     }
 
     @Test
-    void duplicateOperationIdReturnsOriginalTransaction() {
+    void exactRetryReturnsOriginalTransaction() {
         var store = newStore();
         var userId = UUID.randomUUID();
         var operationId = EconomyOperationId.random();
@@ -201,7 +202,7 @@ class InMemoryEconomyStoreTest {
         var first = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
                 .toCompletableFuture()
                 .join();
-        var second = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId)
+        var second = store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
                 .toCompletableFuture()
                 .join();
 
@@ -213,6 +214,34 @@ class InMemoryEconomyStoreTest {
                 .toCompletableFuture()
                 .join();
         assertEquals(0, account.balance().compareTo(SETTINGS.startingBalance().add(BigDecimal.TEN)));
+    }
+
+    @Test
+    void operationIdCannotBeReusedForDifferentAmount() {
+        var store = newStore();
+        var userId = UUID.randomUUID();
+        var operationId = EconomyOperationId.random();
+        store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
+                .toCompletableFuture()
+                .join();
+
+        assertCause(
+                DuplicateEconomyOperationException.class,
+                store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId));
+    }
+
+    @Test
+    void operationIdCannotBeReusedForDifferentOperationType() {
+        var store = newStore();
+        var userId = UUID.randomUUID();
+        var operationId = EconomyOperationId.random();
+        store.deposit(userId, SETTINGS.defaultCurrency().id(), BigDecimal.TEN, REASON, operationId)
+                .toCompletableFuture()
+                .join();
+
+        assertCause(
+                DuplicateEconomyOperationException.class,
+                store.withdraw(userId, SETTINGS.defaultCurrency().id(), BigDecimal.ONE, REASON, operationId));
     }
 
     @Test

@@ -10,12 +10,14 @@ import com.cotani.task.impl.task.PaperSchedulerTask;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 
+@com.cotani.api.InternalApi
 public final class PaperPlatformScheduler implements PlatformScheduler, AutoCloseable {
 
     private final Plugin plugin;
@@ -241,5 +243,10 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
     public void close() {
         cancelOwnedTasks();
         virtualThreadExecutor.close();
+    }
+
+    public CompletionStage<Void> closeAsync() {
+        cancelOwnedTasks();
+        return virtualThreadExecutor.closeAsync();
     }
 }
