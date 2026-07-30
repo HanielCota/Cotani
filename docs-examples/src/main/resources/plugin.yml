@@ -1,0 +1,9 @@
+name: CotaniQuickStart
+version: '0.1.0'
+main: com.example.cotaniquickstart.CotaniQuickStartPlugin
+description: Minimal compile-checked Cotani example
+api-version: '26.2'
+commands:
+  cotanihello:
+    description: Confirms that Cotani is running
+    usage: /cotanihello
