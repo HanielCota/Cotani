@@ -2,7 +2,9 @@
 
 # Cotani
 
-**Modular, async-safe building blocks for Paper and Folia plugins.**
+**Composable infrastructure for safe, non-blocking Paper and Folia plugins.**
+
+Build with only the scheduling, storage, cache, configuration and gameplay modules your plugin needs.
 
 [![Build](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/ci.yml?branch=master&style=flat-square&logo=github&label=build)](https://github.com/HanielCota/Cotani/actions/workflows/ci.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk)](https://adoptium.net/)
@@ -10,44 +12,82 @@
 [![JitPack](https://img.shields.io/jitpack/v/github/HanielCota/Cotani?style=flat-square&logo=jitpack)](https://jitpack.io/#HanielCota/Cotani)
 [![MIT](https://img.shields.io/github/license/HanielCota/Cotani?style=flat-square)](LICENSE)
 
-[Overview](#overview) · [Installation](#installation) · [Modules](#modules) · [Quick start](#quick-start) · [Development](#development)
+[Overview](#overview) · [Architecture](#architecture) · [Installation](#installation) · [Modules](#modules) · [Quick start](#quick-start) · [Development](#development)
 
 </div>
 
 ## Overview
 
-Cotani is a Java 25 multi-module library for building Paper and Folia plugins with explicit execution boundaries. It provides scheduling, persistence, caching, configuration, user, economy, teleport, cooldown, event, GUI, text, item and metrics APIs without turning the plugin main class into a service locator.
+Cotani is a Java 25 multi-module library for building Paper and Folia plugins with explicit execution boundaries. It provides focused APIs for scheduling, persistence, caching, configuration and common gameplay systems without turning the plugin main class into a service locator.
 
-The project is built around a few invariants:
+| Concern | Cotani approach |
+| --- | --- |
+| Thread ownership | Global, region and entity transitions through `PaperTaskScheduler` and `TaskChain` |
+| Asynchronous work | Composable `CompletionStage` APIs and explicit executors—no hidden blocking |
+| Persistence | SQLite, MySQL and MariaDB providers with migrations and transactions |
+| State | Caffeine-backed caches with loading, persistence and invalidation contracts |
+| Plugin lifecycle | Centralized ownership and non-blocking shutdown of registered resources |
+| API quality | Immutable values, null-safe contracts and isolated implementation packages |
 
-- public asynchronous APIs expose composable `CompletionStage` or `TaskChain` results;
-- database and file I/O stay off server-owned threads;
-- Bukkit and Paper objects are accessed only from the thread that owns them;
-- services receive dependencies through constructors;
-- resources have explicit, non-blocking shutdown paths;
-- mutable state and collections are isolated behind clear contracts.
+Choose individual modules for a small dependency surface, or use the BOM to keep their versions aligned.
+
+## Architecture
+
+Cotani is organized in layers. Feature modules compose the infrastructure and foundation modules instead of reaching through global state.
+
+```mermaid
+flowchart TB
+    Plugin["Your Paper / Folia plugin"]
+
+    subgraph Features["Feature modules"]
+        FeatureModules["user · economy · teleport · cooldown<br/>event · gui · metrics"]
+    end
+
+    subgraph Infrastructure["Infrastructure modules"]
+        InfrastructureModules["config · storage · cache"]
+    end
+
+    subgraph Foundation["Foundation modules"]
+        FoundationModules["core · task · text · item"]
+    end
+
+    Runtime["Paper / Folia runtime"]
+
+    Plugin --> FeatureModules
+    Plugin --> InfrastructureModules
+    Plugin --> FoundationModules
+    FeatureModules -->|compose| InfrastructureModules
+    FeatureModules -->|use| FoundationModules
+    InfrastructureModules -->|use| FoundationModules
+    FoundationModules -->|respect thread ownership| Runtime
+```
+
+The usual execution path captures immutable values on the server thread, performs I/O on an explicit executor and returns through the correct scheduler before accessing Bukkit or Paper objects:
 
 ```mermaid
 flowchart LR
-    A["Paper event or command"] --> B["Capture UUIDs and immutable values"]
-    B --> C["Compose async service and storage work"]
-    C --> D["Switch through PaperTaskScheduler"]
-    D --> E["Access Bukkit/Paper on the owning thread"]
+    Event["Event or command<br/>on the owning thread"]
+    Capture["Capture UUIDs and<br/>immutable values"]
+    Async["Compose service and I/O work<br/>on an explicit executor"]
+    Scheduler["PaperTaskScheduler<br/>global · region · entity"]
+    Paper["Access Bukkit / Paper<br/>on the owning thread"]
+
+    Event --> Capture --> Async --> Scheduler --> Paper
 ```
 
 ## Requirements
 
 - JDK 25
 - Paper API 26.2 for Paper-dependent modules
-- Gradle Wrapper for building the repository
+- Gradle Wrapper to build the repository
 - Docker only for the MySQL and MariaDB integration-test suites
 
 > [!IMPORTANT]
-> Cotani modules are libraries, not a standalone server plugin. Package the modules your plugin uses with your normal shading and relocation setup unless your deployment provides them separately.
+> Cotani modules are libraries, not standalone server plugins. Shade and relocate the modules your plugin uses unless your deployment provides them separately.
 
 ## Installation
 
-The latest tagged version is `1.0.0` and is available through JitPack. Add JitPack and Paper's Maven repository to `settings.gradle.kts`:
+The examples below target the stable `1.0.0` tag published through JitPack. Add JitPack and Paper's Maven repository to `settings.gradle.kts`:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -73,22 +113,25 @@ dependencies {
 ```
 
 > [!NOTE]
-> The current source tree is `1.0.1-SNAPSHOT`. The `cotani-gui` and `cotani-metrics` modules were added after tag `1.0.0`; use a commit-based JitPack version only when intentionally testing unreleased code.
+> The current source tree is `1.0.1-SNAPSHOT`. The BOM, GUI and metrics modules were added after tag `1.0.0`; use a commit-based JitPack version only when intentionally testing unreleased code.
 
-Starting with `1.0.1`, `cotani-bom` can align module versions:
+From `1.0.1` onward, use `cotani-bom` to align module versions:
 
 ```kotlin
-implementation(platform("com.github.HanielCota.Cotani:cotani-bom:1.0.1"))
-implementation("com.github.HanielCota.Cotani:cotani-task")
-implementation("com.github.HanielCota.Cotani:cotani-storage")
+dependencies {
+    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:1.0.1"))
+    implementation("com.github.HanielCota.Cotani:cotani-task")
+    implementation("com.github.HanielCota.Cotani:cotani-storage")
+}
 ```
 
-JitPack also provides the equivalent Maven and Groovy DSL snippets on the [Cotani package page](https://jitpack.io/#HanielCota/Cotani).
+Equivalent Maven and Groovy DSL snippets are available on the [Cotani JitPack page](https://jitpack.io/#HanielCota/Cotani).
 
 ## Modules
 
 | Module | Purpose |
 | --- | --- |
+| `cotani-bom` | Version alignment for all published modules |
 | [`cotani-core`](cotani-core/README.md) | Lifecycle ownership and coalesced resource shutdown |
 | [`cotani-task`](cotani-task/README.md) | Async, global, region and entity scheduling with `TaskChain` |
 | [`cotani-storage`](cotani-storage/README.md) | SQLite, MySQL and MariaDB access, migrations and transactions |
@@ -103,6 +146,8 @@ JitPack also provides the equivalent Maven and Groovy DSL snippets on the [Cotan
 | [`cotani-metrics`](cotani-metrics/README.md) | Micrometer metrics and optional Prometheus export |
 | [`cotani-text`](cotani-text/README.md) | Adventure and MiniMessage formatting helpers |
 | [`cotani-item`](cotani-item/README.md) | Fluent Paper data-component item builders |
+
+Each module README documents its public API, setup and usage. The root project does not force an all-in-one dependency.
 
 ## Quick start
 
@@ -136,7 +181,7 @@ public final class MyPlugin extends JavaPlugin {
 }
 ```
 
-When an asynchronous service result needs to touch a player, retain the UUID and return through the entity scheduler:
+When an asynchronous result needs to interact with a player, retain the UUID and return through the entity scheduler:
 
 ```java
 UUID playerId = player.getUniqueId();
@@ -162,13 +207,12 @@ scheduler.chain(userService.findAsync(playerId))
 > [!WARNING]
 > Never call `join()`, `get()` or `Thread.sleep(...)` in application code. Do not capture live `Player`, `World`, `Entity`, `Inventory` or `Block` objects in asynchronous flows.
 
-Detailed usage examples live in each module README. The [Cotani cookbook](docs/ai/cotani-cookbook.md) collects end-to-end plugin recipes.
+## Documentation
 
-Execution and compatibility references:
-
-- [Asynchronous API contracts](docs/async-contracts.md)
-- [Cotani 1.x migration notes](docs/migration-1.x.md)
-- [Compile-checked examples](docs-examples/src/main/java/com/cotani/examples/CotaniExamples.java)
+- [Cotani cookbook](docs/ai/cotani-cookbook.md) — end-to-end plugin recipes
+- [Asynchronous API contracts](docs/async-contracts.md) — execution and failure semantics
+- [Cotani 1.x migration notes](docs/migration-1.x.md) — compatibility guidance
+- [Compile-checked examples](docs-examples/src/main/java/com/cotani/examples/CotaniExamples.java) — examples validated by the build
 
 ## Development
 
@@ -189,7 +233,7 @@ cd Cotani
 
 The integration task uses Docker-backed MySQL and MariaDB containers. CI verifies Docker first so a missing daemon cannot produce a false-green build.
 
-Additional project references:
+Project references:
 
 - [Architecture and engineering rules](AGENTS.md)
 - [Contributor workflow](CONTRIBUTING.md)
