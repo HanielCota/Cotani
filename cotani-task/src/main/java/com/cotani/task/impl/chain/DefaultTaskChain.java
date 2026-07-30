@@ -421,7 +421,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
             }
             try {
                 observe(Objects.requireNonNull(futureFactory.get(), "retry factory returned null"), nextRetryAttempt);
-            } catch (Throwable factoryFailure) {
+            } catch (RuntimeException factoryFailure) {
                 scheduleRetry(unwrap(factoryFailure), nextRetryAttempt);
             }
         }

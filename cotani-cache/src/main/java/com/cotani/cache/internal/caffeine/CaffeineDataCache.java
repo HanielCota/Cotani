@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,6 +58,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     private static final Logger LOGGER = Logger.getLogger(CaffeineDataCache.class.getName());
     private static final String REPOSITORY_SAVE_NULL_MSG = "repository.save returned null";
+    private static final String VALUE_PARAM = "value";
 
     private final AsyncLoadingCache<K, CacheEntry<V>> cache;
     private final CacheRepository<K, V> repository;
@@ -170,7 +172,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     public void put(K key, V value) {
         ensureOpen();
         Objects.requireNonNull(key, "key");
-        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(value, VALUE_PARAM);
         CacheEntry<V> previous = cache.synchronous().getIfPresent(key);
         if (previous != null) {
             synchronized (previous) {
@@ -399,6 +401,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         });
     }
 
+    @SuppressWarnings("java:S2445") // CacheEntry is internally owned and deliberately acts as the per-entry lock.
     private void onRemoval(@Nullable K key, @Nullable CacheEntry<V> entry) {
         if (key == null || entry == null) {
             return;
@@ -589,14 +592,14 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     private record PendingSave<V>(V value, SaveOrder order) {
         PendingSave {
-            Objects.requireNonNull(value, "value");
+            Objects.requireNonNull(value, VALUE_PARAM);
             Objects.requireNonNull(order, "order");
         }
     }
 
     private record SaveSnapshot<V>(V value, SaveOrder order) {
         SaveSnapshot {
-            Objects.requireNonNull(value, "value");
+            Objects.requireNonNull(value, VALUE_PARAM);
             Objects.requireNonNull(order, "order");
         }
     }
@@ -640,36 +643,43 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         }
 
         private void advance() {
-            while (true) {
-                long index = nextIndex.getAndIncrement();
-                if (index >= items.size()) {
-                    workerFinished();
-                    return;
+            while (advanceSynchronously()) {
+                // Keep consuming already-completed work without recursive callbacks.
+            }
+        }
+
+        private boolean advanceSynchronously() {
+            long index = nextIndex.getAndIncrement();
+            if (index >= items.size()) {
+                workerFinished();
+                return false;
+            }
+            var future = invoke(items.get(Math.toIntExact(index)));
+            if (future.isDone()) {
+                recordCompletedFuture(future);
+                return true;
+            }
+            var _ = future.whenComplete((_, error) -> {
+                if (error != null) {
+                    recordFailure(error);
                 }
-                final CompletableFuture<Void> future;
-                try {
-                    future = Objects.requireNonNull(
-                                    operation.apply(items.get(Math.toIntExact(index))), "bulk operation returned null")
-                            .toCompletableFuture();
-                } catch (Throwable failure) {
-                    recordFailure(failure);
-                    continue;
-                }
-                if (future.isDone()) {
-                    try {
-                        future.getNow(null);
-                    } catch (java.util.concurrent.CompletionException failure) {
-                        recordFailure(failure.getCause() == null ? failure : failure.getCause());
-                    }
-                    continue;
-                }
-                var _ = future.whenComplete((_, error) -> {
-                    if (error != null) {
-                        recordFailure(error);
-                    }
-                    advance();
-                });
-                return;
+                advance();
+            });
+            return false;
+        }
+
+        private CompletableFuture<Void> invoke(T item) {
+            return CompletableFuture.completedFuture(item)
+                    .thenCompose(
+                            current -> Objects.requireNonNull(operation.apply(current), "bulk operation returned null"))
+                    .toCompletableFuture();
+        }
+
+        private void recordCompletedFuture(CompletableFuture<Void> future) {
+            try {
+                future.getNow(null);
+            } catch (java.util.concurrent.CompletionException | CancellationException failure) {
+                recordFailure(failure.getCause() == null ? failure : failure.getCause());
             }
         }
 

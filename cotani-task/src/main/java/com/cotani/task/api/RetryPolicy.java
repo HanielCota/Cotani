@@ -83,7 +83,7 @@ public final class RetryPolicy {
             throw new IllegalArgumentException("attempt must be positive");
         }
         long baseMillis = baseDelay.toMillis();
-        double calculated = baseMillis * Math.pow(multiplier, (double) attempt - 1.0);
+        double calculated = baseMillis * Math.pow(multiplier, attempt - 1.0);
         if (!Double.isFinite(calculated) || calculated > Long.MAX_VALUE) {
             throw new IllegalArgumentException("retry delay is too large for attempt " + attempt);
         }

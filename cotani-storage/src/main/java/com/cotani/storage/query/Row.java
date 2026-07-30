@@ -11,6 +11,7 @@ import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.Nullable;
 
+@SuppressWarnings("java:S1133") // Nullable accessors remain for binary/source compatibility during migration.
 public final class Row {
 
     private final ResultSet resultSet;

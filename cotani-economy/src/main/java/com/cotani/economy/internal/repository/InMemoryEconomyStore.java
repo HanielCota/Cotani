@@ -222,50 +222,81 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
 
         EconomyTransaction existing = transactionsByOperation.get(operationId);
         if (existing != null) {
-            try {
-                return CompletableFuture.completedFuture(fingerprint.requireMatch(operationId, existing));
-            } catch (RuntimeException conflict) {
-                return CompletableFuture.failedFuture(conflict);
-            }
+            return requireMatchingOperation(operationId, fingerprint, existing);
         }
 
-        var candidate =
-                new InFlightOperation(fingerprint, new CompletableFuture<>(), new AtomicBoolean(), new AtomicBoolean());
-        var selected = inFlightOperations.compute(operationId, (_, inFlight) -> {
-            if (inFlight != null && !inFlight.result().isDone()) {
-                return inFlight;
-            }
-            return candidate;
-        });
+        var selected = selectInFlightOperation(operationId, fingerprint);
 
         if (!selected.fingerprint().sameRequest(fingerprint)) {
             return CompletableFuture.failedFuture(
                     new com.cotani.economy.exception.DuplicateEconomyOperationException(operationId));
         }
 
-        if (selected.cleanupAttached().compareAndSet(false, true)) {
-            var _ = selected.result().whenComplete((_, _) -> {
-                inFlightOperations.remove(operationId, selected);
-                maybeCleanupStaleLocks();
-            });
-        }
-
-        if (selected.started().compareAndSet(false, true)) {
-            try {
-                executor.execute(() -> {
-                    try {
-                        EconomyTransaction saved = transactionsByOperation.get(operationId);
-                        selected.result()
-                                .complete(saved == null ? action.get() : fingerprint.requireMatch(operationId, saved));
-                    } catch (Throwable failure) {
-                        selected.result().completeExceptionally(failure);
-                    }
-                });
-            } catch (RuntimeException schedulingFailure) {
-                selected.result().completeExceptionally(schedulingFailure);
-            }
-        }
+        attachCleanup(operationId, selected);
+        startOperation(operationId, fingerprint, action, selected);
         return selected.result();
+    }
+
+    private static CompletableFuture<EconomyTransaction> requireMatchingOperation(
+            EconomyOperationId operationId, EconomyOperationFingerprint fingerprint, EconomyTransaction existing) {
+        try {
+            return CompletableFuture.completedFuture(fingerprint.requireMatch(operationId, existing));
+        } catch (RuntimeException conflict) {
+            return CompletableFuture.failedFuture(conflict);
+        }
+    }
+
+    private InFlightOperation selectInFlightOperation(
+            EconomyOperationId operationId, EconomyOperationFingerprint fingerprint) {
+        var candidate =
+                new InFlightOperation(fingerprint, new CompletableFuture<>(), new AtomicBoolean(), new AtomicBoolean());
+        return inFlightOperations.compute(operationId, (_, inFlight) -> {
+            if (inFlight != null && !inFlight.result().isDone()) {
+                return inFlight;
+            }
+            return candidate;
+        });
+    }
+
+    private void attachCleanup(EconomyOperationId operationId, InFlightOperation selected) {
+        if (!selected.cleanupAttached().compareAndSet(false, true)) {
+            return;
+        }
+        var _ = selected.result().whenComplete((_, _) -> {
+            inFlightOperations.remove(operationId, selected);
+            maybeCleanupStaleLocks();
+        });
+    }
+
+    private void startOperation(
+            EconomyOperationId operationId,
+            EconomyOperationFingerprint fingerprint,
+            Supplier<EconomyTransaction> action,
+            InFlightOperation selected) {
+        if (!selected.started().compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            var execution =
+                    CompletableFuture.supplyAsync(() -> executeOrReuse(operationId, fingerprint, action), executor);
+            var _ = execution.whenComplete((transaction, error) -> {
+                if (error == null) {
+                    selected.result().complete(transaction);
+                } else {
+                    selected.result().completeExceptionally(error);
+                }
+            });
+        } catch (RuntimeException schedulingFailure) {
+            selected.result().completeExceptionally(schedulingFailure);
+        }
+    }
+
+    private EconomyTransaction executeOrReuse(
+            EconomyOperationId operationId,
+            EconomyOperationFingerprint fingerprint,
+            Supplier<EconomyTransaction> action) {
+        EconomyTransaction saved = transactionsByOperation.get(operationId);
+        return saved == null ? action.get() : fingerprint.requireMatch(operationId, saved);
     }
 
     private void maybeCleanupStaleLocks() {

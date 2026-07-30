@@ -14,6 +14,8 @@ import java.util.UUID;
 @com.cotani.api.InternalApi
 public final class DefaultEconomyGuard implements EconomyGuard {
 
+    private static final String CURRENCY_ID_PARAM = "currencyId";
+
     private final EconomySettings settings;
 
     public DefaultEconomyGuard(EconomySettings settings) {
@@ -27,7 +29,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
 
     @Override
     public BigDecimal normalizeAmount(CurrencyId currencyId, BigDecimal amount) {
-        Objects.requireNonNull(currencyId, "currencyId");
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
         Objects.requireNonNull(amount, "amount");
         validateCurrencyId(currencyId);
 
@@ -56,7 +58,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
 
     @Override
     public void validateBalanceAmount(CurrencyId currencyId, BigDecimal amount) {
-        Objects.requireNonNull(currencyId, "currencyId");
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
         Objects.requireNonNull(amount, "amount");
         validateCurrencyId(currencyId);
 
@@ -83,7 +85,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
 
     @Override
     public void validateCurrencyId(CurrencyId currencyId) {
-        Objects.requireNonNull(currencyId, "currencyId");
+        Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
         settings.requireEnabledDefinition(currencyId);
     }
 

@@ -12,6 +12,7 @@ import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
 import com.cotani.storage.api.CotaniStorage;
+import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.query.Row;
 import com.cotani.storage.transaction.TransactionContext;
 import java.math.BigDecimal;
@@ -41,6 +42,15 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     private static final String AMOUNT_PARAM = "amount";
     private static final String REASON_PARAM = "reason";
     private static final String OPERATION_ID_PARAM = "operationId";
+    private static final String USER_ID_COLUMN = "user_id";
+    private static final String CURRENCY_ID_COLUMN = "currency_id";
+    private static final String BALANCE_COLUMN = "balance";
+    private static final String CREATED_AT_COLUMN = "created_at";
+    private static final String UPDATED_AT_COLUMN = "updated_at";
+    private static final List<String> ACCOUNT_COLUMNS =
+            List.of(USER_ID_COLUMN, CURRENCY_ID_COLUMN, BALANCE_COLUMN, CREATED_AT_COLUMN, UPDATED_AT_COLUMN);
+    private static final List<String> ACCOUNT_KEY_COLUMNS = List.of(USER_ID_COLUMN, CURRENCY_ID_COLUMN);
+    private static final List<String> ACCOUNT_UPDATE_COLUMNS = List.of(BALANCE_COLUMN, UPDATED_AT_COLUMN);
 
     private final CotaniStorage storage;
     private final Clock clock;
@@ -277,35 +287,27 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     }
 
     private CompletionStage<Void> insertAccountDoNothing(TransactionContext tx, EconomyAccount account) {
-        String sql = storage.dialect()
-                .upsert(
-                        "cotani_economy_accounts",
-                        List.of("user_id", "currency_id", "balance", "created_at", "updated_at"),
-                        List.of("user_id", "currency_id"),
-                        List.of());
+        String sql =
+                storage.dialect().upsert("cotani_economy_accounts", ACCOUNT_COLUMNS, ACCOUNT_KEY_COLUMNS, List.of());
         return tx.update(sql, binder -> {
-            binder.set(account.userId());
-            binder.set(account.currencyId().value());
-            binder.set(account.balance().toPlainString());
-            binder.set(account.createdAt().toString());
-            binder.set(account.updatedAt().toString());
+            bindAccount(binder, account);
         });
     }
 
     private CompletionStage<Void> insertAccount(TransactionContext tx, EconomyAccount account) {
         String sql = storage.dialect()
-                .upsert(
-                        "cotani_economy_accounts",
-                        List.of("user_id", "currency_id", "balance", "created_at", "updated_at"),
-                        List.of("user_id", "currency_id"),
-                        List.of("balance", "updated_at"));
+                .upsert("cotani_economy_accounts", ACCOUNT_COLUMNS, ACCOUNT_KEY_COLUMNS, ACCOUNT_UPDATE_COLUMNS);
         return tx.update(sql, binder -> {
-            binder.set(account.userId());
-            binder.set(account.currencyId().value());
-            binder.set(account.balance().toPlainString());
-            binder.set(account.createdAt().toString());
-            binder.set(account.updatedAt().toString());
+            bindAccount(binder, account);
         });
+    }
+
+    static void bindAccount(ParameterBinder binder, EconomyAccount account) throws SQLException {
+        binder.set(account.userId());
+        binder.set(account.currencyId().value());
+        binder.set(account.balance().toPlainString());
+        binder.set(account.createdAt());
+        binder.set(account.updatedAt());
     }
 
     private CompletionStage<Void> upsertAccount(TransactionContext tx, EconomyAccount account) {

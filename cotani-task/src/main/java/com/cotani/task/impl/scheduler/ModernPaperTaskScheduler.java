@@ -450,7 +450,7 @@ public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
             try {
                 closeable.close();
                 promise.complete(null);
-            } catch (RuntimeException | Error failure) {
+            } catch (RuntimeException failure) {
                 promise.completeExceptionally(failure);
                 throw failure;
             } catch (Exception failure) {

@@ -48,11 +48,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
 
         try {
             Files.writeString(tempFile, content, StandardCharsets.UTF_8);
-            try {
-                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (IOException atomicMoveFailed) {
-                Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING);
-            }
+            moveReplacing(tempFile, file);
         } catch (IOException exception) {
             try {
                 Files.deleteIfExists(tempFile);
@@ -60,6 +56,14 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
                 // Ignore cleanup failure
             }
             throw new IllegalStateException("Failed to save persistent task: " + task.id(), exception);
+        }
+    }
+
+    private static void moveReplacing(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException atomicMoveFailed) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

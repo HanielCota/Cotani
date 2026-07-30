@@ -211,7 +211,7 @@ public final class SimpleUserService implements InternalUserService {
                     .thenCompose(_ -> {
                         try {
                             return Objects.requireNonNull(persistence.get(), "repository persistence returned null");
-                        } catch (Throwable failure) {
+                        } catch (RuntimeException failure) {
                             return CompletableFuture.failedFuture(failure);
                         }
                     })

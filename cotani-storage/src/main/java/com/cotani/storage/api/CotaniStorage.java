@@ -149,7 +149,7 @@ public final class CotaniStorage implements AutoCloseable {
             startup = startupPromise;
             try {
                 registerRepositories();
-            } catch (Throwable failure) {
+            } catch (RuntimeException failure) {
                 abortFailedStartup(failure, startupPromise);
                 return startupPromise;
             }
@@ -243,7 +243,7 @@ public final class CotaniStorage implements AutoCloseable {
         try {
             closeResources();
             completeClose(null);
-        } catch (RuntimeException | Error failure) {
+        } catch (RuntimeException failure) {
             completeClose(failure);
             throw failure;
         }

@@ -63,13 +63,13 @@ public final class PaperTeleportService implements com.cotani.teleport.api.Telep
                     .handle((_, _) -> null)
                     .thenCompose(_ -> gate)
                     .thenCompose(_ -> teleportOnce(request))
-                    .handle((teleportResult, error) -> {
+                    .<Void>handle((teleportResult, error) -> {
                         if (error == null) {
                             result.complete(teleportResult);
                         } else {
                             result.completeExceptionally(error);
                         }
-                        return (Void) null;
+                        return null;
                     });
             startGate.set(gate);
             nextPipeline.set(next);

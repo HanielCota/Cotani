@@ -110,32 +110,20 @@ public final class QueryExecutor {
     }
 
     private <T> CompletionStage<T> supplyAsync(Supplier<T> operation) {
-        var result = new CompletableFuture<T>();
         try {
-            executor.execute(() -> {
-                try {
-                    result.complete(operation.get());
-                } catch (Throwable failure) {
-                    result.completeExceptionally(failure);
-                }
-            });
-        } catch (Throwable schedulingFailure) {
-            result.completeExceptionally(schedulingFailure);
+            return CompletableFuture.supplyAsync(operation, executor);
+        } catch (RuntimeException schedulingFailure) {
+            return CompletableFuture.failedFuture(schedulingFailure);
         }
-        return result;
     }
 
     private <T> CompletionStage<T> executeTransactionOperation(
             TransactionState state, Function<QueryExecutor, CompletionStage<T>> operation) {
         var transactional =
                 new QueryExecutor(provider, Runnable::run, serializers, queryTimeoutSeconds, state.connection);
-        final CompletionStage<T> stage;
-        try {
-            stage = Objects.requireNonNull(operation.apply(transactional), "transaction operation returned null");
-        } catch (Throwable failure) {
-            finishTransaction(state, failure);
-            return CompletableFuture.failedFuture(failure);
-        }
+        CompletionStage<T> stage = CompletableFuture.completedFuture(transactional)
+                .thenCompose(current ->
+                        Objects.requireNonNull(operation.apply(current), "transaction operation returned null"));
         if (!stage.toCompletableFuture().isDone()) {
             var failure = new IllegalStateException(
                     "Transaction callbacks must not wait for external asynchronous work; compose only operations from the transactional QueryExecutor.");

@@ -21,6 +21,7 @@ import java.util.function.UnaryOperator;
 public final class UserCache {
 
     private static final int DEFAULT_MAX_CACHED_USERS = 10_000;
+    private static final String UNIQUE_ID_PARAM = "uniqueId";
 
     private final int maxCachedUsers;
     private final Map<UUID, SimpleCotaniUser> users;
@@ -38,12 +39,12 @@ public final class UserCache {
     }
 
     public Optional<SimpleCotaniUser> findInternal(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return Optional.ofNullable(users.get(uniqueId));
     }
 
     public Optional<CotaniUser> find(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return Optional.ofNullable(users.get(uniqueId)).map(CotaniUser.class::cast);
     }
 
@@ -54,7 +55,7 @@ public final class UserCache {
     }
 
     public boolean remove(UUID uniqueId, UUID expectedSessionId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(expectedSessionId, "expectedSessionId");
         boolean[] removed = new boolean[1];
         users.computeIfPresent(uniqueId, (id, current) -> {
@@ -69,7 +70,7 @@ public final class UserCache {
 
     public Optional<SimpleCotaniUser> updateIfSession(
             UUID uniqueId, UUID expectedSessionId, UnaryOperator<SimpleCotaniUser> updater) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(expectedSessionId, "expectedSessionId");
         Objects.requireNonNull(updater, "updater");
         var result = new AtomicReference<>(Optional.<SimpleCotaniUser>empty());
@@ -89,7 +90,7 @@ public final class UserCache {
     }
 
     public boolean contains(UUID uniqueId) {
-        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         return users.containsKey(uniqueId);
     }
 

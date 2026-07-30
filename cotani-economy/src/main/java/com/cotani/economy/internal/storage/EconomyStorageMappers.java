@@ -5,6 +5,7 @@ import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.transaction.*;
 import com.cotani.storage.error.StorageException;
+import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.query.Row;
 import com.cotani.storage.transaction.TransactionContext;
 import java.math.BigDecimal;
@@ -112,30 +113,31 @@ final class EconomyStorageMappers {
                     reason_key, reason_source, reason_actor_user_id, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        return tx.update(sql, binder -> {
-                    binder.set(transaction.id().value());
-                    binder.set(transaction.operationId().value());
-                    binder.set(transaction.type().name());
-                    binder.set(transaction.sourceUserId());
-                    binder.set(transaction.targetUserId());
-                    binder.set(transaction.currencyId().value());
-                    binder.set(transaction.amount().toPlainString());
-                    binder.set(plainString(transaction.sourceBalanceBefore()));
-                    binder.set(plainString(transaction.sourceBalanceAfter()));
-                    binder.set(plainString(transaction.targetBalanceBefore()));
-                    binder.set(plainString(transaction.targetBalanceAfter()));
-                    binder.set(transaction.reason().key());
-                    binder.set(transaction.reason().source());
-                    binder.set(transaction.reason().actorUserId());
-                    binder.set(transaction.createdAt().toString());
-                })
-                .exceptionallyCompose(error -> {
-                    if (isUniqueViolation(error)) {
-                        return CompletableFuture.failedFuture(
-                                new DuplicateEconomyOperationException(transaction.operationId()));
-                    }
-                    return CompletableFuture.failedFuture(error);
-                });
+        return tx.update(sql, binder -> bindTransaction(binder, transaction)).exceptionallyCompose(error -> {
+            if (isUniqueViolation(error)) {
+                return CompletableFuture.failedFuture(
+                        new DuplicateEconomyOperationException(transaction.operationId()));
+            }
+            return CompletableFuture.failedFuture(error);
+        });
+    }
+
+    static void bindTransaction(ParameterBinder binder, EconomyTransaction transaction) throws SQLException {
+        binder.set(transaction.id().value());
+        binder.set(transaction.operationId().value());
+        binder.set(transaction.type().name());
+        binder.set(transaction.sourceUserId());
+        binder.set(transaction.targetUserId());
+        binder.set(transaction.currencyId().value());
+        binder.set(transaction.amount().toPlainString());
+        binder.set(plainString(transaction.sourceBalanceBefore()));
+        binder.set(plainString(transaction.sourceBalanceAfter()));
+        binder.set(plainString(transaction.targetBalanceBefore()));
+        binder.set(plainString(transaction.targetBalanceAfter()));
+        binder.set(transaction.reason().key());
+        binder.set(transaction.reason().source());
+        binder.set(transaction.reason().actorUserId());
+        binder.set(transaction.createdAt());
     }
 
     static boolean isUniqueViolation(Throwable error) {

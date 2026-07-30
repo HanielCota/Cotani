@@ -10,18 +10,23 @@ import java.util.concurrent.CompletionStage;
 
 public final class ExampleUserRepository extends PlayerDataRepository<ExampleUser> {
 
+    private static final String TABLE = "users";
+    private static final String UNIQUE_ID_COLUMN = "unique_id";
+    private static final String NAME_COLUMN = "name";
+    private static final String COINS_COLUMN = "coins";
+
     public ExampleUserRepository(CotaniStorage storage) {
         super(storage);
     }
 
     @Override
     protected String tableName() {
-        return "users";
+        return TABLE;
     }
 
     @Override
     protected String idColumn() {
-        return "unique_id";
+        return UNIQUE_ID_COLUMN;
     }
 
     @Override
@@ -37,13 +42,13 @@ public final class ExampleUserRepository extends PlayerDataRepository<ExampleUse
 
     @Override
     public CompletionStage<Void> save(ExampleUser user) {
-        return table("users")
+        return table(TABLE)
                 .upsert()
-                .value("unique_id", user.uniqueId())
-                .value("name", user.name())
-                .value("coins", user.coins())
-                .conflict("unique_id")
-                .update("name", "coins")
+                .value(UNIQUE_ID_COLUMN, user.uniqueId())
+                .value(NAME_COLUMN, user.name())
+                .value(COINS_COLUMN, user.coins())
+                .conflict(UNIQUE_ID_COLUMN)
+                .update(NAME_COLUMN, COINS_COLUMN)
                 .execute();
     }
 
@@ -55,8 +60,9 @@ public final class ExampleUserRepository extends PlayerDataRepository<ExampleUse
 
     private ExampleUser map(Row row) throws SQLException {
         return new ExampleUser(
-                row.getUuidOptional("unique_id").orElseThrow(() -> new IllegalStateException("unique_id is SQL NULL")),
-                row.getString("name"),
-                row.getLong("coins"));
+                row.getUuidOptional(UNIQUE_ID_COLUMN)
+                        .orElseThrow(() -> new IllegalStateException(UNIQUE_ID_COLUMN + " is SQL NULL")),
+                row.getString(NAME_COLUMN),
+                row.getLong(COINS_COLUMN));
     }
 }
