@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -18,6 +19,8 @@ public interface TaskChain<T> {
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <T> TaskChain<List<T>> allOf(PaperTaskScheduler scheduler, TaskChain<T>... chains) {
+        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(chains, "chains");
         if (chains.length == 0) {
             return scheduler.chain(CompletableFuture.completedFuture(List.of()));
         }
@@ -44,6 +47,8 @@ public interface TaskChain<T> {
     @SafeVarargs
     @SuppressWarnings({"varargs", "unchecked"})
     static <T> TaskChain<T> anyOf(PaperTaskScheduler scheduler, TaskChain<T>... chains) {
+        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(chains, "chains");
         if (chains.length == 0) {
             throw new IllegalArgumentException("chains must not be empty");
         }

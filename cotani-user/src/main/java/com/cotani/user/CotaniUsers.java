@@ -7,6 +7,7 @@ import com.cotani.user.api.UserModule;
 import com.cotani.user.api.UserModuleOptions;
 import com.cotani.user.internal.DefaultUserModule;
 import java.util.List;
+import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
 public final class CotaniUsers {
@@ -16,11 +17,18 @@ public final class CotaniUsers {
     }
 
     public static UserModule create(Plugin plugin, CotaniStorage storage, PaperTaskScheduler scheduler) {
+        Objects.requireNonNull(plugin, "plugin");
+        Objects.requireNonNull(storage, "storage");
+        Objects.requireNonNull(scheduler, "scheduler");
         return DefaultUserModule.create(plugin, storage, scheduler);
     }
 
     public static UserModule create(
             Plugin plugin, CotaniStorage storage, PaperTaskScheduler scheduler, UserModuleOptions options) {
+        Objects.requireNonNull(plugin, "plugin");
+        Objects.requireNonNull(storage, "storage");
+        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(options, "options");
         return DefaultUserModule.create(plugin, storage, scheduler, options);
     }
 

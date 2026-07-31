@@ -1,5 +1,6 @@
 package com.cotani.item;
 
+import java.util.Objects;
 import org.bukkit.Material;
 import org.jspecify.annotations.NullMarked;
 
@@ -11,6 +12,7 @@ public final class ItemBuilder extends ItemStackBuilder<ItemBuilder> {
     }
 
     public static ItemBuilder of(Material material) {
+        Objects.requireNonNull(material, "Parameter 'material' must not be null");
         return new ItemBuilder(material);
     }
 

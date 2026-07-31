@@ -42,11 +42,17 @@ public final class CotaniCooldowns {
     }
 
     public static DistributedCooldownService distributed(CotaniStorage storage, PaperTaskScheduler scheduler) {
+        Objects.requireNonNull(storage, "storage");
+        Objects.requireNonNull(scheduler, "scheduler");
         return distributed(storage, scheduler, Clock.systemUTC(), Duration.ofMinutes(5));
     }
 
     public static DistributedCooldownService distributed(
             CotaniStorage storage, PaperTaskScheduler scheduler, Clock clock, Duration cleanupInterval) {
+        Objects.requireNonNull(storage, "storage");
+        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(clock, "clock");
+        Objects.requireNonNull(cleanupInterval, "cleanupInterval");
         return new SqlDistributedCooldownService(storage, scheduler, clock, cleanupInterval);
     }
 }
