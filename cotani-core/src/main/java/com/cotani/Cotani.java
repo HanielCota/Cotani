@@ -165,7 +165,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
      */
     @Override
     public void close() {
-        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+        if (Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("Cotani.close() blocks; use closeAsync() on the server thread.");
         }
 
