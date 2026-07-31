@@ -23,7 +23,6 @@ import org.bukkit.Bukkit;
 
 @InternalApi
 public final class DefaultCotaniConfig implements CotaniConfig {
-
     private final String name;
     private final ConfigSource source;
     private final ConfigSerializerRegistry serializers;
@@ -137,9 +136,11 @@ public final class DefaultCotaniConfig implements CotaniConfig {
     @Override
     public Optional<String> optionalString(String path) {
         var entry = source.entry(path);
+
         if (!entry.exists() || entry.raw() == null) {
             return Optional.empty();
         }
+
         return Optional.of(
                 ConfigValue.create(name, path, entry.raw(), true, serializers).asString());
     }
@@ -182,9 +183,11 @@ public final class DefaultCotaniConfig implements CotaniConfig {
     @Override
     public <T> T get(String path, Class<T> type, T fallback) {
         var entry = source.entry(path);
+
         if (!entry.exists() || entry.raw() == null) {
             return fallback;
         }
+
         return ConfigValue.create(name, path, entry.raw(), true, serializers).as(type);
     }
 
@@ -214,9 +217,11 @@ public final class DefaultCotaniConfig implements CotaniConfig {
     @Override
     public <T> T bindOrThrow(String path, Class<T> type) {
         var result = validate(path, type);
+
         if (result.hasErrors()) {
             throw new ConfigValidationException(result);
         }
+
         return bind(path, type);
     }
 

@@ -13,7 +13,6 @@ import java.util.concurrent.CompletionStage;
  * @param <V> the value type
  */
 public interface CacheRepository<K, V> {
-
     /**
      * Finds a persisted value by key.
      *

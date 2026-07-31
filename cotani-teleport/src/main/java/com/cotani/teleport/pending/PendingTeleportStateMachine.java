@@ -55,14 +55,18 @@ public final class PendingTeleportStateMachine {
                 || state.compareAndSet(PendingTeleportState.EXECUTING, PendingTeleportState.CANCELLED)) {
             cancelReason.set(reason);
             Objects.requireNonNull(task.get()).cancel();
+
             return true;
         }
+
         return false;
     }
 
     public boolean cancelExecution(TeleportCancelReason reason) {
         Objects.requireNonNull(reason, "reason");
+
         boolean changed = state.compareAndSet(PendingTeleportState.EXECUTING, PendingTeleportState.CANCELLED);
+
         if (changed) {
             cancelReason.set(reason);
             Objects.requireNonNull(task.get()).cancel();

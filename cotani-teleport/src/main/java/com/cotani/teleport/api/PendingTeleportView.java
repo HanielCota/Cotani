@@ -13,7 +13,6 @@ public record PendingTeleportView(
         Duration delay,
         PendingTeleportState state,
         @Nullable TeleportCancelReason cancelReasonNullable) {
-
     public Optional<TeleportCancelReason> cancelReason() {
         return Optional.ofNullable(cancelReasonNullable);
     }

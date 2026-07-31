@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class CooldownServiceTest {
-
     @Test
     void testInMemoryCooldown() {
         CooldownService cooldownService = DefaultCooldownService.inMemory();
@@ -114,6 +113,7 @@ class CooldownServiceTest {
         var done = new CountDownLatch(callers);
         var allowed = new AtomicInteger();
         var executor = Executors.newFixedThreadPool(callers);
+
         try {
             for (int i = 0; i < callers; i++) {
                 var _ = executor.submit(() -> {

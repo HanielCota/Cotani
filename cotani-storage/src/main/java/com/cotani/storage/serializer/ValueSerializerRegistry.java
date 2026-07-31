@@ -10,7 +10,6 @@ import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.Nullable;
 
 public final class ValueSerializerRegistry {
-
     private final Map<Class<?>, ValueSerializer<?>> serializers = new ConcurrentHashMap<>();
     private final Map<Class<?>, ValueSerializer<?>> resolvedCache = new ConcurrentHashMap<>();
 
@@ -28,6 +27,7 @@ public final class ValueSerializerRegistry {
 
     public Object serialize(Object value) {
         var serializer = findSerializer(value.getClass());
+
         if (serializer == null) {
             return value;
         }
@@ -37,6 +37,7 @@ public final class ValueSerializerRegistry {
 
     public <T> T deserialize(Object value, Class<T> type) {
         ValueSerializer<T> serializer = findSerializer(type);
+
         if (serializer == null) {
             return type.cast(value);
         }
@@ -47,6 +48,7 @@ public final class ValueSerializerRegistry {
     @SuppressWarnings("unchecked")
     private <T> @Nullable ValueSerializer<T> findSerializer(Class<?> type) {
         ValueSerializer<?> cached = resolvedCache.get(type);
+
         if (cached == NullSerializer.INSTANCE) {
             return null;
         }
@@ -55,17 +57,20 @@ public final class ValueSerializerRegistry {
         }
 
         ValueSerializer<?> resolved = resolveSerializer(type);
+
         if (resolved != null) {
             resolvedCache.put(type, resolved);
             return (ValueSerializer<T>) resolved;
         }
 
         resolvedCache.put(type, NullSerializer.INSTANCE);
+
         return null;
     }
 
     private @Nullable ValueSerializer<?> resolveSerializer(Class<?> type) {
         var exact = serializers.get(type);
+
         if (exact != null) {
             return exact;
         }

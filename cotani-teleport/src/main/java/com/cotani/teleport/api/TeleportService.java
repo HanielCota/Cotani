@@ -16,6 +16,7 @@ public interface TeleportService {
 
     default boolean hasIndeterminateTeleport(UUID playerId) {
         Objects.requireNonNull(playerId, "playerId");
+
         return false;
     }
 
@@ -25,6 +26,7 @@ public interface TeleportService {
      */
     default boolean releaseIndeterminateTeleport(UUID playerId) {
         Objects.requireNonNull(playerId, "playerId");
+
         return false;
     }
 }

@@ -7,7 +7,6 @@ import org.jspecify.annotations.Nullable;
 
 public record TeleportRequest(
         UUID playerId, Location target, TeleportCause cause, TeleportOptions options, String source) {
-
     private static final String PLAYER_ID_PARAM = "playerId";
     private static final String TARGET_PARAM = "target";
 
@@ -16,7 +15,9 @@ public record TeleportRequest(
         Objects.requireNonNull(target, TARGET_PARAM);
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(options, "options");
+
         target = target.clone();
+
         if (source == null || source.isBlank()) {
             source = "unknown";
         }

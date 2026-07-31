@@ -19,7 +19,6 @@ import org.jspecify.annotations.Nullable;
  */
 @InternalApi
 public final class PrometheusServer implements AutoCloseable {
-
     private final PrometheusMeterRegistry registry;
     private final String host;
     private final int port;

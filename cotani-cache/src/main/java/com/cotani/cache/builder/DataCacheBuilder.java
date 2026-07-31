@@ -18,7 +18,6 @@ import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
 public final class DataCacheBuilder<K, V> {
-
     private static final String DEFAULT_VALUE_PARAM = "defaultValue";
 
     private final Class<K> keyType;
@@ -56,6 +55,7 @@ public final class DataCacheBuilder<K, V> {
 
     public DataCacheBuilder<K, V> preset(CachePreset preset) {
         Objects.requireNonNull(preset, "preset");
+
         this.settingsBuilder.maximumSize(preset.settings().maximumSize());
         this.settingsBuilder.expireAfterAccess(preset.settings().expireAfterAccess());
         this.settingsBuilder.expireAfterWrite(preset.settings().expireAfterWrite());
@@ -70,6 +70,7 @@ public final class DataCacheBuilder<K, V> {
 
     public DataCacheBuilder<K, V> settings(CacheSettings settings) {
         Objects.requireNonNull(settings, "settings");
+
         this.settingsBuilder.maximumSize(settings.maximumSize());
         this.settingsBuilder.expireAfterAccess(settings.expireAfterAccess());
         this.settingsBuilder.expireAfterWrite(settings.expireAfterWrite());
@@ -111,6 +112,7 @@ public final class DataCacheBuilder<K, V> {
         if (maximumConcurrentSaves <= 0) {
             throw new IllegalArgumentException("maximumConcurrentSaves must be positive");
         }
+
         this.maximumConcurrentSaves = maximumConcurrentSaves;
         return this;
     }
@@ -120,6 +122,7 @@ public final class DataCacheBuilder<K, V> {
 
         var resolvedRepository = resolveRepository();
         var resolvedDefaultValue = Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
+
         return CaffeineDataCache.create(
                 resolvedRepository,
                 resolvedDefaultValue,

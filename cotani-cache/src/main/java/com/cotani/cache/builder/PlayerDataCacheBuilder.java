@@ -22,7 +22,6 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 public final class PlayerDataCacheBuilder<V> {
-
     private final Class<V> valueType;
     private final CacheSettingsBuilder settingsBuilder = CacheSettings.builder()
             .maximumSize(10_000)
@@ -58,6 +57,7 @@ public final class PlayerDataCacheBuilder<V> {
 
     public PlayerDataCacheBuilder<V> preset(CachePreset preset) {
         Objects.requireNonNull(preset, "preset");
+
         this.settingsBuilder.maximumSize(preset.settings().maximumSize());
         this.settingsBuilder.expireAfterAccess(preset.settings().expireAfterAccess());
         this.settingsBuilder.expireAfterWrite(preset.settings().expireAfterWrite());
@@ -72,6 +72,7 @@ public final class PlayerDataCacheBuilder<V> {
 
     public PlayerDataCacheBuilder<V> settings(CacheSettings settings) {
         Objects.requireNonNull(settings, "settings");
+
         this.settingsBuilder.maximumSize(settings.maximumSize());
         this.settingsBuilder.expireAfterAccess(settings.expireAfterAccess());
         this.settingsBuilder.expireAfterWrite(settings.expireAfterWrite());
@@ -138,6 +139,7 @@ public final class PlayerDataCacheBuilder<V> {
         if (maximumConcurrentSaves <= 0) {
             throw new IllegalArgumentException("maximumConcurrentSaves must be positive");
         }
+
         this.maximumConcurrentSaves = maximumConcurrentSaves;
         return this;
     }
@@ -145,6 +147,7 @@ public final class PlayerDataCacheBuilder<V> {
     public PlayerDataCache<V> build(Plugin plugin, PaperTaskScheduler scheduler) {
         Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(scheduler, "scheduler");
+
         validate();
 
         var resolvedRepository = resolveRepository();

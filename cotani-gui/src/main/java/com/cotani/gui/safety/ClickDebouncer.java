@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @InternalApi
 public final class ClickDebouncer {
-
     private final long debounceNanos;
     private final ConcurrentMap<UUID, AtomicLong> lastClickByPlayer = new ConcurrentHashMap<>();
 
@@ -24,9 +23,11 @@ public final class ClickDebouncer {
      */
     public ClickDebouncer(Duration debounce) {
         Objects.requireNonNull(debounce, "Parameter 'debounce' must not be null");
+
         if (debounce.isNegative()) {
             throw new IllegalArgumentException("debounce cannot be negative: " + debounce);
         }
+
         this.debounceNanos = debounce.toNanos();
     }
 
@@ -38,10 +39,12 @@ public final class ClickDebouncer {
      */
     public boolean tryAcquire(UUID playerId) {
         Objects.requireNonNull(playerId, "Parameter 'playerId' must not be null");
+
         var lastClick = lastClickByPlayer.computeIfAbsent(playerId, _ -> new AtomicLong(Long.MIN_VALUE));
 
         var now = System.nanoTime();
         var previous = lastClick.getAndSet(now);
+
         if (previous != Long.MIN_VALUE && now - previous < debounceNanos) {
             lastClick.set(previous);
             return false;
@@ -58,7 +61,9 @@ public final class ClickDebouncer {
      */
     public void release(UUID playerId) {
         Objects.requireNonNull(playerId, "Parameter 'playerId' must not be null");
+
         var lastClick = lastClickByPlayer.get(playerId);
+
         if (lastClick != null) {
             lastClick.set(Long.MIN_VALUE);
         }

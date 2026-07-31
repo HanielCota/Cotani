@@ -18,7 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class CacheAutosaveCoordinatorTest {
-
     @Test
     void coalescesConcurrentTicksAndCancelsOwnedTask() {
         PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);

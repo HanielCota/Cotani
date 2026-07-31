@@ -9,7 +9,6 @@ import com.cotani.teleport.impl.DefaultTeleportModule;
 import org.bukkit.plugin.Plugin;
 
 public final class CotaniTeleports {
-
     private CotaniTeleports() {}
 
     public static TeleportModule create(

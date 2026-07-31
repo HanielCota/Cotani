@@ -12,7 +12,6 @@ import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings("unchecked")
 class SelectQueryTest {
-
     private static EntityMapper<String> stringMapper() {
         return row -> row.getString("value");
     }

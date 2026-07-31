@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @InternalApi
 public final class CompositeSchedulerTask implements SchedulerTask {
-
     private final SchedulerTask setupTask;
     private final AtomicReference<SchedulerTask> delegate;
 
@@ -25,6 +24,7 @@ public final class CompositeSchedulerTask implements SchedulerTask {
     public boolean cancel() {
         boolean cancelled = setupTask.cancel();
         SchedulerTask scheduled = delegate.get();
+
         if (scheduled != null) {
             cancelled |= scheduled.cancel();
         }

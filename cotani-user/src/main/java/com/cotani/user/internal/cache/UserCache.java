@@ -20,7 +20,6 @@ import java.util.function.UnaryOperator;
  */
 @InternalApi
 public final class UserCache {
-
     private static final int DEFAULT_MAX_CACHED_USERS = 10_000;
     private static final String UNIQUE_ID_PARAM = "uniqueId";
 
@@ -35,22 +34,26 @@ public final class UserCache {
         if (maxCachedUsers <= 0) {
             throw new IllegalArgumentException("maxCachedUsers must be positive");
         }
+
         this.maxCachedUsers = maxCachedUsers;
         this.users = new ConcurrentHashMap<>();
     }
 
     public Optional<SimpleCotaniUser> findInternal(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         return Optional.ofNullable(users.get(uniqueId));
     }
 
     public Optional<CotaniUser> find(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         return Optional.ofNullable(users.get(uniqueId)).map(CotaniUser.class::cast);
     }
 
     public void put(SimpleCotaniUser user) {
         Objects.requireNonNull(user, "user");
+
         users.put(user.uniqueId(), user);
         evictIfNeeded();
     }
@@ -58,14 +61,17 @@ public final class UserCache {
     public boolean remove(UUID uniqueId, UUID expectedSessionId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(expectedSessionId, "expectedSessionId");
+
         boolean[] removed = new boolean[1];
         users.computeIfPresent(uniqueId, (id, current) -> {
             if (current.sessionId().equals(expectedSessionId)) {
                 removed[0] = true;
                 return null;
             }
+
             return current;
         });
+
         return removed[0];
     }
 
@@ -74,15 +80,19 @@ public final class UserCache {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(expectedSessionId, "expectedSessionId");
         Objects.requireNonNull(updater, "updater");
+
         var result = new AtomicReference<>(Optional.<SimpleCotaniUser>empty());
         users.computeIfPresent(uniqueId, (_, current) -> {
             if (!current.sessionId().equals(expectedSessionId)) {
                 return current;
             }
+
             SimpleCotaniUser updated = Objects.requireNonNull(updater.apply(current), "updated");
             result.set(Optional.of(updated));
+
             return updated;
         });
+
         return Objects.requireNonNull(result.get());
     }
 
@@ -92,6 +102,7 @@ public final class UserCache {
 
     public boolean contains(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         return users.containsKey(uniqueId);
     }
 
@@ -102,6 +113,7 @@ public final class UserCache {
     private void evictIfNeeded() {
         while (users.size() > maxCachedUsers) {
             var iterator = users.keySet().iterator();
+
             if (iterator.hasNext()) {
                 iterator.next();
                 iterator.remove();

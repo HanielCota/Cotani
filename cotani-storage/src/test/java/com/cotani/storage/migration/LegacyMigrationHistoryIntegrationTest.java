@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class LegacyMigrationHistoryIntegrationTest {
-
     @Test
     void matchingLegacyHistoryIsBackfilledWithoutRerunningMigration(@TempDir Path directory) throws Exception {
         var database = directory.resolve("legacy.db");

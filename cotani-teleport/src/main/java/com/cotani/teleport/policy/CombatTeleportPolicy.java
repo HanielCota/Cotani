@@ -28,10 +28,13 @@ public final class CombatTeleportPolicy implements TeleportPolicy {
         if (!context.options().checkCombat()) {
             return PolicyResult.allowed();
         }
+
         Player player = playerResolver.resolve(context.playerId());
+
         if (player != null && combatAdapter.isInCombat(player)) {
             return PolicyResult.denied(TeleportFailureReason.BLOCKED_BY_COMBAT, messages.blockedByCombat());
         }
+
         return PolicyResult.allowed();
     }
 }

@@ -19,7 +19,6 @@ import org.jspecify.annotations.NullMarked;
  */
 @NullMarked
 public final class ComponentTexts {
-
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
     private static final String COMPONENTS_NULL_MESSAGE = "Parameter 'components' must not be null";
     private static final String CONTENT_NULL_MESSAGE = "Parameter 'content' must not be null";

@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class VirtualThreadExecutorTest {
-
     private static final TaskMetadata METADATA = TaskMetadata.named("test-task", ExecutionTarget.async());
 
     @Test
@@ -92,6 +91,7 @@ class VirtualThreadExecutorTest {
         VirtualThreadExecutor executor = VirtualThreadExecutor.create(1, true);
         var started = new CountDownLatch(1);
         var release = new CountDownLatch(1);
+
         try {
             var running = executor.submit(METADATA, () -> {
                 started.countDown();
@@ -105,6 +105,7 @@ class VirtualThreadExecutorTest {
             assertFalse(running.isDone());
 
             var queued = new ArrayList<Future<Void>>(4_096);
+
             for (int index = 0; index < 4_096; index++) {
                 queued.add(executor.submit(METADATA, () -> {}));
             }

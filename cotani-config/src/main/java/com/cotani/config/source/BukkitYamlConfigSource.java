@@ -29,7 +29,6 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 public final class BukkitYamlConfigSource implements ConfigSource {
-
     private static final long MAX_CONFIG_FILE_BYTES = 4L * 1024L * 1024L;
 
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -81,6 +80,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
 
     private void loadYaml() {
         var loaded = new YamlConfiguration();
+
         try {
             String content = readContainedFile(path);
             YamlInputLimits.validate(content);
@@ -90,6 +90,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         } catch (IOException | InvalidConfigurationException exception) {
             throw new ConfigException("Could not parse config file " + path + ": " + exception.getMessage(), exception);
         }
+
         lock.writeLock().lock();
         try {
             yaml = loaded;
@@ -157,7 +158,9 @@ public final class BukkitYamlConfigSource implements ConfigSource {
             if (yaml.contains(path)) {
                 return false;
             }
+
             yaml.set(path, value);
+
             return true;
         } finally {
             lock.writeLock().unlock();
@@ -169,9 +172,11 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         lock.readLock().lock();
         try {
             ConfigurationSection section = sectionAt(path);
+
             if (section == null) {
                 return Set.of();
             }
+
             return Set.copyOf(section.getKeys(false));
         } finally {
             lock.readLock().unlock();
@@ -183,9 +188,11 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         lock.readLock().lock();
         try {
             ConfigurationSection section = sectionAt(path);
+
             if (section == null) {
                 return Map.of();
             }
+
             return Map.copyOf(section.getValues(false));
         } finally {
             lock.readLock().unlock();
@@ -197,9 +204,11 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         lock.readLock().lock();
         try {
             Object value = yaml.get(path);
+
             if (value instanceof List<?> list) {
                 return List.copyOf(list);
             }
+
             return List.of();
         } finally {
             lock.readLock().unlock();
@@ -210,6 +219,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         if (path.isBlank()) {
             return yaml;
         }
+
         return yaml.getConfigurationSection(path);
     }
 
@@ -222,6 +232,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         }
         try {
             var parent = path.getParent();
+
             if (parent != null) {
                 Files.createDirectories(parent);
             }
@@ -251,6 +262,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         }
 
         YamlConfiguration defaults = loadDefaultsResource();
+
         if (defaults == null) {
             defaultsApplied.set(true);
             return;
@@ -266,6 +278,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
             yaml.options().copyDefaults(true);
             defaultsApplied.set(true);
             var addedKeys = yaml.getKeys(true).size() - beforeKeys;
+
             if (addedKeys > 0 && createMissing) {
                 saveContainedFile(yaml.saveToString());
             }
@@ -281,10 +294,12 @@ public final class BukkitYamlConfigSource implements ConfigSource {
             if (input == null) {
                 return null;
             }
+
             String content = new String(readBounded(input), StandardCharsets.UTF_8);
             YamlInputLimits.validate(content);
             var defaults = new YamlConfiguration();
             defaults.loadFromString(content);
+
             return defaults;
         } catch (IOException | InvalidConfigurationException exception) {
             throw new ConfigException("Could not load defaults for " + resourceName, exception);
@@ -293,14 +308,18 @@ public final class BukkitYamlConfigSource implements ConfigSource {
 
     private String readContainedFile(Path candidate) throws IOException {
         var verified = ConfigPaths.requireContained(candidate, root);
+
         if (!Files.exists(verified, LinkOption.NOFOLLOW_LINKS)) {
             throw new FileNotFoundException(verified.toString());
         }
+
         var before = Files.readAttributes(verified, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+
         if (!before.isRegularFile() || before.size() > MAX_CONFIG_FILE_BYTES) {
             throw new ConfigException(
                     "Config file is not regular or exceeds " + MAX_CONFIG_FILE_BYTES + " bytes: " + verified);
         }
+
         byte[] bytes;
         try (var channel = Files.newByteChannel(
                         verified, Set.<OpenOption>of(StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS));
@@ -309,21 +328,26 @@ public final class BukkitYamlConfigSource implements ConfigSource {
         }
         ConfigPaths.requireContained(candidate, root);
         var after = Files.readAttributes(verified, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+
         if (!Objects.equals(before.fileKey(), after.fileKey()) || before.size() != after.size()) {
             throw new ConfigException("Config file changed while it was being read: " + verified);
         }
+
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
     private void saveContainedFile(String content) throws IOException {
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+
         if (bytes.length > MAX_CONFIG_FILE_BYTES) {
             throw new ConfigException("Serialized config exceeds " + MAX_CONFIG_FILE_BYTES + " bytes: " + path);
         }
+
         var verified = ConfigPaths.requireContained(path, root);
         var parent = Objects.requireNonNull(verified.getParent(), "config parent");
         ConfigPaths.requireContained(parent, root);
         var temporary = Files.createTempFile(parent, ".cotani-config-", ".tmp");
+
         try {
             try (var channel = Files.newByteChannel(
                     temporary,
@@ -355,8 +379,10 @@ public final class BukkitYamlConfigSource implements ConfigSource {
             if (total > MAX_CONFIG_FILE_BYTES) {
                 throw new ConfigException("YAML input exceeds maximum size " + MAX_CONFIG_FILE_BYTES + " bytes");
             }
+
             output.write(buffer, 0, read);
         }
+
         return output.toByteArray();
     }
 
@@ -367,6 +393,7 @@ public final class BukkitYamlConfigSource implements ConfigSource {
 
     private static void writeFully(SeekableByteChannel channel, byte[] content) throws IOException {
         var buffer = ByteBuffer.wrap(content);
+
         while (buffer.hasRemaining()) {
             channel.write(buffer);
         }

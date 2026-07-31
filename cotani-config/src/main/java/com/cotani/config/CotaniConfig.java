@@ -22,7 +22,6 @@ import net.kyori.adventure.text.Component;
 @SuppressWarnings("MissingOverride") // Keep declarations on the compatibility facade's binary surface.
 public interface CotaniConfig
         extends ConfigReader, ConfigWriter, ConfigBinderView, ConfigValidationView, ReloadableConfig {
-
     String name();
 
     Path path();

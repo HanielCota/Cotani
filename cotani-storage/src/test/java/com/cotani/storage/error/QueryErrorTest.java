@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class QueryErrorTest {
-
     @Test
     void storesMessage() {
         var error = new QueryError("test message", null);

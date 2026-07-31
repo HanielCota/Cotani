@@ -7,7 +7,6 @@ import java.util.Locale;
 import org.bukkit.Material;
 
 public final class MaterialSerializer implements ConfigSerializer<Material> {
-
     @Override
     public Class<Material> type() {
         return Material.class;
@@ -16,9 +15,11 @@ public final class MaterialSerializer implements ConfigSerializer<Material> {
     @Override
     public Material read(ConfigValue value) {
         Material material = Material.matchMaterial(value.asString().toUpperCase(Locale.ROOT));
+
         if (material != null) {
             return material;
         }
+
         throw new ConfigException("Invalid material at " + value.location());
     }
 

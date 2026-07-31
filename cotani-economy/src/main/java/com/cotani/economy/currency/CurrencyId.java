@@ -5,7 +5,6 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 public record CurrencyId(String value) {
-
     private static final Pattern ALLOWED_VALUE = Pattern.compile("^[a-z0-9_-]{2,32}$");
 
     public CurrencyId {

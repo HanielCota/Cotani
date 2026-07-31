@@ -8,7 +8,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.Plugin;
 
 public final class NamespacedKeySerializer implements ConfigSerializer<NamespacedKey> {
-
     private final Plugin plugin;
 
     private NamespacedKeySerializer(Plugin plugin) {
@@ -28,9 +27,11 @@ public final class NamespacedKeySerializer implements ConfigSerializer<Namespace
     public NamespacedKey read(ConfigValue value) {
         String input = value.asString();
         NamespacedKey key = NamespacedKey.fromString(input, plugin);
+
         if (key != null) {
             return key;
         }
+
         throw new ConfigException("Invalid namespaced key at " + value.location());
     }
 

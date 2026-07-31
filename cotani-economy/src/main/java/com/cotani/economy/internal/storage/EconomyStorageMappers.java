@@ -19,7 +19,6 @@ import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 final class EconomyStorageMappers {
-
     private static final String CREATED_AT = "created_at";
     private static final String TRANSACTION_ID = "transaction_id";
     private static final String TARGET_USER_ID = "target_user_id";
@@ -113,11 +112,13 @@ final class EconomyStorageMappers {
                     reason_key, reason_source, reason_actor_user_id, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
+
         return tx.update(sql, binder -> bindTransaction(binder, transaction)).exceptionallyCompose(error -> {
             if (isUniqueViolation(error)) {
                 return CompletableFuture.failedFuture(
                         new DuplicateEconomyOperationException(transaction.operationId()));
             }
+
             return CompletableFuture.failedFuture(error);
         });
     }
@@ -142,18 +143,22 @@ final class EconomyStorageMappers {
 
     static boolean isUniqueViolation(Throwable error) {
         Throwable cause = unwrap(error);
+
         while (cause != null) {
             if (cause instanceof SQLException sqlException && isUniqueSqlException(sqlException)) {
                 return true;
             }
             if (cause instanceof StorageException storageException) {
                 Throwable nested = storageException.error().cause();
+
                 if (nested instanceof SQLException sqlException && isUniqueSqlException(sqlException)) {
                     return true;
                 }
+
                 cause = nested != null ? nested : cause.getCause();
                 continue;
             }
+
             cause = cause.getCause();
         }
         return false;
@@ -161,24 +166,31 @@ final class EconomyStorageMappers {
 
     private static boolean isUniqueSqlException(SQLException sqlException) {
         String sqlState = sqlException.getSQLState();
+
         if (sqlState != null && sqlState.startsWith("23")) {
             return true;
         }
+
         int errorCode = sqlException.getErrorCode();
         // MySQL/MariaDB ER_DUP_ENTRY = 1062; SQLite SQLITE_CONSTRAINT = 19
         if (errorCode == 1062 || errorCode == 19) {
             return true;
         }
+
         String message = sqlException.getMessage();
+
         if (message == null) {
             return false;
         }
+
         String lower = message.toLowerCase(Locale.ROOT);
+
         return lower.contains("unique") || lower.contains("duplicate");
     }
 
     private static Throwable unwrap(Throwable error) {
         Throwable cause = error;
+
         while (cause instanceof CompletionException && cause.getCause() != null) {
             cause = cause.getCause();
         }

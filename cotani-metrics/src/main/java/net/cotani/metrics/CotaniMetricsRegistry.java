@@ -18,7 +18,6 @@ import net.cotani.metrics.api.MetricsRegistry;
  */
 @InternalApi
 public final class CotaniMetricsRegistry implements MetricsRegistry {
-
     private final MeterRegistry meterRegistry;
     private final String prefix;
 
@@ -44,6 +43,7 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
     @Override
     public void counter(String name, double amount, String... tags) {
         Objects.requireNonNull(name, "name");
+
         meterRegistry.counter(formatName(name), toTags(tags)).increment(amount);
     }
 
@@ -51,6 +51,7 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
     public void gauge(String name, Supplier<Number> numberSupplier, String... tags) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(numberSupplier, "numberSupplier");
+
         Gauge.builder(formatName(name), numberSupplier, s -> {
                     Number val = s.get();
                     return val.doubleValue();
@@ -63,12 +64,14 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
     public void timer(String name, Duration duration, String... tags) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(duration, "duration");
+
         meterRegistry.timer(formatName(name), toTags(tags)).record(duration);
     }
 
     @Override
     public void register(MeterBinder binder) {
         Objects.requireNonNull(binder, "binder");
+
         binder.bindTo(this);
     }
 
@@ -81,6 +84,7 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
         if (meterRegistry instanceof PrometheusMeterRegistry prometheusMeterRegistry) {
             return Optional.of(prometheusMeterRegistry);
         }
+
         return Optional.empty();
     }
 
@@ -88,6 +92,7 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
         if (prefix.isEmpty() || name.startsWith(prefix + ".")) {
             return name;
         }
+
         return prefix + "." + name;
     }
 
@@ -99,8 +104,10 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
             String[] padded = new String[tags.length + 1];
             System.arraycopy(tags, 0, padded, 0, tags.length);
             padded[tags.length] = "";
+
             return Tags.of(padded);
         }
+
         return Tags.of(tags);
     }
 

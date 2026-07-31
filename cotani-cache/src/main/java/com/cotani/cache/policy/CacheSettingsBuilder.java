@@ -10,7 +10,6 @@ import java.util.Objects;
  * produce the immutable settings record.
  */
 public final class CacheSettingsBuilder {
-
     private static final String DURATION_PARAM = "duration";
 
     private long maximumSize = 10_000;

@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class IdentifiersTest {
-
     @Test
     void acceptsValidIdentifier() {
         assertEquals("my_table", Identifiers.requireValid("my_table"));

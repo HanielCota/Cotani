@@ -30,7 +30,6 @@ import org.jspecify.annotations.Nullable;
  * the viewer.
  */
 public final class GuiPanel implements InventoryHolder {
-
     private final Player viewer;
     private final int rows;
     private final @Nullable ItemStack borderItem;
@@ -120,6 +119,7 @@ public final class GuiPanel implements InventoryHolder {
         }
 
         var button = buttons.get(context.slot());
+
         if (button != null) {
             button.onClick(context);
         }
@@ -160,6 +160,7 @@ public final class GuiPanel implements InventoryHolder {
         buttons.put(slot, button);
 
         var newItem = button.render(viewer);
+
         if (!Objects.equals(inventory.getItem(slot), newItem)) {
             inventory.setItem(slot, newItem);
         }

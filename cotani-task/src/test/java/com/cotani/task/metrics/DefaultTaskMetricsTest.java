@@ -9,7 +9,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class DefaultTaskMetricsTest {
-
     @Test
     void recordsExecutionsAndFailures() {
         DefaultTaskMetrics metrics = new DefaultTaskMetrics();

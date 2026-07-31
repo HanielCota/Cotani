@@ -22,7 +22,6 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class SqlCooldownRepository implements CacheRepository<UUID, PlayerCooldowns> {
-
     private static final String PLAYER_ID_PARAM = "playerId";
 
     private final CotaniStorage storage;
@@ -37,6 +36,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
 
         var sql =
                 "SELECT action_name, started_at, expires_at FROM cotani_cooldowns WHERE target_type = 'USER' AND target_id = ?";
+
         return storage.queryExecutor()
                 .queryMany(sql, binder -> binder.string(playerId.toString()), row -> {
                     String action = row.getString("action_name");
@@ -52,6 +52,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
                 .thenApply(entries -> {
                     Instant now = Instant.now();
                     Map<String, CooldownEntry> map = new ConcurrentHashMap<>();
+
                     for (CooldownEntry entry : entries) {
                         if (entry.expired(now)) {
                             continue;
@@ -76,6 +77,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
                     .thenCompose(_ -> {
                         Instant now = Instant.now();
                         List<SqlConsumer<ParameterBinder>> binders = new ArrayList<>();
+
                         for (CooldownEntry entry : value.activeCooldownsUnsafe().values()) {
                             if (entry.expired(now)) {
                                 continue;
@@ -94,6 +96,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
                         if (binders.isEmpty()) {
                             return CompletableFuture.completedFuture(null);
                         }
+
                         return tx.batch(insertSql, binders);
                     });
         });
@@ -104,6 +107,7 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
         Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
 
         var sql = "DELETE FROM cotani_cooldowns WHERE target_type = 'USER' AND target_id = ?";
+
         return storage.transactions().run(tx -> tx.update(sql, binder -> binder.string(playerId.toString())));
     }
 }

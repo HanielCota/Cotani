@@ -20,8 +20,10 @@ public record TeleportContext(
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(options, "options");
         Objects.requireNonNull(createdAt, "createdAt");
+
         from = from.clone();
         target = target.clone();
+
         if (source == null || source.isBlank()) {
             source = "unknown";
         }

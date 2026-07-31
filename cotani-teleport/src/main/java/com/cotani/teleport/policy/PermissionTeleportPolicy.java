@@ -27,10 +27,13 @@ public final class PermissionTeleportPolicy implements TeleportPolicy {
         if (!context.options().checkPermission()) {
             return PolicyResult.allowed();
         }
+
         Player player = playerResolver.resolve(context.playerId());
+
         if (player == null || !player.hasPermission(permission)) {
             return PolicyResult.denied(TeleportFailureReason.BLOCKED_BY_PERMISSION, messages.blockedByPermission());
         }
+
         return PolicyResult.allowed();
     }
 }

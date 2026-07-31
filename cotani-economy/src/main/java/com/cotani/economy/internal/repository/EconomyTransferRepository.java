@@ -11,7 +11,6 @@ import java.util.concurrent.CompletionStage;
 
 @InternalApi
 public interface EconomyTransferRepository {
-
     CompletionStage<EconomyTransaction> transfer(
             UUID sourceUserId,
             UUID targetUserId,

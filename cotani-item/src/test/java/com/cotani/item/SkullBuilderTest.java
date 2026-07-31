@@ -14,7 +14,6 @@ import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 
 class SkullBuilderTest {
-
     @Test
     void isFinalClassWithExpectedApi() throws NoSuchMethodException {
         assertTrue(Modifier.isFinal(SkullBuilder.class.getModifiers()));

@@ -3,7 +3,6 @@ package com.cotani.task.api;
 import java.util.Optional;
 
 public final class TaskContextHolder {
-
     public static final ScopedValue<TaskContext> CURRENT = ScopedValue.newInstance();
 
     private TaskContextHolder() {}

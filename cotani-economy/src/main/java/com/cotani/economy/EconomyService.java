@@ -30,7 +30,6 @@ import java.util.concurrent.CompletionStage;
  * for different operations, otherwise the call may be rejected as a duplicate.
  */
 public interface EconomyService {
-
     CompletionStage<EconomyBalance> balance(UUID userId);
 
     default CompletionStage<EconomyBalance> balanceAsync(UUID userId) {

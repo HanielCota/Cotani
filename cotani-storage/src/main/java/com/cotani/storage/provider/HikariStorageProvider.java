@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
 public final class HikariStorageProvider implements StorageProvider {
-
     private final String jdbcUrl;
     private final MySqlCredentials credentials;
     private final AtomicReference<@Nullable HikariDataSource> dataSource = new AtomicReference<>();
@@ -45,6 +44,7 @@ public final class HikariStorageProvider implements StorageProvider {
         config.setMaxLifetime(maxLifetime);
         config.setPoolName("CotaniStoragePool-" + jdbcUrl.hashCode());
         var created = new HikariDataSource(config);
+
         if (!dataSource.compareAndSet(null, created)) {
             created.close();
             throw new IllegalStateException("HikariStorageProvider has already been started.");
@@ -54,6 +54,7 @@ public final class HikariStorageProvider implements StorageProvider {
     @Override
     public Connection connection() throws SQLException {
         var ds = dataSource.get();
+
         if (ds == null || ds.isClosed()) {
             throw new StorageException(new ConnectionError("Storage provider is not available.", null));
         }
@@ -70,6 +71,7 @@ public final class HikariStorageProvider implements StorageProvider {
     @Override
     public void close() {
         var current = dataSource.getAndSet(null);
+
         if (current != null && !current.isClosed()) {
             current.close();
         }

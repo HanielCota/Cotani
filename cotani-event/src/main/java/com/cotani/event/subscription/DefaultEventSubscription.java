@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @InternalApi
 public final class DefaultEventSubscription implements EventSubscription {
-
     private final UUID id;
     private final Class<? extends CotaniEvent> eventType;
     private final EventPriority priority;

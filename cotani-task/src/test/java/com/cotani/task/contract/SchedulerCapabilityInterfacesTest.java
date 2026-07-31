@@ -27,7 +27,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class SchedulerCapabilityInterfacesTest {
-
     @Test
     void realSchedulerIsSubstitutableForNarrowCapabilities() {
         PlatformScheduler platform = Mockito.mock(PlatformScheduler.class);

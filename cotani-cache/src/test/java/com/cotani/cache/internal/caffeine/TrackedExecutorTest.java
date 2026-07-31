@@ -8,7 +8,6 @@ import java.util.ArrayDeque;
 import org.junit.jupiter.api.Test;
 
 class TrackedExecutorTest {
-
     @Test
     void idleCompletionWaitsForEveryAcceptedTask() {
         var tasks = new ArrayDeque<Runnable>();

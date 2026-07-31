@@ -10,7 +10,6 @@ import java.util.concurrent.CompletionStage;
  * rejected once closing begins.
  */
 public interface AsyncCloseable {
-
     /**
      * Begins non-blocking resource shutdown.
      *

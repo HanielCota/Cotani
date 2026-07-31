@@ -7,7 +7,6 @@ import java.util.Locale;
 import java.util.Set;
 
 public final class BooleanSerializer implements ConfigSerializer<Boolean> {
-
     private static final Set<String> TRUE_VALUES = Set.of("true", "yes", "on", "1");
     private static final Set<String> FALSE_VALUES = Set.of("false", "no", "off", "0");
 
@@ -21,13 +20,16 @@ public final class BooleanSerializer implements ConfigSerializer<Boolean> {
         if (value.raw() instanceof Boolean bool) {
             return bool;
         }
+
         var text = value.asString().trim().toLowerCase(Locale.ROOT);
+
         if (TRUE_VALUES.contains(text)) {
             return true;
         }
         if (FALSE_VALUES.contains(text)) {
             return false;
         }
+
         throw new ConfigException("Invalid boolean value '" + value.raw() + "' at " + value.location()
                 + ". Accepted: true/false, yes/no, on/off, 1/0");
     }

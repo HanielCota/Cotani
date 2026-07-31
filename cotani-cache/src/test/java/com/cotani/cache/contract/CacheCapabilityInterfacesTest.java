@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class CacheCapabilityInterfacesTest {
-
     @Test
     void dataCachePreservesBehaviorThroughNarrowCapabilities() {
         PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);
@@ -52,6 +51,7 @@ class CacheCapabilityInterfacesTest {
     private static CacheRepository<String, String> repository() {
         CacheRepository<String, String> repository = Mockito.mock(CacheRepository.class);
         when(repository.find(any())).thenReturn(CompletableFuture.completedFuture(Optional.empty()));
+
         return repository;
     }
 }

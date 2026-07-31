@@ -15,10 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class CotaniTest {
-
     private static Plugin pluginWithLogger() {
         var plugin = Mockito.mock(Plugin.class);
         Mockito.when(plugin.getLogger()).thenReturn(Logger.getLogger("cotani-test"));
+
         return plugin;
     }
 
@@ -298,6 +298,7 @@ class CotaniTest {
                 .withAsync(() -> {
                     var failed = new CompletableFuture<Void>();
                     failed.completeExceptionally(new IllegalStateException("stage boom"));
+
                     return failed;
                 })
                 .build();

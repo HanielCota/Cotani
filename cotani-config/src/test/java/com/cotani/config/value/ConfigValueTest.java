@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ConfigValueTest {
-
     private ConfigSerializerRegistry registry;
 
     @BeforeEach

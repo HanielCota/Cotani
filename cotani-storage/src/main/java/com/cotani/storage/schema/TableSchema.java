@@ -10,7 +10,6 @@ import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 public final class TableSchema {
-
     private static final String COLUMN_NAME_LABEL = "Column name";
 
     private final String name;
@@ -72,9 +71,11 @@ public final class TableSchema {
      */
     public TableSchema primaryKey(String... columns) {
         Objects.requireNonNull(columns, "columns");
+
         if (columns.length == 0) {
             throw new IllegalArgumentException("primary key must contain at least one column");
         }
+
         compositePrimaryKey.clear();
         for (String column : columns) {
             var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
@@ -97,6 +98,7 @@ public final class TableSchema {
         var builder =
                 new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(name).append(" (");
         var columnCount = columns.size();
+
         for (var i = 0; i < columnCount; i++) {
             if (i > 0) {
                 builder.append(", ");
@@ -114,6 +116,7 @@ public final class TableSchema {
             builder.append(')');
         }
         cachedSql = builder.append(")").toString();
+
         return cachedSql;
     }
 
@@ -126,6 +129,7 @@ public final class TableSchema {
         appendPrimary(column, builder, useCompositePrimaryKey);
         appendNullable(column, builder);
         appendUnique(column, builder, useCompositePrimaryKey);
+
         return builder.toString();
     }
 

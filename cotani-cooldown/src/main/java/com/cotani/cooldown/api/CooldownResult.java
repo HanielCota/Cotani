@@ -11,7 +11,6 @@ public record CooldownResult(
         CooldownKey key,
         Duration remaining,
         @Nullable Instant expiresAt) {
-
     public CooldownResult {
         Objects.requireNonNull(state, "state cannot be null");
         Objects.requireNonNull(key, "key cannot be null");

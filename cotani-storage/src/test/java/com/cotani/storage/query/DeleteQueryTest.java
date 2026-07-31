@@ -10,10 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class DeleteQueryTest {
-
     private static QueryExecutor createExecutor() {
         var provider = Mockito.mock(StorageProvider.class);
         Mockito.when(provider.available()).thenReturn(true);
+
         return QueryExecutor.create(provider, Runnable::run, new ValueSerializerRegistry());
     }
 

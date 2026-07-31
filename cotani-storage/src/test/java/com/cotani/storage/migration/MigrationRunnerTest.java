@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class MigrationRunnerTest {
-
     private final QueryExecutor executor = createExecutor();
     private final Schema schema = new Schema(executor, Mockito.mock(SqlDialect.class));
 

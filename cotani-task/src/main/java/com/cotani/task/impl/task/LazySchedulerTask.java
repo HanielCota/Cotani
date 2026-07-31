@@ -11,7 +11,6 @@ import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class LazySchedulerTask implements SchedulerTask {
-
     private final AtomicReference<@Nullable SchedulerTask> setupTask;
     private final AtomicReference<@Nullable SchedulerTask> delegate;
     private final AtomicBoolean cancelled;

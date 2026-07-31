@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public interface StorageProvider extends AutoCloseable {
-
     void start();
 
     Connection connection() throws SQLException;

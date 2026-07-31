@@ -7,7 +7,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 public interface EventDispatcher {
-
     <T extends CotaniEvent> T dispatch(T event, List<EventSubscription> subscriptions);
 
     default <T extends CotaniEvent> CompletionStage<T> dispatchAsync(T event, List<EventSubscription> subscriptions) {

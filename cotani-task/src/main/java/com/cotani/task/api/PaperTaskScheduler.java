@@ -36,7 +36,6 @@ public interface PaperTaskScheduler
                 SchedulerDiagnostics,
                 AsyncCloseable,
                 AutoCloseable {
-
     SchedulerTask async(Runnable runnable);
 
     SchedulerTask async(String name, Runnable runnable);
@@ -126,6 +125,7 @@ public interface PaperTaskScheduler
         CompletableFuture<Void> future = new CompletableFuture<>();
         SchedulerTask pending = asyncLater("scheduler-delay", () -> future.complete(null), duration);
         var _ = future.whenComplete((_, _) -> pending.cancel());
+
         return future;
     }
 

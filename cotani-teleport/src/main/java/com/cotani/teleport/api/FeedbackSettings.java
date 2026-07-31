@@ -1,7 +1,6 @@
 package com.cotani.teleport.api;
 
 public record FeedbackSettings(boolean playEffects, boolean sendMessages) {
-
     public static FeedbackSettings defaults() {
         return builder().build();
     }

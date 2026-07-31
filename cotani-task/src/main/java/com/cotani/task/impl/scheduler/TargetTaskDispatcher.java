@@ -16,7 +16,6 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
 final class TargetTaskDispatcher implements NamedAsyncTaskScheduler {
-
     private final PlatformScheduler platformScheduler;
     private final TaskRunner taskRunner;
     private final TaskErrorReporter taskErrorReporter;
@@ -75,6 +74,7 @@ final class TargetTaskDispatcher implements NamedAsyncTaskScheduler {
     SchedulerTask region(String name, UUID worldId, int chunkX, int chunkZ, Runnable runnable) {
         var target = ExecutionTarget.region(worldId, chunkX, chunkZ);
         var metadata = metadataFactory.create(name, target);
+
         return platformScheduler.runRegion(metadata, worldId, chunkX, chunkZ, taskRunner.wrap(metadata, runnable));
     }
 
@@ -99,6 +99,7 @@ final class TargetTaskDispatcher implements NamedAsyncTaskScheduler {
     SchedulerTask entity(String name, UUID entityId, Runnable runnable) {
         var target = ExecutionTarget.entity(entityId);
         var metadata = metadataFactory.create(name, target);
+
         return platformScheduler.runEntity(
                 metadata,
                 entityId,
@@ -132,6 +133,7 @@ final class TargetTaskDispatcher implements NamedAsyncTaskScheduler {
         var metadata = metadataFactory.create(name, target);
         Runnable runnable = () -> taskRunner.complete(metadata, supplier, future);
         taskDispatcher.dispatchPrepared(target, metadata, runnable, future);
+
         return future;
     }
 

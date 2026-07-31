@@ -3,7 +3,6 @@ package com.cotani.teleport.api;
 import java.util.Objects;
 
 public record SafetySettings(boolean safeLocation, SafeLocationOptions safeLocationOptions) {
-
     public SafetySettings {
         Objects.requireNonNull(safeLocationOptions, "safeLocationOptions");
     }

@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class InMemoryEconomyStoreTest {
-
     private static final EconomySettings SETTINGS = EconomySettings.defaultSettings(EconomyCurrency.coins());
     private static final EconomyReason REASON = EconomyReason.system("test");
 
@@ -29,6 +28,7 @@ class InMemoryEconomyStoreTest {
         var exception = assertThrows(CompletionException.class, future::join);
         assertNotNull(exception.getCause());
         assertInstanceOf(type, exception.getCause());
+
         return type.cast(exception.getCause());
     }
 

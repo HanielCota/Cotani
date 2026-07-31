@@ -10,7 +10,6 @@ import java.util.Objects;
 
 @InternalApi
 public final class DefaultCooldownService implements CooldownService {
-
     private final CooldownStore store;
     private final Clock clock;
 

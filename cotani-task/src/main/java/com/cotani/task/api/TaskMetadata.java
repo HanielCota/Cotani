@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 
 public record TaskMetadata(String name, ExecutionTarget target, Instant createdAt) {
-
     private static final String TARGET_PARAM = "target";
     private static final int DEFAULT_CACHE_MAX_SIZE = 256;
     private static final Map<String, TaskMetadata> DEFAULT_CACHE = Collections.synchronizedMap(new LinkedHashMap<>() {

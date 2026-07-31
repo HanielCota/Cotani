@@ -23,7 +23,6 @@ import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings({"NullAway", "removal"})
 class DefaultUserModuleTest {
-
     private final Plugin plugin = mock(Plugin.class);
     private final Server server = mock(Server.class);
     private final PluginManager pluginManager = mock(PluginManager.class);

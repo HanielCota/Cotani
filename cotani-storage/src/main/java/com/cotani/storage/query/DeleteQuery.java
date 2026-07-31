@@ -12,7 +12,6 @@ import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 public final class DeleteQuery {
-
     private final String table;
     private final QueryExecutor executor;
     private final List<Condition> conditions = new ArrayList<>();
@@ -43,6 +42,7 @@ public final class DeleteQuery {
                     "DeleteQuery requires at least one where(...) condition; call all() to allow a full-table delete.",
                     null)));
         }
+
         return executor.update(sql(), this::bind);
     }
 
@@ -54,6 +54,7 @@ public final class DeleteQuery {
         var builder = new StringBuilder("DELETE FROM ").append(table);
         appendConditions(builder);
         cachedSql = builder.toString();
+
         return cachedSql;
     }
 

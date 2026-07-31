@@ -13,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
  * not need to throttle {@link #onClick(ClickContext)} themselves.
  */
 public interface Button {
-
     /**
      * Renders the item shown to the given viewer. Called on every (re-)render of the slot.
      *

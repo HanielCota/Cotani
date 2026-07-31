@@ -13,7 +13,6 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 public final class CotaniConfigsBuilder {
-
     private final Plugin plugin;
     private final List<String> files = new ArrayList<>();
     private Path folder;
@@ -47,6 +46,7 @@ public final class CotaniConfigsBuilder {
         if (files.contains(name)) {
             throw new IllegalArgumentException("Duplicate file name: " + name);
         }
+
         files.add(name);
         return this;
     }
@@ -75,6 +75,7 @@ public final class CotaniConfigsBuilder {
                 plugin, folder, resolvedScheduler, registry, createMissingFiles, copyDefaults);
         files.forEach(configs::register);
         configs.reload();
+
         return configs;
     }
 
@@ -89,14 +90,17 @@ public final class CotaniConfigsBuilder {
         DefaultCotaniConfigs configs = DefaultCotaniConfigs.create(
                 plugin, folder, resolvedScheduler, registry, createMissingFiles, copyDefaults);
         files.forEach(configs::register);
+
         return configs.reloadAsync().toCompletionStage().thenApply(_ -> configs);
     }
 
     private PaperTaskScheduler requireScheduler() {
         PaperTaskScheduler resolved = scheduler;
+
         if (resolved == null) {
             throw new IllegalStateException("No scheduler configured; call scheduler(...) before load().");
         }
+
         return resolved;
     }
 

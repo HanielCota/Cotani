@@ -25,7 +25,6 @@ import org.jspecify.annotations.NullMarked;
 @SuppressWarnings("UnsubstitutedExpression")
 @NullMarked
 public final class Placeholders {
-
     private static final String KEY_NULL_MESSAGE = "Parameter 'key' must not be null";
     private static final String VALUE_NULL_MESSAGE = "Parameter 'value' must not be null";
     private static final String STYLE_NULL_MESSAGE = "Parameter 'style' must not be null";

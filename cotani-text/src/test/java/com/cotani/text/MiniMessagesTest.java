@@ -12,7 +12,6 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.junit.jupiter.api.Test;
 
 class MiniMessagesTest {
-
     @Test
     void literalDoesNotInterpretUntrustedTags() {
         assertEquals(

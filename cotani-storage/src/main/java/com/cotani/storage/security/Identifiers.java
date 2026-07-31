@@ -5,7 +5,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 public final class Identifiers {
-
     private static final int MAX_LENGTH = 64;
     private static final Pattern VALID_IDENTIFIER = Pattern.compile("^[A-Za-z_]\\w*$");
 

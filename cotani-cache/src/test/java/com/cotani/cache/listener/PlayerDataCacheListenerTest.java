@@ -19,7 +19,6 @@ import org.mockito.MockitoAnnotations;
 
 @SuppressWarnings("NullAway")
 class PlayerDataCacheListenerTest {
-
     @Mock
     private PlayerDataCache<String> cache;
 

@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.Objects;
 
 public record CooldownEntry(CooldownKey key, Instant startedAt, Instant expiresAt) {
-
     public CooldownEntry {
         Objects.requireNonNull(key, "key cannot be null");
         Objects.requireNonNull(startedAt, "startedAt cannot be null");

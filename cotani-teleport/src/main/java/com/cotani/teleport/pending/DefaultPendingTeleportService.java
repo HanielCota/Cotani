@@ -49,22 +49,28 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         Objects.requireNonNull(options, "options");
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(source, "source");
+
         PendingTeleportData data = PendingTeleportData.create(playerId, target, delay, options, cause, source);
         PendingTeleportStateMachine pending = new PendingTeleportStateMachine(data);
 
         PendingTeleportStateMachine previous = pendingByPlayer.put(playerId, pending);
+
         if (previous != null) {
             previous.cancel(TeleportCancelReason.REPLACED);
         }
 
         Player player = playerResolver.resolve(playerId);
+
         if (player == null) {
             pendingByPlayer.remove(playerId, pending);
             pending.cancel(TeleportCancelReason.QUIT);
+
             return data.id();
         }
+
         pending.attachTask(
                 scheduler.entityLater("pending-teleport-" + data.id(), player, () -> execute(pending), delay));
+
         return data.id();
     }
 
@@ -72,14 +78,19 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
     public boolean cancel(UUID playerId, TeleportCancelReason reason) {
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(reason, "reason");
+
         PendingTeleportStateMachine pending = pendingByPlayer.get(playerId);
+
         if (pending == null) {
             return false;
         }
+
         boolean cancelled = pending.cancel(reason);
+
         if (cancelled) {
             pendingByPlayer.remove(playerId, pending);
         }
+
         return cancelled;
     }
 
@@ -115,6 +126,7 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         }
 
         Player player = playerResolver.resolve(data.playerId());
+
         if (player == null || !player.isOnline()) {
             pendingByPlayer.remove(data.playerId(), pending);
             pending.cancelExecution(TeleportCancelReason.QUIT);

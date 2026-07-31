@@ -12,7 +12,6 @@ import java.time.Duration;
  * No instantiation required.
  */
 public final class CotaniCache {
-
     private CotaniCache() {
         throw new UnsupportedOperationException("Utility class cannot be instantiated.");
     }

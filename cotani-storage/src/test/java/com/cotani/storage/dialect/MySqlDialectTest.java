@@ -7,7 +7,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class MySqlDialectTest {
-
     private final MySqlDialect dialect = new MySqlDialect();
 
     @Test

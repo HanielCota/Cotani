@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public final class SQLiteDialect implements SqlDialect {
-
     @Override
     public String name() {
         return "sqlite";
@@ -40,10 +39,12 @@ public final class SQLiteDialect implements SqlDialect {
         var placeholders = String.join(", ", Collections.nCopies(insertColumns.size(), "?"));
         var conflicts = String.join(", ", validate(conflictColumns));
         var validTable = Identifiers.requireValid(table, "Table name");
+
         if (updateColumns.isEmpty()) {
             return "INSERT INTO " + validTable + " (" + columns + ") VALUES (" + placeholders + ") ON CONFLICT("
                     + conflicts + ") DO NOTHING";
         }
+
         var updates = validate(updateColumns).stream()
                 .map(column -> column + " = excluded." + column)
                 .collect(Collectors.joining(", "));

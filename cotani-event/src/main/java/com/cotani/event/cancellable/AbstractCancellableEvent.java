@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Base implementation for cancellable events.
  */
 public abstract class AbstractCancellableEvent implements CancellableEvent {
-
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
     @Override

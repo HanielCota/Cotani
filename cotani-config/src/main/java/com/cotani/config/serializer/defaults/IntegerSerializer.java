@@ -5,7 +5,6 @@ import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
 
 public final class IntegerSerializer implements ConfigSerializer<Integer> {
-
     @Override
     public Class<Integer> type() {
         return Integer.class;
@@ -16,6 +15,7 @@ public final class IntegerSerializer implements ConfigSerializer<Integer> {
         if (value.raw() instanceof Number number) {
             return number.intValue();
         }
+
         try {
             return Integer.parseInt(value.asString());
         } catch (NumberFormatException exception) {

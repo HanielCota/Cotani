@@ -4,7 +4,6 @@ import com.cotani.event.subscription.EventSubscription;
 import java.util.concurrent.CompletionStage;
 
 public interface EventBus extends AutoCloseable {
-
     /**
      * Publishes on the calling thread and returns the same event after dispatch.
      *

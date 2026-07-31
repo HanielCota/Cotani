@@ -10,7 +10,6 @@ import java.util.concurrent.CompletionException;
 import org.junit.jupiter.api.Test;
 
 class TaskTimeoutControllerTest {
-
     @Test
     void timeoutNeverCompletesTheSourceFuture() {
         var source = new CompletableFuture<String>();

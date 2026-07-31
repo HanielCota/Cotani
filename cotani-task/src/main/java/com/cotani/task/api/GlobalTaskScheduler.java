@@ -5,7 +5,6 @@ import java.util.concurrent.Executor;
 
 /** Dispatches work to the Paper/Folia global scheduler thread. */
 public interface GlobalTaskScheduler {
-
     SchedulerTask global(Runnable runnable);
 
     SchedulerTask global(String name, Runnable runnable);

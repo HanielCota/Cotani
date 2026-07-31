@@ -6,7 +6,6 @@ import com.cotani.event.api.EventPriority;
 import java.util.UUID;
 
 public interface EventSubscription {
-
     UUID id();
 
     Class<? extends CotaniEvent> eventType();

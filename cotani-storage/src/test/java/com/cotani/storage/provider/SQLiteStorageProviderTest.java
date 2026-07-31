@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class SQLiteStorageProviderTest {
-
     @TempDir
     Path tempDir;
 

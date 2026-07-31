@@ -29,8 +29,10 @@ public final class TeleportResultMapper {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(eventTarget, "eventTarget");
         Objects.requireNonNull(startedAt, "startedAt");
+
         TeleportResult.Success result =
                 TeleportResults.success(context, eventTarget, eventNotifier.elapsedMillis(startedAt));
+
         return eventNotifier
                 .firePostTeleport(context.playerId(), from, eventTarget, result)
                 .thenApply(_ -> result);
@@ -38,16 +40,21 @@ public final class TeleportResultMapper {
 
     public CompletionStage<TeleportResult> mapTeleportFailure(TeleportContext context) {
         Objects.requireNonNull(context, CONTEXT_PARAM);
+
         TeleportResult.Failure failure = TeleportResults.failure(context, TeleportFailureReason.TELEPORT_FAILED);
+
         return eventNotifier.fireFailure(failure).thenApply(_ -> failure);
     }
 
     public CompletionStage<TeleportResult> mapException(TeleportContext context, Throwable error) {
         Objects.requireNonNull(context, CONTEXT_PARAM);
         Objects.requireNonNull(error, "error");
+
         Throwable cause = error;
+
         while (cause instanceof CompletionException || cause instanceof ExecutionException) {
             var nested = cause.getCause();
+
             if (nested == null) {
                 break;
             }
@@ -56,6 +63,7 @@ public final class TeleportResultMapper {
         TeleportFailureReason reason =
                 cause instanceof TimeoutException ? TeleportFailureReason.TIMEOUT : TeleportFailureReason.UNKNOWN_ERROR;
         TeleportResult.Failure failure = TeleportResults.failure(context, reason, cause);
+
         return eventNotifier.fireFailure(failure).thenApply(_ -> failure);
     }
 }

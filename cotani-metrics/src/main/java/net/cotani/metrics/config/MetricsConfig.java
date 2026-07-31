@@ -18,7 +18,6 @@ public record MetricsConfig(
         @Default("127.0.0.1") String host,
         @Default("9090") @Range(min = 1024, max = 65535) int port,
         @Default("/metrics") String path) {
-
     public static final String DEFAULT_PATH = "/metrics";
     public static final String DEFAULT_HOST = "127.0.0.1";
     private static final String PATH_DELIMITER = "/";

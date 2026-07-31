@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class ModernPaperTaskSchedulerTest {
-
     private final PlatformScheduler platformScheduler = mock(PlatformScheduler.class);
     private final TaskExceptionHandler exceptionHandler = mock(TaskExceptionHandler.class);
     private final TaskMetrics metrics = mock(TaskMetrics.class);

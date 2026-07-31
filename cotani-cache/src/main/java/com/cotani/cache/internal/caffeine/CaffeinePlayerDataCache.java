@@ -21,7 +21,6 @@ import org.bukkit.entity.Player;
  */
 @InternalApi
 public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
-
     private static final String PLAYER_PARAM = "player";
 
     private final DataCache<UUID, V> delegate;
@@ -48,6 +47,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
     @Override
     public V get(Player player) {
         Objects.requireNonNull(player, PLAYER_PARAM);
+
         return get(player.getUniqueId());
     }
 
@@ -59,6 +59,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
     @Override
     public Optional<V> find(Player player) {
         Objects.requireNonNull(player, PLAYER_PARAM);
+
         return find(player.getUniqueId());
     }
 
@@ -105,6 +106,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
     @Override
     public void unload(Player player) {
         Objects.requireNonNull(player, PLAYER_PARAM);
+
         unload(player.getUniqueId());
     }
 
@@ -116,6 +118,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
     @Override
     public boolean contains(Player player) {
         Objects.requireNonNull(player, PLAYER_PARAM);
+
         return contains(player.getUniqueId());
     }
 
@@ -127,6 +130,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
     @Override
     public void markDirty(Player player) {
         Objects.requireNonNull(player, PLAYER_PARAM);
+
         markDirty(player.getUniqueId());
     }
 

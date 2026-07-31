@@ -8,7 +8,6 @@ import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings("NullableProblems")
 public interface ConfigSource {
-
     Path path();
 
     void load();

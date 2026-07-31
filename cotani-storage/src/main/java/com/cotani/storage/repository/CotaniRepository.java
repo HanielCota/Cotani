@@ -7,7 +7,6 @@ import com.cotani.storage.schema.Schema;
 import com.cotani.storage.transaction.TransactionManager;
 
 public abstract class CotaniRepository {
-
     private final CotaniStorage storage;
 
     protected CotaniRepository(CotaniStorage storage) {

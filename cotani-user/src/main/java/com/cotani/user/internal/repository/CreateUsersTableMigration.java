@@ -8,7 +8,6 @@ import java.util.concurrent.CompletionStage;
 
 @InternalApi
 public final class CreateUsersTableMigration implements Migration {
-
     @Override
     public int version() {
         return 1;

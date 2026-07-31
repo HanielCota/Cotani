@@ -7,7 +7,6 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public final class ValidationResult {
-
     private final List<ConfigIssue> issues = new ArrayList<>();
 
     public static ValidationResult valid() {
@@ -20,6 +19,7 @@ public final class ValidationResult {
 
     public void merge(ValidationResult result) {
         Objects.requireNonNull(result, "result");
+
         issues.addAll(result.issues());
     }
 
@@ -39,6 +39,7 @@ public final class ValidationResult {
         if (issues.isEmpty()) {
             return "Config valid.";
         }
+
         return issues.stream()
                 .map(issue -> "- " + issue.format())
                 .collect(Collectors.joining(
@@ -47,6 +48,7 @@ public final class ValidationResult {
 
     public void log(Logger logger) {
         Objects.requireNonNull(logger, "logger");
+
         issues.forEach(issue -> logger.warning(issue.format()));
     }
 }

@@ -23,7 +23,6 @@ import java.util.concurrent.Executors;
 
 @InternalApi
 public final class DefaultEventBus implements EventBus {
-
     private final EventRegistry registry;
     private final EventDispatcher dispatcher;
     private final Executor asyncExecutor;
@@ -58,7 +57,9 @@ public final class DefaultEventBus implements EventBus {
         Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
 
         Objects.requireNonNull(policy, "policy cannot be null");
+
         var listenerExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
         return new DefaultEventBus(
                 new DefaultEventRegistry(),
                 new DefaultEventDispatcher(exceptionHandler, listenerExecutor, policy),
@@ -76,7 +77,9 @@ public final class DefaultEventBus implements EventBus {
     @Override
     public <T extends CotaniEvent> CompletionStage<T> publishAsync(T event) {
         Objects.requireNonNull(event, "event cannot be null");
+
         var kickoff = new CompletableFuture<Void>();
+
         try {
             asyncExecutor.execute(() -> kickoff.complete(null));
         } catch (RuntimeException schedulingFailure) {
@@ -107,6 +110,7 @@ public final class DefaultEventBus implements EventBus {
                 DefaultEventSubscription.create(eventType, priority, ignoreCancelled, listener);
 
         registry.register(subscription);
+
         return subscription;
     }
 

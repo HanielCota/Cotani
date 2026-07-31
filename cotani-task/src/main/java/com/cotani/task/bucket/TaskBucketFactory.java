@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.util.Objects;
 
 public final class TaskBucketFactory {
-
     private TaskBucketFactory() {}
 
     public static TaskBucket create(PaperTaskScheduler scheduler) {

@@ -38,6 +38,7 @@ public record PlayerCooldowns(UUID playerId, Map<String, CooldownEntry> activeCo
 
     public void put(CooldownEntry entry) {
         Objects.requireNonNull(entry, "entry");
+
         activeCooldowns.put(entry.key().action().value(), entry);
     }
 
@@ -49,16 +50,20 @@ public record PlayerCooldowns(UUID playerId, Map<String, CooldownEntry> activeCo
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(duration, "duration");
         Objects.requireNonNull(now, "now");
+
         var result = new AtomicReference<CooldownResult>();
         activeCooldowns.compute(key.action().value(), (_, current) -> {
             if (current != null && !current.expired(now)) {
                 result.set(CooldownResult.denied(key, current.remaining(now), current.expiresAt()));
                 return current;
             }
+
             var created = new CooldownEntry(key, now, now.plus(duration));
             result.set(CooldownResult.allowed(key));
+
             return created;
         });
+
         return Objects.requireNonNull(result.get(), "cooldown result");
     }
 }

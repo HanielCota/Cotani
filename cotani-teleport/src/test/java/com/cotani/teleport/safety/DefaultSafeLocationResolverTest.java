@@ -18,7 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class DefaultSafeLocationResolverTest {
-
     private static final SafeLocationOptions OPTIONS = new SafeLocationOptions(2, 8, true, true, false);
 
     private final PaperTaskScheduler scheduler = mockScheduler();
@@ -44,6 +43,7 @@ class DefaultSafeLocationResolverTest {
         when(world.getMaxHeight()).thenReturn(320);
         when(world.isChunkLoaded(chunkX, chunkZ)).thenReturn(true);
         when(world.getChunkAtAsync(anyInt(), anyInt())).thenReturn(CompletableFuture.completedFuture(null));
+
         return world;
     }
 

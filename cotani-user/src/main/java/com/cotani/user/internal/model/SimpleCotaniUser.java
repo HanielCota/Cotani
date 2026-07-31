@@ -15,7 +15,6 @@ public record SimpleCotaniUser(
         long lastQuitAt,
         long version)
         implements CotaniUser {
-
     public SimpleCotaniUser {
         Objects.requireNonNull(uniqueId, "uniqueId");
         Objects.requireNonNull(sessionId, "sessionId");

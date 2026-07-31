@@ -8,7 +8,6 @@ import java.util.Objects;
 
 /** Process-local clock whose elapsed time is not affected by wall-clock adjustments. */
 final class MonotonicClock extends Clock {
-
     private final Instant origin;
     private final long originNanos;
     private final ZoneId zone;

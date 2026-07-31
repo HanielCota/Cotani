@@ -7,7 +7,6 @@ import java.util.Objects;
  * Stateless paging math for slicing collections into fixed-size pages.
  */
 public final class Pagination {
-
     private Pagination() {}
 
     /**
@@ -21,6 +20,7 @@ public final class Pagination {
         if (totalItems < 0) {
             throw new IllegalArgumentException("totalItems cannot be negative: " + totalItems);
         }
+
         requirePositivePerPage(perPage);
 
         if (totalItems == 0) {
@@ -57,6 +57,7 @@ public final class Pagination {
      */
     public static <T> List<T> page(List<T> items, int page, int perPage) {
         Objects.requireNonNull(items, "Parameter 'items' must not be null");
+
         requirePositivePerPage(perPage);
 
         var clampedPage = clampPage(page, pageCount(items.size(), perPage));

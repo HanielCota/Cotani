@@ -9,7 +9,6 @@ import java.util.function.Supplier;
  * Primary API contract for Cotani metrics collection.
  */
 public interface MetricsRegistry extends AutoCloseable {
-
     /**
      * Indicates whether metric collection is active.
      *

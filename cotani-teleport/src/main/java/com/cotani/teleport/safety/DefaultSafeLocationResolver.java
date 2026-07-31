@@ -20,7 +20,6 @@ import org.bukkit.World;
  * of the target location.
  */
 public final class DefaultSafeLocationResolver implements SafeLocationResolver {
-
     private static final Map<Long, List<Offset>> OFFSET_CACHE = new ConcurrentHashMap<>();
 
     private final PaperTaskScheduler scheduler;
@@ -41,8 +40,10 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
         int effectiveHorizontal = Math.min(Math.max(0, horizontal), 15);
         int effectiveVertical = Math.min(Math.max(0, vertical), 64);
         long key = (((long) effectiveHorizontal) << 32) | (effectiveVertical & 0xFFFFFFFFL);
+
         return OFFSET_CACHE.computeIfAbsent(key, _ -> {
             List<Offset> offsets = new ArrayList<>();
+
             for (int dy = -effectiveVertical; dy <= effectiveVertical; dy++) {
                 for (int dx = -effectiveHorizontal; dx <= effectiveHorizontal; dx++) {
                     for (int dz = -effectiveHorizontal; dz <= effectiveHorizontal; dz++) {
@@ -55,12 +56,14 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
                 }
             }
             Collections.sort(offsets);
+
             return List.copyOf(offsets);
         });
     }
 
     private static Optional<Location> resolveSync(Location target, SafeLocationOptions options) {
         World world = target.getWorld();
+
         if (world == null) {
             return Optional.empty();
         }
@@ -86,16 +89,20 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
         Location candidate = new Location(world, 0, 0, 0, target.getYaw(), target.getPitch());
 
         List<Offset> offsets = getOrComputeOffsets(horizontal, vertical);
+
         for (Offset offset : offsets) {
             int x = baseX + offset.dx();
+
             if (x < chunkMinX || x > chunkMaxX) {
                 continue;
             }
             int z = baseZ + offset.dz();
+
             if (z < chunkMinZ || z > chunkMaxZ) {
                 continue;
             }
             int y = baseY + offset.dy();
+
             if (y < minWorldY || y >= maxWorldY) {
                 continue;
             }
@@ -116,6 +123,7 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
     public CompletionStage<Optional<Location>> resolve(Location target, SafeLocationOptions options) {
         Location cloned = target.clone();
         World world = cloned.getWorld();
+
         if (world == null) {
             return CompletableFuture.completedFuture(Optional.empty());
         }

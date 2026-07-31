@@ -6,7 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 final class DirtyEntryTracker<K, V> {
-
     private final ConcurrentHashMap<K, CacheEntry<V>> dirtyEntries = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<CacheEntry<V>, Long> entryGenerations = new ConcurrentHashMap<>();
     private final AtomicLong nextGeneration = new AtomicLong();
@@ -14,6 +13,7 @@ final class DirtyEntryTracker<K, V> {
     CacheEntry<V> createEntry(V value) {
         var entry = CacheEntry.of(value);
         entryGenerations.put(entry, nextGeneration.incrementAndGet());
+
         return entry;
     }
 

@@ -10,7 +10,6 @@ import net.kyori.adventure.text.Component;
 
 /** Read-only view of a loaded configuration snapshot. */
 public interface ConfigReader {
-
     String name();
 
     Path path();

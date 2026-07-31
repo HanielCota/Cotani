@@ -12,7 +12,6 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class RowTest {
-
     @Test
     void requiredStringFailsFastOnSqlNullAndOptionalRepresentsAbsence() throws Exception {
         ResultSet resultSet = mock(ResultSet.class);

@@ -9,7 +9,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 final class ChainTargetComposer {
-
     private final AsyncTaskExecutor scheduler;
 
     ChainTargetComposer(AsyncTaskExecutor scheduler) {
@@ -21,6 +20,7 @@ final class ChainTargetComposer {
                 state.future().thenCompose(value -> scheduler.supply(target, name, () -> function.apply(value)));
         Supplier<CompletableFuture<U>> factory = () ->
                 state.newAttempt().thenCompose(value -> scheduler.supply(target, name, () -> function.apply(value)));
+
         return state.derive(next, factory);
     }
 
@@ -35,6 +35,7 @@ final class ChainTargetComposer {
                     consumer.accept(value);
                     return value;
                 }));
+
         return state.derive(next, factory);
     }
 }

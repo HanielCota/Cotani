@@ -33,7 +33,6 @@ import org.testcontainers.mysql.MySQLContainer;
 
 @Testcontainers(disabledWithoutDocker = true)
 class MySqlMariaDbDistributedCooldownIntegrationTest {
-
     @Container
     private static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4.6")
             .withDatabaseName("cotani")
@@ -64,6 +63,7 @@ class MySqlMariaDbDistributedCooldownIntegrationTest {
                 DistributedCooldownService second = CotaniCooldowns.distributed(secondStorage, scheduler)) {
             var key = new CooldownKey(CooldownTargets.resource("world:spawn"), CooldownAction.of("reward:daily"));
             var attempts = new ArrayList<CompletionStage<CooldownResult>>();
+
             for (int i = 0; i < 32; i++) {
                 attempts.add(((i & 1) == 0 ? first : second).checkAndStartAsync(key, Duration.ofMinutes(5)));
             }
@@ -98,6 +98,7 @@ class MySqlMariaDbDistributedCooldownIntegrationTest {
         }
         var storage = builder.build();
         storage.startAsync().toCompletableFuture().join();
+
         return storage;
     }
 
@@ -106,6 +107,7 @@ class MySqlMariaDbDistributedCooldownIntegrationTest {
         Executor direct = Runnable::run;
         when(scheduler.asyncExecutor()).thenReturn(direct);
         when(scheduler.asyncTimer(any(), any(), any())).thenReturn(SchedulerTask.noop());
+
         return scheduler;
     }
 
@@ -131,6 +133,7 @@ class MySqlMariaDbDistributedCooldownIntegrationTest {
             String host, int port, String database, String username, String password) {
         var pool = new MySqlCredentials.PoolSettings(
                 4, 0, Duration.ofSeconds(10), Duration.ofMinutes(1), Duration.ofMinutes(10));
+
         return new MySqlCredentials(host, port, database, username, password, false, pool);
     }
 }

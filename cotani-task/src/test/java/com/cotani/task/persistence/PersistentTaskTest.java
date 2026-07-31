@@ -8,7 +8,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class PersistentTaskTest {
-
     @Test
     void payloadIsClonedOnConstruction() {
         byte[] original = {1, 2, 3};

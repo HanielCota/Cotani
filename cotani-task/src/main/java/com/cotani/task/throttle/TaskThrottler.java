@@ -13,7 +13,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 public final class TaskThrottler {
-
     private static final int DEFAULT_MAX_ATTEMPTS = 10;
 
     private final TaskChainFactory chainFactory;
@@ -76,11 +75,13 @@ public final class TaskThrottler {
                     if (limiter.tryAcquire()) {
                         return supplier.get();
                     }
+
                     throw new RateLimitRejectedException(limiter.retryDelay());
                 })
                 .toCompletionStage()
                 .exceptionallyCompose(error -> {
                     Throwable cause = unwrap(error);
+
                     if (cause instanceof RateLimitRejectedException rejected) {
                         if (attempt >= maxAttempts) {
                             return CompletableFuture.failedStage(new RateLimitExceededException(maxAttempts));
@@ -89,14 +90,17 @@ public final class TaskThrottler {
                         return delays.delayAsync(rejected.retryDelay())
                                 .thenCompose(_ -> throttleStage(supplier, limiter, attempt + 1));
                     }
+
                     return CompletableFuture.failedStage(error);
                 });
     }
 
     private static Throwable unwrap(Throwable throwable) {
         Throwable current = throwable;
+
         while (current instanceof CompletionException || current instanceof ExecutionException) {
             Throwable cause = current.getCause();
+
             if (cause == null || cause.equals(current)) {
                 break;
             }
@@ -107,6 +111,7 @@ public final class TaskThrottler {
 
     private static final class RateLimitRejectedException extends RuntimeException {
         private static final long serialVersionUID = 1L;
+
         private final Duration retryDelay;
 
         RateLimitRejectedException(Duration retryDelay) {

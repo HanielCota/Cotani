@@ -20,7 +20,6 @@ import java.util.Calendar;
 import org.junit.jupiter.api.Test;
 
 class JdbcInstantCodecTest {
-
     private static final Instant SAMPLE = Instant.parse("2026-07-29T12:34:56.123456Z");
 
     @Test
@@ -81,6 +80,7 @@ class JdbcInstantCodecTest {
         when(statement.getConnection()).thenReturn(connection);
         when(connection.getMetaData()).thenReturn(metadata);
         when(metadata.getDatabaseProductName()).thenReturn(databaseProduct);
+
         return statement;
     }
 }

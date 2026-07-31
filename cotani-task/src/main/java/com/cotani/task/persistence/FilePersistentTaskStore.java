@@ -13,7 +13,6 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public final class FilePersistentTaskStore implements PersistentTaskStore {
-
     private static final Logger LOGGER = Logger.getLogger(FilePersistentTaskStore.class.getName());
     private static final String EXTENSION = ".task";
     private static final long MAX_FILE_BYTES = (PersistentTask.MAX_PAYLOAD_BYTES * 4L / 3L) + 1_024L;
@@ -94,6 +93,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
 
     private Optional<PersistentTask> parseAndDeleteCorrupt(Path file) {
         Optional<PersistentTask> parsed = parse(file);
+
         if (parsed.isEmpty()) {
             LOGGER.log(Level.WARNING, "Corrupt persistent task file detected and removed: {0}", file);
             try {
@@ -110,6 +110,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
             if (Files.size(file) > MAX_FILE_BYTES) {
                 return Optional.empty();
             }
+
             List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
 
             if (lines.size() < 5) {

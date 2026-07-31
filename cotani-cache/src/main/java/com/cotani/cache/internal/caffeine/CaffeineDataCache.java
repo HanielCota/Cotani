@@ -49,7 +49,6 @@ import org.jspecify.annotations.Nullable;
  */
 @InternalApi
 public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
-
     private static final Logger LOGGER = Logger.getLogger(CaffeineDataCache.class.getName());
     private static final String VALUE_PARAM = "value";
 
@@ -129,6 +128,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public V get(K key) {
         ensureOpen();
+
         return find(key)
                 .orElseThrow(() -> new CacheException(
                         "Cache entry is not loaded: " + key + ". Use getOrLoad(key) or load(key) first."));
@@ -137,25 +137,30 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public Optional<V> find(K key) {
         ensureOpen();
+
         return Optional.ofNullable(cache.synchronous().getIfPresent(key)).map(CacheEntry::value);
     }
 
     @Override
     public CompletionStage<V> getOrLoad(K key) {
         ensureOpen();
+
         return cache.get(key).thenApply(CacheEntry::value);
     }
 
     @Override
     public CompletionStage<V> load(K key) {
         ensureOpen();
+
         cache.synchronous().invalidate(key);
+
         return getOrLoad(key);
     }
 
     @Override
     public CompletionStage<V> update(K key, UnaryOperator<V> updater) {
         ensureOpen();
+
         var entry = getRequiredEntry(key);
         synchronized (entry) {
             if (entry.update(updater)) {
@@ -168,6 +173,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public CompletionStage<V> mutate(K key, Consumer<V> mutator) {
         ensureOpen();
+
         var entry = getRequiredEntry(key);
         synchronized (entry) {
             if (entry.mutate(mutator)) {
@@ -182,7 +188,9 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         ensureOpen();
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(value, VALUE_PARAM);
+
         CacheEntry<V> previous = cache.synchronous().getIfPresent(key);
+
         if (previous != null) {
             synchronized (previous) {
                 if (previous.dirty()) {
@@ -202,6 +210,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public CompletionStage<Void> save(K key) {
         ensureOpen();
+
         return saveEntry(key);
     }
 
@@ -233,6 +242,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public CompletionStage<Void> saveDirty() {
         ensureOpen();
+
         return saveDirtyEntries();
     }
 
@@ -243,6 +253,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public CompletionStage<Void> saveAll() {
         ensureOpen();
+
         return saveCoordinator.runBounded(
                 List.copyOf(cache.synchronous().asMap().keySet()), this::saveEntry);
     }
@@ -250,6 +261,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public void unload(K key) {
         ensureOpen();
+
         cache.synchronous().invalidate(key);
     }
 
@@ -261,6 +273,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public void markDirty(K key) {
         ensureOpen();
+
         CacheEntry<V> entry = getRequiredEntry(key);
         synchronized (entry) {
             if (entry.markDirty()) {
@@ -304,6 +317,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
             if (closeFuture != null) {
                 return closeFuture;
             }
+
             closing = true;
             var result = new CompletableFuture<Void>();
             closeFuture = result;
@@ -318,6 +332,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                     .thenCompose(_ -> {
                         cache.synchronous().invalidateAll();
                         cache.synchronous().cleanUp();
+
                         return cacheExecutor.whenIdle();
                     })
                     .whenComplete((_, error) -> {
@@ -329,6 +344,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                             result.completeExceptionally(error);
                         }
                     });
+
             return result;
         }
     }
@@ -338,6 +354,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("DataCache.close() blocks; use closeAsync() on the server thread.");
         }
+
         try {
             closeAsync().toCompletableFuture().get(30, TimeUnit.SECONDS);
         } catch (TimeoutException timeout) {
@@ -415,6 +432,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         }
         K key = invalidation.key();
         CacheEntry<V> entry = cache.synchronous().getIfPresent(key);
+
         if (entry == null) {
             return;
         }

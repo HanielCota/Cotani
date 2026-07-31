@@ -9,7 +9,6 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class CooldownPolicySerializer implements ConfigSerializer<CooldownPolicy> {
-
     private final ConfigSerializer<Duration> durationSerializer;
 
     public CooldownPolicySerializer(ConfigSerializer<Duration> durationSerializer) {
@@ -24,13 +23,16 @@ public final class CooldownPolicySerializer implements ConfigSerializer<Cooldown
     @Override
     public CooldownPolicy read(ConfigValue value) {
         Objects.requireNonNull(value, "value");
+
         Duration duration = durationSerializer.read(value);
+
         return () -> duration;
     }
 
     @Override
     public Object write(CooldownPolicy value) {
         Objects.requireNonNull(value, "value");
+
         return durationSerializer.write(value.duration());
     }
 }

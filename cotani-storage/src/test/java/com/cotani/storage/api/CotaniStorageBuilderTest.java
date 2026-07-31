@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class CotaniStorageBuilderTest {
-
     @Test
     void positiveSubsecondTimeoutRoundsUpInsteadOfDisablingJdbcTimeout() {
         assertEquals(1, CotaniStorageBuilder.toQueryTimeoutSeconds(Duration.ofNanos(1)));

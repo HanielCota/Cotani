@@ -12,7 +12,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class AudienceMessagesTest {
-
     @Test
     void sendsMessage() {
         var audience = new CapturingAudience();
@@ -166,7 +165,6 @@ class AudienceMessagesTest {
     }
 
     private static final class CapturingAudience implements Audience {
-
         Component lastMessage = Component.empty();
         Component lastActionBar = Component.empty();
         Component lastPlayerListHeader = Component.empty();

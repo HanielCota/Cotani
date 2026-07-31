@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.util.Optional;
 
 public interface CooldownStore {
-
     Optional<CooldownEntry> find(CooldownKey key);
 
     void save(CooldownEntry entry);

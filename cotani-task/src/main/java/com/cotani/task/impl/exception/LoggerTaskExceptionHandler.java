@@ -9,7 +9,6 @@ import java.util.logging.Logger;
 
 @InternalApi
 public record LoggerTaskExceptionHandler(Logger logger) implements TaskExceptionHandler {
-
     public LoggerTaskExceptionHandler {
         Objects.requireNonNull(logger, "logger");
     }

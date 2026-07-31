@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.Objects;
 
 final class Ticks {
-
     private static final long MILLIS_PER_TICK = 50L;
 
     private Ticks() {}

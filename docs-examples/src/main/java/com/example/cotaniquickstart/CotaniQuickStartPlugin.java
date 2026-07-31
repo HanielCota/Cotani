@@ -18,7 +18,6 @@ import org.jspecify.annotations.Nullable;
 
 @NullMarked
 public final class CotaniQuickStartPlugin extends JavaPlugin {
-
     private @Nullable Cotani lifecycle;
 
     @Override
@@ -27,6 +26,7 @@ public final class CotaniQuickStartPlugin extends JavaPlugin {
         lifecycle = Cotani.forPlugin(this).withAsync(scheduler::closeAsync).build();
 
         var command = getCommand("cotanihello");
+
         if (command == null) {
             throw new IllegalStateException("Command 'cotanihello' is missing from plugin.yml");
         }
@@ -37,6 +37,7 @@ public final class CotaniQuickStartPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         var currentLifecycle = lifecycle;
+
         if (currentLifecycle == null) {
             return;
         }
@@ -49,7 +50,6 @@ public final class CotaniQuickStartPlugin extends JavaPlugin {
     }
 
     private static final class HelloCommand implements CommandExecutor {
-
         private final HelloService helloService;
 
         private HelloCommand(HelloService helloService) {
@@ -64,12 +64,12 @@ public final class CotaniQuickStartPlugin extends JavaPlugin {
             }
 
             helloService.greet(player.getUniqueId());
+
             return true;
         }
     }
 
     private static final class HelloService {
-
         private final PaperTaskScheduler scheduler;
 
         private HelloService(PaperTaskScheduler scheduler) {
@@ -81,6 +81,7 @@ public final class CotaniQuickStartPlugin extends JavaPlugin {
 
             scheduler.entity("cotani-hello", playerId, () -> {
                 var player = Bukkit.getPlayer(playerId);
+
                 if (player != null) {
                     player.sendMessage(Component.text("Cotani is running on your entity thread."));
                 }

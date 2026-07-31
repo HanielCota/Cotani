@@ -16,12 +16,12 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class TeleportResultMapperTest {
-
     private TeleportResultMapper mapper;
 
     private static TeleportContext createContext() {
         var location = Mockito.mock(Location.class);
         Mockito.when(location.clone()).thenReturn(location);
+
         return new TeleportContext(
                 UUID.randomUUID(),
                 location,

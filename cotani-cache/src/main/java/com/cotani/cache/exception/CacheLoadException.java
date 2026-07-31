@@ -6,7 +6,6 @@ import java.io.Serial;
  * Thrown when a cache entry fails to load from the repository.
  */
 public final class CacheLoadException extends CacheException {
-
     @Serial
     private static final long serialVersionUID = 1L;
 

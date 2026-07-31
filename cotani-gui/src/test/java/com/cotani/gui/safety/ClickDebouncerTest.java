@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("NullAway")
 class ClickDebouncerTest {
-
     @Test
     void acceptsFirstClickAndDebouncesSubsequentClicks() throws InterruptedException {
         ClickDebouncer debouncer = new ClickDebouncer(Duration.ofMillis(100));

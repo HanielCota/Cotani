@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("NullAway")
 class CacheEntryTest {
-
     @Test
     void valueReturnsInitialValue() {
         CacheEntry<String> entry = CacheEntry.of("hello");

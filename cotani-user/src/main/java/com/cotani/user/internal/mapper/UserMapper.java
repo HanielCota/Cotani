@@ -9,7 +9,6 @@ import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class UserMapper {
-
     public SimpleCotaniUser toUser(Row row, UUID fallbackUniqueId, @Nullable String fallbackUsername, long now)
             throws SQLException {
         UUID uniqueId = row.getUuidOptional("unique_id").orElse(fallbackUniqueId);

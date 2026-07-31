@@ -18,7 +18,6 @@ import org.jspecify.annotations.NullMarked;
  */
 @NullMarked
 public final class ComponentSerializers {
-
     /**
      * The standard Gson component serializer for modern Minecraft JSON chat components.
      *

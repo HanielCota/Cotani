@@ -12,7 +12,6 @@ import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 
 class PrometheusServerTest {
-
     @Test
     void prometheusServerServesMetricsEndpoint() throws IOException, InterruptedException {
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);

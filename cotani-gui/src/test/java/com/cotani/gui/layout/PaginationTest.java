@@ -9,7 +9,6 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 final class PaginationTest {
-
     @Test
     void computesPageCount() {
         assertEquals(0, Pagination.pageCount(0, 9));

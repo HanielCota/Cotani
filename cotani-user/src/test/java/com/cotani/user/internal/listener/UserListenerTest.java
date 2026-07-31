@@ -19,7 +19,6 @@ import org.mockito.MockedStatic;
 
 @SuppressWarnings({"NullAway", "removal"})
 class UserListenerTest {
-
     private final Plugin plugin = mock(Plugin.class);
     private final InternalUserService userService = mock(InternalUserService.class);
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);

@@ -9,7 +9,6 @@ import org.bukkit.entity.Player;
  * @param player the player whose GUI was closed
  */
 public record CloseContext(Player player) {
-
     public CloseContext {
         Objects.requireNonNull(player, "Parameter 'player' must not be null");
     }

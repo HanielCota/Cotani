@@ -27,7 +27,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class DefaultEconomyServiceTest {
-
     private static final EconomySettings SETTINGS = EconomySettings.defaultSettings(EconomyCurrency.coins());
     private static final CurrencyId CURRENCY = SETTINGS.defaultCurrency().id();
     private static final EconomyReason REASON = EconomyReason.system("test");
@@ -54,6 +53,7 @@ class DefaultEconomyServiceTest {
         var exception = assertThrows(CompletionException.class, future::join);
         assertNotNull(exception.getCause());
         assertInstanceOf(type, exception.getCause());
+
         return type.cast(exception.getCause());
     }
 

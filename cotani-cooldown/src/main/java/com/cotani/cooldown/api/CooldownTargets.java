@@ -3,7 +3,6 @@ package com.cotani.cooldown.api;
 import java.util.UUID;
 
 public final class CooldownTargets {
-
     private CooldownTargets() {
         throw new UnsupportedOperationException("utility class");
     }

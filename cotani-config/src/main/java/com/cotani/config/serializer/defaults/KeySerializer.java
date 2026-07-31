@@ -7,7 +7,6 @@ import net.kyori.adventure.key.Key;
 
 @SuppressWarnings("UnsubstitutedExpression")
 public final class KeySerializer implements ConfigSerializer<Key> {
-
     @Override
     public Class<Key> type() {
         return Key.class;

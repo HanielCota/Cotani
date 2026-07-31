@@ -35,7 +35,6 @@ import org.jspecify.annotations.Nullable;
 
 @NullMarked
 public final class CotaniStorage implements AutoCloseable {
-
     private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(5);
 
     private final Plugin plugin;
@@ -102,6 +101,7 @@ public final class CotaniStorage implements AutoCloseable {
                 ? Executors.newThreadPerTaskExecutor(
                         Thread.ofVirtual().name("cotani-storage-vt-", 0).factory())
                 : Executors.newFixedThreadPool(concurrencyLimit, platformFactory);
+
         return AdmissionControlledExecutorService.create(workers, concurrencyLimit, admissionQueueCapacity);
     }
 
@@ -147,6 +147,7 @@ public final class CotaniStorage implements AutoCloseable {
             state = LifecycleState.STARTING;
             var startupPromise = new CompletableFuture<CotaniStorage>();
             startup = startupPromise;
+
             try {
                 registerRepositories();
             } catch (RuntimeException failure) {
@@ -173,6 +174,7 @@ public final class CotaniStorage implements AutoCloseable {
                 }
                 startupPromise.complete(storage);
             });
+
             return startupPromise;
         }
     }
@@ -234,10 +236,12 @@ public final class CotaniStorage implements AutoCloseable {
         if (Bukkit.isPrimaryThread()) {
             throw new IllegalStateException("CotaniStorage.close() blocks; call closeAsync() off the main thread.");
         }
+
         synchronized (lifecycleLock) {
             if (state == LifecycleState.CLOSED) {
                 return;
             }
+
             state = LifecycleState.CLOSING;
         }
         try {
@@ -256,6 +260,7 @@ public final class CotaniStorage implements AutoCloseable {
             if (closing != null) {
                 return closing;
             }
+
             closePromise = new CompletableFuture<>();
             closing = closePromise;
             predecessor = startup == null ? CompletableFuture.completedFuture(null) : startup.handle((_, _) -> null);
@@ -276,6 +281,7 @@ public final class CotaniStorage implements AutoCloseable {
                 closePromise.completeExceptionally(rejected);
             }
         });
+
         return closePromise;
     }
 
@@ -298,8 +304,10 @@ public final class CotaniStorage implements AutoCloseable {
         if (migrations.isEmpty()) {
             return CompletionStages.completedVoid();
         }
+
         var migrationExecutor = QueryExecutor.create(provider, storageExecutor, serializers, queryTimeoutSeconds);
         var runner = MigrationRunner.create(migrationExecutor, new Schema(migrationExecutor, dialect));
+
         for (var migration : migrations) {
             runner.add(migration);
         }
@@ -322,6 +330,7 @@ public final class CotaniStorage implements AutoCloseable {
         if (state != LifecycleState.RUNNING) {
             throw new RejectedExecutionException("CotaniStorage is not running (state=" + state + ").");
         }
+
         storageExecutor.execute(operation);
     }
 
@@ -368,6 +377,7 @@ public final class CotaniStorage implements AutoCloseable {
         CompletableFuture<Void> closePromise;
         synchronized (lifecycleLock) {
             state = LifecycleState.CLOSED;
+
             if (closing == null) {
                 closing = new CompletableFuture<>();
             }
@@ -385,6 +395,7 @@ public final class CotaniStorage implements AutoCloseable {
                 && failure.getCause() != null) {
             return failure.getCause();
         }
+
         return failure;
     }
 

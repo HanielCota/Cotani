@@ -18,7 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class PersistentTaskCoordinatorTest {
-
     @Test
     void explicitCancellationRemovesPersistedRecoveryRecord() {
         PersistentTaskStore store = Mockito.mock(PersistentTaskStore.class);

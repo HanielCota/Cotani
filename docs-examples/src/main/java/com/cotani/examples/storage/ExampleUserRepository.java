@@ -9,7 +9,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
 public final class ExampleUserRepository extends PlayerDataRepository<ExampleUser> {
-
     private static final String TABLE = "users";
     private static final String UNIQUE_ID_COLUMN = "unique_id";
     private static final String NAME_COLUMN = "name";

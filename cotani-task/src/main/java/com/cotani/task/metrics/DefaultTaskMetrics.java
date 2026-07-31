@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
 public final class DefaultTaskMetrics implements TaskMetrics {
-
     private final ConcurrentHashMap<String, MetricEntry> entries = new ConcurrentHashMap<>();
 
     @Override

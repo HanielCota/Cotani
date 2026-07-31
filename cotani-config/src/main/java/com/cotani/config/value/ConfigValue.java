@@ -7,7 +7,6 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 public final class ConfigValue {
-
     private final String file;
     private final String path;
     private final @Nullable Object raw;
@@ -80,7 +79,9 @@ public final class ConfigValue {
 
     public <T> T as(Class<T> type) {
         Objects.requireNonNull(type, "type");
+
         requireExists();
+
         return serializers.convert(this, type);
     }
 

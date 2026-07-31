@@ -9,7 +9,6 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 
 class MonotonicClockTest {
-
     @Test
     void instantNeverMovesBackwardsWithinTheProcess() {
         var clock = new MonotonicClock();

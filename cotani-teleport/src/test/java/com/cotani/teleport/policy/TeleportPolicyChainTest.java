@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class TeleportPolicyChainTest {
-
     private static final TeleportContext CONTEXT = Mockito.mock(TeleportContext.class);
 
     @Test

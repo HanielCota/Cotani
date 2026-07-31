@@ -11,7 +11,6 @@ import java.util.concurrent.CompletionStage;
  * database table. All methods perform I/O and therefore return {@link CompletionStage}.
  */
 public interface DistributedCooldownService extends AutoCloseable {
-
     CompletionStage<CooldownResult> checkAndStartAsync(CooldownKey key, Duration duration);
 
     CompletionStage<Optional<CooldownEntry>> findAsync(CooldownKey key);

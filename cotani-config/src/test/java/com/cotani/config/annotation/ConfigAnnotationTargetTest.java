@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 import org.junit.jupiter.api.Test;
 
 class ConfigAnnotationTargetTest {
-
     private static void assertRecordComponentOnly(Class<?> annotationType) {
         assertArrayEquals(
                 new ElementType[] {ElementType.RECORD_COMPONENT},

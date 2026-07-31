@@ -10,13 +10,14 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 
 public final class StorageConfigReader {
-
     public StorageBackend read(Plugin plugin, FileConfiguration config, String path) {
         Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(path, "path");
+
         var typeName = config.getString(path + ".type", "SQLITE");
         var kind = StorageKind.valueOf(typeName.toUpperCase(Locale.ROOT));
+
         return switch (kind) {
             case SQLITE -> sqlite(plugin, config, path);
             case MYSQL -> mysql(config, path);
@@ -28,6 +29,7 @@ public final class StorageConfigReader {
         var file = config.getString(path + ".sqlite.file", "database.db");
         var dataFolder = plugin.getDataFolder().toPath();
         var database = Paths.requireContained(dataFolder.resolve(file), dataFolder);
+
         return new SQLiteBackend(new SQLiteCredentials(database));
     }
 
@@ -43,11 +45,13 @@ public final class StorageConfigReader {
         var prefix = path + ".mysql.";
 
         var username = config.getString(prefix + "username");
+
         if (username == null || username.isBlank()) {
             throw new IllegalArgumentException("MySQL username is required at " + prefix + "username");
         }
 
         var password = config.getString(prefix + "password");
+
         if (password == null) {
             throw new IllegalArgumentException("MySQL password is required at " + prefix + "password");
         }

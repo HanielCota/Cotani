@@ -24,7 +24,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 class CotaniStorageTest {
-
     @TempDir
     Path tempDir;
 
@@ -46,6 +45,7 @@ class CotaniStorageTest {
         PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);
         Executor executor = Runnable::run;
         when(scheduler.asyncExecutor()).thenReturn(executor);
+
         return scheduler;
     }
 

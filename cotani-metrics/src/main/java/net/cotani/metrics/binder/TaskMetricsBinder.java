@@ -11,7 +11,6 @@ import net.cotani.metrics.api.MetricsRegistry;
  * Binds {@code cotani-task} execution statistics to a {@link MetricsRegistry}.
  */
 public final class TaskMetricsBinder implements MeterBinder {
-
     private final String taskName;
     private final Supplier<TaskMetricSnapshot> snapshotSupplier;
 
@@ -22,6 +21,7 @@ public final class TaskMetricsBinder implements MeterBinder {
 
     public TaskMetricsBinder(TaskMetrics taskMetrics, String taskName) {
         Objects.requireNonNull(taskMetrics, "taskMetrics");
+
         this.taskName = Objects.requireNonNull(taskName, "taskName");
         this.snapshotSupplier = () -> taskMetrics.snapshot(taskName);
     }

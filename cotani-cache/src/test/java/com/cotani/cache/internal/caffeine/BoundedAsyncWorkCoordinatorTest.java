@@ -11,7 +11,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class BoundedAsyncWorkCoordinatorTest {
-
     @Test
     void neverAdmitsMoreThanConfiguredConcurrency() {
         var active = new AtomicInteger();
@@ -22,6 +21,7 @@ class BoundedAsyncWorkCoordinatorTest {
             peak.accumulateAndGet(current, Math::max);
             var pending = new CompletableFuture<Void>();
             admitted.add(pending);
+
             return pending.whenComplete((_, _) -> active.decrementAndGet());
         });
 

@@ -7,7 +7,6 @@ import com.cotani.teleport.api.TeleportOptions;
 import java.time.Duration;
 
 public record TeleportOptionsFactory(TeleportOptions spawn, TeleportOptions admin, TeleportOptions silent) {
-
     public TeleportOptionsFactory() {
         this(defaultSpawn(), defaultAdmin(), defaultSilent());
     }

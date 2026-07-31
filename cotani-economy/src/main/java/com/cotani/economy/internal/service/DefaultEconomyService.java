@@ -23,7 +23,6 @@ import java.util.logging.Logger;
 
 @InternalApi
 public final class DefaultEconomyService implements EconomyService {
-
     private static final Logger LOGGER = Logger.getLogger(DefaultEconomyService.class.getName());
 
     private final EconomySettings settings;

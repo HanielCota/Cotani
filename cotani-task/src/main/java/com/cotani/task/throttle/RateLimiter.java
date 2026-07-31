@@ -3,7 +3,6 @@ package com.cotani.task.throttle;
 import java.time.Duration;
 
 public interface RateLimiter {
-
     boolean tryAcquire();
 
     /**

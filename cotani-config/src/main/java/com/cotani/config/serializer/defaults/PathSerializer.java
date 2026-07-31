@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 public final class PathSerializer implements ConfigSerializer<Path> {
-
     private final Path baseFolder;
 
     private PathSerializer(Path baseFolder) {

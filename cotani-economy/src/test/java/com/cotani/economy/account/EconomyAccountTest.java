@@ -11,7 +11,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class EconomyAccountTest {
-
     private static final UUID USER_ID = UUID.randomUUID();
     private static final CurrencyId CURRENCY = CurrencyId.of("coins");
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");

@@ -11,7 +11,6 @@ import org.bukkit.Location;
  * <p>The UUID/chunk overloads avoid retaining a live {@link Location} across asynchronous flows.
  */
 public interface RegionTaskScheduler {
-
     SchedulerTask region(Location location, Runnable runnable);
 
     SchedulerTask region(String name, Location location, Runnable runnable);

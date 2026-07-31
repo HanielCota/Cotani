@@ -3,7 +3,6 @@ package com.cotani.cooldown.api;
 import java.util.Objects;
 
 public record ResourceCooldownTarget(String resourceId) implements CooldownTarget {
-
     private static final int MAXIMUM_LENGTH = 128;
 
     public ResourceCooldownTarget {

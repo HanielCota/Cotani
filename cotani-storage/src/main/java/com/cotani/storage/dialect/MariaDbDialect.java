@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public final class MariaDbDialect implements SqlDialect {
-
     @Override
     public String name() {
         return "mariadb";
@@ -44,9 +43,11 @@ public final class MariaDbDialect implements SqlDialect {
         var columns = String.join(", ", validate(insertColumns));
         var placeholders = String.join(", ", Collections.nCopies(insertColumns.size(), "?"));
         var validTable = Identifiers.requireValid(table, "Table name");
+
         if (updateColumns.isEmpty()) {
             return "INSERT IGNORE INTO " + validTable + " (" + columns + ") VALUES (" + placeholders + ")";
         }
+
         var updates = validate(updateColumns).stream()
                 .map(column -> column + " = VALUES(" + column + ")")
                 .collect(Collectors.joining(", "));

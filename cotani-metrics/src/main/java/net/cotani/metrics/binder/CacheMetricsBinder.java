@@ -8,7 +8,6 @@ import net.cotani.metrics.api.MetricsRegistry;
 import org.jspecify.annotations.Nullable;
 
 public final class CacheMetricsBinder implements MeterBinder {
-
     private final String cacheName;
     private final Supplier<CacheStatsView> statsSupplier;
 
@@ -32,7 +31,6 @@ public final class CacheMetricsBinder implements MeterBinder {
     }
 
     private static final class MemoizingStatsSupplier implements Supplier<CacheStatsView> {
-
         private final Supplier<CacheStatsView> delegate;
         private volatile @Nullable CacheStatsView cached;
         private volatile long cachedAt;
@@ -45,6 +43,7 @@ public final class CacheMetricsBinder implements MeterBinder {
         public CacheStatsView get() {
             var now = System.currentTimeMillis();
             var snapshot = cached;
+
             if (snapshot == null || now - cachedAt > 5000) {
                 snapshot = delegate.get();
                 cached = snapshot;

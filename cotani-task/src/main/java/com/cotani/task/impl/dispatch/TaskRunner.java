@@ -13,7 +13,6 @@ import java.util.function.Supplier;
 
 @InternalApi
 public final class TaskRunner {
-
     private final TaskExceptionHandler exceptionHandler;
     private final TaskMetrics metrics;
 
@@ -51,6 +50,7 @@ public final class TaskRunner {
                     if (throwable instanceof Error error) {
                         throw error;
                     }
+
                     throw new RuntimeException(throwable);
                 }
             });

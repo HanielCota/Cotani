@@ -14,7 +14,6 @@ import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 final class BoundedAsyncWorkCoordinator<T> {
-
     private final List<T> items;
     private final int workerCount;
     private final Function<T, CompletionStage<Void>> operation;
@@ -25,9 +24,11 @@ final class BoundedAsyncWorkCoordinator<T> {
 
     BoundedAsyncWorkCoordinator(List<T> items, int maximumConcurrency, Function<T, CompletionStage<Void>> operation) {
         this.items = List.copyOf(items);
+
         if (maximumConcurrency <= 0) {
             throw new IllegalArgumentException("maximumConcurrency must be positive");
         }
+
         this.workerCount = Math.min(maximumConcurrency, items.size());
         this.operation = Objects.requireNonNull(operation, "operation");
         this.remainingWorkers = new AtomicInteger(workerCount);
@@ -37,9 +38,11 @@ final class BoundedAsyncWorkCoordinator<T> {
         if (items.isEmpty()) {
             return CompletionStages.completedVoid();
         }
+
         for (int worker = 0; worker < workerCount; worker++) {
             advance();
         }
+
         return result;
     }
 
@@ -51,21 +54,27 @@ final class BoundedAsyncWorkCoordinator<T> {
 
     private boolean advanceSynchronously() {
         long index = nextIndex.getAndIncrement();
+
         if (index >= items.size()) {
             workerFinished();
             return false;
         }
+
         var future = invoke(items.get(Math.toIntExact(index)));
+
         if (future.isDone()) {
             recordCompletedFuture(future);
             return true;
         }
+
         var _ = future.whenComplete((_, error) -> {
             if (error != null) {
                 recordFailure(error);
             }
+
             advance();
         });
+
         return false;
     }
 
@@ -86,6 +95,7 @@ final class BoundedAsyncWorkCoordinator<T> {
 
     private void recordFailure(Throwable failure) {
         Throwable previous = firstFailure.get();
+
         if (previous == null) {
             if (firstFailure.compareAndSet(null, failure)) {
                 return;
@@ -102,6 +112,7 @@ final class BoundedAsyncWorkCoordinator<T> {
             return;
         }
         Throwable failure = firstFailure.get();
+
         if (failure == null) {
             result.complete(null);
         } else {

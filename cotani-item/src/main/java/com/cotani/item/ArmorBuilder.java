@@ -15,7 +15,6 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class ArmorBuilder extends ItemStackBuilder<ArmorBuilder> {
-
     private static final Set<Material> ARMOR_MATERIALS = resolveArmorMaterials();
 
     private ArmorBuilder(Material material) {
@@ -34,6 +33,7 @@ public final class ArmorBuilder extends ItemStackBuilder<ArmorBuilder> {
 
     private static Set<Material> resolveArmorMaterials() {
         var materials = EnumSet.noneOf(Material.class);
+
         for (var candidate : Material.values()) {
             if (candidate.isItem() && ItemStack.of(candidate).getItemMeta() instanceof ArmorMeta) {
                 materials.add(candidate);
@@ -49,15 +49,18 @@ public final class ArmorBuilder extends ItemStackBuilder<ArmorBuilder> {
 
     public ArmorBuilder trim(ArmorTrim trim) {
         Objects.requireNonNull(trim, "Parameter 'trim' must not be null");
+
         item().setData(
                         DataComponentTypes.TRIM,
                         ItemArmorTrim.itemArmorTrim(trim).build());
+
         return self();
     }
 
     public ArmorBuilder trim(TrimMaterial material, TrimPattern pattern) {
         Objects.requireNonNull(material, "Parameter 'material' must not be null");
         Objects.requireNonNull(pattern, "Parameter 'pattern' must not be null");
+
         return trim(new ArmorTrim(material, pattern));
     }
 

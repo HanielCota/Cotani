@@ -7,7 +7,6 @@ import com.cotani.config.exception.ConfigException;
 import org.junit.jupiter.api.Test;
 
 class YamlInputLimitsTest {
-
     @Test
     void ignoresStructuralTokensInsideQuotesAndComments() {
         var yaml = "value: \"[[[[{{{{********\" # [[[[{{{{********\nother: '***'";
@@ -23,6 +22,7 @@ class YamlInputLimitsTest {
     @Test
     void rejectsExcessiveBlockNesting() {
         var yaml = new StringBuilder("root:\n");
+
         for (int depth = 1; depth <= 65; depth++) {
             yaml.append(" ".repeat(depth)).append("level").append(depth).append(":\n");
         }
@@ -40,6 +40,7 @@ class YamlInputLimitsTest {
     @Test
     void rejectsExcessiveAliasReferences() {
         var yaml = new StringBuilder("value:");
+
         for (int alias = 0; alias < 51; alias++) {
             yaml.append(" *anchor");
         }

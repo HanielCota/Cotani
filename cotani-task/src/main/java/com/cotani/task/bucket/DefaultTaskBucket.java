@@ -16,7 +16,6 @@ import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class DefaultTaskBucket implements TaskBucket {
-
     private final AsyncTaskExecutor executor;
     private final DelayedTaskScheduler delays;
     private final Map<String, RateLimiter> limiters = new ConcurrentHashMap<>();
@@ -88,6 +87,7 @@ public final class DefaultTaskBucket implements TaskBucket {
 
         SchedulerTask immediate = executor.async(taskName, () -> {
             SchedulerTask later = runThrottled(limiter, runnable, rescheduled);
+
             if (later != null) {
                 rescheduled.set(later);
             }
@@ -112,6 +112,7 @@ public final class DefaultTaskBucket implements TaskBucket {
         }
 
         Duration delay = limiter.retryDelay();
+
         if (delay.isZero() || delay.isNegative()) {
             delay = Duration.ofMillis(1);
         }

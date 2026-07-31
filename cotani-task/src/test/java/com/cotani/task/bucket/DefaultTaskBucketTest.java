@@ -12,7 +12,6 @@ import com.cotani.task.throttle.RateLimiter;
 import org.junit.jupiter.api.Test;
 
 class DefaultTaskBucketTest {
-
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
     private final TaskBucket bucket = TaskBucketFactory.create(scheduler);
 

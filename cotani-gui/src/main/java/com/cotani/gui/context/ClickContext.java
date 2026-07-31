@@ -17,7 +17,6 @@ import org.bukkit.inventory.InventoryView;
  * @param view the open inventory view
  */
 public record ClickContext(Player player, ClickType clickType, int slot, InventoryView view) {
-
     public ClickContext {
         Objects.requireNonNull(player, "Parameter 'player' must not be null");
         Objects.requireNonNull(clickType, "Parameter 'clickType' must not be null");

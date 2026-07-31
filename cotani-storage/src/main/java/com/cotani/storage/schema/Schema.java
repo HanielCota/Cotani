@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 
 public final class Schema {
-
     private final QueryExecutor executor;
     private final SqlDialect dialect;
 
@@ -26,6 +25,7 @@ public final class Schema {
     /** Executes migration DDL that is not expressible by {@link TableSchema}. */
     public CompletionStage<Void> execute(String sql) {
         Objects.requireNonNull(sql, "sql");
+
         return executor.update(sql, _ -> {});
     }
 }

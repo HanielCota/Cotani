@@ -13,7 +13,6 @@ import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings("java:S1133") // Nullable accessors remain for binary/source compatibility during migration.
 public final class Row {
-
     private final ResultSet resultSet;
     private final ValueSerializerRegistry serializers;
 
@@ -50,9 +49,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public @Nullable Integer getIntOrNull(String column) throws SQLException {
         int value = resultSet.getInt(column);
+
         if (resultSet.wasNull()) {
             return null;
         }
+
         return value;
     }
 
@@ -64,9 +65,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public @Nullable Long getLongOrNull(String column) throws SQLException {
         long value = resultSet.getLong(column);
+
         if (resultSet.wasNull()) {
             return null;
         }
+
         return value;
     }
 
@@ -78,9 +81,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public @Nullable Double getDoubleOrNull(String column) throws SQLException {
         double value = resultSet.getDouble(column);
+
         if (resultSet.wasNull()) {
             return null;
         }
+
         return value;
     }
 
@@ -92,9 +97,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public @Nullable Boolean getBooleanOrNull(String column) throws SQLException {
         boolean value = resultSet.getBoolean(column);
+
         if (resultSet.wasNull()) {
             return null;
         }
+
         return value;
     }
 
@@ -106,9 +113,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public @Nullable UUID getUuid(String column) throws SQLException {
         var raw = resultSet.getString(column);
+
         if (raw == null) {
             return null;
         }
+
         return UUID.fromString(raw);
     }
 
@@ -130,9 +139,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public @Nullable Duration getDuration(String column) throws SQLException {
         long value = resultSet.getLong(column);
+
         if (resultSet.wasNull()) {
             return null;
         }
+
         return Duration.ofMillis(value);
     }
 
@@ -144,9 +155,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public <E extends Enum<E>> @Nullable E getEnum(String column, Class<E> enumType) throws SQLException {
         var raw = resultSet.getString(column);
+
         if (raw == null) {
             return null;
         }
+
         return Enum.valueOf(enumType, raw);
     }
 
@@ -158,9 +171,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public @Nullable Component getComponent(String column) throws SQLException {
         var raw = resultSet.getString(column);
+
         if (raw == null) {
             return null;
         }
+
         return serializers.deserialize(raw, Component.class);
     }
 
@@ -172,9 +187,11 @@ public final class Row {
     @Deprecated(forRemoval = false)
     public <T> @Nullable T get(String column, Class<T> type) throws SQLException {
         var raw = resultSet.getObject(column);
+
         if (raw == null) {
             return null;
         }
+
         return serializers.deserialize(raw, type);
     }
 

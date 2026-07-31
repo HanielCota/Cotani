@@ -4,7 +4,6 @@ import com.cotani.economy.transaction.EconomyTransaction;
 import java.util.Objects;
 
 public record EconomyTransactionEvent(EconomyTransaction transaction) {
-
     public EconomyTransactionEvent {
         Objects.requireNonNull(transaction, "transaction");
     }

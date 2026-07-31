@@ -15,7 +15,6 @@ import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class InMemoryCooldownStore implements CooldownStore {
-
     private static final String KEY_NULL_MSG = "key cannot be null";
 
     private final ConcurrentMap<CooldownKey, CooldownEntry> entries = new ConcurrentHashMap<>();
@@ -60,6 +59,7 @@ public final class InMemoryCooldownStore implements CooldownStore {
         Objects.requireNonNull(key, KEY_NULL_MSG);
         Objects.requireNonNull(duration, "duration cannot be null");
         Objects.requireNonNull(clock, "clock cannot be null");
+
         if (!duration.isPositive()) {
             throw new IllegalArgumentException("duration must be positive");
         }
@@ -93,6 +93,7 @@ public final class InMemoryCooldownStore implements CooldownStore {
     private void cleanupWhenDue(Instant now) {
         long nowMillis = now.toEpochMilli();
         long nextCleanup = nextCleanupEpochMilli.get();
+
         if (nowMillis < nextCleanup || !nextCleanupEpochMilli.compareAndSet(nextCleanup, safeNextCleanup(now))) {
             return;
         }

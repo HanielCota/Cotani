@@ -8,7 +8,6 @@ import java.util.concurrent.CompletionStage;
 
 @InternalApi
 public final class CreateEconomyTablesMigration implements Migration {
-
     private static final String CURRENCY_ID_COLUMN = "currency_id";
 
     @Override

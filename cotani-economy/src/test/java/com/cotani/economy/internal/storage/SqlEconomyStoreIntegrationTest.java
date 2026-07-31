@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class SqlEconomyStoreIntegrationTest {
-
     private static final EconomySettings SETTINGS = EconomySettings.defaultSettings(EconomyCurrency.coins());
     private static final EconomyReason REASON = EconomyReason.system("integration-test");
 
@@ -40,6 +39,7 @@ class SqlEconomyStoreIntegrationTest {
     @AfterEach
     void closeStorage() {
         var current = storage;
+
         if (current != null) {
             current.closeAsync().toCompletableFuture().join();
         }
@@ -86,6 +86,7 @@ class SqlEconomyStoreIntegrationTest {
 
         int successes = 0;
         int insufficient = 0;
+
         for (var operation : List.of(first, second)) {
             try {
                 operation.toCompletableFuture().join();
@@ -116,6 +117,7 @@ class SqlEconomyStoreIntegrationTest {
                 .build();
         created.startAsync().toCompletableFuture().join();
         storage = created;
+
         return new SqlEconomyStore(created, Clock.systemUTC(), SETTINGS);
     }
 
@@ -126,6 +128,7 @@ class SqlEconomyStoreIntegrationTest {
 
     private static Throwable unwrap(Throwable failure) {
         var current = failure;
+
         while ((current instanceof CompletionException || current instanceof ExecutionException)
                 && current.getCause() != null) {
             current = current.getCause();

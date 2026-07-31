@@ -9,7 +9,6 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 public final class ConfigSerializerRegistry {
-
     private final AtomicReference<Map<Class<?>, ConfigSerializer<?>>> serializers =
             new AtomicReference<>(new LinkedHashMap<>());
     private final ClassValue<Optional<ConfigSerializer<?>>> resolvedCache = new ClassValue<>() {
@@ -21,14 +20,17 @@ public final class ConfigSerializerRegistry {
         private @Nullable ConfigSerializer<?> resolve(Class<?> wrapped) {
             var currentSerializers = Objects.requireNonNull(serializers.get());
             ConfigSerializer<?> serializer = currentSerializers.get(wrapped);
+
             if (serializer != null) {
                 return serializer;
             }
+
             for (var entry : currentSerializers.entrySet()) {
                 if (entry.getKey().isAssignableFrom(wrapped)) {
                     return entry.getValue();
                 }
             }
+
             return null;
         }
     };
@@ -49,6 +51,7 @@ public final class ConfigSerializerRegistry {
         registry.register(new SoundSerializer());
         registry.register(NamespacedKeySerializer.create(plugin));
         registry.register(new KeySerializer());
+
         return registry;
     }
 
@@ -68,17 +71,20 @@ public final class ConfigSerializerRegistry {
     public <T> T convert(ConfigValue value, Class<T> type) {
         Class<T> wrapped = wrap(type);
         Optional<ConfigSerializer<?>> serializer = find(wrapped);
+
         if (serializer.isPresent()) {
             return (T) serializer.get().read(value);
         }
         if (wrapped.isEnum()) {
             @SuppressWarnings("unchecked")
             var enumType = (Class<? extends Enum<?>>) wrapped;
+
             return (T) readEnum(value, enumType);
         }
         if (value.raw() != null && wrapped.isInstance(value.raw())) {
             return wrapped.cast(value.raw());
         }
+
         throw new ConfigException("Unsupported config type " + wrapped.getName() + " at " + value.location());
     }
 
@@ -87,7 +93,9 @@ public final class ConfigSerializerRegistry {
         if (value == null) {
             return null;
         }
+
         Optional<ConfigSerializer<?>> serializer = find(value.getClass());
+
         return serializer
                 .map(configSerializer -> write(configSerializer, value))
                 .orElse(value);
@@ -103,6 +111,7 @@ public final class ConfigSerializerRegistry {
         if (!type.isPrimitive()) {
             return type;
         }
+
         return (Class<T>)
                 switch (type.getName()) {
                     case "int" -> Integer.class;
@@ -120,9 +129,11 @@ public final class ConfigSerializerRegistry {
     private Enum<?> readEnum(ConfigValue value, Class<? extends Enum<?>> type) {
         String name = value.asString().trim().toUpperCase(Locale.ROOT).replace('-', '_');
         var constants = type.getEnumConstants();
+
         if (constants == null) {
             throw new ConfigException("Not an enum type " + type.getName() + " at " + value.location());
         }
+
         return Arrays.stream(constants)
                 .filter(constant -> constant.name().equals(name))
                 .findFirst()

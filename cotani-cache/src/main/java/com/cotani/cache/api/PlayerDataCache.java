@@ -18,7 +18,6 @@ import org.bukkit.entity.Player;
  * @param <V> the player data type
  */
 public interface PlayerDataCache<V> extends AutoCloseable {
-
     V get(Player player);
 
     V get(UUID uniqueId);

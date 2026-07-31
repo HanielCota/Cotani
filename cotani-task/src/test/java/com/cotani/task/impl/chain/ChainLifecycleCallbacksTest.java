@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 class ChainLifecycleCallbacksTest {
-
     @Test
     void completionCallbackCannotReplaceOriginalSuccess() {
         var source = new CompletableFuture<String>();

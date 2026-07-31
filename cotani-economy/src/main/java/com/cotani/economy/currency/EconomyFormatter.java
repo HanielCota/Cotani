@@ -12,7 +12,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
 public final class EconomyFormatter implements AutoCloseable {
-
     private final EconomyCurrency currency;
     private final ThreadLocal<DecimalFormat> decimalFormat;
 
@@ -28,6 +27,7 @@ public final class EconomyFormatter implements AutoCloseable {
             format.setRoundingMode(RoundingMode.DOWN);
             format.setMinimumFractionDigits(currency.decimalPlaces());
             format.setMaximumFractionDigits(currency.decimalPlaces());
+
             return format;
         });
     }
@@ -40,9 +40,11 @@ public final class EconomyFormatter implements AutoCloseable {
 
     public Component formatComponent(BigDecimal amount) {
         var formatted = format(amount);
+
         if (formatted.indexOf('<') < 0) {
             return Component.text(formatted);
         }
+
         return MiniMessages.parse(formatted);
     }
 
@@ -55,6 +57,7 @@ public final class EconomyFormatter implements AutoCloseable {
      */
     public TagResolver asPlaceholder(String placeholderName, BigDecimal amount) {
         Objects.requireNonNull(placeholderName, "placeholderName");
+
         return Placeholders.unparsed(placeholderName, format(amount));
     }
 

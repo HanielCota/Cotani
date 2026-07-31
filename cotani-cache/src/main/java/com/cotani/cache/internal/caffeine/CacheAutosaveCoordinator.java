@@ -11,7 +11,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final class CacheAutosaveCoordinator {
-
     private static final Logger LOGGER = Logger.getLogger(CacheAutosaveCoordinator.class.getName());
 
     private final Supplier<CompletionStage<Void>> autosaveOperation;
@@ -25,6 +24,7 @@ final class CacheAutosaveCoordinator {
             DelayedTaskScheduler scheduler, CacheSettings settings, Supplier<CompletionStage<Void>> autosaveOperation) {
         Objects.requireNonNull(scheduler, "scheduler");
         Objects.requireNonNull(settings, "settings");
+
         this.autosaveOperation = Objects.requireNonNull(autosaveOperation, "autosaveOperation");
         this.scheduledTask = settings.autosaveEnabled()
                 ? scheduler.asyncTimer(this::run, settings.autosaveInterval(), settings.autosaveInterval())
@@ -38,6 +38,7 @@ final class CacheAutosaveCoordinator {
             currentIdle = idle;
         }
         scheduledTask.cancel();
+
         return currentIdle;
     }
 

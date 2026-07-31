@@ -6,7 +6,6 @@ import com.cotani.event.exception.LoggingEventExceptionHandler;
 import java.util.UUID;
 
 public final class ExampleUsage {
-
     private ExampleUsage() {
         throw new UnsupportedOperationException("utility class");
     }

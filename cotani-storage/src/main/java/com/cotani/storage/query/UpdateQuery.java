@@ -14,7 +14,6 @@ import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 public final class UpdateQuery {
-
     private final String table;
     private final QueryExecutor executor;
     private final Map<String, Object> values = new LinkedHashMap<>();
@@ -56,6 +55,7 @@ public final class UpdateQuery {
                     "UpdateQuery requires at least one where(...) condition; call all() to allow a full-table update.",
                     null)));
         }
+
         return executor.update(sql(), this::bind);
     }
 
@@ -66,15 +66,18 @@ public final class UpdateQuery {
 
         var builder = new StringBuilder("UPDATE ").append(table).append(" SET ");
         var iter = values.entrySet().iterator();
+
         while (iter.hasNext()) {
             var entry = iter.next();
             builder.append(entry.getKey()).append(" = ?");
+
             if (iter.hasNext()) {
                 builder.append(", ");
             }
         }
         appendConditions(builder);
         cachedSql = builder.toString();
+
         return cachedSql;
     }
 

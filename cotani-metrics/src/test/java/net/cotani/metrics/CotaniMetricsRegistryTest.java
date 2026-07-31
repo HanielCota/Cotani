@@ -15,7 +15,6 @@ import net.cotani.metrics.api.MeterBinder;
 import org.junit.jupiter.api.Test;
 
 class CotaniMetricsRegistryTest {
-
     @Test
     void registersCounterGaugeAndTimer() {
         MeterRegistry simpleRegistry = new SimpleMeterRegistry();

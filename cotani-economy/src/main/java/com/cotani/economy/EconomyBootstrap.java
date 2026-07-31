@@ -17,7 +17,6 @@ import java.util.concurrent.Executors;
  * <p>In Cotani's real bootstrap, wire this module through the existing service registry instead of using this factory directly.
  */
 public final class EconomyBootstrap implements AutoCloseable {
-
     private final EconomyService service;
     private final Runnable closeAction;
 

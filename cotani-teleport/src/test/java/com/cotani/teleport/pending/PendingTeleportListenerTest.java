@@ -14,7 +14,6 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.junit.jupiter.api.Test;
 
 class PendingTeleportListenerTest {
-
     private final DefaultPendingTeleportService pendingService = mock(DefaultPendingTeleportService.class);
     private final PendingTeleportListener listener = new PendingTeleportListener(pendingService);
 

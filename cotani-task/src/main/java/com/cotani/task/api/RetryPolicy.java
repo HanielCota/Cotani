@@ -6,7 +6,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 public final class RetryPolicy {
-
     private static final double MIN_JITTER = 0.0;
     private static final double MAX_JITTER = 1.0;
 
@@ -34,9 +33,11 @@ public final class RetryPolicy {
 
         this.maxAttempts = maxAttempts;
         this.baseDelay = Objects.requireNonNull(baseDelay, "baseDelay");
+
         if (baseDelay.isNegative()) {
             throw new IllegalArgumentException("baseDelay must not be negative");
         }
+
         this.multiplier = multiplier;
         this.jitter = validateJitter(jitter);
         this.symmetricJitter = symmetricJitter;
@@ -92,11 +93,14 @@ public final class RetryPolicy {
         if (attempt <= 0) {
             throw new IllegalArgumentException("attempt must be positive");
         }
+
         long baseMillis = baseDelay.toMillis();
         double calculated = baseMillis * Math.pow(multiplier, attempt - 1.0);
+
         if (!Double.isFinite(calculated) || calculated > Long.MAX_VALUE) {
             throw new IllegalArgumentException("retry delay is too large for attempt " + attempt);
         }
+
         long exponential = (long) calculated;
 
         if (jitter == MIN_JITTER) {
@@ -150,7 +154,6 @@ public final class RetryPolicy {
     }
 
     public static final class Builder {
-
         private final int maxAttempts;
         private final Duration baseDelay;
         private double multiplier = 1.0;

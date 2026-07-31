@@ -24,7 +24,6 @@ import org.bukkit.plugin.Plugin;
 
 @InternalApi
 public final class DefaultCotaniConfigs implements CotaniConfigs {
-
     private final Plugin plugin;
     private final Path folder;
     private final TaskChainFactory chainFactory;
@@ -82,6 +81,7 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
 
     public void register(String name) {
         Objects.requireNonNull(name, "name");
+
         var resolved = ConfigPaths.requireContained(folder.resolve(name), folder);
         var source = BukkitYamlConfigSource.create(plugin, name, resolved, folder, createMissingFiles, copyDefaults);
         files.put(name, DefaultCotaniConfig.create(name, source, serializers, binder, chainFactory));
@@ -90,9 +90,11 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
     @Override
     public CotaniConfig file(String name) {
         var config = files.get(name);
+
         if (config != null) {
             return config;
         }
+
         throw new ConfigException("Config file not registered: " + name);
     }
 
@@ -114,6 +116,7 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
 
     private void reloadFiles() {
         ConfigException firstFailure = null;
+
         for (var config : files.values()) {
             try {
                 config.reload();

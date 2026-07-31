@@ -3,7 +3,6 @@ package com.cotani.cooldown.api;
 import java.util.Objects;
 
 public record CooldownAction(String value) {
-
     private static final int MAXIMUM_LENGTH = 64;
 
     public CooldownAction {

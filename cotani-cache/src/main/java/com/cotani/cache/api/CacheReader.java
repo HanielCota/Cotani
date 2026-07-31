@@ -11,7 +11,6 @@ import java.util.concurrent.CompletionStage;
  * Bukkit/Paper state.
  */
 public interface CacheReader<K, V> {
-
     V get(K key);
 
     Optional<V> find(K key);

@@ -4,7 +4,6 @@ import java.io.Serial;
 import java.math.BigDecimal;
 
 public final class InvalidAmountException extends EconomyException {
-
     @Serial
     private static final long serialVersionUID = 1L;
 

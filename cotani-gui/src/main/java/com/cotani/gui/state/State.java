@@ -12,7 +12,6 @@ import java.util.function.UnaryOperator;
  * Factory for reactive {@link Property} instances bound to GUI render cycles.
  */
 public final class State {
-
     private State() {}
 
     /**
@@ -37,14 +36,12 @@ public final class State {
     }
 
     private static final class BoolStateProperty extends StateProperty<Boolean> implements BoolProperty {
-
         private BoolStateProperty(boolean initial) {
             super(initial);
         }
     }
 
     static class StateProperty<T> implements Property<T> {
-
         private final Object lock = new Object();
         private final List<Consumer<? super T>> observers = new CopyOnWriteArrayList<>();
 
@@ -81,11 +78,14 @@ public final class State {
             T updated;
             synchronized (lock) {
                 updated = Objects.requireNonNull(mutator.apply(value), "The mutator must not return null");
+
                 if (Objects.equals(this.value, updated)) {
                     return;
                 }
+
                 this.value = updated;
             }
+
             notifyObservers(updated);
         }
 
@@ -94,6 +94,7 @@ public final class State {
             Objects.requireNonNull(listener, "Parameter 'listener' must not be null");
 
             observers.add(listener);
+
             return () -> observers.remove(listener);
         }
 

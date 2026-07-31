@@ -7,7 +7,6 @@ import com.cotani.task.api.TaskChain;
  * Factory methods for commonly used {@link TaskChain} instances.
  */
 public final class TaskChains {
-
     private TaskChains() {}
 
     /**

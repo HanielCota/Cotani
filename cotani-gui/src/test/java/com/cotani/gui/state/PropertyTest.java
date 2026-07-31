@@ -9,7 +9,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 final class PropertyTest {
-
     @Test
     void getsAndSetsValues() {
         var property = State.of("a");

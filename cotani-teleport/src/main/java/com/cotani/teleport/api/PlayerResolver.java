@@ -13,7 +13,6 @@ import org.jspecify.annotations.Nullable;
  */
 @FunctionalInterface
 public interface PlayerResolver {
-
     @Nullable
     Player resolve(UUID playerId);
 

@@ -11,7 +11,6 @@ import org.bukkit.block.Block;
 import org.junit.jupiter.api.Test;
 
 class BlockSafetyCheckerTest {
-
     private final SafeLocationOptions options = new SafeLocationOptions(2, 8, true, true, false);
     private final World world = mock(World.class);
 

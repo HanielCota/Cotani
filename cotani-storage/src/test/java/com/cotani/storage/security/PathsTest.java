@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class PathsTest {
-
     @TempDir
     Path tempDir;
 
@@ -43,6 +42,7 @@ class PathsTest {
         var target = tempDir.resolve("target.db");
         Files.createFile(target);
         var link = tempDir.resolve("link.db");
+
         try {
             Files.createSymbolicLink(link, target);
         } catch (UnsupportedOperationException | IOException unsupported) {

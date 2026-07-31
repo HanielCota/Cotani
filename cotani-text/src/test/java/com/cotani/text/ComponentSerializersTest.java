@@ -10,7 +10,6 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.Test;
 
 class ComponentSerializersTest {
-
     @Test
     void exposesGsonSerializer() {
         assertNotNull(ComponentSerializers.GSON);

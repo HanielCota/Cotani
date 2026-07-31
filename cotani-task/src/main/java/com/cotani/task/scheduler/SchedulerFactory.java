@@ -14,7 +14,6 @@ import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
 public final class SchedulerFactory {
-
     private static final String PLUGIN_PARAM = "plugin";
     private static final String OPTIONS_PARAM = "options";
     private static final String EXCEPTION_HANDLER_PARAM = "exceptionHandler";

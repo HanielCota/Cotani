@@ -7,7 +7,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class MariaDbDialectTest {
-
     private final MariaDbDialect dialect = new MariaDbDialect();
 
     @Test

@@ -7,7 +7,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class DirtyEntryTrackerTest {
-
     @Test
     void oldEntryCannotClearDirtyStateOfItsReplacement() {
         var tracker = new DirtyEntryTracker<String, String>();

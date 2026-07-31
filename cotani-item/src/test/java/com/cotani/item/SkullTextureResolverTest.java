@@ -11,7 +11,6 @@ import java.net.URI;
 import org.junit.jupiter.api.Test;
 
 class SkullTextureResolverTest {
-
     private static String normalize(String input) throws Exception {
         return invokeStatic("normalizeTextureUrl", String.class, input);
     }
@@ -24,6 +23,7 @@ class SkullTextureResolverTest {
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         var method = SkullTextureResolver.class.getDeclaredMethod(name, paramType);
         method.setAccessible(true);
+
         return (String) method.invoke(null, value);
     }
 

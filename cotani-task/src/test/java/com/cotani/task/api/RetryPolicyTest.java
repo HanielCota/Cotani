@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class RetryPolicyTest {
-
     @Test
     void fixedPolicyHasDefaultValues() {
         RetryPolicy policy = RetryPolicy.fixed(3, Duration.ofMillis(50));

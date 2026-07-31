@@ -12,7 +12,6 @@ import java.util.concurrent.CompletionStage;
 
 @InternalApi
 public final class StorageUserRepository implements UserRepository {
-
     private static final String UNIQUE_ID_COL = "unique_id";
     private static final String USERNAME_COL = "username";
     private static final String LAST_JOIN_AT_COL = "last_join_at";

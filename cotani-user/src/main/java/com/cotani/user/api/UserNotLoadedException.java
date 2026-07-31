@@ -4,7 +4,6 @@ import java.io.Serial;
 import java.util.UUID;
 
 public final class UserNotLoadedException extends RuntimeException {
-
     @Serial
     private static final long serialVersionUID = 1L;
 

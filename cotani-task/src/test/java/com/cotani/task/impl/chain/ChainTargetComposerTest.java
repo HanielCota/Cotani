@@ -16,7 +16,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class ChainTargetComposerTest {
-
     @Test
     @SuppressWarnings("unchecked")
     void composesCurrentAndRepeatableAttemptsThroughTheSameTarget() {

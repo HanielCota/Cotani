@@ -13,7 +13,6 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
-
     private final SkullTextureResolver textureResolver;
 
     private SkullBuilder(SkullTextureResolver textureResolver) {
@@ -41,12 +40,15 @@ public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
 
     public SkullBuilder player(OfflinePlayer player) {
         Objects.requireNonNull(player, "Parameter 'player' must not be null");
+
         return profile(player.getPlayerProfile());
     }
 
     public SkullBuilder profile(PlayerProfile profile) {
         Objects.requireNonNull(profile, "Parameter 'profile' must not be null");
+
         item().setData(DataComponentTypes.PROFILE, ResolvableProfile.resolvableProfile(profile));
+
         return self();
     }
 
@@ -69,7 +71,9 @@ public final class SkullBuilder extends ItemStackBuilder<SkullBuilder> {
 
     public SkullBuilder noteBlockSound(NamespacedKey soundKey) {
         Objects.requireNonNull(soundKey, "Parameter 'soundKey' must not be null");
+
         item().setData(DataComponentTypes.NOTE_BLOCK_SOUND, soundKey);
+
         return self();
     }
 

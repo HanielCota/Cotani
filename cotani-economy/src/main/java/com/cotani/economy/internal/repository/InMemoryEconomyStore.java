@@ -35,7 +35,6 @@ import java.util.function.Supplier;
  */
 @InternalApi
 public final class InMemoryEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
-
     private final Executor executor;
     private final Clock clock;
     private final EconomySettings settings;
@@ -59,6 +58,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         Objects.requireNonNull(currencyId, "currencyId");
 
         var key = new EconomyAccountKey(userId, currencyId);
+
         return CompletableFuture.supplyAsync(() -> getOrCreateLocked(key), executor);
     }
 
@@ -69,8 +69,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-
         var key = new EconomyAccountKey(userId, currencyId);
+
         return executeIdempotent(
                 operationId,
                 EconomyOperationFingerprint.deposit(userId, currencyId, amount, reason),
@@ -208,6 +208,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                 () -> {
                     var result = new ArrayList<EconomyTransaction>(Math.min(limit, transactions.size()));
                     var iterator = transactions.descendingIterator();
+
                     while (iterator.hasNext() && result.size() < limit) {
                         result.add(iterator.next());
                     }
@@ -224,6 +225,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         Objects.requireNonNull(fingerprint, "fingerprint");
 
         EconomyTransaction existing = transactionsByOperation.get(operationId);
+
         if (existing != null) {
             return requireMatchingOperation(operationId, fingerprint, existing);
         }
@@ -236,6 +238,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
 
         attachCleanup(operationId, selected);
         startOperation(operationId, fingerprint, action, selected);
+
         return selected.result();
     }
 
@@ -252,10 +255,12 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             EconomyOperationId operationId, EconomyOperationFingerprint fingerprint) {
         var candidate =
                 new InFlightOperation(fingerprint, new CompletableFuture<>(), new AtomicBoolean(), new AtomicBoolean());
+
         return inFlightOperations.compute(operationId, (_, inFlight) -> {
             if (inFlight != null && !inFlight.result().isDone()) {
                 return inFlight;
             }
+
             return candidate;
         });
     }
@@ -309,6 +314,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
 
     private EconomyAccount getOrCreateLocked(EconomyAccountKey key) {
         var existing = accounts.get(key);
+
         if (existing != null) {
             return existing;
         }
@@ -317,16 +323,20 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         var created =
                 EconomyAccount.create(key.userId(), key.currencyId(), settings.startingBalance(key.currencyId()), now);
         var previous = accounts.putIfAbsent(key, created);
+
         return previous != null ? previous : created;
     }
 
     private EconomyTransaction saveTransactionLocked(EconomyTransaction transaction) {
         EconomyTransaction previous = transactionsByOperation.putIfAbsent(transaction.operationId(), transaction);
+
         if (previous != null) {
             // Another winner already committed this operation id — keep the original.
             return previous;
         }
+
         transactions.add(transaction);
+
         return transaction;
     }
 
@@ -338,6 +348,7 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
 
     private void ensureMaximumBalance(EconomyAccount account) {
         var maximumBalance = settings.maximumBalance(account.currencyId());
+
         if (account.balance().compareTo(maximumBalance) <= 0) {
             return;
         }

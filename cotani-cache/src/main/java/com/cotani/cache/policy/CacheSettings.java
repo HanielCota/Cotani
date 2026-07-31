@@ -26,7 +26,6 @@ public record CacheSettings(
         boolean unloadOnQuit,
         boolean saveOnEvict,
         boolean recordStats) {
-
     public CacheSettings {
         Objects.requireNonNull(expireAfterAccess, "expireAfterAccess");
         Objects.requireNonNull(expireAfterWrite, "expireAfterWrite");

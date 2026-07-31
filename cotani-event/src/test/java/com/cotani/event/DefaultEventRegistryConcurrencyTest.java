@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 
 class DefaultEventRegistryConcurrencyTest {
-
     @Test
     void registrationCannotBeLostBehindConcurrentResolution() throws Exception {
         var registry = new DefaultEventRegistry();
@@ -49,7 +48,6 @@ class DefaultEventRegistryConcurrencyTest {
     private record TestEvent() implements CotaniEvent {}
 
     private static final class BlockingSubscription implements EventSubscription {
-
         private final UUID id = UUID.randomUUID();
         private final CountDownLatch entered;
         private final CountDownLatch release;
@@ -91,6 +89,7 @@ class DefaultEventRegistryConcurrencyTest {
                 Thread.currentThread().interrupt();
                 return false;
             }
+
             return active.get();
         }
 

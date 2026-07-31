@@ -11,7 +11,6 @@ import org.bukkit.inventory.ItemStack;
  * Static factory helpers for common buttons (close, pagination, generic actions).
  */
 public final class Buttons {
-
     private Buttons() {}
 
     /**

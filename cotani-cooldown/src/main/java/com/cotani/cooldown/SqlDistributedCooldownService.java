@@ -27,7 +27,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final class SqlDistributedCooldownService implements DistributedCooldownService {
-
     private static final Logger LOGGER = Logger.getLogger(SqlDistributedCooldownService.class.getName());
     private static final String SELECT_BY_ID = """
         SELECT target_type, target_id, action_name, started_at, expires_at, lease_token
@@ -44,11 +43,14 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
             CotaniStorage storage, DelayedTaskScheduler scheduler, Clock clock, Duration cleanupInterval) {
         this.storage = Objects.requireNonNull(storage, "storage");
         Objects.requireNonNull(scheduler, "scheduler");
+
         this.clock = Objects.requireNonNull(clock, "clock");
         Objects.requireNonNull(cleanupInterval, "cleanupInterval");
+
         if (!cleanupInterval.isPositive()) {
             throw new IllegalArgumentException("cleanupInterval must be positive");
         }
+
         this.cleanupTask = scheduler.asyncTimer(this::runCleanup, cleanupInterval, cleanupInterval);
     }
 
@@ -56,9 +58,11 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
     public CompletionStage<CooldownResult> checkAndStartAsync(CooldownKey key, Duration duration) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(duration, "duration");
+
         if (!duration.isPositive()) {
             throw new IllegalArgumentException("duration must be positive");
         }
+
         var target = TargetColumns.from(key);
         Instant startedAt = clock.instant();
         Instant expiresAt = startedAt.plus(duration);
@@ -81,6 +85,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
                     if (leaseToken.equals(entry.leaseToken())) {
                         return CooldownResult.allowed(key);
                     }
+
                     Duration remaining =
                             Duration.between(startedAt, entry.entry().expiresAt());
                     if (remaining.isNegative()) {
@@ -93,13 +98,17 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
     @Override
     public CompletionStage<Optional<CooldownEntry>> findAsync(CooldownKey key) {
         Objects.requireNonNull(key, "key");
+
         var target = TargetColumns.from(key);
         Instant now = clock.instant();
+
         return findStored(target.cooldownId()).thenCompose(stored -> {
             var entry = stored.map(StoredCooldown::entry);
+
             if (entry.isPresent() && entry.get().expired(now)) {
                 return removeExpired(target.cooldownId(), now).thenApply(_ -> Optional.empty());
             }
+
             return CompletableFuture.completedFuture(entry);
         });
     }
@@ -107,6 +116,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
     @Override
     public CompletionStage<Void> removeAsync(CooldownKey key) {
         Objects.requireNonNull(key, "key");
+
         return storage.queryExecutor()
                 .update(
                         "DELETE FROM cotani_cooldowns WHERE cooldown_id = ?",
@@ -223,7 +233,6 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
     private record StoredCooldown(CooldownEntry entry, String leaseToken) {}
 
     private record TargetColumns(String cooldownId, String type, String id, CooldownKey key) {
-
         private static TargetColumns from(CooldownKey key) {
             String type;
             String id;
@@ -253,6 +262,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
                         case "RESOURCE" -> new ResourceCooldownTarget(id);
                         default -> throw new IllegalStateException("Invalid stored cooldown target type: " + type);
                     };
+
             return new CooldownKey(target, action);
         }
     }

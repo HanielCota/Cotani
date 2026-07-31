@@ -14,7 +14,6 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 class TaskThrottlerTest {
-
     @Test
     @SuppressWarnings("unchecked")
     void testThrottleRetriesAndSucceeds() {
@@ -28,12 +27,14 @@ class TaskThrottlerTest {
         // When scheduler.supplyAsync is called, mock it to run immediately
         when(scheduler.supplyAsync(any(Supplier.class))).thenAnswer(invocation -> {
             Supplier<?> supplier = invocation.getArgument(0);
+
             try {
                 Object result = supplier.get();
                 return DefaultTaskChain.create(CompletableFuture.completedFuture(result), scheduler);
             } catch (Throwable t) {
                 CompletableFuture<Object> future = new CompletableFuture<>();
                 future.completeExceptionally(t);
+
                 return DefaultTaskChain.create(future, scheduler);
             }
         });

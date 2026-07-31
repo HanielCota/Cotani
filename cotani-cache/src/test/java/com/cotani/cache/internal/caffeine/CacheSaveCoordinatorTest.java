@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class CacheSaveCoordinatorTest {
-
     @Test
     void serializesSavesForTheSameKey() {
         CacheRepository<String, String> repository = repository();

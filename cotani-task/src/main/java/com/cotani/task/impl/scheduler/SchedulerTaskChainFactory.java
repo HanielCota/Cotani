@@ -10,7 +10,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
 final class SchedulerTaskChainFactory {
-
     private final PaperTaskScheduler scheduler;
     private final TargetTaskDispatcher dispatcher;
 
@@ -22,12 +21,15 @@ final class SchedulerTaskChainFactory {
     <T> TaskChain<T> supplyAsync(String name, Supplier<T> supplier) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(supplier, "supplier");
+
         Supplier<CompletableFuture<T>> factory = () -> dispatcher.supply(ExecutionTarget.async(), name, supplier);
+
         return DefaultTaskChain.<T>create(factory.get(), scheduler, factory);
     }
 
     <T> TaskChain<T> chain(CompletionStage<T> stage) {
         Objects.requireNonNull(stage, "stage");
+
         return DefaultTaskChain.<T>create(stage.toCompletableFuture(), scheduler);
     }
 }

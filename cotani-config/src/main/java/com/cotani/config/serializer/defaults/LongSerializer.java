@@ -5,7 +5,6 @@ import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
 
 public final class LongSerializer implements ConfigSerializer<Long> {
-
     @Override
     public Class<Long> type() {
         return Long.class;
@@ -16,6 +15,7 @@ public final class LongSerializer implements ConfigSerializer<Long> {
         if (value.raw() instanceof Number number) {
             return number.longValue();
         }
+
         try {
             return Long.parseLong(value.asString());
         } catch (NumberFormatException exception) {

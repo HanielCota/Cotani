@@ -5,7 +5,6 @@ import java.util.Objects;
 
 /** Lightweight structural limits applied before handing input to SnakeYAML. */
 final class YamlInputLimits {
-
     private static final int MAXIMUM_NESTING_DEPTH = 64;
     private static final int MAXIMUM_ALIAS_REFERENCES = 50;
     private static final int MAXIMUM_CONTENT_LINES = 50_000;
@@ -14,7 +13,9 @@ final class YamlInputLimits {
 
     static void validate(String yaml) {
         Objects.requireNonNull(yaml, "yaml");
+
         var state = new ValidationState();
+
         for (String line : yaml.split("\\R", -1)) {
             state.validateLine(line);
         }
@@ -27,7 +28,6 @@ final class YamlInputLimits {
     }
 
     private static final class ValidationState {
-
         private final int[] indentationStack = new int[MAXIMUM_NESTING_DEPTH + 1];
         private int indentationDepth;
         private int flowDepth;
@@ -40,6 +40,7 @@ final class YamlInputLimits {
         private void validateLine(String line) {
             int indentation = indentationOf(line);
             String content = line.substring(indentation).stripTrailing();
+
             if (content.isEmpty() || content.startsWith("#")) {
                 return;
             }
@@ -50,12 +51,14 @@ final class YamlInputLimits {
 
         private static int indentationOf(String line) {
             int indentation = 0;
+
             while (indentation < line.length() && line.charAt(indentation) == ' ') {
                 indentation++;
             }
             if (indentation < line.length() && line.charAt(indentation) == '\t') {
                 throw new ConfigException("YAML indentation must not contain tabs");
             }
+
             return indentation;
         }
 
@@ -77,12 +80,14 @@ final class YamlInputLimits {
             if (indentationDepth > MAXIMUM_NESTING_DEPTH) {
                 throw new ConfigException("YAML exceeds maximum nesting depth " + MAXIMUM_NESTING_DEPTH);
             }
+
             indentationStack[indentationDepth] = indentation;
         }
 
         private void scanContent(String content) {
             int index = 0;
             boolean commentStarted = false;
+
             while (index < content.length() && !commentStarted) {
                 commentStarted = scanCharacter(content, index);
                 index++;
@@ -91,6 +96,7 @@ final class YamlInputLimits {
 
         private boolean scanCharacter(String content, int index) {
             char current = content.charAt(index);
+
             if (consumeEscapedCharacter(current)) {
                 return false;
             }
@@ -108,8 +114,10 @@ final class YamlInputLimits {
             if (current == '#') {
                 return true;
             }
+
             updateFlowDepth(current);
             countAlias(content, index, current);
+
             return false;
         }
 
@@ -125,6 +133,7 @@ final class YamlInputLimits {
                 escaped = true;
                 return true;
             }
+
             return false;
         }
 

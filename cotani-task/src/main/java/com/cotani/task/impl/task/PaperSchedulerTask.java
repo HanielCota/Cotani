@@ -7,7 +7,6 @@ import java.util.Objects;
 
 @InternalApi
 public record PaperSchedulerTask(ScheduledTask task) implements SchedulerTask {
-
     public PaperSchedulerTask {
         Objects.requireNonNull(task, "task");
     }

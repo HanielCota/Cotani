@@ -39,7 +39,6 @@ import java.util.function.Function;
  */
 @InternalApi
 public final class SqlEconomyStore implements EconomyAccountRepository, EconomyTransferRepository {
-
     private static final String USER_ID_PARAM = "userId";
     private static final String CURRENCY_ID_PARAM = "currencyId";
     private static final String AMOUNT_PARAM = "amount";
@@ -91,6 +90,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
+
         return runIdempotent(
                 operationId,
                 EconomyOperationFingerprint.deposit(userId, currencyId, amount, reason),
@@ -99,6 +99,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.deposit(
                             operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
+
                     return insertAccount(tx, updated)
                             .thenCompose(_ -> insertTransaction(tx, transaction))
                             .thenApply(_ -> transaction);
@@ -119,6 +120,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
+
         return runIdempotent(
                 operationId,
                 EconomyOperationFingerprint.withdraw(userId, currencyId, amount, reason),
@@ -126,6 +128,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                     EconomyAccount updated = account.withdraw(amount, now);
                     EconomyTransaction transaction = EconomyTransaction.withdraw(
                             operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
+
                     return upsertAccount(tx, updated)
                             .thenCompose(_ -> insertTransaction(tx, transaction))
                             .thenApply(_ -> transaction);
@@ -146,6 +149,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
         Instant now = clock.instant();
+
         return runIdempotent(
                 operationId,
                 EconomyOperationFingerprint.set(userId, currencyId, amount, reason),
@@ -154,6 +158,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.set(
                             operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
+
                     return upsertAccount(tx, updated)
                             .thenCompose(_ -> insertTransaction(tx, transaction))
                             .thenApply(_ -> transaction);
@@ -179,6 +184,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         UUID secondId = firstId.equals(sourceUserId) ? targetUserId : sourceUserId;
 
         Instant now = clock.instant();
+
         return runIdempotent(
                 operationId,
                 EconomyOperationFingerprint.transfer(sourceUserId, targetUserId, currencyId, amount, reason),
@@ -221,6 +227,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                     if (existing.isPresent()) {
                         return CompletableFuture.completedStage(fingerprint.requireMatch(operationId, existing.get()));
                     }
+
                     return mutation.apply(tx);
                 }))
                 .exceptionallyCompose(error -> {
@@ -228,6 +235,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                             && !EconomyStorageMappers.isUniqueViolation(error)) {
                         return CompletableFuture.failedFuture(error);
                     }
+
                     return findTransactionByOperationIdAsync(operationId)
                             .thenCompose(found -> found.map(existing -> CompletableFuture.completedStage(
                                             fingerprint.requireMatch(operationId, existing)))
@@ -255,6 +263,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                 FROM cotani_economy_transactions
                 WHERE operation_id = ?
                 """;
+
         return tx.queryOne(sql, binder -> binder.set(operationId.value()), EconomyStorageMappers::transactionFromRow);
     }
 
@@ -266,6 +275,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                             Instant now = clock.instant();
                             EconomyAccount created = EconomyAccount.create(
                                     userId, currencyId, settings.startingBalance(currencyId), now);
+
                             return insertAccountDoNothing(tx, created)
                                     .thenCompose(_ -> findLocked(tx, userId, currencyId))
                                     .thenApply(reloaded -> reloaded.orElse(created));
@@ -277,6 +287,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         String sql =
                 "SELECT balance, created_at, updated_at FROM cotani_economy_accounts WHERE user_id = ? AND currency_id"
                         + " = ?";
+
         if (!storage.dialect().name().equalsIgnoreCase("sqlite")) {
             sql += " FOR UPDATE";
         }
@@ -292,6 +303,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
     private CompletionStage<Void> insertAccountDoNothing(TransactionContext tx, EconomyAccount account) {
         String sql =
                 storage.dialect().upsert("cotani_economy_accounts", ACCOUNT_COLUMNS, ACCOUNT_KEY_COLUMNS, List.of());
+
         return tx.update(sql, binder -> {
             bindAccount(binder, account);
         });
@@ -323,6 +335,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
 
     private void ensureMaximumBalance(EconomyAccount account) {
         var maximumBalance = settings.maximumBalance(account.currencyId());
+
         if (account.balance().compareTo(maximumBalance) > 0) {
             throw new MaximumBalanceExceededException(account.userId(), account.balance(), maximumBalance);
         }
@@ -330,6 +343,7 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
 
     private static Throwable unwrap(Throwable error) {
         Throwable cause = error;
+
         while (cause.getCause() != null
                 && (cause instanceof CompletionException || cause instanceof ExecutionException)) {
             cause = cause.getCause();

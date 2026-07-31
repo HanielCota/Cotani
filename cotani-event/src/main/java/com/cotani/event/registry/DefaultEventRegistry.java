@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @InternalApi
 public final class DefaultEventRegistry implements EventRegistry {
-
     private final CopyOnWriteArrayList<EventSubscription> subscriptions = new CopyOnWriteArrayList<>();
     private final Map<UUID, EventSubscription> subscriptionIndex = new ConcurrentHashMap<>();
     private final Map<Class<? extends CotaniEvent>, List<EventSubscription>> resolvedCache = new ConcurrentHashMap<>();
@@ -26,6 +25,7 @@ public final class DefaultEventRegistry implements EventRegistry {
     @Override
     public void register(EventSubscription subscription) {
         Objects.requireNonNull(subscription, "subscription cannot be null");
+
         snapshotLock.writeLock().lock();
         try {
             subscriptions.add(subscription);
@@ -63,6 +63,7 @@ public final class DefaultEventRegistry implements EventRegistry {
             Class<? extends CotaniEvent> eventClass = event.getClass();
             List<EventSubscription> cached = resolvedCache.get(eventClass);
             var inactiveCounter = inactiveCounters.get(eventClass);
+
             if (cached != null && (inactiveCounter == null || inactiveCounter.get() == 0)) {
                 return cached;
             }
@@ -70,6 +71,7 @@ public final class DefaultEventRegistry implements EventRegistry {
             return resolvedCache.computeIfAbsent(eventClass, cls -> {
                 var result = resolveSubscriptions(cls);
                 inactiveCounters.put(cls, new AtomicInteger(countInactive(result)));
+
                 return result;
             });
         } finally {
@@ -87,11 +89,13 @@ public final class DefaultEventRegistry implements EventRegistry {
         }
 
         matchingSubscriptions.sort(Comparator.comparing(EventSubscription::priority));
+
         return List.copyOf(matchingSubscriptions);
     }
 
     private static int countInactive(List<EventSubscription> subs) {
         int count = 0;
+
         for (var s : subs) {
             if (!s.active()) count++;
         }
@@ -107,6 +111,7 @@ public final class DefaultEventRegistry implements EventRegistry {
                     subscriptionIndex.remove(subscription.id());
                     return true;
                 }
+
                 return false;
             });
             if (changed) {

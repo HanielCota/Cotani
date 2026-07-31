@@ -9,7 +9,6 @@ import org.bukkit.plugin.Plugin;
 
 @InternalApi
 public final class PlatformSchedulerFactory {
-
     private static final int DEFAULT_MAX_CONCURRENT = 256;
 
     private PlatformSchedulerFactory() {}

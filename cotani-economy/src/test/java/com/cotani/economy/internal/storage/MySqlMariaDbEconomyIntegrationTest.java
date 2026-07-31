@@ -35,7 +35,6 @@ import org.testcontainers.mysql.MySQLContainer;
 
 @Testcontainers(disabledWithoutDocker = true)
 class MySqlMariaDbEconomyIntegrationTest {
-
     private static final EconomySettings SETTINGS = EconomySettings.defaultSettings(EconomyCurrency.coins());
     private static final EconomyReason REASON = EconomyReason.system("container-integration-test");
 
@@ -64,6 +63,7 @@ class MySqlMariaDbEconomyIntegrationTest {
     private static void verifyCrossInstanceAtomicity(Supplier<StorageBackend> backendFactory) {
         var firstStorage = startStorage(backendFactory.get(), true);
         var secondStorage = startStorage(backendFactory.get(), false);
+
         try {
             var firstStore = new SqlEconomyStore(firstStorage, Clock.systemUTC(), SETTINGS);
             var secondStore = new SqlEconomyStore(secondStorage, Clock.systemUTC(), SETTINGS);
@@ -95,6 +95,7 @@ class MySqlMariaDbEconomyIntegrationTest {
 
             int successes = 0;
             int insufficientFunds = 0;
+
             for (var operation : List.of(firstWithdrawal, secondWithdrawal)) {
                 try {
                     operation.toCompletableFuture().join();
@@ -133,6 +134,7 @@ class MySqlMariaDbEconomyIntegrationTest {
         }
         var storage = builder.build();
         storage.startAsync().toCompletableFuture().join();
+
         return storage;
     }
 
@@ -158,11 +160,13 @@ class MySqlMariaDbEconomyIntegrationTest {
             String host, int port, String database, String username, String password) {
         var pool = new MySqlCredentials.PoolSettings(
                 2, 0, Duration.ofSeconds(10), Duration.ofMinutes(1), Duration.ofMinutes(10));
+
         return new MySqlCredentials(host, port, database, username, password, false, pool);
     }
 
     private static Throwable unwrap(Throwable failure) {
         Throwable current = failure;
+
         while ((current instanceof CompletionException || current instanceof ExecutionException)
                 && current.getCause() != null) {
             current = current.getCause();

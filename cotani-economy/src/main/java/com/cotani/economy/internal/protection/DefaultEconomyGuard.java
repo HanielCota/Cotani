@@ -14,7 +14,6 @@ import java.util.UUID;
 
 @InternalApi
 public final class DefaultEconomyGuard implements EconomyGuard {
-
     private static final String CURRENCY_ID_PARAM = "currencyId";
 
     private final EconomySettings settings;
@@ -32,6 +31,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
     public BigDecimal normalizeAmount(CurrencyId currencyId, BigDecimal amount) {
         Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
         Objects.requireNonNull(amount, "amount");
+
         validateCurrencyId(currencyId);
 
         int decimalPlaces = settings.decimalPlaces(currencyId);
@@ -45,6 +45,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
         }
 
         var maximumOperationAmount = settings.maximumOperationAmount(currencyId);
+
         if (amount.compareTo(maximumOperationAmount) > 0) {
             throw new InvalidAmountException(amount, "amount cannot be greater than " + maximumOperationAmount);
         }
@@ -61,6 +62,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
     public void validateBalanceAmount(CurrencyId currencyId, BigDecimal amount) {
         Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
         Objects.requireNonNull(amount, "amount");
+
         validateCurrencyId(currencyId);
 
         int decimalPlaces = settings.decimalPlaces(currencyId);
@@ -74,6 +76,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
         }
 
         var maximumBalance = settings.maximumBalance(currencyId);
+
         if (amount.compareTo(maximumBalance) > 0) {
             throw new InvalidAmountException(amount, "balance cannot be greater than " + maximumBalance);
         }
@@ -87,6 +90,7 @@ public final class DefaultEconomyGuard implements EconomyGuard {
     @Override
     public void validateCurrencyId(CurrencyId currencyId) {
         Objects.requireNonNull(currencyId, CURRENCY_ID_PARAM);
+
         settings.requireEnabledDefinition(currencyId);
     }
 

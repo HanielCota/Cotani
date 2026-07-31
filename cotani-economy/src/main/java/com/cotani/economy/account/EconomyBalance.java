@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 public record EconomyBalance(UUID userId, CurrencyId currencyId, BigDecimal amount) {
-
     public EconomyBalance {
         Objects.requireNonNull(userId, "userId");
         Objects.requireNonNull(currencyId, "currencyId");

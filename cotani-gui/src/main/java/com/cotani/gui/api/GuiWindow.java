@@ -25,7 +25,6 @@ import org.jspecify.annotations.Nullable;
  * on Folia). The module's {@code CotaniGuiModule} listener must be registered for clicks to work.
  */
 public final class GuiWindow {
-
     private final Component title;
     private final Map<Character, Button> buttons = new LinkedHashMap<>();
     private final List<ObservedBinding> observedBindings = new ArrayList<>();
@@ -282,7 +281,6 @@ public final class GuiWindow {
 
     private record PaginatedSpec<T>(
             char symbol, Property<Integer> pageState, List<T> items, Function<T, Button> renderer) {
-
         PaginatedRegion<T> toRegion(List<Integer> slots) {
             return new PaginatedRegion<>(slots, pageState, items, renderer);
         }

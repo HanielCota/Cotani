@@ -9,7 +9,6 @@ import com.cotani.event.api.CotaniEvent;
  * TransactionPreEvent or TeleportPreEvent.</p>
  */
 public interface CancellableEvent extends CotaniEvent {
-
     boolean cancelled();
 
     void cancel();

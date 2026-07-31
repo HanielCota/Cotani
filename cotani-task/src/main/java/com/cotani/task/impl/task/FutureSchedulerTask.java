@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @InternalApi
 public final class FutureSchedulerTask implements SchedulerTask {
-
     private final Future<Void> future;
     private final AtomicBoolean cancelled;
 

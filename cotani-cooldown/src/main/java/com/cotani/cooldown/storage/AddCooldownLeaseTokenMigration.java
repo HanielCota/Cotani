@@ -6,7 +6,6 @@ import java.util.concurrent.CompletionStage;
 
 /** Adds the winner token used by atomic distributed cooldown acquisition. */
 public final class AddCooldownLeaseTokenMigration implements Migration {
-
     @Override
     public int version() {
         return 2;

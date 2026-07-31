@@ -17,7 +17,6 @@ import org.jspecify.annotations.Nullable;
  * @param <V> the value type
  */
 public final class CacheEntry<V> {
-
     private final AtomicReference<EntryState<V>> state;
     private final Instant loadedAt;
 
@@ -36,22 +35,28 @@ public final class CacheEntry<V> {
 
     public synchronized boolean update(UnaryOperator<V> updater) {
         Objects.requireNonNull(updater, "updater");
+
         EntryState<V> current = currentState();
         V currentValue = current.value();
         V updated = Objects.requireNonNull(updater.apply(currentValue), "updated");
+
         if (Objects.equals(currentValue, updated)) {
             return false;
         }
+
         state.set(new EntryState<>(updated, true, current.lastSavedAt(), current.version() + 1));
+
         return !current.dirty();
     }
 
     public synchronized boolean mutate(Consumer<V> mutator) {
         Objects.requireNonNull(mutator, "mutator");
+
         EntryState<V> current = currentState();
         V value = current.value();
         mutator.accept(value);
         state.set(new EntryState<>(value, true, current.lastSavedAt(), current.version() + 1));
+
         return !current.dirty();
     }
 
@@ -65,6 +70,7 @@ public final class CacheEntry<V> {
     public synchronized boolean markDirty() {
         EntryState<V> current = currentState();
         state.set(new EntryState<>(current.value(), true, current.lastSavedAt(), current.version() + 1));
+
         return !current.dirty();
     }
 
@@ -84,10 +90,13 @@ public final class CacheEntry<V> {
      */
     public synchronized boolean markSavedIfVersionMatches(long expectedVersion) {
         EntryState<V> current = currentState();
+
         if (current.version() != expectedVersion || !current.dirty()) {
             return false;
         }
+
         state.set(new EntryState<>(current.value(), false, Instant.now(), expectedVersion));
+
         return true;
     }
 

@@ -6,7 +6,6 @@ import com.cotani.storage.schema.Schema;
 import java.util.concurrent.CompletionStage;
 
 public final class CreateCooldownsTableMigration implements Migration {
-
     @Override
     public int version() {
         return 1;

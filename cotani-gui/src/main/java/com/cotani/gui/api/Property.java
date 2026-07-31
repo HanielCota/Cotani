@@ -14,7 +14,6 @@ import java.util.function.UnaryOperator;
  * @param <T> the immutable value type
  */
 public interface Property<T> {
-
     /**
      * Returns the current value.
      *
@@ -49,7 +48,6 @@ public interface Property<T> {
      */
     @FunctionalInterface
     interface Subscription extends AutoCloseable {
-
         @Override
         void close();
     }

@@ -5,7 +5,6 @@ import com.cotani.storage.executor.QueryExecutor;
 import java.util.Objects;
 
 public final class TableQuery {
-
     private final String table;
     private final QueryExecutor executor;
     private final SqlDialect dialect;

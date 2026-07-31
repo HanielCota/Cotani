@@ -18,6 +18,7 @@ public record PendingTeleportData(
         String source) {
     public PendingTeleportData {
         target = target.clone();
+
         if (source == null || source.isBlank()) {
             source = "unknown";
         }

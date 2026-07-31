@@ -8,6 +8,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.RECORD_COMPONENT)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Default {
-
     String value();
 }

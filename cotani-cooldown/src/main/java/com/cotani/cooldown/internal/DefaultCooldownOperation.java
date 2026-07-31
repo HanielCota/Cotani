@@ -14,7 +14,6 @@ import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class DefaultCooldownOperation implements CooldownOperation {
-
     private final CooldownStore store;
     private final Clock clock;
     private final CooldownTarget target;
@@ -49,6 +48,7 @@ public final class DefaultCooldownOperation implements CooldownOperation {
     @Override
     public CooldownOperation policy(CooldownPolicy policy) {
         Objects.requireNonNull(policy, "policy cannot be null");
+
         return duration(policy.duration());
     }
 
@@ -108,6 +108,7 @@ public final class DefaultCooldownOperation implements CooldownOperation {
         }
 
         CooldownKey key = result.key();
+
         if (result.denied()) {
             Bukkit.getPluginManager()
                     .callEvent(new CotaniCooldownDenyEvent(

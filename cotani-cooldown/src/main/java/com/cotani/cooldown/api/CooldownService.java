@@ -5,7 +5,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 public interface CooldownService {
-
     CooldownOperation target(CooldownTarget target);
 
     default CooldownOperation user(UUID userId) {

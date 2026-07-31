@@ -8,7 +8,6 @@ import java.util.function.Consumer;
 
 /** Schedules crash-recoverable work with at-least-once execution semantics. */
 public interface PersistentTaskScheduler {
-
     /**
      * Persists and schedules a task. Explicit cancellation removes its recovery record;
      * scheduler shutdown leaves the record pending for recovery.

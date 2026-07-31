@@ -10,7 +10,6 @@ import org.mockito.Mockito;
 
 @SuppressWarnings("NullAway")
 class TeleportRequestTest {
-
     @Test
     void targetIsClonedOnConstruction() {
         World world = Mockito.mock(World.class);

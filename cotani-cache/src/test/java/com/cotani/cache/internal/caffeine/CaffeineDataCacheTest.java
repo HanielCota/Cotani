@@ -27,7 +27,6 @@ import org.mockito.MockitoAnnotations;
 
 @SuppressWarnings("NullAway")
 class CaffeineDataCacheTest {
-
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
 
     @Mock
@@ -398,6 +397,7 @@ class CaffeineDataCacheTest {
                 firstSaveStarted.countDown();
                 return firstSave;
             }
+
             return CompletableFuture.completedFuture(null);
         });
 

@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
 final class CompositeSchedulerTask implements SchedulerTask {
-
     private final SchedulerTask immediate;
     private final AtomicReference<@Nullable SchedulerTask> rescheduled;
 

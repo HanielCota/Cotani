@@ -5,7 +5,6 @@ package net.cotani.metrics.api;
  */
 @FunctionalInterface
 public interface MeterBinder {
-
     /**
      * Binds metrics to the target metrics registry.
      *

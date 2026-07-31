@@ -15,7 +15,6 @@ import java.util.Set;
  * The character {@code '.'} is reserved for intentionally empty slots and is never recorded.
  */
 public final class Structure {
-
     /**
      * Reserved symbol for intentionally empty slots.
      */
@@ -42,6 +41,7 @@ public final class Structure {
      */
     public static Structure parse(String... rows) {
         Objects.requireNonNull(rows, "Parameter 'rows' must not be null");
+
         if (rows.length == 0 || rows.length > MAX_ROWS) {
             throw new IllegalArgumentException("Structure must have between 1 and " + MAX_ROWS + " rows");
         }
@@ -56,6 +56,7 @@ public final class Structure {
             }
 
             var tokens = tokenize(row);
+
             if (tokens.size() > COLUMNS) {
                 throw new IllegalArgumentException(
                         "Structure row " + rowIndex + " has " + tokens.size() + " columns; maximum is " + COLUMNS);
@@ -63,12 +64,14 @@ public final class Structure {
 
             for (int column = 0; column < tokens.size(); column++) {
                 var token = tokens.get(column);
+
                 if (token.length() != 1) {
                     throw new IllegalArgumentException("Structure token '" + token + "' at row " + rowIndex
                             + ", column " + column + " must be a single character");
                 }
 
                 var symbol = token.charAt(0);
+
                 if (symbol == EMPTY) {
                     continue;
                 }
@@ -87,12 +90,14 @@ public final class Structure {
         List<String> tokens = new ArrayList<>();
 
         var index = 0;
+
         while (index < row.length()) {
             while (index < row.length() && Character.isWhitespace(row.charAt(index))) {
                 index++;
             }
 
             var start = index;
+
             while (index < row.length() && !Character.isWhitespace(row.charAt(index))) {
                 index++;
             }

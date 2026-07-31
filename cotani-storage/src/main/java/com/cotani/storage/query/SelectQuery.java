@@ -10,7 +10,6 @@ import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 public final class SelectQuery {
-
     private final String table;
     private final QueryExecutor executor;
     private final List<String> columns = new ArrayList<>();
@@ -59,6 +58,7 @@ public final class SelectQuery {
         if (value <= 0) {
             throw new IllegalArgumentException("limit must be positive, got " + value);
         }
+
         this.limit = value;
         cachedSql = null;
         return this;
@@ -84,6 +84,7 @@ public final class SelectQuery {
         appendOrder(builder);
         appendLimit(builder);
         cachedSql = builder.toString();
+
         return cachedSql;
     }
 

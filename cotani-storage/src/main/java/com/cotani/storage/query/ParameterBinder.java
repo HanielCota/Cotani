@@ -10,7 +10,6 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 public final class ParameterBinder {
-
     private static final String VALUE_PARAM = "value";
 
     private final PreparedStatement statement;
@@ -27,6 +26,7 @@ public final class ParameterBinder {
             JdbcInstantCodec.bind(statement, index++, instant);
             return this;
         }
+
         var serialized = fastSerialize(value);
         statement.setObject(index++, serialized);
         return this;
@@ -42,11 +42,13 @@ public final class ParameterBinder {
         if (value instanceof Duration duration) {
             return duration.toMillis();
         }
+
         return serializers.serialize(value);
     }
 
     public ParameterBinder string(String value) throws SQLException {
         Objects.requireNonNull(value, VALUE_PARAM);
+
         statement.setString(index, value);
         index++;
         return this;
@@ -54,6 +56,7 @@ public final class ParameterBinder {
 
     public ParameterBinder uuid(UUID value) throws SQLException {
         Objects.requireNonNull(value, VALUE_PARAM);
+
         statement.setString(index, value.toString());
         index++;
         return this;
@@ -73,6 +76,7 @@ public final class ParameterBinder {
 
     public ParameterBinder instant(Instant value) throws SQLException {
         Objects.requireNonNull(value, VALUE_PARAM);
+
         JdbcInstantCodec.bind(statement, index, value);
         index++;
         return this;
@@ -80,6 +84,7 @@ public final class ParameterBinder {
 
     public ParameterBinder duration(Duration value) throws SQLException {
         Objects.requireNonNull(value, VALUE_PARAM);
+
         statement.setLong(index, value.toMillis());
         index++;
         return this;

@@ -5,6 +5,5 @@ import com.cotani.task.api.TaskMetadata;
 
 @FunctionalInterface
 interface TaskMetadataFactory {
-
     TaskMetadata create(String name, ExecutionTarget target);
 }

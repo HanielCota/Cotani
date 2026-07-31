@@ -8,7 +8,6 @@ import java.util.concurrent.CompletionStage;
 
 @InternalApi
 public interface InternalUserService extends UserService {
-
     CompletionStage<SimpleCotaniUser> load(UUID uniqueId, String username);
 
     CompletionStage<Void> unload(UUID uniqueId);

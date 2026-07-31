@@ -13,7 +13,6 @@ import org.bukkit.entity.Entity;
  * retirement through the configured exception handler.
  */
 public interface EntityTaskScheduler {
-
     SchedulerTask entity(Entity entity, Runnable runnable);
 
     SchedulerTask entity(String name, Entity entity, Runnable runnable);

@@ -7,7 +7,6 @@ import com.cotani.text.MiniMessages;
 import net.kyori.adventure.text.Component;
 
 public final class ComponentSerializer implements ConfigSerializer<Component> {
-
     @Override
     public Class<Component> type() {
         return Component.class;

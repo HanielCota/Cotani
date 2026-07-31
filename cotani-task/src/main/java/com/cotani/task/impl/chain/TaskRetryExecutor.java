@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 final class TaskRetryExecutor<T> {
-
     private final RetryPolicy policy;
     private final DelayedTaskScheduler scheduler;
     private final Supplier<CompletableFuture<T>> attemptFactory;
@@ -38,10 +37,12 @@ final class TaskRetryExecutor<T> {
             return;
         }
         SchedulerTask pending = scheduled.getAndSet(null);
+
         if (pending != null) {
             pending.cancel();
         }
         CompletableFuture<T> running = active.getAndSet(null);
+
         if (running != null) {
             running.cancel(true);
         }
@@ -49,6 +50,7 @@ final class TaskRetryExecutor<T> {
 
     private void observe(CompletableFuture<T> attemptFuture, int nextRetryAttempt) {
         Objects.requireNonNull(attemptFuture, "attemptFuture");
+
         if (result.isDone()) {
             attemptFuture.cancel(true);
             return;
@@ -66,6 +68,7 @@ final class TaskRetryExecutor<T> {
             }
 
             Throwable cause = CompletionFailure.unwrap(error);
+
             if (cause instanceof CancellationException) {
                 result.cancel(false);
                 return;
@@ -82,6 +85,7 @@ final class TaskRetryExecutor<T> {
                 return;
             }
             delay = Objects.requireNonNull(policy.delayFor(retryAttempt), "retry delay");
+
             if (delay.isNegative()) {
                 throw new IllegalArgumentException("retry delay must not be negative");
             }

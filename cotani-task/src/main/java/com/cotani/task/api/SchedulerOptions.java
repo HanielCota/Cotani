@@ -8,7 +8,6 @@ public record SchedulerOptions(
         boolean cancelPaperTasksOnClose,
         Duration defaultShutdownTimeout,
         int maxConcurrentVirtualThreads) {
-
     public SchedulerOptions {
         Objects.requireNonNull(defaultShutdownTimeout, "defaultShutdownTimeout");
 

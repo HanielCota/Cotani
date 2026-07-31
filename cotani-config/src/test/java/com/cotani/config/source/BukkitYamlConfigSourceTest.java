@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class BukkitYamlConfigSourceTest {
-
     @Test
     void rejectsOversizedFileBeforeYamlParsing(@TempDir Path directory) throws IOException {
         var path = directory.resolve("oversized.yml");
@@ -31,6 +30,7 @@ class BukkitYamlConfigSourceTest {
     void rejectsDeeplyNestedYamlBeforeParsing(@TempDir Path directory) throws IOException {
         var path = directory.resolve("deep.yml");
         var yaml = new StringBuilder();
+
         for (int depth = 0; depth < 70; depth++) {
             yaml.append("  ".repeat(depth)).append("level").append(depth).append(":\n");
         }
@@ -44,6 +44,7 @@ class BukkitYamlConfigSourceTest {
     void rejectsAliasExpansionBombBeforeParsing(@TempDir Path directory) throws IOException {
         var path = directory.resolve("aliases.yml");
         var yaml = new StringBuilder("base: &base {value: 1}\n");
+
         for (int alias = 0; alias < 51; alias++) {
             yaml.append("alias").append(alias).append(": *base\n");
         }
@@ -59,6 +60,7 @@ class BukkitYamlConfigSourceTest {
         var outside = directory.resolve("outside.yml");
         Files.writeString(outside, "safe: true\n");
         var link = root.resolve("config.yml");
+
         try {
             Files.createSymbolicLink(link, outside);
         } catch (UnsupportedOperationException | IOException unsupported) {

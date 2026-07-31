@@ -8,11 +8,11 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 
 public final class BlockSafetyChecker {
-
     private BlockSafetyChecker() {}
 
     public static boolean isSafe(Location location, SafeLocationOptions options) {
         World world = location.getWorld();
+
         if (world == null) {
             return false;
         }
@@ -43,6 +43,7 @@ public final class BlockSafetyChecker {
         if (options.avoidLiquids() && isLiquid(feet, head, ground)) {
             return false;
         }
+
         return !options.avoidHazards() || !isHazard(feet.getType(), head.getType(), ground.getType());
     }
 

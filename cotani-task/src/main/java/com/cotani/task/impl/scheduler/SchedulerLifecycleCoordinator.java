@@ -13,7 +13,6 @@ import org.bukkit.Bukkit;
 import org.jspecify.annotations.Nullable;
 
 final class SchedulerLifecycleCoordinator {
-
     private final PlatformScheduler platformScheduler;
     private final boolean cancelOwnedTasks;
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -28,16 +27,19 @@ final class SchedulerLifecycleCoordinator {
         if (closed.get()) {
             throw new RejectedExecutionException("PaperTaskScheduler is closed.");
         }
+
         return TaskMetadata.named(name, target);
     }
 
     CompletionStage<Void> closeAsync(Runnable cancelInternalTasks) {
         var existing = closeFuture.get();
+
         if (existing != null) {
             return existing;
         }
 
         var promise = new CompletableFuture<Void>();
+
         if (!closeFuture.compareAndSet(null, promise)) {
             return Objects.requireNonNull(closeFuture.get(), "closeFuture");
         }
@@ -49,16 +51,20 @@ final class SchedulerLifecycleCoordinator {
         } catch (Throwable startupFailure) {
             promise.completeExceptionally(
                     Objects.requireNonNull(mergeFailures(cancellationFailure, startupFailure), "close failure"));
+
             return promise;
         }
+
         var _ = platformClose.whenComplete((_, failure) -> {
             @Nullable Throwable closeFailure = mergeFailures(cancellationFailure, failure);
+
             if (closeFailure == null) {
                 promise.complete(null);
             } else {
                 promise.completeExceptionally(closeFailure);
             }
         });
+
         return promise;
     }
 
@@ -67,11 +73,14 @@ final class SchedulerLifecycleCoordinator {
             throw new IllegalStateException(
                     "PaperTaskScheduler.close() blocks; use closeAsync() on the server thread.");
         }
+
         var promise = new CompletableFuture<Void>();
+
         if (!closeFuture.compareAndSet(null, promise)) {
             return;
         }
         @Nullable Throwable failure = beginClose(cancelInternalTasks);
+
         if (platformScheduler instanceof AutoCloseable closeable) {
             try {
                 closeable.close();
@@ -91,7 +100,9 @@ final class SchedulerLifecycleCoordinator {
         if (!closed.compareAndSet(false, true)) {
             return null;
         }
+
         @Nullable Throwable failure = null;
+
         try {
             Objects.requireNonNull(cancelInternalTasks, "cancelInternalTasks").run();
         } catch (Throwable cancellationFailure) {
@@ -114,6 +125,7 @@ final class SchedulerLifecycleCoordinator {
         if (platformScheduler instanceof AutoCloseable closeable) {
             return closeOnDedicatedThread(closeable);
         }
+
         return CompletableFuture.completedFuture(null);
     }
 
@@ -125,6 +137,7 @@ final class SchedulerLifecycleCoordinator {
         if (next != null && next != first) {
             first.addSuppressed(next);
         }
+
         return first;
     }
 
@@ -135,6 +148,7 @@ final class SchedulerLifecycleCoordinator {
         if (failure instanceof Error error) {
             throw error;
         }
+
         throw new IllegalStateException("Could not close scheduler resources", failure);
     }
 
@@ -148,6 +162,7 @@ final class SchedulerLifecycleCoordinator {
                 promise.completeExceptionally(failure);
             }
         });
+
         return promise;
     }
 }

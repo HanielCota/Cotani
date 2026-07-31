@@ -14,7 +14,6 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 public final class CotaniStorageBuilder {
-
     private final Plugin plugin;
     private final List<Migration> migrations = new ArrayList<>();
     private final List<Class<? extends CotaniRepository>> repositories = new ArrayList<>();
@@ -71,6 +70,7 @@ public final class CotaniStorageBuilder {
         if (threads <= 0) {
             throw new IllegalArgumentException("threads must be positive, got " + threads);
         }
+
         this.threads = threads;
         this.virtualThreads = false;
         return this;
@@ -89,6 +89,7 @@ public final class CotaniStorageBuilder {
         if (capacity < 0) {
             throw new IllegalArgumentException("admissionQueueCapacity must not be negative, got " + capacity);
         }
+
         this.admissionQueueCapacity = capacity;
         return this;
     }
@@ -100,9 +101,11 @@ public final class CotaniStorageBuilder {
 
     public CotaniStorageBuilder queryTimeout(Duration timeout) {
         this.queryTimeout = Objects.requireNonNull(timeout, "timeout");
+
         if (timeout.isNegative() || timeout.isZero()) {
             throw new IllegalArgumentException("queryTimeout must be positive, got " + timeout);
         }
+
         return this;
     }
 
@@ -135,17 +138,21 @@ public final class CotaniStorageBuilder {
 
     static int toQueryTimeoutSeconds(Duration timeout) {
         long roundedSeconds = timeout.getSeconds() + (timeout.getNano() == 0 ? 0 : 1);
+
         if (roundedSeconds > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("queryTimeout exceeds the JDBC maximum: " + timeout);
         }
+
         return Math.toIntExact(roundedSeconds);
     }
 
     private PaperTaskScheduler requireScheduler() {
         PaperTaskScheduler resolved = scheduler;
+
         if (resolved == null) {
             throw new IllegalStateException("No scheduler configured; call scheduler(...) before build().");
         }
+
         return resolved;
     }
 }

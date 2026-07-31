@@ -14,7 +14,6 @@ import net.cotani.metrics.CotaniMetricsRegistry;
 import org.junit.jupiter.api.Test;
 
 class MetricsBinderTest {
-
     @Test
     void cacheMetricsBinderRegistersGauges() {
         MeterRegistry simpleRegistry = new SimpleMeterRegistry();

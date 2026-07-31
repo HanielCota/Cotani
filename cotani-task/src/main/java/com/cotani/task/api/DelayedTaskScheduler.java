@@ -7,7 +7,6 @@ import java.util.concurrent.CompletionStage;
 
 /** Schedules delayed and recurring asynchronous work without sleeping or blocking the caller. */
 public interface DelayedTaskScheduler {
-
     SchedulerTask asyncLater(Runnable runnable, Duration delay);
 
     SchedulerTask asyncLater(String name, Runnable runnable, Duration delay);
@@ -20,9 +19,11 @@ public interface DelayedTaskScheduler {
      */
     default CompletionStage<Void> delayAsync(Duration duration) {
         Objects.requireNonNull(duration, "duration");
+
         CompletableFuture<Void> future = new CompletableFuture<>();
         SchedulerTask pending = asyncLater("scheduler-delay", () -> future.complete(null), duration);
         var _ = future.whenComplete((_, _) -> pending.cancel());
+
         return future;
     }
 }

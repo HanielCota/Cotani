@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class ConfigCapabilityInterfacesTest {
-
     @Test
     void defaultConfigPreservesBehaviorThroughNarrowCapabilities() {
         ConfigSource source = Mockito.mock(ConfigSource.class);

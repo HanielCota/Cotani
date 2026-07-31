@@ -14,7 +14,6 @@ import java.util.concurrent.CompletionStage;
  */
 @InternalApi
 public final class NoopCacheRepository<K, V> implements CacheRepository<K, V> {
-
     @Override
     public CompletionStage<Optional<V>> find(K key) {
         return CompletableFuture.completedStage(Optional.empty());

@@ -8,7 +8,6 @@ import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
 public final class TeleportConfiguration implements AutoCloseable {
-
     private final CotaniConfigs configs;
     private final TeleportMessages messages;
     private final TeleportOptionsFactory options;

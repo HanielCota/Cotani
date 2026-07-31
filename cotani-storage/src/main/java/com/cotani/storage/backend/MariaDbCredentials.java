@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 public record MariaDbCredentials(MySqlCredentials value) implements StorageCredentials {
-
     public MariaDbCredentials {
         Objects.requireNonNull(value, "MariaDB credentials are required.");
     }
@@ -17,6 +16,7 @@ public record MariaDbCredentials(MySqlCredentials value) implements StorageCrede
         var base = "jdbc:mariadb://" + encodedHost + ":" + v.port() + "/" + encodedDatabase;
         var params = "?characterEncoding=utf8&useServerPrepStmts=true";
         var ssl = v.useSsl() ? "&sslMode=verify-full" : "&sslMode=disable";
+
         return base + params + ssl;
     }
 }

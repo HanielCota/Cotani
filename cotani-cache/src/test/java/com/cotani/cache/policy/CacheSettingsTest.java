@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("NullAway")
 class CacheSettingsTest {
-
     @Test
     void playerDataHasExpectedDefaults() {
         CacheSettings settings = CacheSettings.playerData();

@@ -15,7 +15,6 @@ import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 public final class TransactionManager {
-
     private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
 
     private final StorageProvider provider;
@@ -32,6 +31,7 @@ public final class TransactionManager {
         if (queryTimeoutSeconds < 0) {
             throw new IllegalArgumentException("queryTimeoutSeconds must not be negative, got " + queryTimeoutSeconds);
         }
+
         this.provider = Objects.requireNonNull(provider, "provider");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.serializers = Objects.requireNonNull(serializers, "serializers");
@@ -44,6 +44,7 @@ public final class TransactionManager {
 
     public <T> CompletionStage<T> runAsync(Function<TransactionContext, CompletionStage<T>> operation) {
         Objects.requireNonNull(operation, "operation");
+
         return CompletableFuture.supplyAsync(this::beginTransaction, executor)
                 .thenCompose(state -> executeOperation(state, operation));
     }
@@ -61,19 +62,23 @@ public final class TransactionManager {
             var failure = new IllegalStateException(
                     "Transaction callbacks must not wait for external asynchronous work; compose only operations from the provided TransactionContext.");
             finishTransaction(state, failure);
+
             return CompletableFuture.failedFuture(failure);
         }
+
         return stage.whenComplete((_, error) -> finishTransaction(state, error));
     }
 
     private TransactionState beginTransaction() {
         @Nullable Connection connection = null;
+
         try {
             connection = provider.connection();
             boolean previousAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             var transactional =
                     QueryExecutor.create(provider, Runnable::run, serializers, queryTimeoutSeconds, connection);
+
             return new TransactionState(connection, previousAutoCommit, new TransactionContext(transactional));
         } catch (SQLException exception) {
             if (connection != null) {
@@ -90,6 +95,7 @@ public final class TransactionManager {
 
     private void finishTransaction(TransactionState state, @Nullable Throwable error) {
         Connection connection = state.connection;
+
         try {
             if (error != null) {
                 rollback(connection, error);
@@ -98,6 +104,7 @@ public final class TransactionManager {
             }
         } catch (SQLException failure) {
             var wrapped = new StorageException(new TransactionError("Could not finish transaction.", failure));
+
             if (error != null) {
                 error.addSuppressed(wrapped);
             } else {

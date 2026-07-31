@@ -11,7 +11,6 @@ import java.util.function.Supplier;
  * cancellation; a returned stage propagates task failures and entity-retirement failures.
  */
 public interface AsyncTaskExecutor {
-
     SchedulerTask async(Runnable runnable);
 
     SchedulerTask async(String name, Runnable runnable);

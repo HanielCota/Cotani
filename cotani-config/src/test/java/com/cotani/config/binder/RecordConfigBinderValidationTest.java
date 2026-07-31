@@ -17,7 +17,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 class RecordConfigBinderValidationTest {
-
     private final ConfigSerializerRegistry serializers = serializers();
     private final RecordConfigBinder binder = RecordConfigBinder.create(serializers);
 
@@ -25,6 +24,7 @@ class RecordConfigBinderValidationTest {
         var registry = new ConfigSerializerRegistry();
         registry.register(new IntegerSerializer());
         registry.register(new StringSerializer());
+
         return registry;
     }
 
@@ -85,7 +85,6 @@ class RecordConfigBinderValidationTest {
     }
 
     private static final class MapConfigSource implements ConfigSource {
-
         private final Map<String, Object> values;
 
         private MapConfigSource(Map<String, Object> values) {
@@ -122,19 +121,24 @@ class RecordConfigBinderValidationTest {
             if (path == null || path.isBlank()) {
                 return new Entry(values, true);
             }
+
             Object current = values;
+
             for (var part : parts(path)) {
                 if (!(current instanceof Map<?, ?> map) || !map.containsKey(part)) {
                     return new Entry(null, false);
                 }
+
                 current = map.get(part);
             }
+
             return new Entry(current, true);
         }
 
         private List<String> parts(String path) {
             List<String> result = new ArrayList<>();
             var start = 0;
+
             for (var index = 0; index < path.length(); index++) {
                 if (path.charAt(index) == '.') {
                     result.add(path.substring(start, index));
@@ -142,6 +146,7 @@ class RecordConfigBinderValidationTest {
                 }
             }
             result.add(path.substring(start));
+
             return result;
         }
 
@@ -163,20 +168,25 @@ class RecordConfigBinderValidationTest {
         @Override
         public Map<String, Object> section(String path) {
             Object value = entry(path).raw();
+
             if (!(value instanceof Map<?, ?> map)) {
                 return Map.of();
             }
+
             Map<String, Object> result = new LinkedHashMap<>();
             map.forEach((key, nestedValue) -> result.put(String.valueOf(key), nestedValue));
+
             return result;
         }
 
         @Override
         public List<Object> list(String path) {
             Object value = entry(path).raw();
+
             if (value instanceof List<?> list) {
                 return List.copyOf(list);
             }
+
             return List.of();
         }
     }

@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public final class InsufficientFundsException extends EconomyException {
-
     @Serial
     private static final long serialVersionUID = 1L;
 

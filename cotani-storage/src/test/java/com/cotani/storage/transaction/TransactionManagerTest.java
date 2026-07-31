@@ -22,7 +22,6 @@ import org.mockito.Mockito;
 
 @SuppressWarnings("NullAway")
 class TransactionManagerTest {
-
     private final StorageProvider provider = mock(StorageProvider.class);
     private final Connection connection = mock(Connection.class);
     private final TransactionManager transactions =

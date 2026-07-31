@@ -11,7 +11,6 @@ import java.util.concurrent.CompletionStage;
  * compose through {@code thenApply}/{@code thenCompose} or use {@code CotaniStorage.closeAsync()} for shutdown.
  */
 public interface Repository<K, T> {
-
     CompletionStage<Optional<T>> findById(K id);
 
     CompletionStage<Boolean> exists(K id);

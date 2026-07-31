@@ -9,7 +9,6 @@ import java.util.UUID;
 
 public record EconomyAccount(
         UUID userId, CurrencyId currencyId, BigDecimal balance, Instant createdAt, Instant updatedAt) {
-
     public EconomyAccount {
         Objects.requireNonNull(userId, "userId");
         Objects.requireNonNull(currencyId, "currencyId");

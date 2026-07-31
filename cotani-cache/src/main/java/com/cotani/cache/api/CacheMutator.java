@@ -11,7 +11,6 @@ import java.util.function.UnaryOperator;
  * one entry and reject new mutation after closing begins.
  */
 public interface CacheMutator<K, V> {
-
     CompletionStage<V> update(K key, UnaryOperator<V> updater);
 
     default CompletionStage<V> updateAsync(K key, UnaryOperator<V> updater) {

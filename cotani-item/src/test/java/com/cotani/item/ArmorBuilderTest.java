@@ -12,7 +12,6 @@ import org.bukkit.inventory.meta.trim.TrimPattern;
 import org.junit.jupiter.api.Test;
 
 class ArmorBuilderTest {
-
     @Test
     void isFinalClassWithExpectedApi() throws NoSuchMethodException {
         assertTrue(Modifier.isFinal(ArmorBuilder.class.getModifiers()));

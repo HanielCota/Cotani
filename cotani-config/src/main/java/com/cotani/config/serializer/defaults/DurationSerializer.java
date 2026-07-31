@@ -9,7 +9,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class DurationSerializer implements ConfigSerializer<Duration> {
-
     private static final Pattern PATTERN = Pattern.compile("^(\\d+)(ms|s|m|h|d)$", Pattern.CASE_INSENSITIVE);
 
     @Override
@@ -22,21 +21,28 @@ public final class DurationSerializer implements ConfigSerializer<Duration> {
         if (value.raw() instanceof Duration duration) {
             return duration;
         }
+
         String input = value.asString().trim();
+
         if (input.startsWith("PT")) {
             return Duration.parse(input);
         }
+
         Matcher matcher = PATTERN.matcher(input);
+
         if (!matcher.matches()) {
             throw new ConfigException("Invalid duration at " + value.location() + ". Use 500ms, 3s, 5m, 2h or 1d.");
         }
+
         long amount;
         try {
             amount = Long.parseLong(matcher.group(1));
         } catch (NumberFormatException exception) {
             throw new ConfigException("Duration amount out of range at " + value.location(), exception);
         }
+
         String unit = matcher.group(2).toLowerCase(Locale.ROOT);
+
         return switch (unit) {
             case "ms" -> Duration.ofMillis(amount);
             case "s" -> Duration.ofSeconds(amount);
@@ -56,6 +62,7 @@ public final class DurationSerializer implements ConfigSerializer<Duration> {
         if (value.toSeconds() % 60 != 0) return value.toSeconds() + "s";
         if (value.toMinutes() % 60 != 0) return value.toMinutes() + "m";
         if (value.toHours() % 24 != 0) return value.toHours() + "h";
+
         return value.toDays() + "d";
     }
 }

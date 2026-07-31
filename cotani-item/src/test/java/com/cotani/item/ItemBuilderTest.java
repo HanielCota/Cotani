@@ -11,7 +11,6 @@ import org.bukkit.inventory.ItemFlag;
 import org.junit.jupiter.api.Test;
 
 class ItemBuilderTest {
-
     @Test
     void isFinalClassWithExpectedApi() throws NoSuchMethodException {
         assertTrue(Modifier.isFinal(ItemBuilder.class.getModifiers()));

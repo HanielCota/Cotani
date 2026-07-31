@@ -43,7 +43,6 @@ import org.jspecify.annotations.Nullable;
 @SuppressWarnings("resource")
 @InternalApi
 public final class PaperTeleportService implements TeleportService {
-
     private static final Logger LOGGER = Logger.getLogger(PaperTeleportService.class.getName());
 
     private final Dependencies deps;
@@ -79,12 +78,14 @@ public final class PaperTeleportService implements TeleportService {
                     });
             startGate.set(gate);
             nextPipeline.set(next);
+
             return next;
         });
 
         var pipeline = Objects.requireNonNull(nextPipeline.get(), "nextPipeline");
         var _ = pipeline.whenComplete((_, _) -> playerPipelines.remove(request.playerId(), pipeline));
         Objects.requireNonNull(startGate.get(), "startGate").complete(null);
+
         return result;
     }
 
@@ -108,6 +109,7 @@ public final class PaperTeleportService implements TeleportService {
         Player player = resolvePlayer(request.playerId());
         Location originalTarget = request.target().clone();
         TeleportOptions options = request.options();
+
         if (player == null) {
             TeleportContext context = new TeleportContext(
                     request.playerId(),
@@ -117,13 +119,16 @@ public final class PaperTeleportService implements TeleportService {
                     options,
                     request.source(),
                     Instant.now(deps.clock()));
+
             return new PreparedTeleport(
                     context,
                     originalTarget,
                     Optional.of(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE)));
         }
+
         Location from =
                 Objects.requireNonNull(player.getLocation(), "player.location").clone();
+
         TeleportContext context = new TeleportContext(
                 request.playerId(),
                 from,
@@ -138,6 +143,7 @@ public final class PaperTeleportService implements TeleportService {
                     originalTarget,
                     Optional.of(TeleportResults.failure(context, TeleportFailureReason.OUTCOME_INDETERMINATE)));
         }
+
         return new PreparedTeleport(context, originalTarget, TeleportValidator.validateInitial(context, player));
     }
 
@@ -170,15 +176,19 @@ public final class PaperTeleportService implements TeleportService {
 
     private Optional<TeleportResult.Failure> validateOrStart(TeleportContext context) {
         Player player = resolvePlayer(context.playerId());
+
         if (player == null) {
             return Optional.of(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
         }
+
         var initialFailure = TeleportValidator.validateInitial(context, player);
+
         if (initialFailure.isPresent()) {
             return initialFailure;
         }
 
         PolicyResult policyResult = deps.policyChain().validate(context);
+
         if (!(policyResult instanceof PolicyResult.Denied denied)) {
             return Optional.empty();
         }
@@ -193,6 +203,7 @@ public final class PaperTeleportService implements TeleportService {
     private CompletionStage<TeleportResult> firePreTeleportAndExecute(
             TeleportContext context, Location resolvedTarget) {
         Player player = resolvePlayer(context.playerId());
+
         if (player == null) {
             return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
         }
@@ -206,9 +217,11 @@ public final class PaperTeleportService implements TeleportService {
 
         Location eventTarget =
                 Objects.requireNonNull(event.getTo(), "preEvent.to").clone();
+
         if (!eventTarget.equals(resolvedTarget)) {
             return validateEventTargetAndExecute(context.withTarget(eventTarget), eventTarget);
         }
+
         return executeTeleport(context, eventTarget);
     }
 
@@ -253,6 +266,7 @@ public final class PaperTeleportService implements TeleportService {
 
         return flatten(deps.scheduler().supply(ExecutionTarget.entity(context.playerId()), "teleport-execute", () -> {
             Player player = resolvePlayer(context.playerId());
+
             if (player == null) {
                 return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
             }
@@ -298,6 +312,7 @@ public final class PaperTeleportService implements TeleportService {
                     if (!isTimeout(error)) {
                         return CompletableFuture.failedFuture(error);
                     }
+
                     return withTimeout(teleportFuture, reconciliationTimeout)
                             .thenApply(
                                     success -> (PhysicalTeleportOutcome) new PhysicalTeleportOutcome.Confirmed(success))
@@ -322,7 +337,9 @@ public final class PaperTeleportService implements TeleportService {
                             "teleport-complete",
                             () -> completeTeleport(context, eventTarget, velocity, confirmed.success(), startedAt)));
         }
+
         registerLateReconciliation(context, eventTarget, velocity, startedAt, physicalTeleport);
+
         return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.OUTCOME_INDETERMINATE));
     }
 
@@ -368,6 +385,7 @@ public final class PaperTeleportService implements TeleportService {
 
     private static boolean isTimeout(Throwable error) {
         Throwable cause = error;
+
         while (cause instanceof CompletionException || cause instanceof ExecutionException) {
             if (cause.getCause() == null) {
                 break;
@@ -388,6 +406,7 @@ public final class PaperTeleportService implements TeleportService {
         }
 
         Player player = resolvePlayer(context.playerId());
+
         if (player == null) {
             return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
         }
@@ -465,7 +484,6 @@ public final class PaperTeleportService implements TeleportService {
             TeleportContext context, Location originalTarget, Optional<TeleportResult.Failure> initialFailure) {}
 
     private sealed interface PhysicalTeleportOutcome {
-
         record Confirmed(boolean success) implements PhysicalTeleportOutcome {}
 
         record Indeterminate() implements PhysicalTeleportOutcome {}

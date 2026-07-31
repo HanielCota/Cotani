@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class PathSerializerTest {
-
     private ConfigSerializerRegistry registry;
     private Path tempFolder;
 
@@ -51,6 +50,7 @@ class PathSerializerTest {
         var outside = tempFolder.resolveSibling(tempFolder.getFileName() + "-outside");
         Files.createDirectories(outside);
         var link = tempFolder.resolve("linked");
+
         try {
             Files.createSymbolicLink(link, outside);
         } catch (UnsupportedOperationException | IOException | SecurityException unavailable) {

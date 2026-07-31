@@ -23,7 +23,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 class TargetTaskDispatcherTest {
-
     @Test
     void preservesNameTargetAndMetricsWrapping() {
         PlatformScheduler platform = Mockito.mock(PlatformScheduler.class);

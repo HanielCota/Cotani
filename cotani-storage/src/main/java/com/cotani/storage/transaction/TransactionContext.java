@@ -9,7 +9,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
 public final class TransactionContext {
-
     private final QueryExecutor executor;
 
     TransactionContext(QueryExecutor executor) {

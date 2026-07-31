@@ -7,7 +7,6 @@ import java.util.Objects;
 
 @InternalApi
 public final class NoopEconomyEventPublisher implements EconomyEventPublisher {
-
     @Override
     public void publish(EconomyTransactionEvent event) {
         Objects.requireNonNull(event, "event");

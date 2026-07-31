@@ -9,7 +9,6 @@ import com.cotani.config.value.ConfigValue;
 import org.junit.jupiter.api.Test;
 
 class ConfigSerializerRegistryTest {
-
     private final ConfigSerializerRegistry registry = new ConfigSerializerRegistry();
 
     @Test
@@ -52,6 +51,7 @@ class ConfigSerializerRegistryTest {
     void registerIsThreadSafe() {
         var localRegistry = new ConfigSerializerRegistry();
         var threads = new Thread[4];
+
         for (int i = 0; i < threads.length; i++) {
             threads[i] = new Thread(() -> {
                 for (int j = 0; j < 100; j++) {

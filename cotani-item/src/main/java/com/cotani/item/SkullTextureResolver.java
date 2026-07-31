@@ -16,7 +16,6 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class SkullTextureResolver implements AutoCloseable {
-
     private static final String TEXTURES_PROPERTY = "textures";
     private static final String TEXTURES_DOMAIN = "https://textures.minecraft.net/texture/";
     private static final String HTTP_TEXTURES_DOMAIN = "http://textures.minecraft.net/texture/";
@@ -50,12 +49,14 @@ public final class SkullTextureResolver implements AutoCloseable {
      */
     public PlayerProfile fromBase64(String base64) {
         Objects.requireNonNull(base64, "Parameter 'base64' must not be null");
+
         requireBoundedInput(base64, "base64", MAX_BASE64_LENGTH);
         try {
             Base64.getDecoder().decode(base64);
         } catch (IllegalArgumentException failure) {
             throw new IllegalArgumentException("Parameter 'base64' must be valid Base64", failure);
         }
+
         return profileCache.get(base64, SkullTextureResolver::buildProfile);
     }
 
@@ -67,12 +68,15 @@ public final class SkullTextureResolver implements AutoCloseable {
      */
     public PlayerProfile fromUrl(String textureUrl) {
         Objects.requireNonNull(textureUrl, "Parameter 'textureUrl' must not be null");
+
         var normalizedUrl = normalizeTextureUrl(textureUrl);
+
         return profileCache.get(normalizedUrl, SkullTextureResolver::createProfile);
     }
 
     public PlayerProfile fromUrl(URI textureUri) {
         Objects.requireNonNull(textureUri, "Parameter 'textureUri' must not be null");
+
         return fromUrl(textureUri.toString());
     }
 
@@ -100,6 +104,7 @@ public final class SkullTextureResolver implements AutoCloseable {
         var uuid = UUID.nameUUIDFromBytes(base64.getBytes(StandardCharsets.UTF_8));
         var profile = Bukkit.createProfile(uuid);
         profile.setProperty(new ProfileProperty(TEXTURES_PROPERTY, base64));
+
         return profile;
     }
 
@@ -112,6 +117,7 @@ public final class SkullTextureResolver implements AutoCloseable {
         var stripped = input.strip();
         requireBoundedInput(stripped, "textureUrl", MAX_TEXTURE_URL_LENGTH);
         var lower = stripped.toLowerCase(Locale.ROOT);
+
         if (lower.startsWith(HTTP_TEXTURES_DOMAIN)) {
             return TEXTURES_DOMAIN + stripped.substring(HTTP_TEXTURES_DOMAIN.length());
         }
@@ -121,13 +127,16 @@ public final class SkullTextureResolver implements AutoCloseable {
         if (lower.startsWith(BARE_DOMAIN)) {
             return "https://" + stripped;
         }
+
         return TEXTURES_DOMAIN + stripped;
     }
 
     private static String escapeJson(String value) {
         var sb = new StringBuilder(value.length() + 16);
+
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
+
             switch (c) {
                 case '\\' -> sb.append("\\\\");
                 case '"' -> sb.append("\\\"");

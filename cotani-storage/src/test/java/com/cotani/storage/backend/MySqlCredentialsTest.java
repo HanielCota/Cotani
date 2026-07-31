@@ -7,7 +7,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class MySqlCredentialsTest {
-
     @Test
     void buildsIpv6UrlWithoutFormEncodingTheHost() {
         var credentials = new MySqlCredentials(

@@ -14,7 +14,6 @@ public sealed interface EconomyTransaction
                 EconomyTransaction.Withdraw,
                 EconomyTransaction.Set,
                 EconomyTransaction.Transfer {
-
     @SuppressWarnings("java:S107")
     static Deposit deposit(
             EconomyOperationId opId,
@@ -168,6 +167,7 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(targetBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
+
             if (amount.signum() <= 0) {
                 throw new IllegalArgumentException("Transaction amount must be positive.");
             }
@@ -221,6 +221,7 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(sourceBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
+
             if (amount.signum() <= 0) {
                 throw new IllegalArgumentException("Transaction amount must be positive.");
             }
@@ -274,6 +275,7 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(targetBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
+
             if (amount.signum() < 0) {
                 throw new IllegalArgumentException("Set balance amount cannot be negative.");
             }
@@ -333,6 +335,7 @@ public sealed interface EconomyTransaction
             Objects.requireNonNull(targetBalanceAfter);
             Objects.requireNonNull(reason);
             Objects.requireNonNull(createdAt);
+
             if (amount.signum() <= 0) {
                 throw new IllegalArgumentException("Transaction amount must be positive.");
             }

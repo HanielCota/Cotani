@@ -22,7 +22,6 @@ import java.util.function.Supplier;
 
 @InternalApi
 public final class SimpleUserService implements InternalUserService {
-
     private static final String UNIQUE_ID_PARAM = "uniqueId";
 
     private final UserCache cache;
@@ -39,12 +38,15 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<Optional<CotaniUser>> findAsync(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         Optional<CotaniUser> cached = cache.find(uniqueId);
+
         if (cached.isPresent()) {
             return CompletableFuture.completedStage(cached);
         }
 
         CompletableFuture<SimpleCotaniUser> ongoing = loadingUsers.get(uniqueId);
+
         if (ongoing != null) {
             return ongoing.thenApply(Optional::of);
         }
@@ -60,6 +62,7 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<CotaniUser> getOrThrowAsync(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         return findAsync(uniqueId)
                 .thenApply(optional -> optional.orElseThrow(() -> new UserNotLoadedException(uniqueId)));
     }
@@ -67,6 +70,7 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<Boolean> isLoadedAsync(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         return CompletableFuture.completedStage(cache.contains(uniqueId));
     }
 
@@ -76,17 +80,20 @@ public final class SimpleUserService implements InternalUserService {
         Objects.requireNonNull(username, "username");
 
         Optional<SimpleCotaniUser> cached = cache.findInternal(uniqueId);
+
         if (cached.isPresent()) {
             SimpleCotaniUser user = cached.get();
             long now = System.currentTimeMillis();
             SimpleCotaniUser updated =
                     user.withUsername(username).withLastJoinAt(now).withNewSessionId();
             cache.put(updated);
+
             return CompletableFuture.completedStage(updated);
         }
 
         CompletableFuture<SimpleCotaniUser> loadFuture = new CompletableFuture<>();
         CompletableFuture<SimpleCotaniUser> ongoing = loadingUsers.putIfAbsent(uniqueId, loadFuture);
+
         if (ongoing != null) {
             return ongoing;
         }
@@ -124,6 +131,7 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<Void> unload(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
 
         if (optionalUser.isEmpty()) {
@@ -147,7 +155,9 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<Void> save(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
         Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
+
         if (optionalUser.isEmpty()) {
             return CompletionStages.completedVoid();
         }
@@ -165,11 +175,13 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<Void> saveAll() {
         var snapshot = cache.allInternal();
+
         if (snapshot.isEmpty()) {
             return CompletionStages.completedVoid();
         }
 
         var saves = new ArrayList<CompletionStage<Void>>(snapshot.size());
+
         for (SimpleCotaniUser original : snapshot) {
             var updated = cache.updateIfSession(
                     original.uniqueId(), original.sessionId(), current -> current.withIncrementedVersion());
@@ -191,6 +203,7 @@ public final class SimpleUserService implements InternalUserService {
             var lane = current == null ? new WriteLane() : current;
             laneRef.set(lane);
             ticketRef.set(lane.enqueue(persistence));
+
             return lane;
         });
 
@@ -200,11 +213,11 @@ public final class SimpleUserService implements InternalUserService {
                 .whenComplete((_, _) -> writeLanes.computeIfPresent(
                         uniqueId,
                         (_, current) -> current.equals(lane) && current.isIdle(ticket.sequence()) ? null : current));
+
         return ticket.result();
     }
 
     private static final class WriteLane {
-
         private CompletableFuture<Void> tail = CompletableFuture.completedFuture(null);
         private long sequence;
 
@@ -219,6 +232,7 @@ public final class SimpleUserService implements InternalUserService {
                     })
                     .toCompletableFuture();
             sequence++;
+
             return new WriteTicket(tail, sequence);
         }
 

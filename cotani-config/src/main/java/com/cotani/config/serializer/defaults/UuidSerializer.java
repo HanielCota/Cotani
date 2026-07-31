@@ -6,7 +6,6 @@ import com.cotani.config.value.ConfigValue;
 import java.util.UUID;
 
 public final class UuidSerializer implements ConfigSerializer<UUID> {
-
     @Override
     public Class<UUID> type() {
         return UUID.class;

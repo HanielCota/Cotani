@@ -7,7 +7,6 @@ import java.util.Collection;
 import org.bukkit.plugin.Plugin;
 
 public interface CotaniConfigs extends AutoCloseable {
-
     static CotaniConfigsBuilder builder(Plugin plugin) {
         return CotaniConfigsBuilder.create(plugin);
     }

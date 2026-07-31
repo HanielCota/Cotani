@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("NullAway")
 class NoopCacheRepositoryTest {
-
     @Test
     void findReturnsEmptyOptional() {
         NoopCacheRepository<String, String> repo = new NoopCacheRepository<>();

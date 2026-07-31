@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class SchedulerLifecycleCoordinatorTest {
-
     @Test
     void concurrentCloseCallsCoalesceAndRejectLaterMetadata() {
         PlatformScheduler platform = Mockito.mock(PlatformScheduler.class);

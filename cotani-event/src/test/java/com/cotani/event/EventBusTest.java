@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 final class EventBusTest {
-
     @Test
     void testPublishAndSubscribe() {
         EventBus eventBus = DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), Runnable::run);

@@ -21,7 +21,6 @@ public record EconomySettings(
         BigDecimal minimumPayAmount,
         int balanceCacheSeconds,
         int topCacheSeconds) {
-
     private static final String STARTING_BALANCE_SETTING = "startingBalance";
     private static final String MAXIMUM_BALANCE_SETTING = "maximumBalance";
     private static final String MAXIMUM_OPERATION_AMOUNT_SETTING = "maximumOperationAmount";
@@ -142,6 +141,7 @@ public record EconomySettings(
 
     public Optional<EconomyCurrency> findCurrency(CurrencyId currencyId) {
         Objects.requireNonNull(currencyId, "currencyId");
+
         return Optional.ofNullable(currencies.get(currencyId));
     }
 
@@ -173,9 +173,11 @@ public record EconomySettings(
     public CurrencyDefinition requireEnabledDefinition(CurrencyId currencyId) {
         requireCurrency(currencyId);
         var definition = Objects.requireNonNull(currencyDefinitions.get(currencyId), "currencyDefinition");
+
         if (!definition.enabled()) {
             throw new IllegalArgumentException("Currency is disabled: " + currencyId.value());
         }
+
         return definition;
     }
 
@@ -239,6 +241,7 @@ public record EconomySettings(
             BigDecimal minimumPayAmount) {
         validateDefinitionKeys(currencies, configuredDefinitions);
         var resolved = new LinkedHashMap<CurrencyId, CurrencyDefinition>();
+
         for (EconomyCurrency currency : currencies.values()) {
             var fallback = new CurrencyDefinition(
                     currency, startingBalance, maximumBalance, maximumOperationAmount, minimumPayAmount, true);
@@ -254,6 +257,7 @@ public record EconomySettings(
             Map<CurrencyId, EconomyCurrency> currencies, Map<CurrencyId, CurrencyDefinition> configuredDefinitions) {
         for (var configuredId : configuredDefinitions.keySet()) {
             var requiredId = Objects.requireNonNull(configuredId, "configuredCurrencyId");
+
             if (!currencies.containsKey(requiredId)) {
                 throw new IllegalArgumentException(
                         "Currency definition has no registered currency: " + requiredId.value());
@@ -266,6 +270,7 @@ public record EconomySettings(
             throw new IllegalArgumentException("Currency definition does not match registered currency: "
                     + currency.id().value());
         }
+
         requireScale(definition.startingBalance(), currency, STARTING_BALANCE_SETTING);
         requireScale(definition.maximumBalance(), currency, MAXIMUM_BALANCE_SETTING);
         requireScale(definition.maximumOperationAmount(), currency, MAXIMUM_OPERATION_AMOUNT_SETTING);

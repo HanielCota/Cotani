@@ -9,7 +9,6 @@ import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 
 class EconomyFormatterTest {
-
     @Test
     void formatIncludesSymbolAndDecimalPlaces() {
         var currency = new EconomyCurrency(CurrencyId.of("coins"), "Coins", "$", 2);

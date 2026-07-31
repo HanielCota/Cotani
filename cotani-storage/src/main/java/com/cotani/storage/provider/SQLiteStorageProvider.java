@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 
 public final class SQLiteStorageProvider implements StorageProvider {
-
     private static final String PRAGMA_JOURNAL_MODE = "PRAGMA journal_mode = WAL";
 
     private final SQLiteCredentials credentials;
@@ -44,6 +43,7 @@ public final class SQLiteStorageProvider implements StorageProvider {
         try {
             var verifiedPath = Paths.requireNoSymbolicLinks(credentials.path());
             var parent = verifiedPath.getParent();
+
             if (parent != null) {
                 Files.createDirectories(parent);
             }
@@ -57,6 +57,7 @@ public final class SQLiteStorageProvider implements StorageProvider {
                 }
             }
             beforeOpen = Files.readAttributes(verifiedPath, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+
             if (!beforeOpen.isRegularFile()) {
                 throw new IOException("SQLite path is not a regular file: " + verifiedPath);
             }
@@ -65,18 +66,24 @@ public final class SQLiteStorageProvider implements StorageProvider {
         } catch (IllegalArgumentException invalidPath) {
             throw new StorageException(new ConnectionError("SQLite path contains a symbolic link.", invalidPath));
         }
+
         @Nullable Connection opened = null;
+
         try {
             opened = DriverManager.getConnection(configuredJdbcUrl());
             var verifiedPath = Paths.requireNoSymbolicLinks(credentials.path());
             var afterOpen = Files.readAttributes(verifiedPath, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+
             if (!Objects.equals(beforeOpen.fileKey(), afterOpen.fileKey())) {
                 throw new StorageException(new ConnectionError("SQLite path changed while it was being opened.", null));
             }
+
             try (Statement statement = opened.createStatement()) {
                 statement.execute(PRAGMA_JOURNAL_MODE);
             }
+
             Connection proxy = new NonClosingConnection(opened);
+
             if (!connection.compareAndSet(null, proxy)) {
                 closeQuietly(opened);
                 return;
@@ -95,9 +102,11 @@ public final class SQLiteStorageProvider implements StorageProvider {
     @Override
     public Connection connection() throws SQLException {
         Connection current = connection.get();
+
         if (current == null || current.isClosed()) {
             throw new StorageException(new ConnectionError("SQLite provider is not available.", null));
         }
+
         return current;
     }
 
@@ -136,7 +145,6 @@ public final class SQLiteStorageProvider implements StorageProvider {
     }
 
     private static final class NonClosingConnection implements Connection {
-
         private final Connection delegate;
 
         NonClosingConnection(Connection delegate) {

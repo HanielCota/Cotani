@@ -19,7 +19,6 @@ import org.bukkit.plugin.Plugin;
 
 @InternalApi
 public final class UserListener implements Listener {
-
     private final Plugin plugin;
     private final InternalUserService userService;
     private final PaperTaskScheduler scheduler;

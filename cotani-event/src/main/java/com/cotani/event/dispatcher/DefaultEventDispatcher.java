@@ -22,7 +22,6 @@ import java.util.concurrent.TimeoutException;
 
 @InternalApi
 public final class DefaultEventDispatcher implements EventDispatcher {
-
     private final EventExceptionHandler exceptionHandler;
     private final Executor isolatedExecutor;
     private final EventDispatchPolicy policy;
@@ -54,7 +53,9 @@ public final class DefaultEventDispatcher implements EventDispatcher {
     public <T extends CotaniEvent> CompletionStage<T> dispatchAsync(T event, List<EventSubscription> subscriptions) {
         Objects.requireNonNull(event, "event cannot be null");
         Objects.requireNonNull(subscriptions, "subscriptions cannot be null");
+
         CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
+
         for (var subscription : subscriptions) {
             sequence = sequence.thenCompose(_ -> dispatchToSubscriptionAsync(event, subscription));
         }
@@ -84,6 +85,7 @@ public final class DefaultEventDispatcher implements EventDispatcher {
         if (!shouldDispatch(event, subscription)) {
             return CompletableFuture.completedFuture(null);
         }
+
         var completion = new CompletableFuture<Void>();
         var task = new FutureTask<Void>(() -> {
             try {
@@ -96,6 +98,7 @@ public final class DefaultEventDispatcher implements EventDispatcher {
                 completion.completeExceptionally(error);
                 throw error;
             }
+
             return null;
         });
         try {
@@ -104,15 +107,19 @@ public final class DefaultEventDispatcher implements EventDispatcher {
             completion.completeExceptionally(schedulingFailure);
         }
         long timeoutMillis = timeoutMillis(policy.listenerTimeout());
+
         return completion.orTimeout(timeoutMillis, TimeUnit.MILLISECONDS).exceptionallyCompose(error -> {
             if (!(unwrap(error) instanceof TimeoutException timeout)) {
                 return CompletableFuture.failedFuture(error);
             }
+
             task.cancel(true);
             if (policy.unsubscribeOnTimeout()) {
                 subscription.unsubscribe();
             }
+
             exceptionHandler.handle(new EventListenerException(event, subscription, timeout));
+
             return CompletableFuture.completedFuture(null);
         });
     }
@@ -121,6 +128,7 @@ public final class DefaultEventDispatcher implements EventDispatcher {
         if (!subscription.active()) {
             return false;
         }
+
         return !subscription.ignoreCancelled()
                 || !(event instanceof CancellableEvent cancellable)
                 || !cancellable.cancelled();
@@ -136,6 +144,7 @@ public final class DefaultEventDispatcher implements EventDispatcher {
 
     private static Throwable unwrap(Throwable error) {
         Throwable current = error;
+
         while ((current instanceof CompletionException || current instanceof ExecutionException)
                 && current.getCause() != null) {
             current = current.getCause();

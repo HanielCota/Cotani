@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 
 @InternalApi
 public final class TaskDispatcher {
-
     private final PlatformScheduler platformScheduler;
     private final TaskRunner taskRunner;
 

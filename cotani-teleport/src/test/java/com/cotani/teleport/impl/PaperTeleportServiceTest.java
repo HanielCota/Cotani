@@ -30,7 +30,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class PaperTeleportServiceTest {
-
     private static final UUID PLAYER_ID = UUID.randomUUID();
     private static final Component DENY_MESSAGE = Component.text("denied");
 
@@ -76,6 +75,7 @@ class PaperTeleportServiceTest {
         when(player.isOnline()).thenReturn(true);
         when(player.getLocation()).thenReturn(location);
         when(player.getVelocity()).thenReturn(new Vector(1, 2, 3));
+
         return player;
     }
 
@@ -84,6 +84,7 @@ class PaperTeleportServiceTest {
         when(world.getUID()).thenReturn(UUID.randomUUID());
         when(world.getMinHeight()).thenReturn(-64);
         when(world.getMaxHeight()).thenReturn(320);
+
         return world;
     }
 
@@ -277,6 +278,7 @@ class PaperTeleportServiceTest {
                 .toCompletableFuture();
         var deadlineObserved = new CompletableFuture<Void>();
         var timer = Executors.newSingleThreadScheduledExecutor();
+
         try {
             var _ = timer.schedule(() -> deadlineObserved.complete(null), 50, TimeUnit.MILLISECONDS);
             deadlineObserved.join();
@@ -754,7 +756,6 @@ class PaperTeleportServiceTest {
     }
 
     private TeleportRequest request(UUID playerId, Location target, TeleportOptions options) {
-
         return TeleportRequest.builder()
                 .playerId(playerId)
                 .target(target)

@@ -56,12 +56,14 @@ public final class DefaultTeleportModule implements TeleportModule {
             RegionProtectionAdapter regionAdapter,
             PaperTaskScheduler scheduler) {
         Objects.requireNonNull(plugin, "plugin");
+
         TeleportConfiguration configuration;
         try {
             configuration = TeleportConfiguration.load(plugin, scheduler);
         } catch (RuntimeException failure) {
             throw new IllegalStateException("Could not load teleport configuration", failure);
         }
+
         return create(plugin, combatAdapter, regionAdapter, scheduler, configuration);
     }
 
@@ -104,7 +106,9 @@ public final class DefaultTeleportModule implements TeleportModule {
         Objects.requireNonNull(scheduler, "scheduler");
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(options, "options");
+
         Cotani cotani = null;
+
         try {
             Clock clock = Clock.systemUTC();
             PlayerResolver playerResolver = PlayerResolver.bukkit();

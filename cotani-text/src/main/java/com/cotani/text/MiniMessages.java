@@ -13,13 +13,13 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class MiniMessages {
-
     private static final String INPUT_NULL_MESSAGE = "Parameter 'input' must not be null";
     private static final String INPUTS_NULL_MESSAGE = "Parameter 'inputs' must not be null";
     private static final String TARGET_NULL_MESSAGE = "Parameter 'target' must not be null";
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
     private static final int PARSE_CACHE_MAX_SIZE = 512;
     private static final int MAX_TEMPLATE_LENGTH = 32_768;
+
     private static final Map<String, Component> parseCache =
             Collections.synchronizedMap(new LinkedHashMap<>(16, 0.75f, true) {
                 @Override
@@ -42,6 +42,7 @@ public final class MiniMessages {
         if (input.indexOf('<') < 0) {
             return Component.text(input);
         }
+
         return parseCache.computeIfAbsent(input, ComponentSerializers.MINIMESSAGE::deserialize);
     }
 
@@ -89,6 +90,7 @@ public final class MiniMessages {
     /** Creates a literal component from untrusted text without interpreting MiniMessage tags. */
     public static Component literal(String input) {
         Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+
         return Component.text(input);
     }
 
@@ -199,6 +201,7 @@ public final class MiniMessages {
 
     private static void requireBoundedTemplate(String input) {
         Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+
         if (input.length() > MAX_TEMPLATE_LENGTH) {
             throw new IllegalArgumentException("MiniMessage template exceeds maximum length " + MAX_TEMPLATE_LENGTH);
         }

@@ -24,7 +24,6 @@ import org.mockito.MockitoAnnotations;
 
 @SuppressWarnings("NullAway")
 class DataCacheBuilderTest {
-
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
 
     @Mock

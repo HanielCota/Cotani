@@ -15,12 +15,12 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
 public interface TaskChain<T> {
-
     @SafeVarargs
     @SuppressWarnings("varargs")
     static <T> TaskChain<List<T>> allOf(PaperTaskScheduler scheduler, TaskChain<T>... chains) {
         Objects.requireNonNull(scheduler, "scheduler");
         Objects.requireNonNull(chains, "chains");
+
         if (chains.length == 0) {
             return scheduler.chain(CompletableFuture.completedFuture(List.of()));
         }
@@ -34,6 +34,7 @@ public interface TaskChain<T> {
                 .thenApplyAsync(
                         _ -> {
                             var result = new ArrayList<T>(futures.length);
+
                             for (var future : futures) {
                                 result.add(future.getNow(null));
                             }
@@ -49,6 +50,7 @@ public interface TaskChain<T> {
     static <T> TaskChain<T> anyOf(PaperTaskScheduler scheduler, TaskChain<T>... chains) {
         Objects.requireNonNull(scheduler, "scheduler");
         Objects.requireNonNull(chains, "chains");
+
         if (chains.length == 0) {
             throw new IllegalArgumentException("chains must not be empty");
         }

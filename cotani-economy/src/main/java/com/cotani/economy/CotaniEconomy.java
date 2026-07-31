@@ -12,11 +12,11 @@ import org.jspecify.annotations.NullMarked;
  */
 @NullMarked
 public final class CotaniEconomy {
-
     private CotaniEconomy() {}
 
     public static EconomyModule create(EconomyModule.Context context) {
         Objects.requireNonNull(context, "context");
+
         return DefaultEconomyModule.create(context);
     }
 }

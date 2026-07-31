@@ -3,7 +3,6 @@ package com.cotani.economy.currency;
 import java.util.Objects;
 
 public record EconomyCurrency(CurrencyId id, String name, String symbol, int decimalPlaces) {
-
     public EconomyCurrency {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(name, "name");

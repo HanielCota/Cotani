@@ -20,7 +20,6 @@ import org.bukkit.entity.Entity;
 
 @InternalApi
 public final class DefaultTaskChain<T> implements TaskChain<T> {
-
     private static final String ACTION_PARAM = "action";
 
     private final ChainState<T> state;
@@ -161,12 +160,14 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     public TaskChain<T> timeout(Duration duration) {
         CompletableFuture<T> timed = timeoutController.apply(state.future(), duration);
         Supplier<CompletableFuture<T>> factory = () -> timeoutController.apply(state.newAttempt(), duration);
+
         return new DefaultTaskChain<>(state.derive(timed, factory), executionContext);
     }
 
     @Override
     public TaskChain<T> retry(RetryPolicy retryPolicy) {
         Objects.requireNonNull(retryPolicy, "retryPolicy");
+
         if (!state.repeatable()) {
             throw new IllegalStateException(
                     "Retry requires a repeatable supplier; a chain created from an external CompletionStage cannot be retried");
@@ -174,12 +175,14 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
 
         CompletableFuture<T> retried = retry(state.future(), retryPolicy);
         Supplier<CompletableFuture<T>> factory = () -> retry(state.newAttempt(), retryPolicy);
+
         return new DefaultTaskChain<>(state.derive(retried, factory), executionContext);
     }
 
     @Override
     public TaskChain<T> onStart(Runnable action) {
         Objects.requireNonNull(action, ACTION_PARAM);
+
         return new DefaultTaskChain<>(
                 ChainLifecycleCallbacks.onStart(
                         state, action, executionContext.executor().asyncExecutor()),

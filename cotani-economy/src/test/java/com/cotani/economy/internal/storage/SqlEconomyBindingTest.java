@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class SqlEconomyBindingTest {
-
     private static final CurrencyId CURRENCY_ID = CurrencyId.of("coins");
     private static final Instant CREATED_AT = Instant.parse("2026-07-29T12:34:56Z");
 

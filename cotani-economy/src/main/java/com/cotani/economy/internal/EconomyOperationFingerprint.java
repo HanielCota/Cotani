@@ -21,7 +21,6 @@ public record EconomyOperationFingerprint(
         CurrencyId currencyId,
         BigDecimal amount,
         EconomyReason reason) {
-
     public EconomyOperationFingerprint {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(currencyId, "currencyId");
@@ -55,6 +54,7 @@ public record EconomyOperationFingerprint(
     public EconomyTransaction requireMatch(EconomyOperationId operationId, EconomyTransaction existingTransaction) {
         Objects.requireNonNull(operationId, "operationId");
         Objects.requireNonNull(existingTransaction, "existingTransaction");
+
         if (type == existingTransaction.type()
                 && Objects.equals(sourceUserId, existingTransaction.sourceUserId())
                 && Objects.equals(targetUserId, existingTransaction.targetUserId())
@@ -63,11 +63,13 @@ public record EconomyOperationFingerprint(
                 && reason.equals(existingTransaction.reason())) {
             return existingTransaction;
         }
+
         throw new DuplicateEconomyOperationException(operationId);
     }
 
     public boolean sameRequest(EconomyOperationFingerprint other) {
         Objects.requireNonNull(other, "other");
+
         return type == other.type
                 && Objects.equals(sourceUserId, other.sourceUserId)
                 && Objects.equals(targetUserId, other.targetUserId)

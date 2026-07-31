@@ -5,7 +5,6 @@ import java.util.concurrent.CompletionStage;
 
 @SuppressWarnings("NullableProblems")
 public interface Migration {
-
     /** Namespace in which versions are ordered; defaults to the migration package. */
     default String namespace() {
         return getClass().getPackageName();

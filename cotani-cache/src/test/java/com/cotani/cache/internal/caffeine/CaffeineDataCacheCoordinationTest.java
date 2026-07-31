@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class CaffeineDataCacheCoordinationTest {
-
     @Test
     void sharedBusInvalidatesCleanEntriesAcrossCacheInstances() {
         var repository = new MapRepository();
@@ -86,9 +85,11 @@ class CaffeineDataCacheCoordinationTest {
 
         for (int completed = 0; completed < 10_000; completed++) {
             var pending = repository.pending.poll();
+
             if (pending == null) {
                 throw new AssertionError("bulk coordinator stopped before all saves were admitted");
             }
+
             pending.complete(null);
         }
 
@@ -102,6 +103,7 @@ class CaffeineDataCacheCoordinationTest {
         PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
         when(scheduler.asyncExecutor()).thenReturn(Runnable::run);
         when(scheduler.asyncTimer(any(), any(), any())).thenReturn(SchedulerTask.noop());
+
         return scheduler;
     }
 
@@ -142,6 +144,7 @@ class CaffeineDataCacheCoordinationTest {
             peak.accumulateAndGet(current, Math::max);
             var gate = new CompletableFuture<Void>();
             pending.add(gate);
+
             return gate.whenComplete((_, _) -> active.decrementAndGet());
         }
 

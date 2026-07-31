@@ -24,7 +24,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
  * @param <V> the player data type
  */
 public final class PlayerDataCacheListener<V> implements Listener {
-
     private final PlayerDataCache<V> cache;
     private final CacheSettings settings;
     private final Logger logger;

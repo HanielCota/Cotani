@@ -12,7 +12,6 @@ import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 public final class UpsertQuery {
-
     private final String table;
     private final QueryExecutor executor;
     private final SqlDialect dialect;
@@ -58,11 +57,13 @@ public final class UpsertQuery {
 
     private void validate() {
         var columns = values.keySet();
+
         for (var column : conflicts) {
             if (!columns.contains(column)) {
                 throw new IllegalArgumentException("Conflict column '" + column + "' is not present in values.");
             }
         }
+
         for (var column : updates) {
             if (!columns.contains(column)) {
                 throw new IllegalArgumentException("Update column '" + column + "' is not present in values.");
@@ -76,6 +77,7 @@ public final class UpsertQuery {
         }
 
         cachedSql = dialect.upsert(table, List.copyOf(values.keySet()), conflicts, updates);
+
         return cachedSql;
     }
 

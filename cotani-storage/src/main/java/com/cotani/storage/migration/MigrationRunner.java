@@ -10,7 +10,6 @@ import java.util.*;
 import java.util.concurrent.CompletionStage;
 
 public final class MigrationRunner {
-
     private static final String CREATE_LEGACY_MIGRATIONS_TABLE = """
         CREATE TABLE IF NOT EXISTS cotani_migrations (
             version INTEGER PRIMARY KEY,
@@ -48,10 +47,13 @@ public final class MigrationRunner {
 
     public MigrationRunner add(Migration migration) {
         Objects.requireNonNull(migration, "migration");
+
         var key = MigrationKey.from(migration);
+
         if (!versions.add(key)) {
             throw new IllegalArgumentException("Duplicate migration version: " + key.namespace() + ":" + key.version());
         }
+
         migrations.add(migration);
         return this;
     }
@@ -84,9 +86,11 @@ public final class MigrationRunner {
                 .thenCompose(legacyRows -> {
                     var legacy = new HashSet<>(legacyRows);
                     CompletionStage<Void> seed = CompletionStages.completedVoid();
+
                     for (var migration : ordered) {
                         var key = MigrationKey.from(migration);
                         var legacyKey = LegacyMigration.from(migration);
+
                         if (executed.contains(key) || !legacy.contains(legacyKey)) {
                             continue;
                         }
@@ -99,6 +103,7 @@ public final class MigrationRunner {
 
     private CompletionStage<Void> runAll(List<Migration> ordered, Set<MigrationKey> executed) {
         CompletionStage<Void> seed = CompletionStages.completedVoid();
+
         for (var migration : ordered) {
             if (executed.contains(MigrationKey.from(migration))) {
                 continue;
@@ -131,6 +136,7 @@ public final class MigrationRunner {
     private record MigrationKey(String namespace, int version) {
         private MigrationKey {
             Objects.requireNonNull(namespace, "namespace");
+
             if (namespace.isBlank()) {
                 throw new IllegalArgumentException("Migration namespace must not be blank.");
             }

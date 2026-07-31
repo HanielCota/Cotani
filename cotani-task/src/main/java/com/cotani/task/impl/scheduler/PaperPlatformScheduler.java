@@ -20,7 +20,6 @@ import org.bukkit.plugin.Plugin;
 
 @InternalApi
 public final class PaperPlatformScheduler implements PlatformScheduler, AutoCloseable {
-
     private final Plugin plugin;
     private final VirtualThreadExecutor virtualThreadExecutor;
 
@@ -129,7 +128,6 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
             Runnable retired,
             Duration initialDelay,
             Duration period) {
-
         var task = entity.getScheduler()
                 .runAtFixedRate(
                         plugin, ignored -> runnable.run(), retired, Ticks.from(initialDelay), Ticks.from(period));
@@ -146,11 +144,13 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var delegate = new AtomicReference<SchedulerTask>();
         var setup = runGlobal(metadata, () -> {
             var world = Bukkit.getWorld(worldId);
+
             if (world == null) {
                 return;
             }
             delegate.set(runRegion(metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable));
         });
+
         return new CompositeSchedulerTask(setup, delegate);
     }
 
@@ -160,11 +160,13 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var delegate = new AtomicReference<SchedulerTask>();
         var setup = runGlobal(metadata, () -> {
             var world = Bukkit.getWorld(worldId);
+
             if (world == null) {
                 return;
             }
             delegate.set(runRegionLater(metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, delay));
         });
+
         return new CompositeSchedulerTask(setup, delegate);
     }
 
@@ -180,12 +182,14 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var delegate = new AtomicReference<SchedulerTask>();
         var setup = runGlobal(metadata, () -> {
             var world = Bukkit.getWorld(worldId);
+
             if (world == null) {
                 return;
             }
             delegate.set(runRegionTimer(
                     metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, initialDelay, period));
         });
+
         return new CompositeSchedulerTask(setup, delegate);
     }
 
@@ -194,12 +198,14 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var delegate = new AtomicReference<SchedulerTask>();
         var setup = runGlobal(metadata, () -> {
             var entity = Bukkit.getEntity(entityId);
+
             if (entity == null) {
                 retired.run();
                 return;
             }
             delegate.set(runEntity(metadata, entity, runnable, retired));
         });
+
         return new CompositeSchedulerTask(setup, delegate);
     }
 
@@ -209,12 +215,14 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var delegate = new AtomicReference<SchedulerTask>();
         var setup = runGlobal(metadata, () -> {
             var entity = Bukkit.getEntity(entityId);
+
             if (entity == null) {
                 retired.run();
                 return;
             }
             delegate.set(runEntityLater(metadata, entity, runnable, retired, delay));
         });
+
         return new CompositeSchedulerTask(setup, delegate);
     }
 
@@ -229,12 +237,14 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var delegate = new AtomicReference<SchedulerTask>();
         var setup = runGlobal(metadata, () -> {
             var entity = Bukkit.getEntity(entityId);
+
             if (entity == null) {
                 retired.run();
                 return;
             }
             delegate.set(runEntityTimer(metadata, entity, runnable, retired, initialDelay, period));
         });
+
         return new CompositeSchedulerTask(setup, delegate);
     }
 

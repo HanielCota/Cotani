@@ -15,7 +15,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class DefaultEconomyGuardTest {
-
     private static final EconomySettings SETTINGS = EconomySettings.defaultSettings(EconomyCurrency.coins());
     private static final DefaultEconomyGuard GUARD = new DefaultEconomyGuard(SETTINGS);
 

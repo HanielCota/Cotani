@@ -6,7 +6,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class SQLiteDialectTest {
-
     private final SQLiteDialect dialect = new SQLiteDialect();
 
     @Test

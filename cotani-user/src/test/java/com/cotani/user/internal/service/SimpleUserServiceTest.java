@@ -20,7 +20,6 @@ import org.mockito.ArgumentCaptor;
 
 @SuppressWarnings("NullAway")
 class SimpleUserServiceTest {
-
     private final UserCache cache = mock(UserCache.class);
     private final UserRepository repository = mock(UserRepository.class);
     private final SimpleUserService service = new SimpleUserService(cache, repository);
@@ -134,6 +133,7 @@ class SimpleUserServiceTest {
         when(cache.updateIfSession(eq(uniqueId), any(UUID.class), any())).thenAnswer(invocation -> {
             var expectedSession = invocation.<UUID>getArgument(1);
             var current = expectedSession.equals(oldSession.sessionId()) ? oldSession : newSession;
+
             return Optional.of(
                     invocation.<UnaryOperator<SimpleCotaniUser>>getArgument(2).apply(current));
         });

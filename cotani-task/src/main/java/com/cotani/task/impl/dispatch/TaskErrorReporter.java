@@ -8,7 +8,6 @@ import java.util.Objects;
 
 @InternalApi
 public final class TaskErrorReporter {
-
     private final TaskExceptionHandler exceptionHandler;
 
     private TaskErrorReporter(TaskExceptionHandler exceptionHandler) {

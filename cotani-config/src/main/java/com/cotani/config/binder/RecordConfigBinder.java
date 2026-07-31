@@ -22,7 +22,6 @@ import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 
 public final class RecordConfigBinder implements ConfigBinder {
-
     private final ConfigSerializerRegistry serializers;
     private final ConfigValidator validator;
     private final Map<Class<?>, RecordBindingPlan<?>> plans = new ConcurrentHashMap<>();
@@ -38,9 +37,11 @@ public final class RecordConfigBinder implements ConfigBinder {
 
     private static String pathFor(RecordComponent component) {
         ConfigPath configPath = component.getAnnotation(ConfigPath.class);
+
         if (configPath != null) {
             return configPath.value();
         }
+
         return toKebabCase(component.getName());
     }
 
@@ -58,17 +59,22 @@ public final class RecordConfigBinder implements ConfigBinder {
         if (!(type instanceof ParameterizedType parameterizedType)) {
             return Object.class;
         }
+
         var args = parameterizedType.getActualTypeArguments();
+
         if (index < 0 || index >= args.length) {
             return Object.class;
         }
+
         var argument = args[index];
+
         if (argument instanceof Class<?> clazz) {
             return clazz;
         }
         if (argument instanceof ParameterizedType nested) {
             return (Class<?>) nested.getRawType();
         }
+
         return Object.class;
     }
 
@@ -80,12 +86,14 @@ public final class RecordConfigBinder implements ConfigBinder {
         if (type.isSealed()) {
             return bindSealed(section, type);
         }
+
         throw new ConfigException("Only record and sealed config types are supported: " + type.getName());
     }
 
     @Override
     public <T> ValidationResult validate(ConfigSection section, Class<T> type) {
         var result = ValidationResult.valid();
+
         if (type.isSealed()) {
             Class<?> selected = selectSealedImplementation(section, type);
             return validate(section, selected);
@@ -93,6 +101,7 @@ public final class RecordConfigBinder implements ConfigBinder {
         if (!type.isRecord()) {
             return result;
         }
+
         for (var component : type.getRecordComponents()) {
             var path = pathFor(component);
             var value = section.value(path);
@@ -124,12 +133,14 @@ public final class RecordConfigBinder implements ConfigBinder {
             var components = type.getRecordComponents();
             var parameterTypes = new Class<?>[components.length];
             var componentList = new ArrayList<RecordComponent>(components.length);
+
             for (var index = 0; index < components.length; index++) {
                 parameterTypes[index] = components[index].getType();
                 componentList.add(components[index]);
             }
             var constructor = type.getDeclaredConstructor(parameterTypes);
             constructor.setAccessible(true);
+
             return new RecordBindingPlan<>(type, constructor, List.copyOf(componentList));
         } catch (ReflectiveOperationException exception) {
             throw new ConfigException("Could not create binding plan for " + type.getName(), exception);
@@ -142,11 +153,13 @@ public final class RecordConfigBinder implements ConfigBinder {
         var readableValue = valueForDefault(component, value);
         Class<?> componentType = component.getType();
         Type genericType = component.getGenericType();
+
         if (componentType.isRecord()) {
             if (!readableValue.exists()) {
                 throw new ConfigException("Missing section '" + path + "' required by record " + componentType.getName()
                         + " at " + section.path());
             }
+
             return bindRecord(section.section(path), componentType);
         }
         if (componentType.isSealed()) {
@@ -154,6 +167,7 @@ public final class RecordConfigBinder implements ConfigBinder {
                 throw new ConfigException("Missing section '" + path + "' required by sealed type "
                         + componentType.getName() + " at " + section.path());
             }
+
             return bindSealed(section.section(path), componentType);
         }
         if (List.class.isAssignableFrom(componentType)) {
@@ -162,6 +176,7 @@ public final class RecordConfigBinder implements ConfigBinder {
         if (Map.class.isAssignableFrom(componentType)) {
             return readMap(genericType, readableValue);
         }
+
         return serializers.convert(readableValue, componentType);
     }
 
@@ -169,27 +184,33 @@ public final class RecordConfigBinder implements ConfigBinder {
         if (value.exists() && value.raw() != null) {
             return value;
         }
+
         Default defaultValue = component.getAnnotation(Default.class);
+
         if (defaultValue == null) {
             return value;
         }
+
         return ConfigValue.create(value.file(), value.path(), defaultValue.value(), true, serializers);
     }
 
     private List<?> readList(Type genericType, ConfigValue value) {
         var itemType = genericArgument(genericType, 0);
         var raw = value.exists() ? value.raw() : null;
+
         if (raw == null) {
             return List.of();
         }
         if (!(raw instanceof List<?> list)) {
             throw new ConfigException("Expected a list at " + value.location());
         }
+
         return IntStream.range(0, list.size())
                 .mapToObj(index -> {
                     var element = list.get(index);
                     ConfigValue elementValue = ConfigValue.create(
                             value.file(), value.path() + "[" + index + "]", element, element != null, serializers);
+
                     return convertElement(elementValue, itemType);
                 })
                 .toList();
@@ -198,12 +219,14 @@ public final class RecordConfigBinder implements ConfigBinder {
     private Map<String, ?> readMap(Type genericType, ConfigValue value) {
         var valueType = genericArgument(genericType, 1);
         var raw = value.exists() ? value.raw() : null;
+
         if (raw == null) {
             return Map.of();
         }
         if (!(raw instanceof Map<?, ?> map)) {
             throw new ConfigException("Expected a map at " + value.location());
         }
+
         return map.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(entry -> String.valueOf(entry.getKey()), entry -> {
                     var entryValue = entry.getValue();
@@ -213,6 +236,7 @@ public final class RecordConfigBinder implements ConfigBinder {
                             entryValue,
                             entryValue != null,
                             serializers);
+
                     return convertElement(configValue, valueType);
                 }));
     }
@@ -220,22 +244,27 @@ public final class RecordConfigBinder implements ConfigBinder {
     private Object convertElement(ConfigValue elementValue, Class<?> itemType) {
         if (itemType.isRecord() || itemType.isSealed()) {
             var subSection = sectionFromElement(elementValue);
+
             if (itemType.isRecord()) {
                 return bindRecord(subSection, itemType);
             }
+
             return bindSealed(subSection, itemType);
         }
+
         return serializers.convert(elementValue, itemType);
     }
 
     private ConfigSection sectionFromElement(ConfigValue elementValue) {
         Object raw = elementValue.raw();
+
         if (!(raw instanceof Map<?, ?> map)) {
             throw new ConfigException("Expected a section at " + elementValue.location());
         }
 
         Map<String, Object> values = new LinkedHashMap<>();
         map.forEach((key, value) -> values.put(String.valueOf(key), value));
+
         return ConfigSection.create(
                 elementValue.file(),
                 elementValue.path(),
@@ -247,38 +276,46 @@ public final class RecordConfigBinder implements ConfigBinder {
     @SuppressWarnings("unchecked")
     private <T> T bindSealed(ConfigSection section, Class<T> type) {
         var implementation = selectSealedImplementation(section, type);
+
         if (!implementation.isRecord()) {
             throw new ConfigException("Sealed implementation " + implementation.getName() + " must be a record");
         }
+
         return (T) bindRecord(section, implementation);
     }
 
     private Class<?> selectSealedImplementation(ConfigSection section, Class<?> type) {
         var typeValue = section.value("type");
+
         if (!typeValue.exists()) {
             throw new ConfigException("Missing 'type' field in " + type.getName() + " at " + section.path());
         }
+
         var requested = typeValue.asString().trim().toUpperCase(Locale.ROOT);
         var permittedSubclasses = type.getPermittedSubclasses();
+
         if (permittedSubclasses == null) {
             throw new ConfigException(type.getName() + " is not a sealed class");
         }
+
         for (var permitted : permittedSubclasses) {
             ConfigType configType = permitted.getAnnotation(ConfigType.class);
+
             if (configType == null) {
                 continue;
             }
             var name = configType.value().trim().toUpperCase(Locale.ROOT);
+
             if (name.equals(requested)) {
                 return permitted;
             }
         }
+
         throw new ConfigException("Unknown config type " + requested + " for " + type.getName());
     }
 
     private record InMemoryConfigSource(Path path, String rootPath, Map<String, Object> values)
             implements ConfigSource {
-
         private InMemoryConfigSource(String file, String rootPath, Map<String, Object> values) {
             this(Path.of(file), rootPath, Collections.unmodifiableMap(new LinkedHashMap<>(values)));
         }
@@ -327,39 +364,48 @@ public final class RecordConfigBinder implements ConfigBinder {
         @Override
         public Set<String> keys(String path) {
             Object value = resolve(path).raw();
+
             if (!(value instanceof Map<?, ?> map)) {
                 return Set.of();
             }
+
             return map.keySet().stream().map(String::valueOf).collect(Collectors.toUnmodifiableSet());
         }
 
         @Override
         public Map<String, Object> section(String path) {
             Object value = resolve(path).raw();
+
             if (!(value instanceof Map<?, ?> map)) {
                 return Map.of();
             }
+
             Map<String, Object> sectionValues = new LinkedHashMap<>();
             map.forEach((key, sectionValue) -> sectionValues.put(String.valueOf(key), sectionValue));
+
             return Collections.unmodifiableMap(sectionValues);
         }
 
         @Override
         public List<Object> list(String path) {
             Object value = resolve(path).raw();
+
             if (value instanceof List<?> list) {
                 return List.copyOf(list);
             }
+
             return List.of();
         }
 
         private Entry resolve(String requestedPath) {
             var relativePath = relativePath(requestedPath);
+
             if (relativePath.isBlank()) {
                 return new Entry(values, true);
             }
 
             Object current = values;
+
             for (var part : parts(relativePath)) {
                 if (!(current instanceof Map<?, ?> map)) {
                     return new Entry(null, false);
@@ -367,8 +413,10 @@ public final class RecordConfigBinder implements ConfigBinder {
                 if (!map.containsKey(part)) {
                     return new Entry(null, false);
                 }
+
                 current = map.get(part);
             }
+
             return new Entry(current, true);
         }
 
@@ -379,16 +427,20 @@ public final class RecordConfigBinder implements ConfigBinder {
             if (requestedPath.equals(rootPath)) {
                 return "";
             }
+
             var prefix = rootPath + ".";
+
             if (requestedPath.startsWith(prefix)) {
                 return requestedPath.substring(prefix.length());
             }
+
             return requestedPath;
         }
 
         private List<String> parts(String path) {
             List<String> parts = new ArrayList<>();
             var start = 0;
+
             for (var index = 0; index < path.length(); index++) {
                 if (path.charAt(index) == '.') {
                     parts.add(path.substring(start, index));
@@ -396,6 +448,7 @@ public final class RecordConfigBinder implements ConfigBinder {
                 }
             }
             parts.add(path.substring(start));
+
             return parts;
         }
     }

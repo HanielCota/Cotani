@@ -12,7 +12,6 @@ import org.jspecify.annotations.Nullable;
  * Main lifecycle and bootstrap module for Cotani metrics collection.
  */
 public final class CotaniMetricsModule implements AutoCloseable {
-
     private final MetricsConfig config;
     private final MetricsRegistry registry;
     private final @Nullable PrometheusServer prometheusServer;
@@ -32,6 +31,7 @@ public final class CotaniMetricsModule implements AutoCloseable {
      */
     public static CotaniMetricsModule create(MetricsConfig config) {
         Objects.requireNonNull(config, "config");
+
         if (!config.enabled()) {
             return new CotaniMetricsModule(config, NoOpMetricsRegistry.INSTANCE, null);
         }
@@ -40,6 +40,7 @@ public final class CotaniMetricsModule implements AutoCloseable {
         PrometheusServer server = null;
 
         var prometheus = cotaniRegistry.prometheusRegistry();
+
         if (prometheus.isPresent()) {
             PrometheusServer pServer =
                     new PrometheusServer(prometheus.get(), config.host(), config.port(), config.path());

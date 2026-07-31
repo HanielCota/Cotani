@@ -9,7 +9,6 @@ import java.util.concurrent.CompletionStage;
 
 @InternalApi
 public interface UserRepository {
-
     CompletionStage<Optional<SimpleCotaniUser>> find(UUID uniqueId, String username);
 
     CompletionStage<Optional<SimpleCotaniUser>> findByUniqueId(UUID uniqueId);

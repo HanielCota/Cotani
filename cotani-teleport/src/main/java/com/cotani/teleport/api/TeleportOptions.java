@@ -17,6 +17,7 @@ public record TeleportOptions(
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(feedback, "feedback");
         Objects.requireNonNull(timeout, "timeout");
+
         if (timeout.isNegative() || timeout.isZero()) {
             timeout = Duration.ofSeconds(10);
         }

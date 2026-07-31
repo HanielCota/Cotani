@@ -4,13 +4,13 @@ import java.time.Duration;
 import java.util.Objects;
 
 public record ExecutionSettings(boolean async, Duration reconciliationTimeout) {
-
     public ExecutionSettings(boolean async) {
         this(async, Duration.ofSeconds(30));
     }
 
     public ExecutionSettings {
         Objects.requireNonNull(reconciliationTimeout, "reconciliationTimeout");
+
         if (!reconciliationTimeout.isPositive()) {
             throw new IllegalArgumentException("reconciliationTimeout must be positive");
         }

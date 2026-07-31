@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @InternalApi
 public final class VirtualThreadExecutor implements AutoCloseable {
-
     private static final String THREAD_NAME = "cotani-task-";
     private static final String DELAYED_THREAD_NAME = THREAD_NAME + "delayed";
     private static final String METADATA_PARAM = "metadata";
@@ -72,6 +71,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         ThreadFactory factory = useVirtualThreads
                 ? Thread.ofVirtual().name(THREAD_NAME, 0).factory()
                 : Thread.ofPlatform().name(THREAD_NAME, 0).factory();
+
         return new ThreadPoolExecutor(
                 maxConcurrent,
                 maxConcurrent,
@@ -122,11 +122,13 @@ public final class VirtualThreadExecutor implements AutoCloseable {
 
     public CompletionStage<Void> closeAsync() {
         var existing = closeFuture.get();
+
         if (existing != null) {
             return existing;
         }
 
         var promise = new CompletableFuture<Void>();
+
         if (!closeFuture.compareAndSet(null, promise)) {
             return Objects.requireNonNull(closeFuture.get(), "closeFuture");
         }
@@ -139,6 +141,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
                 promise.completeExceptionally(failure);
             }
         });
+
         return promise;
     }
 
@@ -146,6 +149,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     public void close() {
         shutdownExecutors();
         var existing = closeFuture.get();
+
         if (existing != null) {
             existing.complete(null);
         }
@@ -170,7 +174,6 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     }
 
     private record NamedTask(TaskMetadata metadata, Runnable delegate, boolean nameThread) implements Runnable {
-
         @Override
         public void run() {
             if (!nameThread) {

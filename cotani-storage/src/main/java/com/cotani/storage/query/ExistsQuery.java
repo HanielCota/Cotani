@@ -9,7 +9,6 @@ import java.util.concurrent.CompletionStage;
 import org.jspecify.annotations.Nullable;
 
 public final class ExistsQuery {
-
     private final String table;
     private final QueryExecutor executor;
     private final List<Condition> conditions = new ArrayList<>();
@@ -41,6 +40,7 @@ public final class ExistsQuery {
         appendConditions(builder);
         builder.append(" LIMIT 1");
         cachedSql = builder.toString();
+
         return cachedSql;
     }
 

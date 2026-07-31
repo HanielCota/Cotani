@@ -7,7 +7,6 @@ import java.util.logging.Logger;
 
 @InternalApi
 public final class LoggingEventExceptionHandler implements EventExceptionHandler {
-
     private final Logger logger;
 
     public LoggingEventExceptionHandler(Logger logger) {

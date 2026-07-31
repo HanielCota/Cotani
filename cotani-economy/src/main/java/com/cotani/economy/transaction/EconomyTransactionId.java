@@ -4,7 +4,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 public record EconomyTransactionId(UUID value) {
-
     public EconomyTransactionId {
         Objects.requireNonNull(value, "value");
     }

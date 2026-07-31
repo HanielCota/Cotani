@@ -11,13 +11,13 @@ public record CurrencyDefinition(
         BigDecimal maximumOperationAmount,
         BigDecimal minimumPayAmount,
         boolean enabled) {
-
     public CurrencyDefinition {
         Objects.requireNonNull(currency, "currency");
         Objects.requireNonNull(startingBalance, "startingBalance");
         Objects.requireNonNull(maximumBalance, "maximumBalance");
         Objects.requireNonNull(maximumOperationAmount, "maximumOperationAmount");
         Objects.requireNonNull(minimumPayAmount, "minimumPayAmount");
+
         if (startingBalance.signum() < 0) {
             throw new IllegalArgumentException("startingBalance cannot be negative.");
         }

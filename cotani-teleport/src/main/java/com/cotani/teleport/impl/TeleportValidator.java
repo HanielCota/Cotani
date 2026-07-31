@@ -24,6 +24,7 @@ public final class TeleportValidator {
         if (!isFinite(context.target())) {
             return Optional.of(TeleportResults.failure(context, TeleportFailureReason.INVALID_LOCATION));
         }
+
         return Optional.empty();
     }
 

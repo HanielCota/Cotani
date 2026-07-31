@@ -9,7 +9,6 @@ import java.util.regex.Pattern;
 public record MySqlCredentials(
         String host, int port, String database, String username, String password, boolean useSsl, PoolSettings pool)
         implements StorageCredentials {
-
     private static final Pattern HOST_PATTERN = Pattern.compile("[A-Za-z0-9._:-]+");
 
     public MySqlCredentials {
@@ -18,6 +17,7 @@ public record MySqlCredentials(
         Objects.requireNonNull(username, "username");
         Objects.requireNonNull(password, "password");
         Objects.requireNonNull(pool, "pool");
+
         if (host.isBlank()) {
             throw new IllegalArgumentException("MySQL host is required.");
         }
@@ -47,6 +47,7 @@ public record MySqlCredentials(
                 + "&cachePrepStmts=true&useServerPrepStmts=true"
                 + "&prepStmtCacheSize=250&prepStmtCacheSqlLimit=2048";
         var ssl = useSsl ? "&useSSL=true&verifyServerCertificate=true" : "&useSSL=false";
+
         return base + params + ssl;
     }
 
@@ -56,7 +57,6 @@ public record MySqlCredentials(
             Duration connectionTimeout,
             Duration idleTimeout,
             Duration maxLifetime) {
-
         private static final PoolSettings DEFAULT =
                 new PoolSettings(10, 2, Duration.ofSeconds(10), Duration.ofMinutes(1), Duration.ofMinutes(30));
 
@@ -64,6 +64,7 @@ public record MySqlCredentials(
             Objects.requireNonNull(connectionTimeout, "connectionTimeout");
             Objects.requireNonNull(idleTimeout, "idleTimeout");
             Objects.requireNonNull(maxLifetime, "maxLifetime");
+
             if (maximumPoolSize <= 0) {
                 throw new IllegalArgumentException("maximumPoolSize must be positive.");
             }
@@ -74,6 +75,7 @@ public record MySqlCredentials(
             if (minimumIdle > maximumPoolSize) {
                 throw new IllegalArgumentException("minimumIdle must not exceed maximumPoolSize.");
             }
+
             requirePositive(connectionTimeout, "connectionTimeout");
             requirePositive(idleTimeout, "idleTimeout");
             requirePositive(maxLifetime, "maxLifetime");
@@ -87,6 +89,7 @@ public record MySqlCredentials(
             if (value.isZero() || value.isNegative()) {
                 throw new IllegalArgumentException(name + " must be positive.");
             }
+
             final long milliseconds;
             try {
                 milliseconds = value.toMillis();

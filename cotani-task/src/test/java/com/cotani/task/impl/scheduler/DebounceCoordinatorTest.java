@@ -15,7 +15,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class DebounceCoordinatorTest {
-
     @Test
     void supersededGenerationCannotExecuteOrRemoveReplacement() {
         NamedAsyncTaskScheduler scheduler = Mockito.mock(NamedAsyncTaskScheduler.class);

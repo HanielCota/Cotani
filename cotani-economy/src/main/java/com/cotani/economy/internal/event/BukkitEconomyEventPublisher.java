@@ -22,7 +22,6 @@ import org.bukkit.event.HandlerList;
  */
 @InternalApi
 public final class BukkitEconomyEventPublisher implements EconomyEventPublisher {
-
     private BukkitEconomyEventPublisher() {}
 
     public static EconomyEventPublisher create() {
@@ -32,15 +31,18 @@ public final class BukkitEconomyEventPublisher implements EconomyEventPublisher 
     @Override
     public void publish(EconomyTransactionEvent event) {
         Objects.requireNonNull(event, "event");
+
         if (!Bukkit.isPrimaryThread()) {
             throw new IllegalStateException(
                     "BukkitEconomyEventPublisher.publish must be called from the server main thread");
         }
+
         Bukkit.getPluginManager().callEvent(new BukkitEconomyTransactionEvent(event.transaction()));
     }
 
     public static final class BukkitEconomyTransactionEvent extends Event {
         private static final HandlerList HANDLERS = new HandlerList();
+
         private final EconomyTransaction transaction;
 
         public BukkitEconomyTransactionEvent(EconomyTransaction transaction) {

@@ -15,7 +15,6 @@ import java.util.TimeZone;
 import org.jspecify.annotations.Nullable;
 
 final class JdbcInstantCodec {
-
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
     private JdbcInstantCodec() {}
@@ -32,6 +31,7 @@ final class JdbcInstantCodec {
 
     static @Nullable Instant read(ResultSet resultSet, String column) throws SQLException {
         var raw = resultSet.getObject(column);
+
         if (raw == null) {
             return null;
         }
@@ -53,6 +53,7 @@ final class JdbcInstantCodec {
         if (raw instanceof CharSequence text) {
             return parseText(text.toString(), column);
         }
+
         throw new SQLException("Unsupported timestamp value in column '" + column + "': "
                 + raw.getClass().getName());
     }

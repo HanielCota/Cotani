@@ -8,7 +8,6 @@ package com.cotani.task.util;
  * as the single allowed source of {@code Void} nulls, keeping call sites clean.
  */
 public final class VoidResult {
-
     private VoidResult() {}
 
     @SuppressWarnings("NullAway")

@@ -6,7 +6,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class TokenBucketRateLimiterTest {
-
     @Test
     void firstAcquireSucceeds() {
         RateLimiter limiter = TokenBucketRateLimiter.create(2, Duration.ofSeconds(1));

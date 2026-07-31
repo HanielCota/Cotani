@@ -25,7 +25,6 @@ import org.bukkit.plugin.Plugin;
 
 /** Compile-checked counterparts for the most frequently copied documentation snippets. */
 public final class CotaniExamples {
-
     private CotaniExamples() {}
 
     public static Cotani lifecycle(Plugin plugin, PaperTaskScheduler scheduler) {
@@ -60,6 +59,7 @@ public final class CotaniExamples {
                 .chain(messageStage)
                 .consumeEntity(playerId, message -> {
                     var player = Bukkit.getPlayer(playerId);
+
                     if (player != null) {
                         player.sendMessage(Component.text(message));
                     }

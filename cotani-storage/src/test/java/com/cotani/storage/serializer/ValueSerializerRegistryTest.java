@@ -9,7 +9,6 @@ import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;
 
 class ValueSerializerRegistryTest {
-
     @Test
     void unregisteredTypeIsReturnedUnchangedOnRepeatedLookup() {
         ValueSerializerRegistry registry = new ValueSerializerRegistry();

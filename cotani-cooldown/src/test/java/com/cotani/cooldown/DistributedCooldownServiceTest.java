@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class DistributedCooldownServiceTest {
-
     @Test
     void twoServicesAtomicallyAcquireOneSharedCooldown(@TempDir Path directory) {
         var clock = new MutableClock(Instant.parse("2026-01-01T00:00:00Z"));
@@ -43,6 +42,7 @@ class DistributedCooldownServiceTest {
                         CotaniCooldowns.distributed(storage, scheduler, clock, Duration.ofMinutes(1))) {
             var key = new CooldownKey(CooldownTargets.user(UUID.randomUUID()), CooldownAction.of("daily.reward"));
             var attempts = new ArrayList<CompletionStage<CooldownResult>>();
+
             for (int i = 0; i < 64; i++) {
                 attempts.add(
                         (i & 1) == 0
@@ -115,6 +115,7 @@ class DistributedCooldownServiceTest {
     void inMemoryStorePerformsOpportunisticCleanupUnderKeyChurn() {
         var clock = new MutableClock(Instant.parse("2026-01-01T00:00:00Z"));
         var store = new InMemoryCooldownStore();
+
         for (int i = 0; i < 1_000; i++) {
             var key = new CooldownKey(CooldownTargets.resource("resource-" + i), CooldownAction.of("use"));
             store.checkAndStart(key, Duration.ofSeconds(1), clock);
@@ -134,6 +135,7 @@ class DistributedCooldownServiceTest {
                 .migrations(CotaniCooldowns.migrations().toArray(Migration[]::new))
                 .build();
         storage.startAsync().toCompletableFuture().join();
+
         return storage;
     }
 
@@ -141,6 +143,7 @@ class DistributedCooldownServiceTest {
         PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
         when(scheduler.asyncExecutor()).thenReturn(Runnable::run);
         when(scheduler.asyncTimer(any(), any(), any())).thenReturn(SchedulerTask.noop());
+
         return scheduler;
     }
 

@@ -3,7 +3,6 @@ package com.cotani.storage.dialect;
 import java.util.List;
 
 public interface SqlDialect {
-
     String name();
 
     String autoIncrement();

@@ -10,7 +10,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.junit.jupiter.api.Test;
 
 class ComponentTextsTest {
-
     @Test
     void createsEmptyComponent() {
         assertEquals(Component.empty(), ComponentTexts.empty());

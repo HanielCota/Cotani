@@ -29,10 +29,13 @@ public final class RegionTeleportPolicy implements TeleportPolicy {
         if (!context.options().checkRegion()) {
             return PolicyResult.allowed();
         }
+
         Player player = playerResolver.resolve(context.playerId());
+
         if (player == null || !regionAdapter.canTeleport(player, context.target())) {
             return PolicyResult.denied(TeleportFailureReason.BLOCKED_BY_REGION, messages.blockedByRegion());
         }
+
         return PolicyResult.allowed();
     }
 }

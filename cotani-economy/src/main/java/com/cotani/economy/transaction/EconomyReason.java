@@ -9,7 +9,6 @@ import org.jspecify.annotations.Nullable;
 
 public record EconomyReason(
         String key, String source, @Nullable UUID actorUserId) {
-
     private static final Pattern ALLOWED_KEY = Pattern.compile("^[a-z0-9_.:-]{2,96}$");
     private static final Pattern ALLOWED_SOURCE = Pattern.compile("^[a-z0-9_.:-]{2,64}$");
 

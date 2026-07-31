@@ -22,7 +22,6 @@ import org.jspecify.annotations.Nullable;
 @SuppressWarnings("resource")
 @InternalApi
 public final class DefaultEconomyModule implements EconomyModule {
-
     private final EconomyService service;
     private final Cotani cotani;
     private final boolean ownsCotani;

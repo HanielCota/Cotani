@@ -10,7 +10,6 @@ import java.util.function.Consumer;
  * may bridge Redis, a message broker, or another deployment-specific transport.
  */
 public interface CacheInvalidationBus<K> {
-
     CacheInvalidationSubscription subscribe(Consumer<CacheInvalidation<K>> listener);
 
     CompletionStage<Void> publish(CacheInvalidation<K> invalidation);

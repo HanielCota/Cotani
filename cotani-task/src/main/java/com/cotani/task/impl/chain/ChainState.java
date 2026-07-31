@@ -5,7 +5,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 final class ChainState<T> {
-
     private final CompletableFuture<T> future;
     private final Supplier<CompletableFuture<T>> futureFactory;
     private final boolean repeatable;

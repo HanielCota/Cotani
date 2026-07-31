@@ -17,7 +17,6 @@ import org.bukkit.entity.Entity;
 @SuppressWarnings("java:S1845")
 public sealed interface ExecutionTarget
         permits ExecutionTarget.Async, ExecutionTarget.Global, ExecutionTarget.Region, ExecutionTarget.EntityTarget {
-
     Async ASYNC = new Async();
     Global GLOBAL = new Global();
 
@@ -31,6 +30,7 @@ public sealed interface ExecutionTarget
 
     static ExecutionTarget region(Location location) {
         Objects.requireNonNull(location, "location");
+
         var world = Objects.requireNonNull(location.getWorld(), "location.world");
 
         return new Region(world.getUID(), location.getBlockX() >> 4, location.getBlockZ() >> 4);
@@ -42,6 +42,7 @@ public sealed interface ExecutionTarget
 
     static ExecutionTarget entity(Entity entity) {
         Objects.requireNonNull(entity, "entity");
+
         return new EntityTarget(entity.getUniqueId());
     }
 
@@ -66,9 +67,11 @@ public sealed interface ExecutionTarget
          */
         public Location location() {
             World world = Bukkit.getWorld(worldId);
+
             if (world == null) {
                 throw new IllegalStateException("World not found: " + worldId);
             }
+
             return new Location(world, chunkX << 4, 0, chunkZ << 4);
         }
     }
@@ -86,9 +89,11 @@ public sealed interface ExecutionTarget
          */
         public Entity entity() {
             Entity resolved = Bukkit.getEntity(entityId);
+
             if (resolved == null) {
                 throw new IllegalStateException("Entity not found: " + entityId);
             }
+
             return resolved;
         }
     }

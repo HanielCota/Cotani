@@ -24,7 +24,6 @@ import org.mockito.MockitoAnnotations;
 
 @SuppressWarnings("NullAway")
 class CaffeinePlayerDataCacheTest {
-
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
     private final PlayerValueFactory<String> factory = uuid -> "default-" + uuid;
 
@@ -50,6 +49,7 @@ class CaffeinePlayerDataCacheTest {
     private PlayerDataCache<String> createCache() {
         var dataCache =
                 CaffeineDataCache.create(repository, key -> "default-" + key, scheduler, CacheSettings.playerData());
+
         return CaffeinePlayerDataCache.create(dataCache, repository, factory, scheduler);
     }
 

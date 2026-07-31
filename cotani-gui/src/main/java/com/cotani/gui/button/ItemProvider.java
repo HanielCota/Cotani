@@ -8,7 +8,6 @@ import org.bukkit.inventory.ItemStack;
  */
 @FunctionalInterface
 public interface ItemProvider {
-
     /**
      * Builds the item shown to the given viewer.
      *

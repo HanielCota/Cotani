@@ -17,7 +17,6 @@ import org.mockito.Mockito;
 
 @SuppressWarnings({"NullAway", "unchecked", "removal"})
 class CotaniConfigsBuilderTest {
-
     @Test
     void loadAsyncReturnsStageThatCompletesAfterReload(@TempDir Path tempDir) {
         Plugin plugin = mockPlugin(tempDir);
@@ -88,6 +87,7 @@ class CotaniConfigsBuilderTest {
     private static Plugin mockPlugin(Path dataFolder) {
         Plugin plugin = Mockito.mock(Plugin.class);
         when(plugin.getDataFolder()).thenReturn(dataFolder.toFile());
+
         return plugin;
     }
 

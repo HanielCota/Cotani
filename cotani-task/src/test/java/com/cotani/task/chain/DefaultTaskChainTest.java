@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class DefaultTaskChainTest {
-
     private final PaperTaskScheduler scheduler = mock(PaperTaskScheduler.class);
 
     @BeforeEach

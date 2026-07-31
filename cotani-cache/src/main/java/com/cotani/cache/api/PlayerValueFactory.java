@@ -10,7 +10,6 @@ import java.util.UUID;
  */
 @FunctionalInterface
 public interface PlayerValueFactory<V> {
-
     /**
      * Creates a default value for the given player.
      *

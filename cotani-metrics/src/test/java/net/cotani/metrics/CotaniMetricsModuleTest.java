@@ -7,7 +7,6 @@ import net.cotani.metrics.config.MetricsConfig;
 import org.junit.jupiter.api.Test;
 
 class CotaniMetricsModuleTest {
-
     @Test
     void disabledModuleUsesNoOpRegistry() {
         MetricsConfig config = new MetricsConfig(false, "cotani", 9090, "/metrics");

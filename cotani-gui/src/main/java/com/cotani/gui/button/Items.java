@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 public final class Items {
-
     private static final ConcurrentHashMap<Material, ItemStack> borderPaneCache = new ConcurrentHashMap<>();
 
     private Items() {}
@@ -21,6 +20,7 @@ public final class Items {
         Objects.requireNonNull(lore, "Parameter 'lore' must not be null");
 
         var builder = ItemBuilder.of(material).customName(title);
+
         if (lore.length > 0) {
             builder.lore(lore);
         }
@@ -33,6 +33,7 @@ public final class Items {
         Objects.requireNonNull(lore, "Parameter 'lore' must not be null");
 
         var builder = SkullBuilder.create().player(player).customName(title);
+
         if (lore.length > 0) {
             builder.lore(lore);
         }

@@ -14,7 +14,6 @@ import org.bukkit.plugin.Plugin;
  * {@code Cotani.forPlugin(plugin).with(CotaniGuiModule.create(plugin))}.
  */
 public final class CotaniGuiModule implements AutoCloseable {
-
     /**
      * Default per-player click debounce (100ms).
      */
@@ -52,6 +51,7 @@ public final class CotaniGuiModule implements AutoCloseable {
 
         var module = new CotaniGuiModule(new AntiExploitGuard(debounce), debounce);
         plugin.getServer().getPluginManager().registerEvents(module.guard, plugin);
+
         return module;
     }
 

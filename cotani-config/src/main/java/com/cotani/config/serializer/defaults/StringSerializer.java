@@ -4,7 +4,6 @@ import com.cotani.config.serializer.ConfigSerializer;
 import com.cotani.config.value.ConfigValue;
 
 public final class StringSerializer implements ConfigSerializer<String> {
-
     @Override
     public Class<String> type() {
         return String.class;
@@ -15,6 +14,7 @@ public final class StringSerializer implements ConfigSerializer<String> {
         if (value.raw() == null) {
             return "";
         }
+
         return String.valueOf(value.raw());
     }
 

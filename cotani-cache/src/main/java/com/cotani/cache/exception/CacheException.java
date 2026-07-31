@@ -6,7 +6,6 @@ import java.io.Serial;
  * Base exception for cache errors.
  */
 public class CacheException extends RuntimeException {
-
     @Serial
     private static final long serialVersionUID = 1L;
 

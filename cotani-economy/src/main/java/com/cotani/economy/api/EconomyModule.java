@@ -14,7 +14,6 @@ import org.jspecify.annotations.Nullable;
  */
 @NullMarked
 public interface EconomyModule extends AutoCloseable {
-
     EconomyService economyService();
 
     @Override

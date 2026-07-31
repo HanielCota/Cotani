@@ -9,7 +9,6 @@ import java.util.concurrent.CompletionStage;
  * committed. Failures complete the returned stage exceptionally; callers must observe them.
  */
 public interface CachePersistence<K> {
-
     CompletionStage<Void> save(K key);
 
     default CompletionStage<Void> saveAsync(K key) {

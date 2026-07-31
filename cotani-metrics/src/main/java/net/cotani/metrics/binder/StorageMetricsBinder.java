@@ -10,7 +10,6 @@ import net.cotani.metrics.api.MetricsRegistry;
  * Binds {@code cotani-storage} database pool statistics to a {@link MetricsRegistry}.
  */
 public final class StorageMetricsBinder implements MeterBinder {
-
     /**
      * Immutable snapshot of storage connection pool statistics.
      *
@@ -32,7 +31,9 @@ public final class StorageMetricsBinder implements MeterBinder {
 
     public static StorageMetricsBinder forHikari(HikariDataSource dataSource) {
         Objects.requireNonNull(dataSource, "dataSource");
+
         String name = dataSource.getPoolName() != null ? dataSource.getPoolName() : "default";
+
         return forHikari(name, dataSource);
     }
 
@@ -42,9 +43,11 @@ public final class StorageMetricsBinder implements MeterBinder {
 
         return new StorageMetricsBinder(poolName, () -> {
             var mxBean = dataSource.getHikariPoolMXBean();
+
             if (mxBean == null) {
                 return new StoragePoolStatsView(0, 0, 0, 0);
             }
+
             return new StoragePoolStatsView(
                     mxBean.getActiveConnections(),
                     mxBean.getIdleConnections(),

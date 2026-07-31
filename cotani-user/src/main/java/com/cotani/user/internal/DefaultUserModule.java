@@ -27,7 +27,6 @@ import org.bukkit.plugin.Plugin;
 
 @InternalApi
 public final class DefaultUserModule implements UserModule {
-
     private final Cotani cotani;
     private final SimpleUserService userService;
 
@@ -72,6 +71,7 @@ public final class DefaultUserModule implements UserModule {
         var repository = new StorageUserRepository(storage, new UserMapper());
         var cache = new UserCache();
         var service = new SimpleUserService(cache, repository);
+
         return createWithService(plugin, scheduler, options, service);
     }
 
@@ -119,6 +119,7 @@ public final class DefaultUserModule implements UserModule {
                         plugin.getLogger().log(Level.SEVERE, "Failed to save users on shutdown", throwable);
                         return;
                     }
+
                     service.clearCache();
                 });
     }

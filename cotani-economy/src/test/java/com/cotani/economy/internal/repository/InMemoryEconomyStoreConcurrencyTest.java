@@ -19,7 +19,6 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class InMemoryEconomyStoreConcurrencyTest {
-
     private static final EconomySettings SETTINGS = EconomySettings.defaultSettings(EconomyCurrency.coins());
     private static final EconomyReason REASON = EconomyReason.system("test");
 
@@ -41,6 +40,7 @@ class InMemoryEconomyStoreConcurrencyTest {
                             () -> {
                                 latch.countDown();
                                 await(latch);
+
                                 return store.deposit(
                                                 userId,
                                                 SETTINGS.defaultCurrency().id(),
@@ -88,6 +88,7 @@ class InMemoryEconomyStoreConcurrencyTest {
                             () -> {
                                 latch.countDown();
                                 await(latch);
+
                                 return store.transfer(
                                                 source,
                                                 target,
@@ -135,6 +136,7 @@ class InMemoryEconomyStoreConcurrencyTest {
             BigDecimal amount = BigDecimal.TEN;
 
             List<CompletableFuture<Throwable>> outcomes = new ArrayList<>();
+
             for (int i = 0; i < threads; i++) {
                 outcomes.add(CompletableFuture.supplyAsync(
                         () -> {

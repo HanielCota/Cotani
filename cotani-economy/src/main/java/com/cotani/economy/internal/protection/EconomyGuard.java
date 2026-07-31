@@ -9,7 +9,6 @@ import java.util.UUID;
 
 @InternalApi
 public interface EconomyGuard {
-
     BigDecimal normalizeAmount(BigDecimal amount);
 
     BigDecimal normalizeAmount(CurrencyId currencyId, BigDecimal amount);

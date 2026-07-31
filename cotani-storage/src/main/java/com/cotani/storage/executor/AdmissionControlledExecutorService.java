@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * queue, or receives a {@link RejectedExecutionException}. It never runs storage work itself.
  */
 public final class AdmissionControlledExecutorService extends AbstractExecutorService {
-
     private final ExecutorService workers;
     private final int concurrencyLimit;
     private final int queueCapacity;
@@ -35,12 +34,14 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
 
     private AdmissionControlledExecutorService(ExecutorService workers, int concurrencyLimit, int queueCapacity) {
         this.workers = Objects.requireNonNull(workers, "workers");
+
         if (concurrencyLimit <= 0) {
             throw new IllegalArgumentException("concurrencyLimit must be positive");
         }
         if (queueCapacity < 0) {
             throw new IllegalArgumentException("queueCapacity must not be negative");
         }
+
         this.concurrencyLimit = concurrencyLimit;
         this.queueCapacity = queueCapacity;
         this.queue = new ArrayDeque<>(Math.min(queueCapacity, 1_024));
@@ -49,6 +50,7 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
     @Override
     public void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
+
         boolean startImmediately = false;
         synchronized (lock) {
             if (shutdown) {
@@ -115,6 +117,7 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
             lock.notifyAll();
         }
         pending.addAll(workers.shutdownNow());
+
         return List.copyOf(pending);
     }
 
@@ -135,17 +138,22 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
     @Override
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         Objects.requireNonNull(unit, "unit");
+
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         synchronized (lock) {
             while (!(shutdown && activeOperations == 0 && queue.isEmpty())) {
                 long remaining = deadline - System.nanoTime();
+
                 if (remaining <= 0) {
                     return false;
                 }
+
                 TimeUnit.NANOSECONDS.timedWait(lock, remaining);
             }
         }
+
         long remaining = Math.max(0L, deadline - System.nanoTime());
+
         return workers.awaitTermination(remaining, TimeUnit.NANOSECONDS);
     }
 

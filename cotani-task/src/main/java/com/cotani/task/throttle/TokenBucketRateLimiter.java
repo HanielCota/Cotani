@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @InternalApi
 public final class TokenBucketRateLimiter implements RateLimiter {
-
     private static final long NANOTOKENS_PER_TOKEN = 1_000_000_000L;
 
     private final long capacityNanotokens;
@@ -60,6 +59,7 @@ public final class TokenBucketRateLimiter implements RateLimiter {
                 if (state.compareAndSet(current, next)) {
                     return false;
                 }
+
                 continue;
             }
 
@@ -83,6 +83,7 @@ public final class TokenBucketRateLimiter implements RateLimiter {
 
         long nextRefillNanos = refilled.lastRefillNanos + refillPeriodNanos;
         long remaining = nextRefillNanos - now;
+
         return remaining > 0 ? Duration.ofNanos(remaining) : Duration.ZERO;
     }
 

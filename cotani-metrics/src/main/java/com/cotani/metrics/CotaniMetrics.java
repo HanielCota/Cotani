@@ -6,7 +6,6 @@ import net.cotani.metrics.config.MetricsConfig;
 
 /** Stable {@code com.cotani} entry point for the legacy 1.x metrics namespace. */
 public final class CotaniMetrics {
-
     private CotaniMetrics() {}
 
     public static CotaniMetricsModule create(MetricsConfig config) {

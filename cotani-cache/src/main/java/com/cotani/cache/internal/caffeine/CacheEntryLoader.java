@@ -8,7 +8,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 final class CacheEntryLoader<K, V> {
-
     private final CacheRepository<K, V> repository;
     private final Function<K, V> defaultValue;
     private final Function<V, CacheEntry<V>> entryFactory;
@@ -26,6 +25,7 @@ final class CacheEntryLoader<K, V> {
                 .thenApply(optional -> optional.orElseGet(() -> defaultValue.apply(key)))
                 .thenApply(value -> {
                     Objects.requireNonNull(value, "defaultValue must not return null");
+
                     return entryFactory.apply(value);
                 })
                 .toCompletableFuture()

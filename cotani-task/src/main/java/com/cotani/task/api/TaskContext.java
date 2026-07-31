@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.Objects;
 
 public final class TaskContext {
-
     private static final long NANOS_PER_MILLI = 1_000_000L;
 
     private final TaskMetadata metadata;

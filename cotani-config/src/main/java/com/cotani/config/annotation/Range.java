@@ -8,7 +8,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.RECORD_COMPONENT)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Range {
-
     double min() default Double.NEGATIVE_INFINITY;
 
     double max() default Double.POSITIVE_INFINITY;

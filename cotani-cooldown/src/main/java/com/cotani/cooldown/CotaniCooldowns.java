@@ -19,7 +19,6 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class CotaniCooldowns {
-
     private CotaniCooldowns() {}
 
     public static CooldownService inMemory() {
@@ -28,11 +27,13 @@ public final class CotaniCooldowns {
 
     public static CooldownService inMemory(Clock clock) {
         Objects.requireNonNull(clock, "clock");
+
         return new DefaultCooldownService(new InMemoryCooldownStore(), clock);
     }
 
     public static CooldownService cacheBacked(PlayerDataCache<PlayerCooldowns> playerCache) {
         Objects.requireNonNull(playerCache, "playerCache");
+
         return DefaultCooldownService.cacheBacked(playerCache);
     }
 
@@ -44,6 +45,7 @@ public final class CotaniCooldowns {
     public static DistributedCooldownService distributed(CotaniStorage storage, PaperTaskScheduler scheduler) {
         Objects.requireNonNull(storage, "storage");
         Objects.requireNonNull(scheduler, "scheduler");
+
         return distributed(storage, scheduler, Clock.systemUTC(), Duration.ofMinutes(5));
     }
 
@@ -53,6 +55,7 @@ public final class CotaniCooldowns {
         Objects.requireNonNull(scheduler, "scheduler");
         Objects.requireNonNull(clock, "clock");
         Objects.requireNonNull(cleanupInterval, "cleanupInterval");
+
         return new SqlDistributedCooldownService(storage, scheduler, clock, cleanupInterval);
     }
 }

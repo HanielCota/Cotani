@@ -12,7 +12,6 @@ import java.util.concurrent.CompletionStage;
 
 @InternalApi
 public interface EconomyAccountRepository {
-
     CompletionStage<EconomyAccount> getOrCreate(UUID userId, CurrencyId currencyId);
 
     CompletionStage<EconomyTransaction> deposit(

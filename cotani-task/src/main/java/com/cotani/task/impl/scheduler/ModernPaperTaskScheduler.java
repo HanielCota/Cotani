@@ -22,7 +22,6 @@ import org.bukkit.entity.Entity;
 
 @InternalApi
 public final class ModernPaperTaskScheduler implements PaperTaskScheduler {
-
     private final TaskExceptionHandler exceptionHandler;
     private final TaskMetrics metrics;
     private final TargetTaskDispatcher dispatcher;

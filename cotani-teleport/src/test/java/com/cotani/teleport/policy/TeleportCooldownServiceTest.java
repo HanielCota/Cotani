@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class TeleportCooldownServiceTest {
-
     private final MutableClock clock = new MutableClock(Instant.ofEpochSecond(1000), ZoneId.of("UTC"));
     private TeleportCooldownService service;
 

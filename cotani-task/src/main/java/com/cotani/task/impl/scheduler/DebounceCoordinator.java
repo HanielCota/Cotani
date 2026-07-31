@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 final class DebounceCoordinator {
-
     private final NamedAsyncTaskScheduler scheduler;
     private final Map<String, DebounceTask> pending = new ConcurrentHashMap<>();
 
@@ -33,6 +32,7 @@ final class DebounceCoordinator {
         try {
             SchedulerTask scheduled = scheduler.schedule("debounce-" + name, debounce::executeIfCurrent, quietPeriod);
             debounce.attach(scheduled);
+
             return debounce;
         } catch (Throwable failure) {
             pending.remove(name, debounce);
@@ -47,7 +47,6 @@ final class DebounceCoordinator {
     }
 
     private final class DebounceTask implements SchedulerTask {
-
         private final String name;
         private final Runnable runnable;
         private final AtomicReference<SchedulerTask> delegate = new AtomicReference<>();
@@ -77,12 +76,14 @@ final class DebounceCoordinator {
         public boolean cancel() {
             boolean changed = supersede();
             pending.remove(name, this);
+
             return changed;
         }
 
         private boolean supersede() {
             boolean changed = cancelled.compareAndSet(false, true);
             SchedulerTask task = delegate.get();
+
             if (task != null) {
                 task.cancel();
             }

@@ -1,7 +1,6 @@
 package com.cotani.task.api;
 
 public interface SchedulerTask {
-
     static SchedulerTask noop() {
         return NoopSchedulerTask.INSTANCE;
     }
@@ -11,7 +10,6 @@ public interface SchedulerTask {
     boolean cancelled();
 
     final class NoopSchedulerTask implements SchedulerTask {
-
         static final NoopSchedulerTask INSTANCE = new NoopSchedulerTask();
 
         private NoopSchedulerTask() {}

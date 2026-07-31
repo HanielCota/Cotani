@@ -17,7 +17,6 @@ import org.jspecify.annotations.NullMarked;
  */
 @NullMarked
 public final class AudienceMessages {
-
     private static final String AUDIENCE_NULL_MESSAGE = "Parameter 'audience' must not be null";
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
     private static final String MINI_MESSAGE_NULL_MESSAGE = "Parameter 'miniMessage' must not be null";

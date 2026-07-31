@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class AdmissionControlledExecutorServiceTest {
-
     @Test
     void boundsActiveWorkAndQueueWithoutRunningOnCaller() throws InterruptedException {
         var release = new CountDownLatch(1);

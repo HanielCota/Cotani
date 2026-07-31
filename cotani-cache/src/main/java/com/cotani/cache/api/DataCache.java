@@ -33,7 +33,6 @@ public interface DataCache<K, V>
                 CacheDiagnostics<K, V>,
                 AsyncCloseable,
                 AutoCloseable {
-
     /**
      * Returns the cached value for the given key.
      *

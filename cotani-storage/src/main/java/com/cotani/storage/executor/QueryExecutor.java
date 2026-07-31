@@ -26,7 +26,6 @@ import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
 public final class QueryExecutor {
-
     private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
     private static final String BINDER_PARAM = "binder";
 
@@ -73,6 +72,7 @@ public final class QueryExecutor {
         if (queryTimeoutSeconds < 0) {
             throw new IllegalArgumentException("queryTimeoutSeconds must not be negative, got " + queryTimeoutSeconds);
         }
+
         this.provider = Objects.requireNonNull(provider, "provider");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.serializers = Objects.requireNonNull(serializers, "serializers");
@@ -83,6 +83,7 @@ public final class QueryExecutor {
     public CompletionStage<Void> update(String sql, SqlConsumer<ParameterBinder> binder) {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
+
         return runAsync(() -> runUpdate(sql, binder));
     }
 
@@ -91,6 +92,7 @@ public final class QueryExecutor {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
         Objects.requireNonNull(mapper, "mapper");
+
         return supplyAsync(() -> runQueryOne(sql, binder, mapper));
     }
 
@@ -99,27 +101,33 @@ public final class QueryExecutor {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
         Objects.requireNonNull(mapper, "mapper");
+
         return supplyAsync(() -> runQueryMany(sql, binder, mapper));
     }
 
     public CompletionStage<Boolean> exists(String sql, SqlConsumer<ParameterBinder> binder) {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binder, BINDER_PARAM);
+
         return supplyAsync(() -> runExists(sql, binder));
     }
 
     public CompletionStage<Void> batch(String sql, List<SqlConsumer<ParameterBinder>> binders) {
         Objects.requireNonNull(sql, "sql");
         Objects.requireNonNull(binders, "binders");
+
         var snapshot = List.copyOf(binders);
+
         return runAsync(() -> runBatch(sql, snapshot));
     }
 
     public <T> CompletionStage<T> transaction(Function<QueryExecutor, CompletionStage<T>> operation) {
         Objects.requireNonNull(operation, "operation");
+
         if (transactionConnection != null) {
             return CompletableFuture.failedFuture(new IllegalStateException("Nested transactions are not supported."));
         }
+
         return supplyAsync(this::beginTransaction).thenCompose(state -> executeTransactionOperation(state, operation));
     }
 
@@ -145,12 +153,15 @@ public final class QueryExecutor {
         CompletionStage<T> stage = CompletableFuture.completedFuture(transactional)
                 .thenCompose(current ->
                         Objects.requireNonNull(operation.apply(current), "transaction operation returned null"));
+
         if (!stage.toCompletableFuture().isDone()) {
             var failure = new IllegalStateException(
                     "Transaction callbacks must not wait for external asynchronous work; compose only operations from the transactional QueryExecutor.");
             finishTransaction(state, failure);
+
             return CompletableFuture.failedFuture(failure);
         }
+
         return stage.whenComplete((_, error) -> finishTransaction(state, error));
     }
 
@@ -193,6 +204,7 @@ public final class QueryExecutor {
             binder.accept(new ParameterBinder(statement, serializers));
             try (ResultSet resultSet = statement.executeQuery()) {
                 var values = new ArrayList<T>();
+
                 while (resultSet.next()) {
                     values.add(mapper.map(new Row(resultSet, serializers)));
                 }
@@ -236,6 +248,7 @@ public final class QueryExecutor {
                 if (failure instanceof SQLException sqlException) {
                     throw new StorageException(new QueryError("Could not execute batch query.", sqlException));
                 }
+
                 throw new StorageException(new MappingError("Could not bind batch parameters.", failure));
             } finally {
                 restoreAutoCommit(connection, previousAutoCommit);
@@ -250,6 +263,7 @@ public final class QueryExecutor {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setQueryTimeout(queryTimeoutSeconds);
             int count = 0;
+
             for (var item : binders) {
                 statement.clearParameters();
                 item.accept(new ParameterBinder(statement, serializers));
@@ -281,6 +295,7 @@ public final class QueryExecutor {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setQueryTimeout(queryTimeoutSeconds);
             int count = 0;
+
             for (var item : binders) {
                 statement.clearParameters();
                 item.accept(new ParameterBinder(statement, serializers));
@@ -304,10 +319,12 @@ public final class QueryExecutor {
 
     private TransactionState beginTransaction() {
         @Nullable Connection connection = null;
+
         try {
             connection = provider.connection();
             boolean previousAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
+
             return new TransactionState(connection, previousAutoCommit);
         } catch (SQLException exception) {
             if (connection != null) {
@@ -323,6 +340,7 @@ public final class QueryExecutor {
 
     private void finishTransaction(TransactionState state, @Nullable Throwable error) {
         Connection connection = state.connection;
+
         try {
             if (error != null) {
                 rollback(connection, error);
@@ -331,6 +349,7 @@ public final class QueryExecutor {
             }
         } catch (SQLException failure) {
             var wrapped = new StorageException(new TransactionError("Could not finish transaction.", failure));
+
             if (error != null) {
                 error.addSuppressed(wrapped);
             } else {
@@ -380,13 +399,13 @@ public final class QueryExecutor {
         if (transactionConnection != null) {
             return new ConnectionScope(transactionConnection, false);
         }
+
         return new ConnectionScope(provider.connection(), true);
     }
 
     private record TransactionState(Connection connection, boolean previousAutoCommit) {}
 
     private record ConnectionScope(Connection connection, boolean closeOnExit) implements AutoCloseable {
-
         @Override
         public void close() throws SQLException {
             if (closeOnExit) {

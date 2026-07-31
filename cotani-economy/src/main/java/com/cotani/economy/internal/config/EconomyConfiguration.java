@@ -14,7 +14,6 @@ import org.bukkit.plugin.Plugin;
 
 @InternalApi
 public final class EconomyConfiguration implements AutoCloseable {
-
     private final CotaniConfigs configs;
     private final EconomySettings settings;
 
@@ -59,6 +58,7 @@ public final class EconomyConfiguration implements AutoCloseable {
         if (!config.contains(path)) {
             return fallback.setScale(scale, RoundingMode.UNNECESSARY);
         }
+
         return new BigDecimal(config.getString(path, fallback.toPlainString()))
                 .setScale(scale, RoundingMode.UNNECESSARY);
     }

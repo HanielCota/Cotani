@@ -8,7 +8,6 @@ import java.util.concurrent.CompletionStage;
  * Public asynchronous API exposed by cotani-user to other modules.
  */
 public interface UserService {
-
     CompletionStage<Optional<CotaniUser>> findAsync(UUID uniqueId);
 
     CompletionStage<CotaniUser> getOrThrowAsync(UUID uniqueId);

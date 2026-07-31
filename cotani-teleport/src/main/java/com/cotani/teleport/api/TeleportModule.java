@@ -6,7 +6,6 @@ import com.cotani.teleport.config.TeleportOptionsFactory;
 import com.cotani.teleport.policy.TeleportCooldownService;
 
 public interface TeleportModule extends AutoCloseable {
-
     Cotani cotani();
 
     TeleportService teleportService();

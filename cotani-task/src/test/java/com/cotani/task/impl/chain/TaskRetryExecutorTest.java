@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class TaskRetryExecutorTest {
-
     @Test
     void recreatesEveryRetryAttempt() {
         PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);

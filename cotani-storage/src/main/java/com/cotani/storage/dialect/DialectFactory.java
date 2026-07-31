@@ -6,7 +6,6 @@ import com.cotani.storage.backend.SQLiteBackend;
 import com.cotani.storage.backend.StorageBackend;
 
 public final class DialectFactory {
-
     public SqlDialect create(StorageBackend backend) {
         return switch (backend) {
             case MySqlBackend(var _) -> new MySqlDialect();

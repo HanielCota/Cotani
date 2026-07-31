@@ -8,7 +8,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 final class StructureTest {
-
     @Test
     void parsesSymbolsToSlotCoordinates() {
         var structure = Structure.parse("X X X", "X . X");

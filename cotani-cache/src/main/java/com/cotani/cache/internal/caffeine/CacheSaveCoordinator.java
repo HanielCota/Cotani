@@ -19,7 +19,6 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 final class CacheSaveCoordinator<K, V> {
-
     private static final Logger LOGGER = Logger.getLogger(CacheSaveCoordinator.class.getName());
     private static final String REPOSITORY_SAVE_NULL_MSG = "repository.save returned null";
     private static final String VALUE_PARAM = "value";
@@ -40,9 +39,11 @@ final class CacheSaveCoordinator<K, V> {
         this.repository = Objects.requireNonNull(repository, "repository");
         this.invalidationBus = Objects.requireNonNull(invalidationBus, "invalidationBus");
         this.cacheId = Objects.requireNonNull(cacheId, "cacheId");
+
         if (maximumConcurrency <= 0) {
             throw new IllegalArgumentException("maximumConcurrency must be positive");
         }
+
         this.maximumConcurrency = maximumConcurrency;
     }
 
@@ -53,6 +54,7 @@ final class CacheSaveCoordinator<K, V> {
             var lane = current == null ? new SaveLane(key) : current;
             laneRef.set(lane);
             ticketRef.set(lane.enqueue(value, order));
+
             return lane;
         });
 
@@ -61,6 +63,7 @@ final class CacheSaveCoordinator<K, V> {
         var lane = Objects.requireNonNull(laneRef.get(), "save lane");
         var _ = result.whenComplete((_, _) -> saveLanes.computeIfPresent(
                 key, (_, current) -> current.equals(lane) && current.isIdle(ticket.sequence()) ? null : current));
+
         return result;
     }
 
@@ -94,6 +97,7 @@ final class CacheSaveCoordinator<K, V> {
         }
 
         var entries = Map.copyOf(pendingSaves);
+
         return runBounded(List.copyOf(entries.entrySet()), entry -> savePendingEntry(entry.getKey(), entry.getValue()));
     }
 
@@ -117,6 +121,7 @@ final class CacheSaveCoordinator<K, V> {
                             Level.SEVERE,
                             error,
                             () -> "Could not save pending cache entry: " + key + ". Re-queueing for retry.");
+
                     return CompletableFuture.failedFuture(
                             new CacheSaveException("Could not save pending cache entry: " + key, error));
                 })
@@ -129,7 +134,6 @@ final class CacheSaveCoordinator<K, V> {
     }
 
     private final class SaveLane {
-
         private final K key;
         private CompletableFuture<Void> tail = CompletableFuture.completedFuture(null);
         private SaveOrder newestOrder = SaveOrder.NONE;
@@ -150,11 +154,13 @@ final class CacheSaveCoordinator<K, V> {
                                 return CompletionStages.completedVoid();
                             }
                         }
+
                         return Objects.requireNonNull(repository.save(key, value), REPOSITORY_SAVE_NULL_MSG)
                                 .thenCompose(_ -> invalidationBus.publish(new CacheInvalidation<>(cacheId, key)));
                     })
                     .toCompletableFuture();
             tailSequence++;
+
             return new SaveTicket(tail, tailSequence);
         }
 

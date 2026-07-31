@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class TeleportEventBusTest {
-
     private TeleportEventBus eventBus;
     private Entity entity;
 

@@ -1,7 +1,6 @@
 package com.cotani.cache.internal.caffeine;
 
 record SaveOrder(long generation, long version) implements Comparable<SaveOrder> {
-
     static final SaveOrder NONE = new SaveOrder(Long.MIN_VALUE, Long.MIN_VALUE);
 
     @Override

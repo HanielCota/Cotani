@@ -7,7 +7,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 final class TrackedExecutor implements Executor {
-
     private final Executor delegate;
     private final Object lock = new Object();
     private int activeTasks;
@@ -20,6 +19,7 @@ final class TrackedExecutor implements Executor {
     @Override
     public void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
+
         var started = new AtomicBoolean();
         synchronized (lock) {
             if (activeTasks == 0) {

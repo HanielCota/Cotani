@@ -8,7 +8,6 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class ConfigSection {
-
     private final String file;
     private final String path;
     private final ConfigSource source;
@@ -48,6 +47,7 @@ public final class ConfigSection {
     public ConfigValue value(String childPath) {
         var fullPath = join(childPath);
         var entry = source.entry(fullPath);
+
         return ConfigValue.create(file, fullPath, entry.raw(), entry.exists(), serializers);
     }
 
@@ -66,6 +66,7 @@ public final class ConfigSection {
         if (childPath.isBlank()) {
             return path;
         }
+
         return path + "." + childPath;
     }
 }

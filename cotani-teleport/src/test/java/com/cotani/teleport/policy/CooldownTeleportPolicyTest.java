@@ -15,7 +15,6 @@ import org.bukkit.World;
 import org.junit.jupiter.api.Test;
 
 class CooldownTeleportPolicyTest {
-
     private final TeleportCooldownService cooldownService = mock(TeleportCooldownService.class);
     private final TeleportMessages messages = TeleportMessages.defaults();
     private final CooldownTeleportPolicy policy = new CooldownTeleportPolicy(cooldownService, messages);
@@ -45,6 +44,7 @@ class CooldownTeleportPolicyTest {
     private TeleportContext contextWithCooldown(Duration duration) {
         World world = mock(World.class);
         Location target = new Location(world, 0, 64, 0);
+
         return new TeleportContext(
                 UUID.randomUUID(),
                 target,

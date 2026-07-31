@@ -16,7 +16,6 @@ import java.util.logging.Logger;
  */
 @InternalApi
 public final class MainThreadEconomyEventPublisher implements EconomyEventPublisher {
-
     private final AsyncTaskExecutor scheduler;
     private final EconomyEventPublisher delegate;
     private final Logger logger;

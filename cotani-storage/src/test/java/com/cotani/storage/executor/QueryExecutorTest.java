@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
 class QueryExecutorTest {
-
     private final StorageProvider provider = mock(StorageProvider.class);
     private final Connection connection = mock(Connection.class);
     private final PreparedStatement statement = mock(PreparedStatement.class);
@@ -51,6 +50,7 @@ class QueryExecutorTest {
         CompletableFuture<Void> result = executor.batch("INSERT", binders).toCompletableFuture();
         binders.clear();
         Objects.requireNonNull(queued.get()).run();
+
         result.join();
 
         verify(statement, times(2)).clearParameters();
@@ -63,6 +63,7 @@ class QueryExecutorTest {
     void batchClearsDriverBatchAfterEachThousandRows() throws Exception {
         QueryExecutor executor = QueryExecutor.create(provider, Runnable::run, new ValueSerializerRegistry());
         List<SqlConsumer<ParameterBinder>> binders = new ArrayList<>();
+
         for (int index = 0; index < 1_001; index++) {
             binders.add(binder -> binder.set("value"));
         }

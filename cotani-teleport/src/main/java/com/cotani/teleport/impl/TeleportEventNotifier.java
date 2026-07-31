@@ -41,11 +41,15 @@ public final class TeleportEventNotifier {
         Objects.requireNonNull(resolvedTarget, "resolvedTarget");
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(source, "source");
+
         Player player = playerResolver.resolve(playerId);
+
         if (player == null) {
             return CompletableFuture.completedFuture(null);
         }
+
         CotaniPreTeleportEvent event = new CotaniPreTeleportEvent(player, from, resolvedTarget, cause, source);
+
         return eventBus.callAsync(event, player).thenApply(_ -> event);
     }
 
@@ -56,7 +60,9 @@ public final class TeleportEventNotifier {
         Objects.requireNonNull(resolvedTarget, "resolvedTarget");
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(source, "source");
+
         CotaniPreTeleportEvent event = new CotaniPreTeleportEvent(player, from, resolvedTarget, cause, source);
+
         return eventBus.callPreTeleportSync(event);
     }
 
@@ -66,19 +72,25 @@ public final class TeleportEventNotifier {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(eventTarget, "eventTarget");
         Objects.requireNonNull(result, "result");
+
         Player player = playerResolver.resolve(playerId);
+
         if (player == null) {
             return CompletableFuture.completedFuture(null);
         }
+
         return eventBus.callAsync(new CotaniPostTeleportEvent(player, from, eventTarget, result), player);
     }
 
     public CompletionStage<Void> fireFailure(TeleportResult.Failure failure) {
         Objects.requireNonNull(failure, "failure");
+
         Player player = playerResolver.resolve(failure.playerId());
+
         if (player == null) {
             return CompletableFuture.completedFuture(null);
         }
+
         return eventBus.callAsync(new CotaniTeleportFailEvent(player, failure), player);
     }
 

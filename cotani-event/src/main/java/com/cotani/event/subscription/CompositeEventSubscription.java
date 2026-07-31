@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @InternalApi
 public final class CompositeEventSubscription implements AutoCloseable {
-
     private final Set<EventSubscription> subscriptions = ConcurrentHashMap.newKeySet();
     private volatile boolean closed = false;
 
@@ -15,6 +14,7 @@ public final class CompositeEventSubscription implements AutoCloseable {
 
     public void add(EventSubscription subscription) {
         Objects.requireNonNull(subscription, "subscription cannot be null");
+
         if (closed) {
             subscription.unsubscribe();
             return;
@@ -24,6 +24,7 @@ public final class CompositeEventSubscription implements AutoCloseable {
 
     public void remove(EventSubscription subscription) {
         Objects.requireNonNull(subscription, "subscription cannot be null");
+
         subscriptions.remove(subscription);
     }
 

@@ -5,7 +5,6 @@ import com.cotani.event.subscription.EventSubscription;
 import java.util.List;
 
 public interface EventRegistry {
-
     void register(EventSubscription subscription);
 
     void unregister(EventSubscription subscription);

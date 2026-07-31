@@ -13,7 +13,6 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.junit.jupiter.api.Test;
 
 class PlaceholdersTest {
-
     @Test
     void createsComponentPlaceholder() {
         var resolver = Placeholders.component("name", Component.text("World"));

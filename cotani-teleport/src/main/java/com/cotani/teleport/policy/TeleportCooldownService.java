@@ -16,7 +16,6 @@ import org.jspecify.annotations.NullMarked;
 
 @NullMarked
 public final class TeleportCooldownService implements AutoCloseable {
-
     private static final String PLAYER_ID_PARAM = "playerId";
     private static final String CAUSE_PARAM = "cause";
     private static final String TELEPORT_PREFIX = "teleport.";
@@ -26,6 +25,7 @@ public final class TeleportCooldownService implements AutoCloseable {
 
     private static Map<TeleportCause, String> buildActionKeys() {
         Map<TeleportCause, String> keys = new EnumMap<>(TeleportCause.class);
+
         for (TeleportCause cause : TeleportCause.values()) {
             keys.put(cause, TELEPORT_PREFIX + cause.name().toLowerCase(Locale.ROOT));
         }
@@ -85,6 +85,7 @@ public final class TeleportCooldownService implements AutoCloseable {
 
     public void clearAll(UUID playerId) {
         Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
+
         for (TeleportCause cause : TeleportCause.values()) {
             clear(playerId, cause);
         }

@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("NullAway")
 class UserCacheTest {
-
     private final UserCache cache = new UserCache();
 
     @Test

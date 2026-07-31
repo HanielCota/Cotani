@@ -7,7 +7,6 @@ import java.util.concurrent.CompletionStage;
  * Factory methods for commonly used {@link CompletionStage} instances.
  */
 public final class CompletionStages {
-
     private CompletionStages() {}
 
     /**

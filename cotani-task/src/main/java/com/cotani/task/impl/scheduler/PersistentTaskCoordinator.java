@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 final class PersistentTaskCoordinator {
-
     private final PersistentTaskStore store;
     private final NamedAsyncTaskScheduler scheduler;
     private final Clock clock;
@@ -70,6 +69,7 @@ final class PersistentTaskCoordinator {
         });
 
         lazyTask.setSetupTask(saveTask);
+
         return persistentHandle;
     }
 
@@ -78,7 +78,6 @@ final class PersistentTaskCoordinator {
     }
 
     private final class PersistentSchedulerTask implements SchedulerTask {
-
         private final PersistentTask persistentTask;
         private final LazySchedulerTask delegate;
         private final AtomicBoolean persisted = new AtomicBoolean();
@@ -126,6 +125,7 @@ final class PersistentTaskCoordinator {
             boolean changed = cancelled.compareAndSet(false, true);
             delegate.cancel();
             scheduleCancellationPersistence();
+
             return changed;
         }
 

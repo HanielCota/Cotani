@@ -13,7 +13,6 @@ import java.util.function.Supplier;
  */
 @InternalApi
 public final class NoOpMetricsRegistry implements MetricsRegistry {
-
     /**
      * Singleton instance of the no-op registry.
      */
