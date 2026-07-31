@@ -39,7 +39,7 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
     private static List<Offset> getOrComputeOffsets(int horizontal, int vertical) {
         // Candidates are clamped to the target chunk (~16x16), so radii beyond that only waste memory.
         int effectiveHorizontal = Math.min(Math.max(0, horizontal), 15);
-        int effectiveVertical = Math.min(Math.max(0, vertical), 512);
+        int effectiveVertical = Math.min(Math.max(0, vertical), 64);
         long key = (((long) effectiveHorizontal) << 32) | (effectiveVertical & 0xFFFFFFFFL);
         return OFFSET_CACHE.computeIfAbsent(key, _ -> {
             List<Offset> offsets = new ArrayList<>();
@@ -119,6 +119,7 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
         if (world == null) {
             return CompletableFuture.completedFuture(Optional.empty());
         }
+
         int chunkX = cloned.getBlockX() >> 4;
         int chunkZ = cloned.getBlockZ() >> 4;
 

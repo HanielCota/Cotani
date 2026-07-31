@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -95,6 +96,7 @@ public final class GuiPanel implements InventoryHolder {
                 renderSlot(slot);
             }
         }
+
         for (var regionRenderer : regionRenderers) {
             regionRenderer.accept(this);
         }
@@ -156,13 +158,20 @@ public final class GuiPanel implements InventoryHolder {
     void setDynamicSlot(int slot, Button button) {
         dynamicSlots.add(slot);
         buttons.put(slot, button);
-        inventory.setItem(slot, button.render(viewer));
+
+        var newItem = button.render(viewer);
+        if (!Objects.equals(inventory.getItem(slot), newItem)) {
+            inventory.setItem(slot, newItem);
+        }
     }
 
     void clearDynamicSlot(int slot) {
         dynamicSlots.add(slot);
         buttons.remove(slot);
-        inventory.setItem(slot, borderItem);
+
+        if (!Objects.equals(inventory.getItem(slot), borderItem)) {
+            inventory.setItem(slot, borderItem);
+        }
     }
 
     private void renderSlots(List<Integer> slots) {
@@ -175,7 +184,11 @@ public final class GuiPanel implements InventoryHolder {
 
     private void renderSlot(int slot) {
         var button = buttons.get(slot);
-        inventory.setItem(slot, button != null ? button.render(viewer) : borderItem);
+        var newItem = button != null ? button.render(viewer) : borderItem;
+
+        if (!Objects.equals(inventory.getItem(slot), newItem)) {
+            inventory.setItem(slot, newItem);
+        }
     }
 
     @Override
