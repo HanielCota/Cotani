@@ -2,50 +2,57 @@
 
 # Cotani
 
-**Infraestrutura modular para plugins Paper e Folia seguros e não bloqueantes.**
+**Infraestrutura componível e de alta performance para plugins Paper e Folia seguros e não bloqueantes.**
 
-Use apenas os módulos de tarefas, armazenamento, cache, configuração e gameplay que seu plugin realmente precisa.
+Construa plugins Minecraft escaláveis com limites de execução explícitos, eventos sem reflexão, interfaces reativas e persistência robusta.
 
 [![Build](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/ci.yml?branch=master&style=flat-square&logo=github&label=build)](https://github.com/HanielCota/Cotani/actions/workflows/ci.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk)](https://adoptium.net/)
 [![Paper 26.2](https://img.shields.io/badge/Paper-26.2-3f48cc?style=flat-square)](https://papermc.io/)
+[![Javadoc](https://img.shields.io/badge/docs-javadoc-0969da?style=flat-square&logo=gitbook)](https://hanielcota.github.io/Cotani/)
 [![JitPack](https://img.shields.io/jitpack/v/github/HanielCota/Cotani?style=flat-square&logo=jitpack)](https://jitpack.io/#HanielCota/Cotani)
 [![MIT](https://img.shields.io/github/license/HanielCota/Cotani?style=flat-square)](LICENSE)
 
 [English](README.md) · [Português](README.pt-BR.md)
 
-[Visão geral](#visão-geral) · [Compatibilidade](#compatibilidade) · [Instalação](#instalação) · [Escolha de módulos](#escolha-seus-módulos) · [Arquitetura](#arquitetura) · [Início rápido](#início-rápido-em-cinco-minutos) · [Solução de problemas](#solução-de-problemas)
+[Visão geral](#visão-geral) · [Compatibilidade](#compatibilidade) · [Instalação](#instalação) · [Módulos](#escolha-seus-módulos) · [Arquitetura](#arquitetura) · [Início rápido](#início-rápido-em-cinco-minutos) · [Solução de problemas](#solução-de-problemas) · [Documentação](#documentação)
+
+---
 
 </div>
 
 ## Visão geral
 
-Cotani é uma biblioteca Java 25 multimódulo para criar plugins Paper e Folia com limites de execução explícitos. Ela fornece APIs focadas em agendamento, persistência, cache, configuração e sistemas comuns de gameplay sem transformar a classe principal do plugin em um service locator.
+Cotani é um framework moderno Java 25 multimódulo projetado para desenvolvimento de plugins no ecossistema Paper e Folia. Ele elimina o estado global frágil e bloqueios da thread principal com transições explícitas de thread, APIs componíveis baseadas em `CompletionStage` e isolamento limpo de domínio.
 
 | Necessidade | Abordagem do Cotani |
-| --- | --- |
-| Thread proprietária | Transições global, region e entity com `PaperTaskScheduler` e `TaskChain` |
-| Trabalho assíncrono | APIs componíveis com `CompletionStage` e executors explícitos, sem bloqueio escondido |
-| Persistência | SQLite, MySQL e MariaDB com migrations e transações |
-| Estado | Caches baseados em Caffeine com contratos de carregamento, persistência e invalidação |
-| Lifecycle | Propriedade centralizada e encerramento não bloqueante dos recursos registrados |
-| Qualidade de API | Valores imutáveis, contratos null-safe e pacotes de implementação isolados |
+| :--- | :--- |
+| **🧵 Thread Proprietária** | Transições global, region e entity gerenciadas via `PaperTaskScheduler` e `TaskChain` |
+| **⚡ Trabalho Assíncrono** | APIs componíveis com `CompletionStage` e executors explícitos — sem bloqueios ocultos ou `join()` |
+| **💾 Persistência** | Drivers SQLite, MySQL e MariaDB com migrações automáticas de schema e executor de transações |
+| **🧠 Estado & Cache** | Caches baseados em Caffeine com dirty-tracking automático, flush em lote e contratos de invalidação |
+| **🔄 Lifecycle do Plugin** | Propriedade centralizada, descarte em ordem inversa e encerramento não bloqueante de recursos |
+| **🛡️ Qualidade de API** | Records imutáveis, null-safety rigoroso e pacotes de implementação isolados |
+
+---
 
 ## Compatibilidade
 
-| Cotani | Java | API Paper | Disponibilidade | Módulos |
-| --- | --- | --- | --- | --- |
-| `1.0.0` | 25 | 26.2 | Tag estável no JitPack | Core, task, text, item, config, storage, cache, user, economy, cooldown, teleport e event |
-| `1.1.0-SNAPSHOT` | 25 | 26.2 | Apenas código-fonte ou build por commit | Todos os módulos estáveis, além de BOM, GUI e metrics |
+| Versão do Cotani | Versão Java | API Paper | Status de Lançamento | Módulos Incluídos |
+| :--- | :---: | :---: | :--- | :--- |
+| `1.0.0` | 25 | 26.2 | Tag estável no JitPack | Core, task, text, item, config, storage, cache, user, economy, cooldown, teleport, event |
+| `1.1.0-SNAPSHOT` | 25 | 26.2 | Apenas código-fonte ou build por commit | Todos os módulos estáveis, além de BOM, GUI reativa e métricas Micrometer |
 
 > [!NOTE]
-> `1.0.0` é a versão mais recente com tag. Não use a versão literal `1.1.0` antes de essa tag ser publicada. A documentação de `master` descreve o snapshot atual; consulte a [tag `1.0.0`](https://github.com/HanielCota/Cotani/tree/1.0.0) para a API estável exata.
+> `1.0.0` é a versão mais recente com tag publicada. Não use a versão literal `1.1.0` antes de a tag ser publicada. A documentação em `master` reflete o snapshot ativo; consulte a [tag `1.0.0`](https://github.com/HanielCota/Cotani/tree/1.0.0) para a API estável de lançamento.
+
+---
 
 ## Instalação
 
-### Versão estável
+### Versão Estável (`1.0.0`)
 
-Adicione os repositórios do Paper e do JitPack e declare somente os módulos de alto nível utilizados:
+Adicione o repositório do PaperMC e do JitPack no seu script de build e declare apenas os módulos de alto nível que seu plugin utiliza:
 
 ```kotlin
 repositories {
@@ -62,17 +69,17 @@ dependencies {
 }
 ```
 
-O Gradle resolve transitivamente as dependências internas de cada módulo. Não é necessário declarar `cotani-core` quando um módulo selecionado já depende dele.
+O Gradle resolve automaticamente as dependências internas do Cotani de forma transitiva (por exemplo, `cotani-core` é importado automaticamente ao declarar `cotani-task`).
 
-### Snapshot atual e BOM
+### Snapshot Atual & Alinhamento com BOM
 
-O BOM existe no código-fonte atual, mas ainda não foi lançado. Para testá-lo sem referenciar uma versão inexistente, publique o checkout localmente:
+Para alinhar as versões de todos os módulos Cotani usando o Bill of Materials (BOM), publique o snapshot localmente:
 
 ```bash
 ./gradlew publishToMavenLocal
 ```
 
-Depois consuma o snapshot local:
+Depois consuma o BOM alinhado no seu plugin:
 
 ```kotlin
 repositories {
@@ -85,44 +92,64 @@ dependencies {
     implementation(platform("com.cotani:cotani-bom:1.1.0-SNAPSHOT"))
     implementation("com.cotani:cotani-task")
     implementation("com.cotani:cotani-storage")
+    implementation("com.cotani:cotani-gui")
 }
 ```
 
 > [!IMPORTANT]
-> Os módulos Cotani são bibliotecas, não plugins de servidor independentes. Inclua-os e faça relocation dentro do seu plugin, exceto quando seu ambiente os fornecer deliberadamente de outra forma.
+> Os módulos Cotani são bibliotecas, não plugins de servidor independentes. Faça o shadow e relocation de `com.cotani` (e `net.cotani` caso use métricas) para o namespace privado do seu plugin usando o Gradle Shadow.
 
-## Escolha seus módulos
+---
 
-Declare o módulo que corresponde à capacidade desejada; as dependências internas do Cotani serão incluídas transitivamente.
+## Escolha seus Módulos
 
-| Eu preciso… | Declare | Disponibilidade |
-| --- | --- | --- |
-| Gerenciar somente o lifecycle de recursos | `cotani-core` | `1.0.0` |
-| Agendar trabalho async, global, region ou entity | `cotani-task` | `1.0.0` |
-| Formatar textos Adventure e MiniMessage | `cotani-text` | `1.0.0` |
-| Construir itens Paper com API fluente | `cotani-item` | `1.0.0` |
-| Vincular e recarregar YAML como records imutáveis | `cotani-config` | `1.0.0` |
-| Usar SQLite, MySQL ou MariaDB com migrations | `cotani-storage` | `1.0.0` |
-| Manter cache genérico ou associado a jogadores | `cotani-cache` | `1.0.0` |
-| Resolver usuários e gerenciar sessões | `cotani-user` | `1.0.0` |
-| Executar operações econômicas idempotentes | `cotani-economy` | `1.0.0` |
-| Adquirir cooldowns locais ou distribuídos | `cotani-cooldown` | `1.0.0` |
-| Executar pipelines protegidos de teleporte | `cotani-teleport` | `1.0.0` |
-| Despachar eventos de domínio sem reflexão | `cotani-event` | `1.0.0` |
-| Criar interfaces de inventário reativas | `cotani-gui` | `1.1.0-SNAPSHOT` |
-| Exportar métricas Micrometer e Prometheus | `cotani-metrics` | `1.1.0-SNAPSHOT` |
-| Alinhar as versões de todos os módulos | `cotani-bom` | `1.1.0-SNAPSHOT` |
+Declare apenas os módulos necessários para o seu conjunto de funcionalidades; as dependências transitivas são incluídas automaticamente.
 
-Cada módulo estável possui seu próprio guia na [referência de módulos](#referência-de-módulos).
+### 🧱 Fundação & Execução
+
+| Módulo | Capacidade | Disponibilidade |
+| :--- | :--- | :---: |
+| [`cotani-core`](cotani-core/README.md) | Lifecycle centralizado do plugin e descarte seguro de recursos | `1.0.0` |
+| [`cotani-task`](cotani-task/README.md) | Agendamento async, global, region e entity com o fluente `TaskChain` | `1.0.0` |
+| [`cotani-text`](cotani-text/README.md) | Parsing de MiniMessage, envio para audiências e resolução de placeholders | `1.0.0` |
+| [`cotani-item`](cotani-item/README.md) | Builders fluentes de itens, armaduras e cabeças com data components do Paper 1.21+ | `1.0.0` |
+
+### ⚙️ Infraestrutura & Persistência
+
+| Módulo | Capacidade | Disponibilidade |
+| :--- | :--- | :---: |
+| [`cotani-config`](cotani-config/README.md) | Mapeamento de YAML para records imutáveis com validação de restrições e reload async | `1.0.0` |
+| [`cotani-storage`](cotani-storage/README.md) | Consultas SQLite, MySQL e MariaDB, migrações de schema e transações | `1.0.0` |
+| [`cotani-cache`](cotani-cache/README.md) | Caches baseados em Caffeine com dirty-tracking automático e persistência | `1.0.0` |
+
+### 🎮 Sistemas de Gameplay & Domínio
+
+| Módulo | Capacidade | Disponibilidade |
+| :--- | :--- | :---: |
+| [`cotani-user`](cotani-user/README.md) | Carregamento assíncrono de perfis, cache online e gerenciamento de sessões | `1.0.0` |
+| [`cotani-economy`](cotani-economy/README.md) | Economia exata com `BigDecimal`, transações atômicas e garantias de idempotência | `1.0.0` |
+| [`cotani-cooldown`](cotani-cooldown/README.md) | Limites de cooldown locais e distribuídos em SQL com limpeza automática | `1.0.0` |
+| [`cotani-teleport`](cotani-teleport/README.md) | Pipelines de teleporte orientados a políticas com checagem de perigos, tags de combate e delays | `1.0.0` |
+| [`cotani-event`](cotani-event/README.md) | Event Bus de alta performance e livre de reflexão com despacho por prioridades | `1.0.0` |
+| [`cotani-gui`](cotani-gui/README.md) | Interfaces declarativas de inventário com estado reativo, paginação e proteção contra exploits | `1.1.0-SNAPSHOT` |
+
+### 📊 Operações & Ferramentas
+
+| Módulo | Capacidade | Disponibilidade |
+| :--- | :--- | :---: |
+| [`cotani-metrics`](cotani-metrics/README.md) | Coletor de métricas Micrometer com exportação opcional via HTTP Prometheus | `1.1.0-SNAPSHOT` |
+| [`cotani-bom`](cotani-bom/README.md) | Bill of Materials para alinhamento de versões de todos os módulos | `1.1.0-SNAPSHOT` |
+
+---
 
 ## Arquitetura
 
-Cotani é organizado em camadas. Módulos de funcionalidades compõem infraestrutura e fundação em vez de depender de estado global.
+O Cotani é organizado em camadas arquiteturais limpas. Módulos de funcionalidades compõem componentes de infraestrutura e fundação em vez de depender de singletons globais mutáveis.
 
 ```mermaid
 flowchart TB
-    Plugin["Seu plugin Paper / Folia"]
-    Features["Funcionalidades<br/>user · economy · teleport · cooldown<br/>event · gui · metrics"]
+    Plugin["Seu Plugin Paper / Folia"]
+    Features["Gameplay & Domínio<br/>user · economy · teleport · cooldown · event · gui · metrics"]
     Infrastructure["Infraestrutura<br/>config · storage · cache"]
     Foundation["Fundação<br/>core · task · text · item"]
     Runtime["Runtime Paper / Folia"]
@@ -130,25 +157,21 @@ flowchart TB
     Plugin --> Features
     Plugin --> Infrastructure
     Plugin --> Foundation
-    Features -->|compõem quando necessário| Infrastructure
+    Features -->|compõem| Infrastructure
     Features -->|usam| Foundation
     Infrastructure -->|usa| Foundation
     Foundation -->|respeita a thread proprietária| Runtime
 ```
 
-A [referência completa de arquitetura](docs/architecture.md) contém o grafo real de dependências Gradle e a sequência de runtime entre I/O assíncrono e a thread global, de região ou de entidade.
+Consulte a [referência completa de arquitetura](docs/architecture.md) para visualizar o grafo completo de dependências e os diagramas de sequência de fronteiras de thread.
 
-## Início rápido em cinco minutos
+---
 
-Este exemplo cria um plugin sombreado com o comando `/cotanihello`. O comando captura o UUID do jogador, delega para um serviço e retorna pelo entity scheduler do Cotani antes de acessar o Paper.
+## Início Rápido em Cinco Minutos
+
+Este guia configura um plugin Paper com shadow que lê dados do jogador de forma assíncrona e retorna de maneira segura para a entity thread do jogador antes de alterar o estado do jogo.
 
 ### 1. Configure o Gradle
-
-`settings.gradle.kts`:
-
-```kotlin
-rootProject.name = "cotani-quick-start"
-```
 
 `build.gradle.kts`:
 
@@ -187,13 +210,9 @@ tasks.build {
 }
 ```
 
-Este início rápido fixa um commit atual porque o lifecycle não bloqueante com `closeAsync()` mostrado abaixo foi adicionado depois de `1.0.0`. Substitua o commit por `1.1.0` quando essa versão receber uma tag.
+### 2. Descreva o Plugin
 
-Se você adicionar `cotani-metrics`, também faça relocation de `net.cotani` para o namespace privado do plugin.
-
-### 2. Descreva o plugin
-
-Crie `src/main/resources/plugin.yml`:
+`src/main/resources/plugin.yml`:
 
 ```yaml
 name: CotaniQuickStart
@@ -207,28 +226,47 @@ commands:
     usage: /cotanihello
 ```
 
-### 3. Adicione a classe do plugin
+### 3. Adicione a Classe Principal do Plugin
 
-Copie o [`CotaniQuickStartPlugin` verificado por compilação](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java). Ele demonstra uma classe de lifecycle fina, injeção por construtor, um comando fino e uma tarefa entity nomeada sem armazenar um `Player` vivo em estado assíncrono.
+Utilize o [`CotaniQuickStartPlugin` verificado por compilação](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java). Ele demonstra controle fino de lifecycle, injeção por construtor e transições seguras para tarefas de entidade:
 
-### 4. Compile e execute
+```java
+public final class CotaniQuickStartPlugin extends JavaPlugin {
 
-```bash
-./gradlew shadowJar
+    private Cotani cotani;
+    private PaperTaskScheduler scheduler;
+
+    @Override
+    public void onEnable() {
+        this.scheduler = SchedulerFactory.create(this);
+        this.cotani = Cotani.forPlugin(this)
+            .withAsync(scheduler::closeAsync)
+            .build();
+    }
+
+    @Override
+    public void onDisable() {
+        if (cotani != null) {
+            cotani.closeAsync().exceptionally(error -> {
+                getLogger().log(Level.SEVERE, "Erro ao encerrar Cotani", error);
+                return null;
+            });
+        }
+    }
+}
 ```
 
-Copie o JAR de `build/libs` para o diretório `plugins` do servidor, inicie o Paper e execute `/cotanihello` como jogador.
+### 4. Transição Async para a Entity Thread
 
-### Padrão async para entity thread
-
-Quando o resultado assíncrono de um serviço precisar interagir com um jogador, mantenha o UUID e retorne por `TaskChain`:
+Quando uma consulta ou serviço assíncrono for concluído, retenha o `UUID` do jogador e transite de volta para a thread da entidade utilizando `TaskChain`:
 
 ```java
 UUID playerId = player.getUniqueId();
 CompletionStage<String> messageStage = messageService.loadAsync(playerId);
 
-var _ = scheduler.chain(messageStage)
+scheduler.chain(messageStage)
     .consumeEntity(playerId, message -> {
+        // Seguro para interagir com objetos Bukkit/Paper na thread do jogador
         var onlinePlayer = Bukkit.getPlayer(playerId);
         if (onlinePlayer != null) {
             onlinePlayer.sendMessage(Component.text(message));
@@ -237,57 +275,43 @@ var _ = scheduler.chain(messageStage)
     .toCompletionStage()
     .whenComplete((_, failure) -> {
         if (failure != null) {
-            logger.log(Level.SEVERE, "Could not message player " + playerId, failure);
+            logger.log(Level.SEVERE, "Não foi possível enviar mensagem ao jogador " + playerId, failure);
         }
     });
 ```
 
 > [!WARNING]
-> Nunca use `join()`, `get()` ou `Thread.sleep(...)` no código da aplicação. Nunca capture objetos vivos como `Player`, `World`, `Entity`, `Inventory` ou `Block` em fluxos assíncronos.
+> Nunca chame `join()`, `get()` ou `Thread.sleep(...)` em código de servidor. Nunca carregue objetos vivos como `Player`, `World`, `Entity`, `Inventory` ou `Block` através de fronteiras assíncronas.
 
-## Solução de problemas
+---
 
-| Sintoma | Causa provável | Correção |
-| --- | --- | --- |
-| JitPack não resolve `1.1.0` | A versão ainda é snapshot | Use `1.0.0`, um build por commit ou publique o snapshot localmente |
-| O primeiro build de um commit no JitPack expira | O JitPack está compilando o commit sob demanda | Tente uma vez após o build remoto terminar ou use `publishToMavenLocal` |
-| `NoClassDefFoundError: com/cotani/...` | O JAR sem shadow foi instalado | Compile e instale a saída de `shadowJar` |
-| Aparece async-catcher ou erro de thread | Bukkit/Paper foi acessado em código async | Carregue UUIDs e retorne com agendamento `global`, `region` ou `entity` |
-| O servidor trava durante um comando ou evento | Uma future ou operação de I/O bloqueou a thread proprietária | Componha com `CompletionStage`; remova `join()`, `get()` e I/O síncrono |
-| A GUI abre, mas os cliques são ignorados | `CotaniGuiModule` não foi registrado | Siga o [guia de bootstrap do `cotani-gui`](cotani-gui/README.md) |
-| Testes de integração com banco não iniciam | Docker não está disponível | Inicie o Docker, valide `docker info` e execute `./gradlew integrationTest` novamente |
+## Solução de Problemas
 
-## Referência de módulos
+| Sintoma | Causa Provável | Solução |
+| :--- | :--- | :--- |
+| JitPack não resolve `1.1.0` | A versão de tag ainda não foi publicada | Use a estável `1.0.0`, build por hash de commit ou publique localmente com `publishToMavenLocal` |
+| `NoClassDefFoundError: com/cotani/...` | JAR sem shadow instalado no servidor | Compile e instale a saída do `shadowJar` com relocation configurado |
+| Exceção de async-catcher ou thread incorreta | API Bukkit acessada dentro de lambda assíncrono | Capture `UUID`s e retorne via `scheduler.chain(...).consumeEntity(...)` |
+| Servidor congela durante comandos | Chamada bloqueante (`join()`, `get()`, I/O) na main thread | Componha com `CompletionStage`; elimine chamadas síncronas de banco de dados ou arquivos |
+| GUI abre, mas os cliques são ignorados | `CotaniGuiModule` não foi registrado | Registre `CotaniGuiModule.create(plugin)` dentro de `Cotani.forPlugin(plugin)` |
+| Testes de integração de banco não iniciam | Docker não está disponível | Inicie o daemon do Docker e valide com `docker info` antes de executar `./gradlew integrationTest` |
 
-| Módulo | Finalidade |
-| --- | --- |
-| [`cotani-core`](cotani-core/README.md) | Propriedade do lifecycle e encerramento coordenado de recursos |
-| [`cotani-task`](cotani-task/README.md) | Agendamento async, global, region e entity com `TaskChain` |
-| [`cotani-storage`](cotani-storage/README.md) | SQLite, MySQL, MariaDB, migrations e transações |
-| [`cotani-cache`](cotani-cache/README.md) | Caches de dados e jogadores baseados em Caffeine com persistência |
-| [`cotani-config`](cotani-config/README.md) | Binding de YAML para records imutáveis, validação e reload async |
-| [`cotani-user`](cotani-user/README.md) | Resolução assíncrona de usuários e lifecycle de sessões |
-| [`cotani-economy`](cotani-economy/README.md) | Operações econômicas precisas, idempotentes e auditáveis |
-| [`cotani-teleport`](cotani-teleport/README.md) | Pipelines de teleporte orientados a políticas e verificações de segurança |
-| [`cotani-cooldown`](cotani-cooldown/README.md) | Aquisição de cooldowns locais e distribuídos |
-| [`cotani-event`](cotani-event/README.md) | Eventos e inscrições sem reflexão |
-| [`cotani-gui`](cotani-gui/README.md) | Interfaces declarativas de inventário com estado reativo e proteção contra exploits |
-| [`cotani-metrics`](cotani-metrics/README.md) | Métricas Micrometer e exportação Prometheus opcional |
-| [`cotani-text`](cotani-text/README.md) | Utilitários de formatação Adventure e MiniMessage |
-| [`cotani-item`](cotani-item/README.md) | Builders fluentes de itens com data components do Paper |
+---
 
-## Documentação
+## Documentação & Recursos
 
-- [Cookbook do Cotani](docs/ai/cotani-cookbook.md) — receitas completas para plugins
-- [Arquitetura completa](docs/architecture.md) — dependências reais e limites de execução
-- [Contratos das APIs assíncronas](docs/async-contracts.md) — semântica de execução e falhas
-- [Migração do Cotani 1.x](docs/migration-1.x.md) — orientações de compatibilidade
-- [Exemplos verificados por compilação](docs-examples/src/main/java/com/cotani/examples/CotaniExamples.java) — exemplos validados pelo build
-- [Exemplos de plugin de demonstração](docs-examples/src/main/java/com/cotani/examples/showcase/ShowcasePlugin.java) — implementação de plugin de referência completo
+- 📖 **[Cookbook do Cotani](docs/ai/cotani-cookbook.md)** — Receitas práticas para padrões comuns em plugins Paper
+- 🌐 **[Documentação da API (Javadoc)](https://hanielcota.github.io/Cotani/)** — Referência agregada de Javadocs de todos os módulos
+- 💡 **[Exemplos de Plugin Showcase](docs-examples/src/main/java/com/cotani/examples/showcase/ShowcasePlugin.java)** — Implementação de referência completa e verificada por compilação
+- 🏗️ **[Referência de Arquitetura](docs/architecture.md)** — Grafos de dependências do Gradle e limites de execução
+- 📜 **[Contratos de APIs Assíncronas](docs/async-contracts.md)** — Garantias de execução não bloqueante e tratamento de erros
+- 🔄 **[Notas de Migração 1.x](docs/migration-1.x.md)** — Guia de atualização com compatibilidade de código-fonte
+
+---
 
 ## Desenvolvimento
 
-Clone o repositório e execute as verificações com o wrapper incluído:
+Clone o repositório e execute todas as validações utilizando o wrapper do Gradle incluído:
 
 ```bash
 git clone https://github.com/HanielCota/Cotani.git
@@ -296,10 +320,11 @@ cd Cotani
 ./gradlew check
 ```
 
-`check` executa testes unitários, validação de formatação, Error Prone, NullAway, exemplos de documentação e regras de fronteira entre módulos. As suítes de banco com Docker são separadas:
+O comando `check` executa testes unitários, validação de formatação de código com Palantir, Error Prone, NullAway, exemplos de documentação verificados e regras de fronteiras arquiteturais. As suítes de banco com Docker são executadas separadamente:
 
 ```bash
 ./gradlew integrationTest
 ```
 
-Leia o [fluxo de contribuição](CONTRIBUTING.md), a [política de segurança](SECURITY.md) e as [regras de engenharia](AGENTS.md) antes de enviar alterações.
+Consulte o [Guia de Contribuição](CONTRIBUTING.md), a [Política de Segurança](SECURITY.md) e as [Regras de Engenharia](AGENTS.md) antes de enviar contribuições.
+
