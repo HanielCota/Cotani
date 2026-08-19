@@ -241,7 +241,7 @@ public final class DefaultHologram implements Hologram {
             return;
         }
 
-        entityIds.clear();
+        despawnSync();
         double currentY = baseLocation.getY();
 
         // Spawn lines from top to bottom
@@ -265,8 +265,14 @@ public final class DefaultHologram implements Hologram {
         }
 
         if (clickable && !lines.isEmpty()) {
-            double totalHeight = Math.max(0.5, baseLocation.getY() - currentY);
-            var interactionLocation = baseLocation.clone().add(0, -totalHeight / 2.0, 0);
+            double totalHeight = Math.max(0.5, (baseLocation.getY() - currentY) + 0.2);
+            var interactionLocation = new Location(
+                    world,
+                    baseLocation.getX(),
+                    currentY,
+                    baseLocation.getZ(),
+                    baseLocation.getYaw(),
+                    baseLocation.getPitch());
             var interaction = (Interaction) world.spawnEntity(interactionLocation, EntityType.INTERACTION);
             interaction.setInteractionWidth(1.2f);
             interaction.setInteractionHeight((float) totalHeight);

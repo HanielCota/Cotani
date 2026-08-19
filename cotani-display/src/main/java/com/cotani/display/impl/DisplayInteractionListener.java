@@ -90,6 +90,9 @@ public final class DisplayInteractionListener implements Listener {
 
     private boolean isDebounced(UUID playerId) {
         long now = System.nanoTime();
+        if (lastClickNanos.size() > 500) {
+            lastClickNanos.entrySet().removeIf(entry -> (now - entry.getValue()) > 5_000_000_000L);
+        }
         Long previous = lastClickNanos.put(playerId, now);
         return previous != null && (now - previous) < DEBOUNCE_NANOS;
     }
