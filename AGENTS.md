@@ -316,6 +316,13 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 - Close `Property.Subscription`s when disposing panels; `GuiPanel` already does this on close.
 - Do not bypass `AntiExploitGuard`; it cancels every interaction with Cotani top inventories and enforces click debounce.
 
+### cotani-display
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniDisplays.create(plugin, scheduler))`.
+- Build holograms with `displays.holograms().builder(...)` and spawn with `spawnAsync(location)`; never manipulate `Display` entities across async threads.
+- All spawned display entities are marked with `setPersistent(false)` automatically to prevent orphaned entities across server restarts.
+- Use `Hologram.updateLineAsync(...)` for live updates on the Folia region thread.
+
 ## Anti-patterns by module
 
 | Module | Do not | Do instead |
@@ -332,6 +339,7 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 | economy | reuse the same `EconomyOperationId` for different operations | one unique id per logical operation |
 | teleport | call `player.teleport(...)` directly | use `TeleportService.teleport(...)` |
 | teleport | ignore `TeleportResult.Failure` | handle failure reason and notify player |
+| display | touch `Display` entities on async threads | use `spawnAsync` / `updateLineAsync` via region scheduler |
 
 ## Agent Cookbook
 
