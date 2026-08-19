@@ -274,6 +274,7 @@ public final class DefaultHologram implements Hologram {
                     baseLocation.getYaw(),
                     baseLocation.getPitch());
             var interaction = (Interaction) world.spawnEntity(interactionLocation, EntityType.INTERACTION);
+            interaction.setPersistent(false);
             interaction.setInteractionWidth(1.2f);
             interaction.setInteractionHeight((float) totalHeight);
             interaction.setResponsive(true);
@@ -288,6 +289,7 @@ public final class DefaultHologram implements Hologram {
         return switch (line) {
             case TextLine textLine -> {
                 var textDisplay = (TextDisplay) world.spawnEntity(location, EntityType.TEXT_DISPLAY);
+                textDisplay.setPersistent(false);
                 textDisplay.text(textLine.text());
                 textDisplay.setBillboard(textLine.billboard().toBukkit());
                 textDisplay.setShadowed(textLine.shadow());
@@ -307,6 +309,7 @@ public final class DefaultHologram implements Hologram {
             }
             case ItemLine itemLine -> {
                 var itemDisplay = (ItemDisplay) world.spawnEntity(location, EntityType.ITEM_DISPLAY);
+                itemDisplay.setPersistent(false);
                 itemDisplay.setItemStack(itemLine.item());
                 itemDisplay.setItemDisplayTransform(itemLine.itemTransform());
                 itemDisplay.setBillboard(itemLine.billboard().toBukkit());
@@ -322,6 +325,7 @@ public final class DefaultHologram implements Hologram {
             }
             case BlockLine blockLine -> {
                 var blockDisplay = (BlockDisplay) world.spawnEntity(location, EntityType.BLOCK_DISPLAY);
+                blockDisplay.setPersistent(false);
                 blockDisplay.setBlock(blockLine.blockData());
                 blockDisplay.setBillboard(blockLine.billboard().toBukkit());
                 blockDisplay.setViewRange(blockLine.viewRange());
