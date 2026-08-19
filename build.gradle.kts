@@ -425,22 +425,18 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                 <title>Cotani — API Documentation</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com">
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+                <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
                 <style>
                     :root {
-                        --bg: #090d16;
-                        --bg-card: #111827;
-                        --bg-card-hover: #172033;
-                        --border: #1f293d;
-                        --border-hover: #3b82f6;
-                        --text: #f3f4f6;
-                        --text-muted: #9ca3af;
-                        --accent-blue: #3b82f6;
-                        --accent-cyan: #06b6d4;
-                        --accent-indigo: #6366f1;
-                        --accent-emerald: #10b981;
-                        --accent-amber: #f59e0b;
-                        --radius: 14px;
+                        --bg: #09090b;
+                        --bg-card: #121215;
+                        --bg-card-hover: #18181b;
+                        --border: #27272a;
+                        --border-hover: #52525b;
+                        --text: #fafafa;
+                        --text-muted: #a1a1aa;
+                        --text-subtle: #71717a;
+                        --radius: 12px;
                     }
                     * { box-sizing: border-box; margin: 0; padding: 0; }
                     body {
@@ -451,47 +447,47 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                         display: flex;
                         flex-direction: column;
                         line-height: 1.6;
-                        background-image: 
-                            radial-gradient(circle at 15% 10%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
-                            radial-gradient(circle at 85% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 40%);
+                        background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
                     }
                     .container {
                         max-width: 1200px;
                         margin: 0 auto;
-                        padding: 48px 24px;
+                        padding: 56px 24px;
                         width: 100%;
                     }
                     header {
                         text-align: center;
-                        margin-bottom: 48px;
+                        margin-bottom: 52px;
                     }
                     .hero-tag {
                         display: inline-flex;
                         align-items: center;
                         gap: 8px;
                         padding: 6px 16px;
-                        background: rgba(59, 130, 246, 0.1);
-                        border: 1px solid rgba(59, 130, 246, 0.25);
+                        background: rgba(255, 255, 255, 0.04);
+                        border: 1px solid rgba(255, 255, 255, 0.12);
                         border-radius: 9999px;
-                        font-size: 0.85rem;
+                        font-size: 0.82rem;
                         font-weight: 600;
-                        color: #60a5fa;
-                        margin-bottom: 20px;
+                        color: #e4e4e7;
+                        letter-spacing: 0.02em;
+                        margin-bottom: 24px;
                     }
                     h1 {
-                        font-size: 3rem;
+                        font-size: 3.2rem;
                         font-weight: 800;
-                        letter-spacing: -0.03em;
-                        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #60a5fa 100%);
+                        letter-spacing: -0.04em;
+                        background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
                         -webkit-background-clip: text;
                         -webkit-text-fill-color: transparent;
                         margin-bottom: 16px;
                     }
                     .subtitle {
-                        font-size: 1.15rem;
+                        font-size: 1.12rem;
                         color: var(--text-muted);
-                        max-width: 680px;
+                        max-width: 660px;
                         margin: 0 auto 32px;
+                        font-weight: 400;
                     }
                     .nav-links {
                         display: flex;
@@ -503,30 +499,31 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                         display: inline-flex;
                         align-items: center;
                         gap: 8px;
-                        padding: 10px 20px;
+                        padding: 10px 22px;
                         border-radius: 10px;
-                        font-size: 0.92rem;
+                        font-size: 0.9rem;
                         font-weight: 600;
                         text-decoration: none;
-                        transition: all 0.2s ease;
+                        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
                     }
                     .nav-btn-primary {
-                        background: linear-gradient(135deg, #2563eb, #3b82f6);
-                        color: #ffffff;
-                        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+                        background: #ffffff;
+                        color: #09090b;
+                        box-shadow: 0 2px 10px rgba(255, 255, 255, 0.12);
                     }
                     .nav-btn-primary:hover {
+                        background: #e4e4e7;
                         transform: translateY(-1px);
-                        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+                        box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
                     }
                     .nav-btn-secondary {
-                        background: var(--bg-card);
-                        color: var(--text);
+                        background: #18181b;
+                        color: #f4f4f5;
                         border: 1px solid var(--border);
                     }
                     .nav-btn-secondary:hover {
-                        background: var(--bg-card-hover);
-                        border-color: #4b5563;
+                        background: #27272a;
+                        border-color: #52525b;
                         transform: translateY(-1px);
                     }
                     .controls {
@@ -545,7 +542,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                     .search-bar {
                         position: relative;
                         flex: 1;
-                        max-width: 420px;
+                        max-width: 440px;
                     }
                     .search-bar input {
                         width: 100%;
@@ -555,20 +552,23 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                         border-radius: 10px;
                         color: var(--text);
                         font-family: inherit;
-                        font-size: 0.95rem;
+                        font-size: 0.92rem;
                         transition: all 0.2s ease;
+                    }
+                    .search-bar input::placeholder {
+                        color: var(--text-subtle);
                     }
                     .search-bar input:focus {
                         outline: none;
-                        border-color: var(--accent-blue);
-                        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+                        border-color: #71717a;
+                        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
                     }
                     .search-icon {
                         position: absolute;
                         left: 14px;
                         top: 50%;
                         transform: translateY(-50%);
-                        color: var(--text-muted);
+                        color: var(--text-subtle);
                         pointer-events: none;
                     }
                     .filter-tabs {
@@ -585,12 +585,18 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                         font-size: 0.85rem;
                         font-weight: 600;
                         cursor: pointer;
-                        transition: all 0.2s ease;
+                        transition: all 0.15s ease;
                     }
-                    .filter-tab:hover, .filter-tab.active {
-                        background: rgba(59, 130, 246, 0.15);
-                        color: #60a5fa;
-                        border-color: rgba(59, 130, 246, 0.4);
+                    .filter-tab:hover {
+                        background: #18181b;
+                        color: #ffffff;
+                        border-color: #3f3f46;
+                    }
+                    .filter-tab.active {
+                        background: #ffffff;
+                        color: #09090b;
+                        border-color: #ffffff;
+                        font-weight: 700;
                     }
                     .grid {
                         display: grid;
@@ -606,15 +612,14 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                         flex-direction: column;
                         text-decoration: none;
                         color: inherit;
-                        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+                        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
                         position: relative;
-                        overflow: hidden;
                     }
                     .card:hover {
                         background: var(--bg-card-hover);
                         border-color: var(--border-hover);
-                        transform: translateY(-3px);
-                        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.15);
+                        transform: translateY(-2px);
+                        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
                     }
                     .card-header {
                         display: flex;
@@ -623,40 +628,41 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                         margin-bottom: 16px;
                     }
                     .card-icon {
-                        font-size: 1.75rem;
-                        width: 44px;
-                        height: 44px;
+                        font-size: 1.6rem;
+                        width: 42px;
+                        height: 42px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         background: rgba(255, 255, 255, 0.04);
                         border-radius: 10px;
-                        border: 1px solid rgba(255, 255, 255, 0.06);
+                        border: 1px solid rgba(255, 255, 255, 0.08);
                     }
                     .badge {
                         font-size: 0.72rem;
                         font-weight: 700;
                         text-transform: uppercase;
-                        letter-spacing: 0.05em;
+                        letter-spacing: 0.06em;
                         padding: 4px 10px;
                         border-radius: 6px;
+                        background: rgba(255, 255, 255, 0.06);
+                        color: #e4e4e7;
+                        border: 1px solid rgba(255, 255, 255, 0.12);
                     }
-                    .badge-Foundation { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-                    .badge-Infrastructure { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-                    .badge-Gameplay { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-                    .badge-Operations { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
                     .card-title {
                         font-size: 1.25rem;
                         font-weight: 700;
                         font-family: 'JetBrains Mono', monospace;
                         color: #ffffff;
                         margin-bottom: 8px;
+                        letter-spacing: -0.02em;
                     }
                     .card-desc {
                         font-size: 0.92rem;
                         color: var(--text-muted);
                         flex-grow: 1;
                         margin-bottom: 20px;
+                        line-height: 1.55;
                     }
                     .card-footer {
                         display: flex;
@@ -664,29 +670,32 @@ abstract class GenerateJavadocIndex : DefaultTask() {
                         justify-content: space-between;
                         font-size: 0.85rem;
                         font-weight: 600;
-                        color: #60a5fa;
+                        color: #e4e4e7;
                         padding-top: 14px;
                         border-top: 1px solid rgba(255, 255, 255, 0.06);
                     }
                     .arrow {
-                        transition: transform 0.2s ease;
+                        color: #a1a1aa;
+                        transition: transform 0.2s ease, color 0.2s ease;
                     }
                     .card:hover .arrow {
                         transform: translateX(4px);
+                        color: #ffffff;
                     }
                     footer {
                         margin-top: auto;
-                        padding: 40px 24px;
+                        padding: 48px 24px;
                         text-align: center;
                         font-size: 0.88rem;
-                        color: var(--text-muted);
+                        color: var(--text-subtle);
                         border-top: 1px solid var(--border);
                     }
                     footer a {
-                        color: #60a5fa;
+                        color: #d4d4d8;
                         text-decoration: none;
                     }
                     footer a:hover {
+                        color: #ffffff;
                         text-decoration: underline;
                     }
                 </style>
@@ -694,7 +703,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             <body>
                 <div class="container">
                     <header>
-                        <div class="hero-tag">✨ Cotani Framework v1.1.0 · Java 25 · Paper 26.2</div>
+                        <div class="hero-tag">Cotani Framework v1.1.0 · Java 25 · Paper 26.2</div>
                         <h1>Cotani API Documentation</h1>
                         <p class="subtitle">Official API javadocs for modular Paper & Folia plugin architecture with non-blocking execution and clear contracts.</p>
                         <div class="nav-links">
