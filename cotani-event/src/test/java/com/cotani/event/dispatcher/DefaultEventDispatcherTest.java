@@ -201,7 +201,7 @@ final class DefaultEventDispatcherTest {
     @Test
     void shouldTimeoutSlowListenerAndContinueWhenPolicyUnsubscribes() throws Exception {
         EventExceptionHandler handler = mock(EventExceptionHandler.class);
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newCachedThreadPool();
         try {
             DefaultEventDispatcher dispatcher =
                     new DefaultEventDispatcher(handler, executor, new EventDispatchPolicy(Duration.ofMillis(20), true));
@@ -235,7 +235,7 @@ final class DefaultEventDispatcherTest {
     @Test
     void shouldKeepSubscriptionActiveWhenPolicyDoesNotUnsubscribeOnTimeout() throws Exception {
         EventExceptionHandler handler = mock(EventExceptionHandler.class);
-        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ExecutorService executor = Executors.newCachedThreadPool();
         try {
             DefaultEventDispatcher dispatcher = new DefaultEventDispatcher(
                     handler, executor, new EventDispatchPolicy(Duration.ofMillis(20), false));
