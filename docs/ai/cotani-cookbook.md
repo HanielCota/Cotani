@@ -340,6 +340,29 @@ public void openRecyclerMenu(Player player) {
 
 ---
 
+## 13. Interactive Display Entity Hologram
+
+```java
+public void spawnServerWelcomeHologram(Location location, DisplayModule displays) {
+    displays.holograms().builder("spawn_welcome")
+        .billboard(DisplayBillboard.CENTER)
+        .lineSpacing(0.28)
+        .addItemLine(new ItemStack(Material.NETHER_STAR), 1.2f)
+        .addLine("<gold><bold>COTANI NETWORK</bold></gold>")
+        .addLine("<gray>Welcome to the server!</gray>")
+        .addLine("<yellow>Click to open the main menu</yellow>")
+        .onClick((player, hologram, clickType) -> {
+            player.sendMessage(Component.text("Opening main menu..."));
+        })
+        .spawnAsync(location)
+        .thenAccept(hologram -> {
+            // Spawned safely on the Folia/Paper region thread
+        });
+}
+```
+
+---
+
 ## Checklist for every recipe
 
 - [ ] No `join()`, `get()` or `Thread.sleep(...)` in application code.
@@ -348,3 +371,4 @@ public void openRecyclerMenu(Player player) {
 - [ ] Async results are composed through `CompletionStage` or `TaskChain`.
 - [ ] Domain exceptions are handled in `whenComplete` or `exceptionallyCompose`.
 - [ ] Resources created at startup are registered in `Cotani`.
+

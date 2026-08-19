@@ -21,6 +21,7 @@ flowchart LR
     teleport["teleport"]
     event["event"]
     gui["gui"]
+    display["display"]
     metrics["metrics"]
 
     task --> core
@@ -58,6 +59,10 @@ flowchart LR
     event --> core
     gui --> text
     gui --> item
+    display --> core
+    display --> task
+    display --> text
+    display --> item
     metrics --> task
     metrics --> config
     metrics --> storage
@@ -71,7 +76,7 @@ flowchart LR
 | Lifecycle | `core` | Own and close resources without acting as a service locator |
 | Execution and presentation | `task`, `text`, `item` | Thread transitions, messages and item construction |
 | Infrastructure | `config`, `storage`, `cache` | Configuration, persistence and state coordination |
-| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui` | Reusable plugin use cases and user-facing behavior |
+| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display` | Reusable plugin use cases and user-facing behavior |
 | Operations | `metrics` | Runtime measurements and optional Prometheus export |
 
 ## Runtime execution boundary

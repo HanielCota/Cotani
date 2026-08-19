@@ -6,6 +6,7 @@ dependencies {
         api(project(":config"))
         api(project(":cooldown"))
         api(project(":core"))
+        api(project(":display"))
         api(project(":economy"))
         api(project(":event"))
         api(project(":gui"))

@@ -31,6 +31,7 @@ include(
     "event",
     "metrics",
     "gui",
+    "display",
     "examples"
 )
 
@@ -49,4 +50,5 @@ project(":cooldown").projectDir = file("cotani-cooldown")
 project(":event").projectDir = file("cotani-event")
 project(":metrics").projectDir = file("cotani-metrics")
 project(":gui").projectDir = file("cotani-gui")
+project(":display").projectDir = file("cotani-display")
 project(":examples").projectDir = file("docs-examples")

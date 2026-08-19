@@ -132,6 +132,7 @@ Declare only the modules required for your feature set; transitive dependencies 
 | [`cotani-teleport`](cotani-teleport/README.md) | Policy-driven teleport pipelines with hazard checks, combat tags & delays | `1.0.0` |
 | [`cotani-event`](cotani-event/README.md) | Reflection-free, high-performance event bus with priority dispatching | `1.0.0` |
 | [`cotani-gui`](cotani-gui/README.md) | Reactive inventory UIs with declarative structure, pagination & anti-dupe guards | `1.1.0-SNAPSHOT` |
+| [`cotani-display`](cotani-display/README.md) | Modern Display Entity engine for text, item, and block holograms | `1.1.0-SNAPSHOT` |
 
 ### 📊 Operations & Tooling
 

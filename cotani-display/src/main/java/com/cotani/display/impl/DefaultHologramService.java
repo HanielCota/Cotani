@@ -1,0 +1,116 @@
+package com.cotani.display.impl;
+
+import com.cotani.api.InternalApi;
+import com.cotani.display.api.Hologram;
+import com.cotani.display.api.HologramBuilder;
+import com.cotani.display.api.HologramService;
+import com.cotani.task.api.PaperTaskScheduler;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
+
+@InternalApi
+public final class DefaultHologramService implements HologramService {
+
+    private final PaperTaskScheduler scheduler;
+    private final Map<UUID, Hologram> hologramsById = new ConcurrentHashMap<>();
+    private final Map<String, Hologram> hologramsByName = new ConcurrentHashMap<>();
+
+    public DefaultHologramService(PaperTaskScheduler scheduler) {
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler cannot be null");
+    }
+
+    public void register(Hologram hologram) {
+        Objects.requireNonNull(hologram, "hologram cannot be null");
+        hologramsById.put(hologram.id(), hologram);
+        hologram.name().ifPresent(name -> hologramsByName.put(name.toLowerCase(Locale.ROOT), hologram));
+    }
+
+    @Override
+    public HologramBuilder builder() {
+        return new DefaultHologramBuilder(this, scheduler);
+    }
+
+    @Override
+    public HologramBuilder builder(String name) {
+        return new DefaultHologramBuilder(this, scheduler, name);
+    }
+
+    @Override
+    public Optional<Hologram> find(String name) {
+        Objects.requireNonNull(name, "name cannot be null");
+        return Optional.ofNullable(hologramsByName.get(name.toLowerCase(Locale.ROOT)));
+    }
+
+    @Override
+    public Optional<Hologram> find(UUID id) {
+        Objects.requireNonNull(id, "id cannot be null");
+        return Optional.ofNullable(hologramsById.get(id));
+    }
+
+    @Override
+    public Optional<Hologram> findByEntityId(UUID entityId) {
+        Objects.requireNonNull(entityId, "entityId cannot be null");
+        for (Hologram hologram : hologramsById.values()) {
+            if (hologram.entityIds().contains(entityId)) {
+                return Optional.of(hologram);
+            }
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Collection<Hologram> all() {
+        return List.copyOf(hologramsById.values());
+    }
+
+    @Override
+    public CompletionStage<Void> removeAsync(Hologram hologram) {
+        Objects.requireNonNull(hologram, "hologram cannot be null");
+        hologramsById.remove(hologram.id());
+        hologram.name().ifPresent(name -> hologramsByName.remove(name.toLowerCase(Locale.ROOT)));
+        return hologram.destroyAsync();
+    }
+
+    @Override
+    public CompletionStage<Void> removeAsync(String name) {
+        Objects.requireNonNull(name, "name cannot be null");
+        var hologram = hologramsByName.remove(name.toLowerCase(Locale.ROOT));
+        if (hologram == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        hologramsById.remove(hologram.id());
+        return hologram.destroyAsync();
+    }
+
+    @Override
+    public CompletionStage<Void> removeAsync(UUID id) {
+        Objects.requireNonNull(id, "id cannot be null");
+        var hologram = hologramsById.remove(id);
+        if (hologram == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        hologram.name().ifPresent(name -> hologramsByName.remove(name.toLowerCase(Locale.ROOT)));
+        return hologram.destroyAsync();
+    }
+
+    @Override
+    public CompletionStage<Void> clearAsync() {
+        var futures = hologramsById.values().stream()
+                .map(Hologram::destroyAsync)
+                .map(CompletionStage::toCompletableFuture)
+                .toArray(CompletableFuture<?>[]::new);
+
+        hologramsById.clear();
+        hologramsByName.clear();
+
+        return CompletableFuture.allOf(futures);
+    }
+}

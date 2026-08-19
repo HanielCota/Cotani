@@ -319,7 +319,7 @@ val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("val
     group = "verification"
     description = "Validates Cotani module boundaries and Gradle dependency cycles."
     rootDirectory.set(layout.projectDirectory)
-    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui"))
+    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display"))
 }
 
 val validateDocumentation = tasks.register<ValidateDocumentation>("validateDocumentation") {
@@ -375,6 +375,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "teleport" to Pair("🌀", "Gameplay"),
             "event" to Pair("📢", "Gameplay"),
             "gui" to Pair("📦", "Gameplay"),
+            "display" to Pair("🪄", "Gameplay"),
             "metrics" to Pair("📊", "Operations")
         )
 
@@ -392,6 +393,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "teleport" to "Policy-driven teleport pipelines with hazard checks, combat tags, and countdown warps.",
             "event" to "Reflection-free, high-performance event bus with execution order prioritizations.",
             "gui" to "Declarative reactive inventory interfaces, pagination, and anti-exploit click debounce.",
+            "display" to "Modern Display Entity engine for text, item, and block holograms.",
             "metrics" to "Micrometer metrics instrumentation with optional Prometheus HTTP exporter endpoint."
         )
 

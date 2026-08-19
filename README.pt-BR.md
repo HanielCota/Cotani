@@ -132,6 +132,7 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | [`cotani-teleport`](cotani-teleport/README.md) | Pipelines de teleporte orientados a políticas com checagem de perigos, tags de combate e delays | `1.0.0` |
 | [`cotani-event`](cotani-event/README.md) | Event Bus de alta performance e livre de reflexão com despacho por prioridades | `1.0.0` |
 | [`cotani-gui`](cotani-gui/README.md) | Interfaces declarativas de inventário com estado reativo, paginação e proteção contra exploits | `1.1.0-SNAPSHOT` |
+| [`cotani-display`](cotani-display/README.md) | Motor moderno de Display Entities para hologramas de texto, itens e blocos | `1.1.0-SNAPSHOT` |
 
 ### 📊 Operações & Ferramentas
 
