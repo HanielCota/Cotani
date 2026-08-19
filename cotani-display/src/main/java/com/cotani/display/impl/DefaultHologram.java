@@ -1,12 +1,9 @@
 package com.cotani.display.impl;
 
 import com.cotani.api.InternalApi;
-import com.cotani.display.api.BlockLine;
 import com.cotani.display.api.Hologram;
 import com.cotani.display.api.HologramClickHandler;
 import com.cotani.display.api.HologramLine;
-import com.cotani.display.api.ItemLine;
-import com.cotani.display.api.TextLine;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.List;
 import java.util.Objects;
@@ -17,18 +14,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Interaction;
-import org.bukkit.entity.ItemDisplay;
-import org.bukkit.entity.TextDisplay;
-import org.bukkit.util.Transformation;
-import org.joml.AxisAngle4f;
-import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
 @InternalApi
@@ -42,6 +28,7 @@ public final class DefaultHologram implements Hologram {
     private final AtomicReference<@Nullable HologramClickHandler> clickHandler = new AtomicReference<>();
     private final PaperTaskScheduler scheduler;
     private final @Nullable DefaultHologramService service;
+    private final DisplayEntityRenderer renderer = new DisplayEntityRenderer();
 
     private final AtomicReference<@Nullable Location> locationRef = new AtomicReference<>();
     private final List<UUID> entityIds = new CopyOnWriteArrayList<>();
@@ -176,11 +163,7 @@ public final class DefaultHologram implements Hologram {
         return CompletableFuture.runAsync(
                 () -> {
                     if (index < entityIds.size()) {
-                        var entityId = entityIds.get(index);
-                        var entity = Bukkit.getEntity(entityId);
-                        if (entity != null) {
-                            applyLineProperties(entity, line);
-                        }
+                        renderer.updateLine(entityIds.get(index), line);
                     }
                 },
                 scheduler.regionExecutor(loc));
@@ -255,161 +238,25 @@ public final class DefaultHologram implements Hologram {
     }
 
     private void spawnSync(Location baseLocation) {
-        World world = baseLocation.getWorld();
-        if (world == null) {
-            return;
-        }
-
         despawnSync();
-        double currentY = baseLocation.getY();
-
-        // Spawn lines from top to bottom
-        for (int i = 0; i < lines.size(); i++) {
-            var line = lines.get(i);
-            var lineLocation = new Location(
-                    world,
-                    baseLocation.getX(),
-                    currentY,
-                    baseLocation.getZ(),
-                    baseLocation.getYaw(),
-                    baseLocation.getPitch());
-
-            Entity entity = spawnLineEntity(world, lineLocation, line);
-            if (entity != null) {
-                var uuid = entity.getUniqueId();
-                entityIds.add(uuid);
-                if (service != null) {
-                    service.bindEntity(uuid, this);
-                }
-            }
-
-            double spacing = line.heightOffset() > 0 ? line.heightOffset() : lineSpacing;
-            currentY -= spacing;
-        }
-
-        if (clickable && !lines.isEmpty()) {
-            double totalHeight = Math.max(0.5, (baseLocation.getY() - currentY) + 0.2);
-            var interactionLocation = new Location(
-                    world,
-                    baseLocation.getX(),
-                    currentY,
-                    baseLocation.getZ(),
-                    baseLocation.getYaw(),
-                    baseLocation.getPitch());
-            var interaction = (Interaction) world.spawnEntity(interactionLocation, EntityType.INTERACTION);
-            interaction.setPersistent(false);
-            interaction.setInteractionWidth(1.2f);
-            interaction.setInteractionHeight((float) totalHeight);
-            interaction.setResponsive(true);
-            var interactionUuid = interaction.getUniqueId();
-            interactionId.set(interactionUuid);
-            entityIds.add(interactionUuid);
+        var result = renderer.spawn(baseLocation, lines, lineSpacing, clickable);
+        for (UUID uuid : result.allEntityIds()) {
+            entityIds.add(uuid);
             if (service != null) {
-                service.bindEntity(interactionUuid, this);
+                service.bindEntity(uuid, this);
             }
         }
-
-        spawned.set(true);
-    }
-
-    private Entity spawnLineEntity(World world, Location location, HologramLine line) {
-        return switch (line) {
-            case TextLine textLine -> {
-                var textDisplay = (TextDisplay) world.spawnEntity(location, EntityType.TEXT_DISPLAY);
-                textDisplay.setPersistent(false);
-                textDisplay.text(textLine.text());
-                textDisplay.setBillboard(textLine.billboard().toBukkit());
-                textDisplay.setShadowed(textLine.shadow());
-                textDisplay.setSeeThrough(textLine.seeThrough());
-                textDisplay.setViewRange(textLine.viewRange());
-                if (textLine.backgroundColor() != null) {
-                    textDisplay.setBackgroundColor(textLine.backgroundColor());
-                }
-                if (textLine.scale() != 1.0f) {
-                    textDisplay.setTransformation(scaleTransformation(textLine.scale()));
-                }
-                yield textDisplay;
-            }
-            case ItemLine itemLine -> {
-                var itemDisplay = (ItemDisplay) world.spawnEntity(location, EntityType.ITEM_DISPLAY);
-                itemDisplay.setPersistent(false);
-                itemDisplay.setItemStack(itemLine.item());
-                itemDisplay.setItemDisplayTransform(itemLine.itemTransform());
-                itemDisplay.setBillboard(itemLine.billboard().toBukkit());
-                itemDisplay.setViewRange(itemLine.viewRange());
-                if (itemLine.scale() != 1.0f) {
-                    itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
-                }
-                yield itemDisplay;
-            }
-            case BlockLine blockLine -> {
-                var blockDisplay = (BlockDisplay) world.spawnEntity(location, EntityType.BLOCK_DISPLAY);
-                blockDisplay.setPersistent(false);
-                blockDisplay.setBlock(blockLine.blockData());
-                blockDisplay.setBillboard(blockLine.billboard().toBukkit());
-                blockDisplay.setViewRange(blockLine.viewRange());
-                if (blockLine.scale() != 1.0f) {
-                    blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
-                }
-                yield blockDisplay;
-            }
-        };
-    }
-
-    private void applyLineProperties(Entity entity, HologramLine line) {
-        switch (line) {
-            case TextLine textLine
-            when entity instanceof TextDisplay textDisplay -> {
-                textDisplay.text(textLine.text());
-                textDisplay.setBillboard(textLine.billboard().toBukkit());
-                textDisplay.setShadowed(textLine.shadow());
-                textDisplay.setSeeThrough(textLine.seeThrough());
-                textDisplay.setViewRange(textLine.viewRange());
-                if (textLine.backgroundColor() != null) {
-                    textDisplay.setBackgroundColor(textLine.backgroundColor());
-                }
-                if (textLine.scale() != 1.0f) {
-                    textDisplay.setTransformation(scaleTransformation(textLine.scale()));
-                }
-            }
-            case ItemLine itemLine
-            when entity instanceof ItemDisplay itemDisplay -> {
-                itemDisplay.setItemStack(itemLine.item());
-                itemDisplay.setItemDisplayTransform(itemLine.itemTransform());
-                itemDisplay.setBillboard(itemLine.billboard().toBukkit());
-                itemDisplay.setViewRange(itemLine.viewRange());
-                if (itemLine.scale() != 1.0f) {
-                    itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
-                }
-            }
-            case BlockLine blockLine
-            when entity instanceof BlockDisplay blockDisplay -> {
-                blockDisplay.setBlock(blockLine.blockData());
-                blockDisplay.setBillboard(blockLine.billboard().toBukkit());
-                blockDisplay.setViewRange(blockLine.viewRange());
-                if (blockLine.scale() != 1.0f) {
-                    blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
-                }
-            }
-            default -> {}
-        }
-    }
-
-    private static Transformation scaleTransformation(float scale) {
-        return new Transformation(
-                new Vector3f(0, 0, 0), new AxisAngle4f(), new Vector3f(scale, scale, scale), new AxisAngle4f());
+        interactionId.set(result.interactionEntityId());
+        spawned.set(!entityIds.isEmpty());
     }
 
     private void despawnSync() {
-        for (UUID entityId : entityIds) {
-            if (service != null) {
+        if (service != null) {
+            for (UUID entityId : entityIds) {
                 service.unbindEntity(entityId);
             }
-            var entity = Bukkit.getEntity(entityId);
-            if (entity != null && entity.isValid()) {
-                entity.remove();
-            }
         }
+        renderer.despawn(entityIds);
         entityIds.clear();
         interactionId.set(null);
     }
