@@ -36,10 +36,10 @@ Cotani é uma biblioteca Java 25 multimódulo para criar plugins Paper e Folia c
 | Cotani | Java | API Paper | Disponibilidade | Módulos |
 | --- | --- | --- | --- | --- |
 | `1.0.0` | 25 | 26.2 | Tag estável no JitPack | Core, task, text, item, config, storage, cache, user, economy, cooldown, teleport e event |
-| `1.0.1-SNAPSHOT` | 25 | 26.2 | Apenas código-fonte ou build por commit | Todos os módulos estáveis, além de BOM, GUI e metrics |
+| `1.1.0-SNAPSHOT` | 25 | 26.2 | Apenas código-fonte ou build por commit | Todos os módulos estáveis, além de BOM, GUI e metrics |
 
 > [!NOTE]
-> `1.0.0` é a versão mais recente com tag. Não use a versão literal `1.0.1` antes de essa tag ser publicada. A documentação de `master` descreve o snapshot atual; consulte a [tag `1.0.0`](https://github.com/HanielCota/Cotani/tree/1.0.0) para a API estável exata.
+> `1.0.0` é a versão mais recente com tag. Não use a versão literal `1.1.0` antes de essa tag ser publicada. A documentação de `master` descreve o snapshot atual; consulte a [tag `1.0.0`](https://github.com/HanielCota/Cotani/tree/1.0.0) para a API estável exata.
 
 ## Instalação
 
@@ -82,7 +82,7 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("com.cotani:cotani-bom:1.0.1-SNAPSHOT"))
+    implementation(platform("com.cotani:cotani-bom:1.1.0-SNAPSHOT"))
     implementation("com.cotani:cotani-task")
     implementation("com.cotani:cotani-storage")
 }
@@ -109,9 +109,9 @@ Declare o módulo que corresponde à capacidade desejada; as dependências inter
 | Adquirir cooldowns locais ou distribuídos | `cotani-cooldown` | `1.0.0` |
 | Executar pipelines protegidos de teleporte | `cotani-teleport` | `1.0.0` |
 | Despachar eventos de domínio sem reflexão | `cotani-event` | `1.0.0` |
-| Criar interfaces de inventário reativas | `cotani-gui` | `1.0.1-SNAPSHOT` |
-| Exportar métricas Micrometer e Prometheus | `cotani-metrics` | `1.0.1-SNAPSHOT` |
-| Alinhar as versões de todos os módulos | `cotani-bom` | `1.0.1-SNAPSHOT` |
+| Criar interfaces de inventário reativas | `cotani-gui` | `1.1.0-SNAPSHOT` |
+| Exportar métricas Micrometer e Prometheus | `cotani-metrics` | `1.1.0-SNAPSHOT` |
+| Alinhar as versões de todos os módulos | `cotani-bom` | `1.1.0-SNAPSHOT` |
 
 Cada módulo estável possui seu próprio guia na [referência de módulos](#referência-de-módulos).
 
@@ -187,7 +187,7 @@ tasks.build {
 }
 ```
 
-Este início rápido fixa um commit atual porque o lifecycle não bloqueante com `closeAsync()` mostrado abaixo foi adicionado depois de `1.0.0`. Substitua o commit por `1.0.1` quando essa versão receber uma tag.
+Este início rápido fixa um commit atual porque o lifecycle não bloqueante com `closeAsync()` mostrado abaixo foi adicionado depois de `1.0.0`. Substitua o commit por `1.1.0` quando essa versão receber uma tag.
 
 Se você adicionar `cotani-metrics`, também faça relocation de `net.cotani` para o namespace privado do plugin.
 
@@ -249,7 +249,7 @@ var _ = scheduler.chain(messageStage)
 
 | Sintoma | Causa provável | Correção |
 | --- | --- | --- |
-| JitPack não resolve `1.0.1` | A versão ainda é snapshot | Use `1.0.0`, um build por commit ou publique o snapshot localmente |
+| JitPack não resolve `1.1.0` | A versão ainda é snapshot | Use `1.0.0`, um build por commit ou publique o snapshot localmente |
 | O primeiro build de um commit no JitPack expira | O JitPack está compilando o commit sob demanda | Tente uma vez após o build remoto terminar ou use `publishToMavenLocal` |
 | `NoClassDefFoundError: com/cotani/...` | O JAR sem shadow foi instalado | Compile e instale a saída de `shadowJar` |
 | Aparece async-catcher ou erro de thread | Bukkit/Paper foi acessado em código async | Carregue UUIDs e retorne com agendamento `global`, `region` ou `entity` |
@@ -283,6 +283,7 @@ var _ = scheduler.chain(messageStage)
 - [Contratos das APIs assíncronas](docs/async-contracts.md) — semântica de execução e falhas
 - [Migração do Cotani 1.x](docs/migration-1.x.md) — orientações de compatibilidade
 - [Exemplos verificados por compilação](docs-examples/src/main/java/com/cotani/examples/CotaniExamples.java) — exemplos validados pelo build
+- [Exemplos de plugin de demonstração](docs-examples/src/main/java/com/cotani/examples/showcase/ShowcasePlugin.java) — implementação de plugin de referência completo
 
 ## Desenvolvimento
 

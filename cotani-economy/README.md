@@ -35,7 +35,7 @@ Add funds asynchronously with idempotency guarantees:
 EconomyOperationId operationId = EconomyOperationId.random();
 EconomyReason reason = EconomyReason.system("pvp_reward");
 
-economy.deposit(userId, BigDecimal.valueOf(100), reason, operationId)
+economy.depositAsync(userId, BigDecimal.valueOf(100), reason, operationId)
     .thenAccept(transaction -> {
         // Transaction succeeded
         plugin.getLogger().info("Deposited 100 coins to " + userId);
@@ -50,7 +50,7 @@ Perform a currency transfer between players, dealing with logical errors within 
 EconomyOperationId operationId = EconomyOperationId.random();
 EconomyReason reason = EconomyReason.player("pay", sourceId);
 
-economy.transfer(sourceId, targetId, BigDecimal.valueOf(50), reason, operationId)
+economy.transferAsync(sourceId, targetId, BigDecimal.valueOf(50), reason, operationId)
     .whenComplete((transaction, error) -> {
         if (error != null) {
             if (error instanceof InsufficientFundsException) {

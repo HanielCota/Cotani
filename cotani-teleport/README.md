@@ -32,7 +32,7 @@ var module = CotaniTeleports.create(plugin, combatAdapter, regionAdapter, schedu
 TeleportService teleports = module.teleportService();
 
 
-teleports.teleport(
+teleports.teleportAsync(
     TeleportRequest.builder()
         .playerId(player.getUniqueId())
         .target(location.clone()) // Pass a cloned location copy

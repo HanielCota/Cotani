@@ -6,7 +6,7 @@ Bill of Materials (BOM) for dependency alignment across all Cotani modules.
 
 ```kotlin
 dependencies {
-    implementation(platform("com.cotani:cotani-bom:1.0.1-SNAPSHOT"))
+    implementation(platform("com.cotani:cotani-bom:1.1.0-SNAPSHOT"))
 
     implementation("com.cotani:cotani-core")
     implementation("com.cotani:cotani-task")
@@ -24,7 +24,7 @@ dependencies {
         <dependency>
             <groupId>com.cotani</groupId>
             <artifactId>cotani-bom</artifactId>
-            <version>1.0.1-SNAPSHOT</version>
+            <version>1.1.0-SNAPSHOT</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
