@@ -22,6 +22,7 @@ public final class DefaultHologramService implements HologramService {
     private final PaperTaskScheduler scheduler;
     private final Map<UUID, Hologram> hologramsById = new ConcurrentHashMap<>();
     private final Map<String, Hologram> hologramsByName = new ConcurrentHashMap<>();
+    private final Map<UUID, Hologram> hologramsByEntityId = new ConcurrentHashMap<>();
 
     public DefaultHologramService(PaperTaskScheduler scheduler) {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler cannot be null");
@@ -31,6 +32,20 @@ public final class DefaultHologramService implements HologramService {
         Objects.requireNonNull(hologram, "hologram cannot be null");
         hologramsById.put(hologram.id(), hologram);
         hologram.name().ifPresent(name -> hologramsByName.put(name.toLowerCase(Locale.ROOT), hologram));
+        for (UUID entityId : hologram.entityIds()) {
+            hologramsByEntityId.put(entityId, hologram);
+        }
+    }
+
+    public void bindEntity(UUID entityId, Hologram hologram) {
+        Objects.requireNonNull(entityId, "entityId cannot be null");
+        Objects.requireNonNull(hologram, "hologram cannot be null");
+        hologramsByEntityId.put(entityId, hologram);
+    }
+
+    public void unbindEntity(UUID entityId) {
+        Objects.requireNonNull(entityId, "entityId cannot be null");
+        hologramsByEntityId.remove(entityId);
     }
 
     @Override
@@ -58,8 +73,13 @@ public final class DefaultHologramService implements HologramService {
     @Override
     public Optional<Hologram> findByEntityId(UUID entityId) {
         Objects.requireNonNull(entityId, "entityId cannot be null");
+        var direct = hologramsByEntityId.get(entityId);
+        if (direct != null) {
+            return Optional.of(direct);
+        }
         for (Hologram hologram : hologramsById.values()) {
             if (hologram.entityIds().contains(entityId)) {
+                hologramsByEntityId.put(entityId, hologram);
                 return Optional.of(hologram);
             }
         }
@@ -76,6 +96,9 @@ public final class DefaultHologramService implements HologramService {
         Objects.requireNonNull(hologram, "hologram cannot be null");
         hologramsById.remove(hologram.id());
         hologram.name().ifPresent(name -> hologramsByName.remove(name.toLowerCase(Locale.ROOT)));
+        for (UUID entityId : hologram.entityIds()) {
+            hologramsByEntityId.remove(entityId);
+        }
         return hologram.destroyAsync();
     }
 
@@ -87,6 +110,9 @@ public final class DefaultHologramService implements HologramService {
             return CompletableFuture.completedFuture(null);
         }
         hologramsById.remove(hologram.id());
+        for (UUID entityId : hologram.entityIds()) {
+            hologramsByEntityId.remove(entityId);
+        }
         return hologram.destroyAsync();
     }
 
@@ -98,18 +124,23 @@ public final class DefaultHologramService implements HologramService {
             return CompletableFuture.completedFuture(null);
         }
         hologram.name().ifPresent(name -> hologramsByName.remove(name.toLowerCase(Locale.ROOT)));
+        for (UUID entityId : hologram.entityIds()) {
+            hologramsByEntityId.remove(entityId);
+        }
         return hologram.destroyAsync();
     }
 
     @Override
     public CompletionStage<Void> clearAsync() {
-        var futures = hologramsById.values().stream()
+        var snapshot = List.copyOf(hologramsById.values());
+        hologramsById.clear();
+        hologramsByName.clear();
+        hologramsByEntityId.clear();
+
+        var futures = snapshot.stream()
                 .map(Hologram::destroyAsync)
                 .map(CompletionStage::toCompletableFuture)
                 .toArray(CompletableFuture<?>[]::new);
-
-        hologramsById.clear();
-        hologramsByName.clear();
 
         return CompletableFuture.allOf(futures);
     }

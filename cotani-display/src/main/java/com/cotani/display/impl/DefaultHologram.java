@@ -41,6 +41,7 @@ public final class DefaultHologram implements Hologram {
     private final boolean clickable;
     private final AtomicReference<@Nullable HologramClickHandler> clickHandler = new AtomicReference<>();
     private final PaperTaskScheduler scheduler;
+    private final @Nullable DefaultHologramService service;
 
     private final AtomicReference<@Nullable Location> locationRef = new AtomicReference<>();
     private final List<UUID> entityIds = new CopyOnWriteArrayList<>();
@@ -55,6 +56,18 @@ public final class DefaultHologram implements Hologram {
             boolean clickable,
             @Nullable HologramClickHandler handler,
             PaperTaskScheduler scheduler) {
+        this(id, name, initialLines, lineSpacing, clickable, handler, scheduler, null);
+    }
+
+    public DefaultHologram(
+            UUID id,
+            @Nullable String name,
+            List<HologramLine> initialLines,
+            double lineSpacing,
+            boolean clickable,
+            @Nullable HologramClickHandler handler,
+            PaperTaskScheduler scheduler,
+            @Nullable DefaultHologramService service) {
         this.id = Objects.requireNonNull(id, "id cannot be null");
         this.name = name;
         this.lines.addAll(Objects.requireNonNull(initialLines, "initialLines cannot be null"));
@@ -62,6 +75,7 @@ public final class DefaultHologram implements Hologram {
         this.clickable = clickable;
         this.clickHandler.set(handler);
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler cannot be null");
+        this.service = service;
     }
 
     @Override
@@ -122,7 +136,7 @@ public final class DefaultHologram implements Hologram {
         return CompletableFuture.supplyAsync(
                 () -> {
                     spawnSync(target);
-                    return this;
+                    return (Hologram) this;
                 },
                 scheduler.regionExecutor(target));
     }
@@ -228,7 +242,7 @@ public final class DefaultHologram implements Hologram {
         var loc = locationRef.get();
         if (!spawned.get() || loc == null) {
             spawned.set(false);
-            entityIds.clear();
+            despawnSync();
             return CompletableFuture.completedFuture(null);
         }
 
@@ -250,7 +264,8 @@ public final class DefaultHologram implements Hologram {
         double currentY = baseLocation.getY();
 
         // Spawn lines from top to bottom
-        for (HologramLine line : lines) {
+        for (int i = 0; i < lines.size(); i++) {
+            var line = lines.get(i);
             var lineLocation = new Location(
                     world,
                     baseLocation.getX(),
@@ -261,7 +276,11 @@ public final class DefaultHologram implements Hologram {
 
             Entity entity = spawnLineEntity(world, lineLocation, line);
             if (entity != null) {
-                entityIds.add(entity.getUniqueId());
+                var uuid = entity.getUniqueId();
+                entityIds.add(uuid);
+                if (service != null) {
+                    service.bindEntity(uuid, this);
+                }
             }
 
             double spacing = line.heightOffset() > 0 ? line.heightOffset() : lineSpacing;
@@ -282,8 +301,12 @@ public final class DefaultHologram implements Hologram {
             interaction.setInteractionWidth(1.2f);
             interaction.setInteractionHeight((float) totalHeight);
             interaction.setResponsive(true);
-            interactionId.set(interaction.getUniqueId());
-            entityIds.add(interaction.getUniqueId());
+            var interactionUuid = interaction.getUniqueId();
+            interactionId.set(interactionUuid);
+            entityIds.add(interactionUuid);
+            if (service != null) {
+                service.bindEntity(interactionUuid, this);
+            }
         }
 
         spawned.set(true);
@@ -303,11 +326,7 @@ public final class DefaultHologram implements Hologram {
                     textDisplay.setBackgroundColor(textLine.backgroundColor());
                 }
                 if (textLine.scale() != 1.0f) {
-                    textDisplay.setTransformation(new Transformation(
-                            new Vector3f(0, 0, 0),
-                            new AxisAngle4f(),
-                            new Vector3f(textLine.scale(), textLine.scale(), textLine.scale()),
-                            new AxisAngle4f()));
+                    textDisplay.setTransformation(scaleTransformation(textLine.scale()));
                 }
                 yield textDisplay;
             }
@@ -319,11 +338,7 @@ public final class DefaultHologram implements Hologram {
                 itemDisplay.setBillboard(itemLine.billboard().toBukkit());
                 itemDisplay.setViewRange(itemLine.viewRange());
                 if (itemLine.scale() != 1.0f) {
-                    itemDisplay.setTransformation(new Transformation(
-                            new Vector3f(0, 0, 0),
-                            new AxisAngle4f(),
-                            new Vector3f(itemLine.scale(), itemLine.scale(), itemLine.scale()),
-                            new AxisAngle4f()));
+                    itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
                 }
                 yield itemDisplay;
             }
@@ -334,11 +349,7 @@ public final class DefaultHologram implements Hologram {
                 blockDisplay.setBillboard(blockLine.billboard().toBukkit());
                 blockDisplay.setViewRange(blockLine.viewRange());
                 if (blockLine.scale() != 1.0f) {
-                    blockDisplay.setTransformation(new Transformation(
-                            new Vector3f(0, 0, 0),
-                            new AxisAngle4f(),
-                            new Vector3f(blockLine.scale(), blockLine.scale(), blockLine.scale()),
-                            new AxisAngle4f()));
+                    blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
                 }
                 yield blockDisplay;
             }
@@ -346,50 +357,54 @@ public final class DefaultHologram implements Hologram {
     }
 
     private void applyLineProperties(Entity entity, HologramLine line) {
-        if (entity instanceof TextDisplay textDisplay && line instanceof TextLine textLine) {
-            textDisplay.text(textLine.text());
-            textDisplay.setBillboard(textLine.billboard().toBukkit());
-            textDisplay.setShadowed(textLine.shadow());
-            textDisplay.setSeeThrough(textLine.seeThrough());
-            textDisplay.setViewRange(textLine.viewRange());
-            if (textLine.backgroundColor() != null) {
-                textDisplay.setBackgroundColor(textLine.backgroundColor());
+        switch (line) {
+            case TextLine textLine
+            when entity instanceof TextDisplay textDisplay -> {
+                textDisplay.text(textLine.text());
+                textDisplay.setBillboard(textLine.billboard().toBukkit());
+                textDisplay.setShadowed(textLine.shadow());
+                textDisplay.setSeeThrough(textLine.seeThrough());
+                textDisplay.setViewRange(textLine.viewRange());
+                if (textLine.backgroundColor() != null) {
+                    textDisplay.setBackgroundColor(textLine.backgroundColor());
+                }
+                if (textLine.scale() != 1.0f) {
+                    textDisplay.setTransformation(scaleTransformation(textLine.scale()));
+                }
             }
-            if (textLine.scale() != 1.0f) {
-                textDisplay.setTransformation(new Transformation(
-                        new Vector3f(0, 0, 0),
-                        new AxisAngle4f(),
-                        new Vector3f(textLine.scale(), textLine.scale(), textLine.scale()),
-                        new AxisAngle4f()));
+            case ItemLine itemLine
+            when entity instanceof ItemDisplay itemDisplay -> {
+                itemDisplay.setItemStack(itemLine.item());
+                itemDisplay.setItemDisplayTransform(itemLine.itemTransform());
+                itemDisplay.setBillboard(itemLine.billboard().toBukkit());
+                itemDisplay.setViewRange(itemLine.viewRange());
+                if (itemLine.scale() != 1.0f) {
+                    itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
+                }
             }
-        } else if (entity instanceof ItemDisplay itemDisplay && line instanceof ItemLine itemLine) {
-            itemDisplay.setItemStack(itemLine.item());
-            itemDisplay.setItemDisplayTransform(itemLine.itemTransform());
-            itemDisplay.setBillboard(itemLine.billboard().toBukkit());
-            itemDisplay.setViewRange(itemLine.viewRange());
-            if (itemLine.scale() != 1.0f) {
-                itemDisplay.setTransformation(new Transformation(
-                        new Vector3f(0, 0, 0),
-                        new AxisAngle4f(),
-                        new Vector3f(itemLine.scale(), itemLine.scale(), itemLine.scale()),
-                        new AxisAngle4f()));
+            case BlockLine blockLine
+            when entity instanceof BlockDisplay blockDisplay -> {
+                blockDisplay.setBlock(blockLine.blockData());
+                blockDisplay.setBillboard(blockLine.billboard().toBukkit());
+                blockDisplay.setViewRange(blockLine.viewRange());
+                if (blockLine.scale() != 1.0f) {
+                    blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
+                }
             }
-        } else if (entity instanceof BlockDisplay blockDisplay && line instanceof BlockLine blockLine) {
-            blockDisplay.setBlock(blockLine.blockData());
-            blockDisplay.setBillboard(blockLine.billboard().toBukkit());
-            blockDisplay.setViewRange(blockLine.viewRange());
-            if (blockLine.scale() != 1.0f) {
-                blockDisplay.setTransformation(new Transformation(
-                        new Vector3f(0, 0, 0),
-                        new AxisAngle4f(),
-                        new Vector3f(blockLine.scale(), blockLine.scale(), blockLine.scale()),
-                        new AxisAngle4f()));
-            }
+            default -> {}
         }
+    }
+
+    private static Transformation scaleTransformation(float scale) {
+        return new Transformation(
+                new Vector3f(0, 0, 0), new AxisAngle4f(), new Vector3f(scale, scale, scale), new AxisAngle4f());
     }
 
     private void despawnSync() {
         for (UUID entityId : entityIds) {
+            if (service != null) {
+                service.unbindEntity(entityId);
+            }
             var entity = Bukkit.getEntity(entityId);
             if (entity != null && entity.isValid()) {
                 entity.remove();

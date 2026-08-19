@@ -39,6 +39,17 @@ public record TextLine(
     }
 
     /**
+     * Creates a text line parsed from a MiniMessage string.
+     *
+     * @param miniMessageText the MiniMessage formatted string
+     * @return the created text line
+     */
+    public static TextLine of(String miniMessageText) {
+        Objects.requireNonNull(miniMessageText, "miniMessageText cannot be null");
+        return of(com.cotani.text.MiniMessages.parse(miniMessageText));
+    }
+
+    /**
      * Creates a text line with specified billboard and scale.
      *
      * @param text the Adventure component text

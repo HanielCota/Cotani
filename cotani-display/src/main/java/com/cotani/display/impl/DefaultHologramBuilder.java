@@ -88,8 +88,10 @@ public final class DefaultHologramBuilder implements HologramBuilder {
 
     @Override
     public Hologram build() {
-        var hologram = new DefaultHologram(UUID.randomUUID(), name, lines, spacing, clickable, clickHandler, scheduler);
-        if (service instanceof DefaultHologramService defaultService) {
+        var defaultService = service instanceof DefaultHologramService ds ? ds : null;
+        var hologram = new DefaultHologram(
+                UUID.randomUUID(), name, lines, spacing, clickable, clickHandler, scheduler, defaultService);
+        if (defaultService != null) {
             defaultService.register(hologram);
         }
         return hologram;
