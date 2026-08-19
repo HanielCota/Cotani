@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - '*.*.*'
+      - 'v*.*.*'
 
 permissions:
   contents: write
@@ -15,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -41,7 +42,8 @@ jobs:
             echo "Refusing to release snapshot version: $project_version" >&2
             exit 1
           fi
-          if [[ "$project_version" != "$GITHUB_REF_NAME" ]]; then
+          clean_tag="${GITHUB_REF_NAME#v}"
+          if [[ "$project_version" != "$clean_tag" && "$project_version" != "$GITHUB_REF_NAME" ]]; then
             echo "Tag $GITHUB_REF_NAME does not match Gradle version $project_version" >&2
             exit 1
           fi
