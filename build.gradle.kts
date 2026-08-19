@@ -332,3 +332,76 @@ tasks.named("check") {
     dependsOn(validateModuleArchitecture)
     dependsOn(validateDocumentation)
 }
+
+val aggregateJavadoc = tasks.register<Sync>("aggregateJavadoc") {
+    group = "documentation"
+    description = "Aggregates generated Javadocs from all modules for GitHub Pages."
+    val publicProjects = subprojects.filter { it.name !in setOf("bom", "examples") }
+    dependsOn(publicProjects.map { it.tasks.named("javadoc") })
+
+    into(layout.buildDirectory.dir("docs/javadoc"))
+    publicProjects.forEach { proj ->
+        from(proj.tasks.named<Javadoc>("javadoc").map { it.destinationDir }) {
+            into(proj.name)
+        }
+    }
+}
+
+abstract class GenerateJavadocIndex : DefaultTask() {
+    @get:Input
+    abstract val moduleDescriptions: MapProperty<String, String>
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val target = outputDirectory.get().asFile
+        if (!target.exists()) {
+            target.mkdirs()
+        }
+        val modulesList = moduleDescriptions.get().entries
+            .sortedBy { it.key }
+            .joinToString("\n") { (name, desc) ->
+                """<li><a href="$name/index.html"><strong>cotani-$name</strong></a> - $desc</li>"""
+            }
+        val html = """
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Cotani API Documentation</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #24292e; }
+                    h1 { border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; color: #0969da; }
+                    ul { list-style-type: none; padding-left: 0; }
+                    li { margin: 12px 0; padding: 12px; border: 1px solid #d0d7de; border-radius: 6px; background-color: #f6f8fa; }
+                    a { color: #0969da; text-decoration: none; font-size: 1.1em; }
+                    a:hover { text-decoration: underline; }
+                </style>
+            </head>
+            <body>
+                <h1>Cotani API Documentation</h1>
+                <p>Welcome to the official API documentation for Cotani modular components.</p>
+                <ul>
+                    $modulesList
+                </ul>
+            </body>
+            </html>
+        """.trimIndent()
+        target.resolve("index.html").writeText(html)
+    }
+}
+
+val generateJavadocIndex = tasks.register<GenerateJavadocIndex>("generateJavadocIndex") {
+    group = "documentation"
+    description = "Generates an index.html landing page for aggregated Javadocs."
+    outputDirectory.set(layout.buildDirectory.dir("docs/javadoc"))
+    val publicProjects = subprojects.filter { it.name !in setOf("bom", "examples") }
+    moduleDescriptions.set(publicProjects.associate { it.name to (it.description ?: "") })
+}
+
+aggregateJavadoc.configure {
+    finalizedBy(generateJavadocIndex)
+}

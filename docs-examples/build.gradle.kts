@@ -7,6 +7,8 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":economy"))
     implementation(project(":event"))
+    implementation(project(":gui"))
+    implementation(project(":item"))
     implementation(project(":metrics"))
     implementation(project(":storage"))
     implementation(project(":task"))

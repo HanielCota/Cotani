@@ -7,3 +7,12 @@ commands:
   cotanihello:
     description: Confirms that Cotani is running
     usage: /cotanihello
+  cotanieco:
+    description: Economy demo command
+    usage: /cotanieco
+  cotanispawn:
+    description: Teleport demo command
+    usage: /cotanispawn
+  cotanirecycler:
+    description: Recycler GUI demo command
+    usage: /cotanirecycler
