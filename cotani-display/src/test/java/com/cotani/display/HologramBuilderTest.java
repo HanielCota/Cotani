@@ -39,5 +39,6 @@ class HologramBuilderTest {
         // Verify registration in service
         assertTrue(service.find("spawn_holo").isPresent());
         assertTrue(service.find(hologram.id()).isPresent());
+        assertTrue(hologram.interactionEntityId().isEmpty());
     }
 }

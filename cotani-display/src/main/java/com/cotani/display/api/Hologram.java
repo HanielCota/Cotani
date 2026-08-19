@@ -66,6 +66,13 @@ public interface Hologram {
     List<UUID> entityIds();
 
     /**
+     * Returns the UUID of the clickable interaction hitbox entity, if spawned and clickable.
+     *
+     * @return the optional interaction entity UUID
+     */
+    Optional<UUID> interactionEntityId();
+
+    /**
      * Spawns this hologram at the specified location safely on the region thread.
      *
      * @param location the spawn location

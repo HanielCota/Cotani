@@ -99,6 +99,11 @@ public final class DefaultHologram implements Hologram {
     }
 
     @Override
+    public Optional<UUID> interactionEntityId() {
+        return Optional.ofNullable(interactionId.get());
+    }
+
+    @Override
     public Optional<HologramClickHandler> clickHandler() {
         return Optional.ofNullable(clickHandler.get());
     }
@@ -117,7 +122,7 @@ public final class DefaultHologram implements Hologram {
         return CompletableFuture.supplyAsync(
                 () -> {
                     spawnSync(target);
-                    return (Hologram) this;
+                    return this;
                 },
                 scheduler.regionExecutor(target));
     }
@@ -245,8 +250,7 @@ public final class DefaultHologram implements Hologram {
         double currentY = baseLocation.getY();
 
         // Spawn lines from top to bottom
-        for (int i = 0; i < lines.size(); i++) {
-            var line = lines.get(i);
+        for (HologramLine line : lines) {
             var lineLocation = new Location(
                     world,
                     baseLocation.getX(),
