@@ -1,10 +1,9 @@
 package com.cotani.text;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
@@ -20,13 +19,8 @@ public final class MiniMessages {
     private static final int PARSE_CACHE_MAX_SIZE = 512;
     private static final int MAX_TEMPLATE_LENGTH = 32_768;
 
-    private static final Map<String, Component> parseCache =
-            Collections.synchronizedMap(new LinkedHashMap<>(16, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, Component> eldest) {
-                    return size() > PARSE_CACHE_MAX_SIZE;
-                }
-            });
+    private static final Cache<String, Component> parseCache =
+            Caffeine.newBuilder().maximumSize(PARSE_CACHE_MAX_SIZE).build();
 
     private MiniMessages() {}
 
@@ -43,7 +37,7 @@ public final class MiniMessages {
             return Component.text(input);
         }
 
-        return parseCache.computeIfAbsent(input, ComponentSerializers.MINIMESSAGE::deserialize);
+        return parseCache.get(input, ComponentSerializers.MINIMESSAGE::deserialize);
     }
 
     /**

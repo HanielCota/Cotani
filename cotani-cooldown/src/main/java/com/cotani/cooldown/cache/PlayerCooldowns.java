@@ -16,6 +16,7 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public record PlayerCooldowns(UUID playerId, Map<String, CooldownEntry> activeCooldowns) {
     public PlayerCooldowns {
+        Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(activeCooldowns, "activeCooldowns");
     }
 

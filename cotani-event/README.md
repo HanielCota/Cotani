@@ -65,13 +65,13 @@ public final class UserChatEvent extends AbstractCancellableEvent implements Cot
         this.message = message;
     }
     
-    // inherits setCancelled(boolean) and isCancelled()
+    // inherits cancel(), uncancel() and cancelled()
 }
 
 // In the listener:
 eventBus.subscribe(UserChatEvent.class, event -> {
     if (containsProfanity(event.message())) {
-        event.setCancelled(true);
+        event.cancel();
     }
 });
 
@@ -79,7 +79,7 @@ eventBus.subscribe(UserChatEvent.class, event -> {
 UserChatEvent event = new UserChatEvent(userId, message);
 eventBus.publish(event);
 
-if (event.isCancelled()) {
+if (event.cancelled()) {
     // Abort action
 }
 ```

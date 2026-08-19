@@ -1,5 +1,6 @@
 package com.cotani.economy.internal;
 
+import com.cotani.AsyncCloseable;
 import com.cotani.Cotani;
 import com.cotani.api.InternalApi;
 import com.cotani.economy.EconomyService;
@@ -16,6 +17,8 @@ import com.cotani.storage.api.CotaniStorage;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.time.Clock;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
@@ -64,6 +67,24 @@ public final class DefaultEconomyModule implements EconomyModule {
     @Override
     public EconomyService economyService() {
         return service;
+    }
+
+    @Override
+    public CompletionStage<Void> closeAsync() {
+        if (service instanceof AsyncCloseable asyncCloseable) {
+            return asyncCloseable
+                    .closeAsync()
+                    .thenCompose(_ -> ownsCotani ? cotani.closeAsync() : CompletableFuture.completedFuture(null));
+        }
+        if (service instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception exception) {
+                return CompletableFuture.failedFuture(
+                        new RuntimeException("Failed to close economy service", exception));
+            }
+        }
+        return ownsCotani ? cotani.closeAsync() : CompletableFuture.completedFuture(null);
     }
 
     @Override

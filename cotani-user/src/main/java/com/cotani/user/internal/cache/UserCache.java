@@ -4,7 +4,12 @@ import com.cotani.api.InternalApi;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import com.cotani.user.internal.repository.UserRepository;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
@@ -49,6 +54,18 @@ public final class UserCache {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
 
         return Optional.ofNullable(users.get(uniqueId)).map(CotaniUser.class::cast);
+    }
+
+    public Optional<CotaniUser> findByUsername(String username) {
+        Objects.requireNonNull(username, "username");
+
+        for (var user : users.values()) {
+            if (user.username().equalsIgnoreCase(username)) {
+                return Optional.of(user);
+            }
+        }
+
+        return Optional.empty();
     }
 
     public void put(SimpleCotaniUser user) {

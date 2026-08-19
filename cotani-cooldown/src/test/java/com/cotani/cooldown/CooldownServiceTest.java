@@ -2,13 +2,23 @@ package com.cotani.cooldown;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.cotani.cache.api.PlayerDataCache;
-import com.cotani.cooldown.api.*;
+import com.cotani.cooldown.api.CooldownAction;
+import com.cotani.cooldown.api.CooldownKey;
+import com.cotani.cooldown.api.CooldownResult;
+import com.cotani.cooldown.api.CooldownService;
+import com.cotani.cooldown.api.CooldownStore;
+import com.cotani.cooldown.api.UserCooldownTarget;
 import com.cotani.cooldown.cache.CacheCooldownStore;
 import com.cotani.cooldown.cache.PlayerCooldowns;
-import com.cotani.cooldown.internal.*;
+import com.cotani.cooldown.internal.DefaultCooldownService;
+import com.cotani.cooldown.internal.InMemoryCooldownStore;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

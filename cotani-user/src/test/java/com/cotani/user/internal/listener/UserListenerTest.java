@@ -110,4 +110,29 @@ class UserListenerTest {
         verify(player, atLeastOnce()).getUniqueId();
         verify(player, atLeastOnce()).getName();
     }
+
+    @Test
+    void onPreLoginStartsAsyncPreLoadWhenAllowed() {
+        UUID uniqueId = UUID.randomUUID();
+        when(userService.load(uniqueId, "Steve")).thenReturn(CompletableFuture.completedFuture(null));
+
+        var event = mock(org.bukkit.event.player.AsyncPlayerPreLoginEvent.class);
+        when(event.getLoginResult()).thenReturn(org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result.ALLOWED);
+        when(event.getUniqueId()).thenReturn(uniqueId);
+        when(event.getName()).thenReturn("Steve");
+
+        listener.onPreLogin(event);
+
+        verify(userService).load(uniqueId, "Steve");
+    }
+
+    @Test
+    void onPreLoginDoesNothingWhenDisallowed() {
+        var event = mock(org.bukkit.event.player.AsyncPlayerPreLoginEvent.class);
+        when(event.getLoginResult()).thenReturn(org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result.KICK_BANNED);
+
+        listener.onPreLogin(event);
+
+        verify(userService, never()).load(any(UUID.class), anyString());
+    }
 }

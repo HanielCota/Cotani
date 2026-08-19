@@ -44,6 +44,10 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
     public void counter(String name, double amount, String... tags) {
         Objects.requireNonNull(name, "name");
 
+        if (amount < 0) {
+            throw new IllegalArgumentException("counter amount cannot be negative: " + amount);
+        }
+
         meterRegistry.counter(formatName(name), toTags(tags)).increment(amount);
     }
 
@@ -54,7 +58,7 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
 
         Gauge.builder(formatName(name), numberSupplier, s -> {
                     Number val = s.get();
-                    return val.doubleValue();
+                    return val != null ? val.doubleValue() : Double.NaN;
                 })
                 .tags(toTags(tags))
                 .register(meterRegistry);

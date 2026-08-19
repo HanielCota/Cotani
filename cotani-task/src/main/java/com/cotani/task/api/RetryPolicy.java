@@ -62,6 +62,10 @@ public final class RetryPolicy {
         return RetryPolicy.Builder.create(maxAttempts, baseDelay).exponential().build();
     }
 
+    public static RetryPolicy exponentialWithJitter(int maxAttempts, Duration baseDelay) {
+        return exponentialWithJitter(maxAttempts, baseDelay, 0.2);
+    }
+
     public static RetryPolicy exponentialWithJitter(int maxAttempts, Duration baseDelay, double jitter) {
         return new RetryPolicy.Builder(maxAttempts, baseDelay)
                 .exponential()

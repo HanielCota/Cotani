@@ -13,6 +13,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
@@ -33,6 +34,22 @@ public final class UserListener implements Listener {
         this.userService = Objects.requireNonNull(userService, "userService");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.loadFailureMessage = Objects.requireNonNull(loadFailureMessage, "loadFailureMessage");
+    }
+
+    @EventHandler
+    public void onPreLogin(AsyncPlayerPreLoginEvent event) {
+        if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
+            return;
+        }
+
+        UUID uniqueId = event.getUniqueId();
+        String username = event.getName();
+
+        try {
+            userService.load(uniqueId, username);
+        } catch (RuntimeException exception) {
+            plugin.getLogger().log(Level.WARNING, exception, () -> "Failed to pre-load user " + uniqueId);
+        }
     }
 
     @EventHandler
@@ -60,7 +77,11 @@ public final class UserListener implements Listener {
                     }
                 }))
                 .exceptionally(throwable -> {
-                    plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to load user " + uniqueId);
+                    Throwable cause = throwable instanceof java.util.concurrent.CompletionException
+                                    && throwable.getCause() != null
+                            ? throwable.getCause()
+                            : throwable;
+                    plugin.getLogger().log(Level.SEVERE, cause, () -> "Failed to load user " + uniqueId);
 
                     scheduler.global("user-load-failed", () -> {
                         try {

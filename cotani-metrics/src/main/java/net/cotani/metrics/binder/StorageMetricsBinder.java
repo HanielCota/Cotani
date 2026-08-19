@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import net.cotani.metrics.api.MeterBinder;
 import net.cotani.metrics.api.MetricsRegistry;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Binds {@code cotani-storage} database pool statistics to a {@link MetricsRegistry}.
@@ -60,9 +61,34 @@ public final class StorageMetricsBinder implements MeterBinder {
     public void bindTo(MetricsRegistry registry) {
         Objects.requireNonNull(registry, "registry");
 
-        registry.gauge("storage.pool.active", () -> statsSupplier.get().activeConnections(), "pool", poolName);
-        registry.gauge("storage.pool.idle", () -> statsSupplier.get().idleConnections(), "pool", poolName);
-        registry.gauge("storage.pool.total", () -> statsSupplier.get().totalConnections(), "pool", poolName);
-        registry.gauge("storage.pool.awaiting", () -> statsSupplier.get().threadsAwaiting(), "pool", poolName);
+        var memoized = new MemoizingStorageSupplier(statsSupplier);
+
+        registry.gauge("storage.pool.active", () -> memoized.get().activeConnections(), "pool", poolName);
+        registry.gauge("storage.pool.idle", () -> memoized.get().idleConnections(), "pool", poolName);
+        registry.gauge("storage.pool.total", () -> memoized.get().totalConnections(), "pool", poolName);
+        registry.gauge("storage.pool.awaiting", () -> memoized.get().threadsAwaiting(), "pool", poolName);
+    }
+
+    private static final class MemoizingStorageSupplier implements Supplier<StoragePoolStatsView> {
+        private final Supplier<StoragePoolStatsView> delegate;
+        private volatile @Nullable StoragePoolStatsView cached;
+        private volatile long cachedAt;
+
+        MemoizingStorageSupplier(Supplier<StoragePoolStatsView> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public StoragePoolStatsView get() {
+            var now = System.currentTimeMillis();
+            var snapshot = cached;
+
+            if (snapshot == null || now - cachedAt > 2000) {
+                snapshot = delegate.get();
+                cached = snapshot;
+                cachedAt = now;
+            }
+            return snapshot;
+        }
     }
 }

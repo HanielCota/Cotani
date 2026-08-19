@@ -1,7 +1,14 @@
 package com.cotani.cooldown.internal;
 
 import com.cotani.api.InternalApi;
-import com.cotani.cooldown.api.*;
+import com.cotani.cooldown.api.CooldownAction;
+import com.cotani.cooldown.api.CooldownEntry;
+import com.cotani.cooldown.api.CooldownKey;
+import com.cotani.cooldown.api.CooldownOperation;
+import com.cotani.cooldown.api.CooldownPolicy;
+import com.cotani.cooldown.api.CooldownResult;
+import com.cotani.cooldown.api.CooldownStore;
+import com.cotani.cooldown.api.CooldownTarget;
 import com.cotani.cooldown.paper.CotaniCooldownDenyEvent;
 import com.cotani.cooldown.paper.CotaniCooldownStartEvent;
 import java.time.Clock;

@@ -1,5 +1,6 @@
 package com.cotani.storage.api;
 
+import com.cotani.AsyncCloseable;
 import com.cotani.storage.backend.MariaDbBackend;
 import com.cotani.storage.backend.MySqlBackend;
 import com.cotani.storage.backend.SQLiteBackend;
@@ -25,7 +26,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -34,7 +45,7 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 @NullMarked
-public final class CotaniStorage implements AutoCloseable {
+public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
     private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(5);
 
     private final Plugin plugin;
@@ -253,6 +264,7 @@ public final class CotaniStorage implements AutoCloseable {
         }
     }
 
+    @Override
     public CompletionStage<Void> closeAsync() {
         final CompletableFuture<Void> closePromise;
         final CompletionStage<?> predecessor;

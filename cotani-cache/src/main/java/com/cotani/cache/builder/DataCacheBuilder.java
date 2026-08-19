@@ -43,8 +43,9 @@ public final class DataCacheBuilder<K, V> {
     }
 
     public DataCacheBuilder<K, V> defaultValue(Supplier<V> defaultValue) {
-        this.defaultValue =
-                _ -> Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM).get();
+        Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
+
+        this.defaultValue = _ -> defaultValue.get();
         return this;
     }
 

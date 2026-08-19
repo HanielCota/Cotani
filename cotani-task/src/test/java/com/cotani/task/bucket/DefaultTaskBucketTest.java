@@ -40,4 +40,13 @@ class DefaultTaskBucketTest {
         assertNotNull(first);
         assertNotNull(second);
     }
+
+    @Test
+    void clearEvictsCachedLimiters() {
+        RateLimiter first = bucket.limiterFor("queries");
+        bucket.clear();
+        RateLimiter second = bucket.limiterFor("queries");
+
+        org.junit.jupiter.api.Assertions.assertNotSame(first, second);
+    }
 }

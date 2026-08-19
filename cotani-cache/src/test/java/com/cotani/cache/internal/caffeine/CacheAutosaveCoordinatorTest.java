@@ -1,9 +1,12 @@
 package com.cotani.cache.internal.caffeine;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,5 +70,74 @@ class CacheAutosaveCoordinatorTest {
         pending.complete(null);
         assertTrue(idle.toCompletableFuture().isDone());
         verify(scheduledTask).cancel();
+    }
+
+    @Test
+    void autosaveDisabledDoesNotScheduleTimer() {
+        PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);
+        var coordinator = new CacheAutosaveCoordinator(scheduler, CacheSettings.temporary(), () -> {
+            fail("autosave must not run when disabled");
+
+            return null;
+        });
+
+        assertDoesNotThrow(coordinator::cancelAndAwait);
+        verify(scheduler, never()).asyncTimer(any(), any(), any());
+    }
+
+    @Test
+    void startingOperationFailureCompletesCycleAndAllowsNextTick() {
+        PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);
+        SchedulerTask scheduledTask = Mockito.mock(SchedulerTask.class);
+        var runnable = ArgumentCaptor.forClass(Runnable.class);
+        when(scheduler.asyncTimer(runnable.capture(), any(Duration.class), any(Duration.class)))
+                .thenReturn(scheduledTask);
+        var executions = new AtomicInteger();
+        var _ = new CacheAutosaveCoordinator(scheduler, CacheSettings.playerData(), () -> {
+            if (executions.incrementAndGet() == 1) {
+                throw new IllegalStateException("boom");
+            }
+
+            return CompletableFuture.completedFuture(null);
+        });
+
+        runnable.getValue().run();
+        runnable.getValue().run();
+
+        assertEquals(2, executions.get());
+    }
+
+    @Test
+    void failingOperationCompletesCycle() {
+        PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);
+        SchedulerTask scheduledTask = Mockito.mock(SchedulerTask.class);
+        var runnable = ArgumentCaptor.forClass(Runnable.class);
+        when(scheduler.asyncTimer(runnable.capture(), any(Duration.class), any(Duration.class)))
+                .thenReturn(scheduledTask);
+        var coordinator = new CacheAutosaveCoordinator(
+                scheduler,
+                CacheSettings.playerData(),
+                () -> CompletableFuture.failedFuture(new IllegalStateException("boom")));
+
+        runnable.getValue().run();
+        var idle = coordinator.cancelAndAwait();
+
+        assertTrue(idle.toCompletableFuture().isDone());
+        verify(scheduledTask).cancel();
+    }
+
+    @Test
+    void nullOperationIsHandled() {
+        PaperTaskScheduler scheduler = Mockito.mock(PaperTaskScheduler.class);
+        SchedulerTask scheduledTask = Mockito.mock(SchedulerTask.class);
+        var runnable = ArgumentCaptor.forClass(Runnable.class);
+        when(scheduler.asyncTimer(runnable.capture(), any(Duration.class), any(Duration.class)))
+                .thenReturn(scheduledTask);
+        var coordinator = new CacheAutosaveCoordinator(scheduler, CacheSettings.playerData(), () -> null);
+
+        runnable.getValue().run();
+        var idle = coordinator.cancelAndAwait();
+
+        assertTrue(idle.toCompletableFuture().isDone());
     }
 }

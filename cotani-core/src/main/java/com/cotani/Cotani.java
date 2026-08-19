@@ -18,22 +18,27 @@ import org.jspecify.annotations.Nullable;
 
 @NullMarked
 public final class Cotani implements AutoCloseable, AsyncCloseable {
-    private static final Duration ASYNC_CLOSE_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration DEFAULT_ASYNC_CLOSE_TIMEOUT = Duration.ofSeconds(10);
     private static final String CLOSEABLE_NULL_MSG = "Parameter 'closeable' must not be null";
     private static final String ASYNC_CLOSEABLE_NULL_MSG = "Parameter 'asyncCloseable' must not be null";
 
     private final Plugin plugin;
     private final List<AutoCloseable> closeables;
     private final List<Supplier<CompletionStage<Void>>> asyncCloseables;
+    private final Duration asyncCloseTimeout;
     private final AtomicBoolean closed;
     private final AtomicReference<@Nullable CompletableFuture<Void>> closeFuture;
     private final Object lock = new Object();
 
     private Cotani(
-            Plugin plugin, List<AutoCloseable> closeables, List<Supplier<CompletionStage<Void>>> asyncCloseables) {
+            Plugin plugin,
+            List<AutoCloseable> closeables,
+            List<Supplier<CompletionStage<Void>>> asyncCloseables,
+            Duration asyncCloseTimeout) {
         this.plugin = plugin;
         this.closeables = new ArrayList<>(closeables);
         this.asyncCloseables = new ArrayList<>(asyncCloseables);
+        this.asyncCloseTimeout = asyncCloseTimeout;
         this.closed = new AtomicBoolean();
         this.closeFuture = new AtomicReference<>();
     }
@@ -165,12 +170,14 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
      */
     @Override
     public void close() {
-        if (Bukkit.isPrimaryThread()) {
+        var server = Bukkit.getServer();
+
+        if (server != null && server.isPrimaryThread()) {
             throw new IllegalStateException("Cotani.close() blocks; use closeAsync() on the server thread.");
         }
 
         try {
-            closeAsync().toCompletableFuture().get(ASYNC_CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            closeAsync().toCompletableFuture().get(asyncCloseTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             throw new CotaniCloseException("Interrupted while closing resources", interrupted);
@@ -212,13 +219,15 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
         return CompletableFuture.allOf(stages.stream()
                         .map(CompletionStage::toCompletableFuture)
                         .toArray(CompletableFuture[]::new))
-                .handle((res, failure) -> {
+                .handle((_, _) -> {
                     var current = capturedFailure;
-
-                    if (failure != null) {
-                        plugin.getLogger().log(Level.SEVERE, "Async closeables did not complete successfully", failure);
-                        Throwable cause = failure.getCause() != null ? failure.getCause() : failure;
-                        current = mergeFailure(current, cause);
+                    for (var stage : stages) {
+                        var future = stage.toCompletableFuture();
+                        if (future.isCompletedExceptionally()) {
+                            Throwable cause = future.exceptionNow();
+                            plugin.getLogger().log(Level.SEVERE, "Async closeable failed", cause);
+                            current = mergeFailure(current, cause);
+                        }
                     }
                     return current;
                 });
@@ -247,10 +256,16 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
         private final Plugin plugin;
         private final List<AutoCloseable> closeables = new ArrayList<>();
         private final List<Supplier<CompletionStage<Void>>> asyncCloseables = new ArrayList<>();
+        private Duration asyncCloseTimeout = DEFAULT_ASYNC_CLOSE_TIMEOUT;
         private boolean built;
 
         private Builder(Plugin plugin) {
             this.plugin = plugin;
+        }
+
+        public Builder timeout(Duration timeout) {
+            this.asyncCloseTimeout = Objects.requireNonNull(timeout, "Parameter 'timeout' must not be null");
+            return this;
         }
 
         public Builder with(AutoCloseable closeable) {
@@ -258,7 +273,11 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
             ensureOpen();
 
-            closeables.add(closeable);
+            if (closeable instanceof AsyncCloseable asyncCloseable) {
+                asyncCloseables.add(asyncCloseable::closeAsync);
+            } else {
+                closeables.add(closeable);
+            }
 
             return this;
         }
@@ -281,7 +300,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
         public Cotani build() {
             ensureOpen();
 
-            var instance = new Cotani(plugin, closeables, asyncCloseables);
+            var instance = new Cotani(plugin, closeables, asyncCloseables, asyncCloseTimeout);
             this.built = true;
             closeables.clear();
             asyncCloseables.clear();

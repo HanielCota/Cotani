@@ -27,6 +27,7 @@ public final class SimpleUserService implements InternalUserService {
     private final UserCache cache;
     private final UserRepository repository;
     private final ConcurrentMap<UUID, CompletableFuture<SimpleCotaniUser>> loadingUsers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, UUID> activeSessions = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, WriteLane> writeLanes = new ConcurrentHashMap<>();
     private final AtomicLong cacheGeneration = new AtomicLong();
 
@@ -60,6 +61,24 @@ public final class SimpleUserService implements InternalUserService {
     }
 
     @Override
+    public CompletionStage<Optional<CotaniUser>> findByNameAsync(String username) {
+        Objects.requireNonNull(username, "username");
+
+        Optional<CotaniUser> cached = cache.findByUsername(username);
+
+        if (cached.isPresent()) {
+            return CompletableFuture.completedStage(cached);
+        }
+
+        return repository
+                .findByUsername(username)
+                .toCompletableFuture()
+                .copy()
+                .orTimeout(10, TimeUnit.SECONDS)
+                .thenApply(optional -> optional.map(CotaniUser.class::cast));
+    }
+
+    @Override
     public CompletionStage<CotaniUser> getOrThrowAsync(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
 
@@ -75,6 +94,20 @@ public final class SimpleUserService implements InternalUserService {
     }
 
     @Override
+    public Optional<CotaniUser> findCached(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
+        return cache.find(uniqueId);
+    }
+
+    @Override
+    public boolean isLoaded(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
+        return cache.contains(uniqueId);
+    }
+
+    @Override
     public CompletionStage<SimpleCotaniUser> load(UUID uniqueId, String username) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(username, "username");
@@ -86,6 +119,7 @@ public final class SimpleUserService implements InternalUserService {
             long now = System.currentTimeMillis();
             SimpleCotaniUser updated =
                     user.withUsername(username).withLastJoinAt(now).withNewSessionId();
+            activeSessions.put(uniqueId, updated.sessionId());
             cache.put(updated);
 
             return CompletableFuture.completedStage(updated);
@@ -110,6 +144,7 @@ public final class SimpleUserService implements InternalUserService {
                             optionalUser.orElseGet(() -> SimpleCotaniUser.createNew(uniqueId, username, now));
                     SimpleCotaniUser updated =
                             loaded.withUsername(username).withLastJoinAt(now).withNewSessionId();
+                    activeSessions.put(uniqueId, updated.sessionId());
                     if (cacheGeneration.get() == generationAtStart) {
                         cache.put(updated);
                     }
@@ -132,39 +167,42 @@ public final class SimpleUserService implements InternalUserService {
     public CompletionStage<Void> unload(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
 
-        Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
-
-        if (optionalUser.isEmpty()) {
-            return CompletionStages.completedVoid();
+        UUID sessionId = activeSessions.remove(uniqueId);
+        if (sessionId == null) {
+            Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
+            if (optionalUser.isEmpty()) {
+                return CompletionStages.completedVoid();
+            }
+            sessionId = optionalUser.get().sessionId();
         }
 
-        SimpleCotaniUser user = optionalUser.get();
-        UUID sessionId = user.sessionId();
+        UUID finalSessionId = sessionId;
         Optional<SimpleCotaniUser> quitting = cache.updateIfSession(
                 uniqueId,
-                sessionId,
+                finalSessionId,
                 current -> current.withLastQuitAt(System.currentTimeMillis()).withIncrementedVersion());
         if (quitting.isEmpty()) {
             return CompletionStages.completedVoid();
         }
 
         return persistSequentially(uniqueId, () -> repository.save(quitting.get()))
-                .thenRun(() -> cache.remove(uniqueId, sessionId));
+                .thenRun(() -> cache.remove(uniqueId, finalSessionId));
     }
 
     @Override
     public CompletionStage<Void> save(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
 
-        Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
-
-        if (optionalUser.isEmpty()) {
-            return CompletionStages.completedVoid();
+        UUID sessionId = activeSessions.get(uniqueId);
+        if (sessionId == null) {
+            Optional<SimpleCotaniUser> optionalUser = cache.findInternal(uniqueId);
+            if (optionalUser.isEmpty()) {
+                return CompletionStages.completedVoid();
+            }
+            sessionId = optionalUser.get().sessionId();
         }
 
-        SimpleCotaniUser original = optionalUser.get();
-        var updated =
-                cache.updateIfSession(uniqueId, original.sessionId(), current -> current.withIncrementedVersion());
+        var updated = cache.updateIfSession(uniqueId, sessionId, current -> current.withIncrementedVersion());
         if (updated.isEmpty()) {
             return CompletionStages.completedVoid();
         }
@@ -180,19 +218,24 @@ public final class SimpleUserService implements InternalUserService {
             return CompletionStages.completedVoid();
         }
 
-        var saves = new ArrayList<CompletionStage<Void>>(snapshot.size());
+        var updatedUsers = new ArrayList<SimpleCotaniUser>(snapshot.size());
 
         for (SimpleCotaniUser original : snapshot) {
             var updated = cache.updateIfSession(
                     original.uniqueId(), original.sessionId(), current -> current.withIncrementedVersion());
-            updated.ifPresent(next -> saves.add(persistSequentially(next.uniqueId(), () -> repository.save(next))));
+            updated.ifPresent(updatedUsers::add);
         }
-        return CompletableFuture.allOf(
-                saves.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new));
+
+        if (updatedUsers.isEmpty()) {
+            return CompletionStages.completedVoid();
+        }
+
+        return repository.saveAll(updatedUsers);
     }
 
     public void clearCache() {
         cacheGeneration.incrementAndGet();
+        activeSessions.clear();
         cache.clear();
     }
 

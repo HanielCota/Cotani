@@ -10,7 +10,13 @@ import java.util.concurrent.CompletionStage;
 public interface UserService {
     CompletionStage<Optional<CotaniUser>> findAsync(UUID uniqueId);
 
+    CompletionStage<Optional<CotaniUser>> findByNameAsync(String username);
+
     CompletionStage<CotaniUser> getOrThrowAsync(UUID uniqueId);
 
     CompletionStage<Boolean> isLoadedAsync(UUID uniqueId);
+
+    Optional<CotaniUser> findCached(UUID uniqueId);
+
+    boolean isLoaded(UUID uniqueId);
 }

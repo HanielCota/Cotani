@@ -43,10 +43,9 @@ Retrieve rows asynchronously using the built-in query builder:
 storage.table("users")
     .select()
     .where("uuid", uuid)
-    .single()
-    .thenAccept(maybeRow -> {
-        maybeRow.ifPresent(row -> {
-            String username = row.getString("username");
+    .one(row -> row.getString("username"))
+    .thenAccept(maybeUsername -> {
+        maybeUsername.ifPresent(username -> {
             // Process row data safely
         });
     });
@@ -57,12 +56,15 @@ storage.table("users")
 Apply updates atomically within a transaction block:
 
 ```java
-storage.transactions().run(context -> {
-    // These statements run atomically on the database connection pool
-    context.update("UPDATE accounts SET balance = balance - ? WHERE id = ?", amount, sourceId);
-    context.update("UPDATE accounts SET balance = balance + ? WHERE id = ?", amount, targetId);
-    return null; // Return value if needed
-}).whenComplete((result, error) -> {
+storage.transactions().run(context ->
+    context.update(
+        "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+        binder -> binder.set(amount).set(sourceId)
+    ).thenCompose(_ -> context.update(
+        "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+        binder -> binder.set(amount).set(targetId)
+    ))
+).whenComplete((result, error) -> {
     if (error != null) {
         plugin.getLogger().severe("Transaction failed: " + error.getMessage());
     }

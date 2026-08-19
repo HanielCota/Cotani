@@ -1,6 +1,12 @@
 package com.cotani.storage.api;
 
-import com.cotani.storage.backend.*;
+import com.cotani.storage.backend.MariaDbBackend;
+import com.cotani.storage.backend.MariaDbCredentials;
+import com.cotani.storage.backend.MySqlBackend;
+import com.cotani.storage.backend.MySqlCredentials;
+import com.cotani.storage.backend.SQLiteBackend;
+import com.cotani.storage.backend.SQLiteCredentials;
+import com.cotani.storage.backend.StorageBackend;
 import com.cotani.storage.migration.Migration;
 import com.cotani.storage.repository.CotaniRepository;
 import com.cotani.storage.security.Paths;

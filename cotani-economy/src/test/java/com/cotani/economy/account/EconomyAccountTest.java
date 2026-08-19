@@ -1,6 +1,7 @@
 package com.cotani.economy.account;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.cotani.economy.currency.CurrencyId;
@@ -90,5 +91,58 @@ class EconomyAccountTest {
         var account = EconomyAccount.create(USER_ID, CURRENCY, BigDecimal.TEN, NOW);
 
         assertThrows(IllegalArgumentException.class, () -> account.setBalance(BigDecimal.valueOf(-1), NOW));
+    }
+
+    @Test
+    void shouldWithdrawDownToZeroBalance() {
+        var account = EconomyAccount.create(USER_ID, CURRENCY, BigDecimal.TEN, NOW);
+
+        var updated = account.withdraw(BigDecimal.TEN, NOW.plusSeconds(1));
+
+        assertEquals(0, updated.balance().signum());
+        assertEquals(0, updated.balance().compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    void shouldSetBalanceToZero() {
+        var account = EconomyAccount.create(USER_ID, CURRENCY, BigDecimal.TEN, NOW);
+
+        var updated = account.setBalance(BigDecimal.ZERO, NOW.plusSeconds(1));
+
+        assertEquals(0, updated.balance().signum());
+    }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void shouldRejectNullArguments() {
+        var account = EconomyAccount.create(USER_ID, CURRENCY, BigDecimal.TEN, NOW);
+
+        assertThrows(NullPointerException.class, () -> account.deposit(null, NOW));
+        assertThrows(NullPointerException.class, () -> account.withdraw(null, NOW));
+        assertThrows(NullPointerException.class, () -> account.setBalance(null, NOW));
+        assertThrows(NullPointerException.class, () -> account.deposit(BigDecimal.ONE, null));
+        assertThrows(NullPointerException.class, () -> new EconomyAccount(null, CURRENCY, BigDecimal.TEN, NOW, NOW));
+        assertThrows(NullPointerException.class, () -> new EconomyAccount(USER_ID, null, BigDecimal.TEN, NOW, NOW));
+        assertThrows(NullPointerException.class, () -> new EconomyAccount(USER_ID, CURRENCY, null, NOW, NOW));
+        assertThrows(
+                NullPointerException.class, () -> new EconomyAccount(USER_ID, CURRENCY, BigDecimal.TEN, null, NOW));
+        assertThrows(
+                NullPointerException.class, () -> new EconomyAccount(USER_ID, CURRENCY, BigDecimal.TEN, NOW, null));
+        assertThrows(NullPointerException.class, () -> EconomyAccount.create(null, CURRENCY, BigDecimal.TEN, NOW));
+        assertThrows(NullPointerException.class, () -> EconomyAccount.create(USER_ID, null, BigDecimal.TEN, NOW));
+        assertThrows(NullPointerException.class, () -> EconomyAccount.create(USER_ID, CURRENCY, null, NOW));
+        assertThrows(NullPointerException.class, () -> EconomyAccount.create(USER_ID, CURRENCY, BigDecimal.TEN, null));
+    }
+
+    @Test
+    void shouldImplementValueEquality() {
+        var first = EconomyAccount.create(USER_ID, CURRENCY, BigDecimal.TEN, NOW);
+        var second = EconomyAccount.create(USER_ID, CURRENCY, BigDecimal.TEN, NOW);
+
+        assertEquals(first, second);
+        assertEquals(first.hashCode(), second.hashCode());
+        assertNotEquals(first, null);
+        assertNotEquals(first, "account");
+        assertNotEquals(first, first.deposit(BigDecimal.ONE, NOW));
     }
 }

@@ -13,6 +13,8 @@ public interface UserRepository {
 
     CompletionStage<Optional<SimpleCotaniUser>> findByUniqueId(UUID uniqueId);
 
+    CompletionStage<Optional<SimpleCotaniUser>> findByUsername(String username);
+
     CompletionStage<Void> save(SimpleCotaniUser user);
 
     CompletionStage<Void> saveAll(Collection<SimpleCotaniUser> users);

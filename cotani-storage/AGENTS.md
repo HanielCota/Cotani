@@ -34,17 +34,25 @@ storage.startAsync().thenAccept(started -> {
 storage.table("users")
     .select()
     .where("uuid", uuid)
-    .single()
-    .thenAccept(maybeRow -> maybeRow.ifPresent(row -> { /* ... */ }));
+    .one(row -> new UserProfile(
+        row.getUuidOptional("uuid").orElseThrow(),
+        row.getString("username")
+    ))
+    .thenAccept(maybeUser -> maybeUser.ifPresent(user -> { /* ... */ }));
 ```
 
 ### Transaction
 
 ```java
-storage.transactions().run(context -> {
-    context.update("UPDATE accounts SET balance = balance - ? WHERE id = ?", amount, sourceId);
-    context.update("UPDATE accounts SET balance = balance + ? WHERE id = ?", amount, targetId);
-});
+storage.transactions().run(context ->
+    context.update(
+        "UPDATE accounts SET balance = balance - ? WHERE id = ?",
+        binder -> binder.set(amount).set(sourceId)
+    ).thenCompose(_ -> context.update(
+        "UPDATE accounts SET balance = balance + ? WHERE id = ?",
+        binder -> binder.set(amount).set(targetId)
+    ))
+);
 ```
 
 ## Anti-patterns

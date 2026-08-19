@@ -2,6 +2,7 @@ description = "Cotani — MiniMessage, placeholders and Adventure audience utili
 
 dependencies {
     api(project(":core"))
+    api(libs.caffeine)
 
     compileOnlyApi(libs.paper.api)
 

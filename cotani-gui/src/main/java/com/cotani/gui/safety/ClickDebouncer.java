@@ -43,14 +43,15 @@ public final class ClickDebouncer {
         var lastClick = lastClickByPlayer.computeIfAbsent(playerId, _ -> new AtomicLong(Long.MIN_VALUE));
 
         var now = System.nanoTime();
-        var previous = lastClick.getAndSet(now);
-
-        if (previous != Long.MIN_VALUE && now - previous < debounceNanos) {
-            lastClick.set(previous);
-            return false;
+        while (true) {
+            long previous = lastClick.get();
+            if (previous != Long.MIN_VALUE && now - previous < debounceNanos) {
+                return false;
+            }
+            if (lastClick.compareAndSet(previous, now)) {
+                return true;
+            }
         }
-
-        return true;
     }
 
     /**
@@ -67,6 +68,18 @@ public final class ClickDebouncer {
         if (lastClick != null) {
             lastClick.set(Long.MIN_VALUE);
         }
+    }
+
+    /**
+     * Removes debounce state for a specific player (e.g. on player quit)
+     * to avoid retaining disconnected player entries in memory.
+     *
+     * @param playerId unique identifier of the player
+     */
+    public void remove(UUID playerId) {
+        Objects.requireNonNull(playerId, "Parameter 'playerId' must not be null");
+
+        lastClickByPlayer.remove(playerId);
     }
 
     /**

@@ -34,13 +34,18 @@ public final class ExampleUserRepository extends PlayerDataRepository<ExampleUse
     }
 
     @Override
-    protected CompletionStage<ExampleUser> create(UUID playerId, String name) {
+    protected CompletionStage<ExampleUser> createAsync(UUID playerId, String name) {
         var user = new ExampleUser(playerId, name, 0L);
-        return save(user).thenApply(_ -> user);
+        return saveAsync(user).thenApply(_ -> user);
     }
 
     @Override
-    public CompletionStage<Void> save(ExampleUser user) {
+    protected CompletionStage<ExampleUser> create(UUID playerId, String name) {
+        return createAsync(playerId, name);
+    }
+
+    @Override
+    public CompletionStage<Void> saveAsync(ExampleUser user) {
         return table(TABLE)
                 .upsert()
                 .value(UNIQUE_ID_COLUMN, user.uniqueId())
@@ -52,9 +57,9 @@ public final class ExampleUserRepository extends PlayerDataRepository<ExampleUse
     }
 
     public CompletionStage<Void> addCoinsAsync(UUID playerId, String name, long amount) {
-        return findOrCreate(playerId, name)
+        return findOrCreateAsync(playerId, name)
                 .thenApply(user -> user.addCoins(amount))
-                .thenCompose(this::save);
+                .thenCompose(this::saveAsync);
     }
 
     private ExampleUser map(Row row) throws SQLException {

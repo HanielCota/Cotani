@@ -3,7 +3,14 @@ package com.cotani.teleport.config;
 import com.cotani.config.CotaniConfig;
 import com.cotani.config.CotaniConfigs;
 import com.cotani.task.api.PaperTaskScheduler;
-import com.cotani.teleport.api.*;
+import com.cotani.teleport.api.ExecutionSettings;
+import com.cotani.teleport.api.FeedbackSettings;
+import com.cotani.teleport.api.PlayerSettings;
+import com.cotani.teleport.api.PolicySettings;
+import com.cotani.teleport.api.SafeLocationOptions;
+import com.cotani.teleport.api.SafetySettings;
+import com.cotani.teleport.api.TeleportMessages;
+import com.cotani.teleport.api.TeleportOptions;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 

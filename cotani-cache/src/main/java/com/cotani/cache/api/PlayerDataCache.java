@@ -1,5 +1,6 @@
 package com.cotani.cache.api;
 
+import com.cotani.AsyncCloseable;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
@@ -17,7 +18,7 @@ import org.bukkit.entity.Player;
  *
  * @param <V> the player data type
  */
-public interface PlayerDataCache<V> extends AutoCloseable {
+public interface PlayerDataCache<V> extends AsyncCloseable, AutoCloseable {
     V get(Player player);
 
     V get(UUID uniqueId);
@@ -79,6 +80,7 @@ public interface PlayerDataCache<V> extends AutoCloseable {
 
     long size();
 
+    @Override
     CompletionStage<Void> closeAsync();
 
     @Override

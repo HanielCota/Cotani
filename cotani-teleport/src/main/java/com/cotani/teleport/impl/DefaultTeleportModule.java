@@ -15,11 +15,17 @@ import com.cotani.teleport.config.TeleportOptionsFactory;
 import com.cotani.teleport.event.TeleportEventBus;
 import com.cotani.teleport.pending.DefaultPendingTeleportService;
 import com.cotani.teleport.pending.PendingTeleportListener;
-import com.cotani.teleport.policy.*;
+import com.cotani.teleport.policy.CombatTeleportPolicy;
+import com.cotani.teleport.policy.CooldownTeleportPolicy;
+import com.cotani.teleport.policy.PermissionTeleportPolicy;
+import com.cotani.teleport.policy.RegionTeleportPolicy;
+import com.cotani.teleport.policy.TeleportCooldownService;
+import com.cotani.teleport.policy.TeleportPolicyChain;
 import com.cotani.teleport.safety.DefaultSafeLocationResolver;
 import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
@@ -199,6 +205,11 @@ public final class DefaultTeleportModule implements TeleportModule {
     @Override
     public PaperTaskScheduler scheduler() {
         return scheduler;
+    }
+
+    @Override
+    public CompletionStage<Void> closeAsync() {
+        return cotani.closeAsync();
     }
 
     @Override

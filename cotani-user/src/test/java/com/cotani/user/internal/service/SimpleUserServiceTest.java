@@ -117,11 +117,13 @@ class SimpleUserServiceTest {
                 .thenAnswer(invocation -> Optional.of(invocation
                         .<UnaryOperator<SimpleCotaniUser>>getArgument(2)
                         .apply(user)));
-        when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(repository.saveAll(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.saveAll().toCompletableFuture().join();
 
-        verify(repository).save(argThat(saved -> saved.version() == 2L));
+        verify(repository)
+                .saveAll(argThat(savedList ->
+                        savedList.size() == 1 && savedList.iterator().next().version() == 2L));
     }
 
     @Test
@@ -251,5 +253,51 @@ class SimpleUserServiceTest {
 
         // Verify that findByUniqueId was NOT called since it used the ongoing load
         verify(repository, never()).findByUniqueId(uniqueId);
+    }
+
+    @Test
+    void findByNameAsyncUsesCacheHit() {
+        SimpleCotaniUser user = SimpleCotaniUser.createNew(UUID.randomUUID(), "Steve", 1L);
+        when(cache.findByUsername("Steve")).thenReturn(Optional.of(user));
+
+        Optional<CotaniUser> result =
+                service.findByNameAsync("Steve").toCompletableFuture().join();
+
+        assertTrue(result.isPresent());
+        assertEquals("Steve", result.get().username());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void findByNameAsyncFallsBackToRepository() {
+        SimpleCotaniUser user = SimpleCotaniUser.createNew(UUID.randomUUID(), "Alex", 1L);
+        when(cache.findByUsername("Alex")).thenReturn(Optional.empty());
+        when(repository.findByUsername("Alex")).thenReturn(CompletableFuture.completedFuture(Optional.of(user)));
+
+        Optional<CotaniUser> result =
+                service.findByNameAsync("Alex").toCompletableFuture().join();
+
+        assertTrue(result.isPresent());
+        assertEquals("Alex", result.get().username());
+        verify(repository).findByUsername("Alex");
+    }
+
+    @Test
+    void findCachedDelegatesToCache() {
+        UUID uniqueId = UUID.randomUUID();
+        SimpleCotaniUser user = SimpleCotaniUser.createNew(uniqueId, "Steve", 1L);
+        when(cache.find(uniqueId)).thenReturn(Optional.of(user));
+
+        Optional<CotaniUser> result = service.findCached(uniqueId);
+        assertTrue(result.isPresent());
+        assertEquals(uniqueId, result.get().uniqueId());
+    }
+
+    @Test
+    void isLoadedDelegatesToCache() {
+        UUID uniqueId = UUID.randomUUID();
+        when(cache.contains(uniqueId)).thenReturn(true);
+
+        assertTrue(service.isLoaded(uniqueId));
     }
 }

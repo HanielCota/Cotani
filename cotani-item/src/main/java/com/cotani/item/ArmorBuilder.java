@@ -6,8 +6,6 @@ import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 import org.bukkit.Material;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.bukkit.inventory.meta.trim.TrimMaterial;
 import org.bukkit.inventory.meta.trim.TrimPattern;
@@ -35,7 +33,13 @@ public final class ArmorBuilder extends ItemStackBuilder<ArmorBuilder> {
         var materials = EnumSet.noneOf(Material.class);
 
         for (var candidate : Material.values()) {
-            if (candidate.isItem() && ItemStack.of(candidate).getItemMeta() instanceof ArmorMeta) {
+            String name = candidate.name();
+            if (name.endsWith("_HELMET")
+                    || name.endsWith("_CHESTPLATE")
+                    || name.endsWith("_LEGGINGS")
+                    || name.endsWith("_BOOTS")
+                    || name.equals("TURTLE_HELMET")
+                    || name.equals("WOLF_ARMOR")) {
                 materials.add(candidate);
             }
         }

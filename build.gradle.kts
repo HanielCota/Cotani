@@ -45,13 +45,15 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
                                 file.invariantSeparatorsPath.contains("/impl/"))
             }
             .forEach { file ->
-                val source = file.readText()
-                if (Regex("""(?m)^public\s+(?:final\s+|abstract\s+)?(?:class|record|interface|enum|sealed\s+interface)\s+""")
-                        .containsMatchIn(source) &&
-                    !source.contains("@InternalApi") &&
-                    !source.contains("@com.cotani.api.InternalApi")) {
-                    violations +=
-                        "${file.relativeTo(root)} exposes an unmarked implementation; add @InternalApi or move the contract out of impl/internal"
+                runCatching {
+                    val source = file.readText()
+                    if (Regex("""(?m)^public\s+(?:final\s+|abstract\s+)?(?:class|record|interface|enum|sealed\s+interface)\s+""")
+                            .containsMatchIn(source) &&
+                        !source.contains("@InternalApi") &&
+                        !source.contains("@com.cotani.api.InternalApi")) {
+                        violations +=
+                            "${file.relativeTo(root)} exposes an unmarked implementation; add @InternalApi or move the contract out of impl/internal"
+                    }
                 }
             }
 
@@ -65,13 +67,15 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
                 .walkTopDown()
                 .filter { file -> file.isFile && file.extension == "java" }
                 .forEach { file ->
-                    file.useLines { lines ->
-                        lines.forEachIndexed { index, line ->
-                            val match = importPattern.find(line)
-                            val targetModule = match?.groupValues?.get(1)
-                            if (targetModule != null && targetModule != module) {
-                                violations +=
-                                    "${file.relativeTo(root)}:${index + 1} imports another module implementation: ${line.trim()}"
+                    runCatching {
+                        file.useLines { lines ->
+                            lines.forEachIndexed { index, line ->
+                                val match = importPattern.find(line)
+                                val targetModule = match?.groupValues?.get(1)
+                                if (targetModule != null && targetModule != module) {
+                                    violations +=
+                                        "${file.relativeTo(root)}:${index + 1} imports another module implementation: ${line.trim()}"
+                                }
                             }
                         }
                     }
@@ -86,10 +90,12 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
                         file.invariantSeparatorsPath.contains("/api/")
             }
             .forEach { file ->
-                file.useLines { lines ->
-                    lines.forEachIndexed { index, line ->
-                        if (apiImportPattern.containsMatchIn(line)) {
-                            violations += "${file.relativeTo(root)}:${index + 1} API imports implementation: ${line.trim()}"
+                runCatching {
+                    file.useLines { lines ->
+                        lines.forEachIndexed { index, line ->
+                            if (apiImportPattern.containsMatchIn(line)) {
+                                violations += "${file.relativeTo(root)}:${index + 1} API imports implementation: ${line.trim()}"
+                            }
                         }
                     }
                 }
@@ -121,6 +127,27 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
 
         moduleNames.forEach { module -> visit(module, module, listOf(module)) }
         cycles.forEach { cycle -> violations += "Gradle module dependency cycle: $cycle" }
+
+        val bomFile = root.resolve("cotani-bom/build.gradle.kts")
+        if (bomFile.exists()) {
+            val bomContent = bomFile.readText()
+            val bomConstraints = Regex("""api\(project\(":([^"]+)"\)\)""")
+                .findAll(bomContent)
+                .map { it.groupValues[1] }
+                .toSet()
+
+            val missingFromBom = moduleSet - bomConstraints
+            if (missingFromBom.isNotEmpty()) {
+                violations += "cotani-bom is missing constraints for published modules: ${missingFromBom.sorted().joinToString(", ")}"
+            }
+
+            val unexpectedInBom = bomConstraints - moduleSet
+            if (unexpectedInBom.isNotEmpty()) {
+                violations += "cotani-bom contains constraints for non-published or unknown modules: ${unexpectedInBom.sorted().joinToString(", ")}"
+            }
+        } else {
+            violations += "cotani-bom/build.gradle.kts does not exist"
+        }
 
         if (violations.isNotEmpty()) {
             throw GradleException("Module architecture validation failed:\n" + violations.joinToString("\n"))
@@ -183,6 +210,7 @@ group = "com.cotani"
 description = "Cotani — modular Paper library"
 
 subprojects {
+    group = "com.cotani"
     val isPlatform = name == "bom"
     val isExample = name == "examples"
 

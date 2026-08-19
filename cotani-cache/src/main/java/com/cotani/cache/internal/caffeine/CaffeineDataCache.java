@@ -295,7 +295,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
     @Override
     public Map<K, V> snapshot() {
         return Map.copyOf(cache.synchronous().asMap().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().value())));
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().value(), (a, b) -> b)));
     }
 
     @Override

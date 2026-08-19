@@ -6,7 +6,12 @@ import com.cotani.storage.schema.Schema;
 import com.cotani.task.util.CompletionStages;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 
 public final class MigrationRunner {

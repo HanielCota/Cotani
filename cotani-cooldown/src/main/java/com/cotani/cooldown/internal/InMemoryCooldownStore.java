@@ -1,7 +1,10 @@
 package com.cotani.cooldown.internal;
 
 import com.cotani.api.InternalApi;
-import com.cotani.cooldown.api.*;
+import com.cotani.cooldown.api.CooldownEntry;
+import com.cotani.cooldown.api.CooldownKey;
+import com.cotani.cooldown.api.CooldownResult;
+import com.cotani.cooldown.api.CooldownStore;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

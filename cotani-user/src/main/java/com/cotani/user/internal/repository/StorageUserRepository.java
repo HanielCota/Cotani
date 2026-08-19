@@ -7,7 +7,11 @@ import com.cotani.storage.query.SqlConsumer;
 import com.cotani.task.util.CompletionStages;
 import com.cotani.user.internal.mapper.UserMapper;
 import com.cotani.user.internal.model.SimpleCotaniUser;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
 @InternalApi
@@ -58,6 +62,18 @@ public final class StorageUserRepository implements UserRepository {
     @Override
     public CompletionStage<Optional<SimpleCotaniUser>> findByUniqueId(UUID uniqueId) {
         return find(uniqueId, "unknown");
+    }
+
+    @Override
+    public CompletionStage<Optional<SimpleCotaniUser>> findByUsername(String username) {
+        Objects.requireNonNull(username, "username");
+        long now = System.currentTimeMillis();
+
+        return storage.table(TABLE)
+                .select()
+                .where(USERNAME_COL, username)
+                .limit(1)
+                .one(row -> mapper.toUser(row, UUID.randomUUID(), username, now));
     }
 
     @Override

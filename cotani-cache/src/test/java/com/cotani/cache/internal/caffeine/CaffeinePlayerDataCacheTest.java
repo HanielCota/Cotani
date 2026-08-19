@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -275,5 +276,81 @@ class CaffeinePlayerDataCacheTest {
 
         assertEquals(0, cache.size());
         verify(repository).save(id, "value");
+    }
+
+    private Player playerWithId(UUID id) {
+        var player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(id);
+
+        return player;
+    }
+
+    @Test
+    void playerGetDelegatesByUniqueId() {
+        when(repository.find(any(UUID.class))).thenReturn(CompletableFuture.completedFuture(Optional.of("value")));
+
+        PlayerDataCache<String> cache = createCache();
+        UUID id = UUID.randomUUID();
+        cache.getOrLoadAsync(id).toCompletableFuture().join();
+
+        assertEquals("value", cache.get(playerWithId(id)));
+    }
+
+    @Test
+    void playerFindDelegatesByUniqueId() {
+        when(repository.find(any(UUID.class))).thenReturn(CompletableFuture.completedFuture(Optional.of("value")));
+
+        PlayerDataCache<String> cache = createCache();
+        UUID id = UUID.randomUUID();
+        cache.getOrLoadAsync(id).toCompletableFuture().join();
+
+        assertEquals("value", cache.find(playerWithId(id)).orElseThrow());
+    }
+
+    @Test
+    void playerUnloadAndContainsDelegateByUniqueId() {
+        when(repository.find(any(UUID.class))).thenReturn(CompletableFuture.completedFuture(Optional.of("value")));
+
+        PlayerDataCache<String> cache = createCache();
+        UUID id = UUID.randomUUID();
+        var player = playerWithId(id);
+        cache.getOrLoadAsync(id).toCompletableFuture().join();
+        assertTrue(cache.contains(player));
+
+        cache.unload(player);
+
+        assertFalse(cache.contains(player));
+    }
+
+    @Test
+    void playerMarkDirtyDelegatesByUniqueId() {
+        when(repository.find(any(UUID.class))).thenReturn(CompletableFuture.completedFuture(Optional.of("value")));
+
+        PlayerDataCache<String> cache = createCache();
+        UUID id = UUID.randomUUID();
+        cache.getOrLoadAsync(id).toCompletableFuture().join();
+        assertEquals(0, cache.dirtyCount());
+
+        cache.markDirty(playerWithId(id));
+
+        assertEquals(1, cache.dirtyCount());
+    }
+
+    @Test
+    void containsReturnsFalseBeforeLoad() {
+        PlayerDataCache<String> cache = createCache();
+
+        assertFalse(cache.contains(UUID.randomUUID()));
+    }
+
+    @Test
+    void playerNullRejects() {
+        PlayerDataCache<String> cache = createCache();
+
+        assertThrows(NullPointerException.class, () -> cache.get((Player) null));
+        assertThrows(NullPointerException.class, () -> cache.find((Player) null));
+        assertThrows(NullPointerException.class, () -> cache.unload((Player) null));
+        assertThrows(NullPointerException.class, () -> cache.contains((Player) null));
+        assertThrows(NullPointerException.class, () -> cache.markDirty((Player) null));
     }
 }

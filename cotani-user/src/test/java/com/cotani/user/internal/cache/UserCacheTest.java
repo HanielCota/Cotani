@@ -114,4 +114,22 @@ class UserCacheTest {
         assertTrue(updated.isEmpty());
         assertEquals(newSession, cache.findInternal(uniqueId).orElseThrow());
     }
+
+    @Test
+    void findByUsernameReturnsMatchingUser() {
+        UUID uniqueId = UUID.randomUUID();
+        SimpleCotaniUser user = SimpleCotaniUser.createNew(uniqueId, "Steve", 1L);
+        cache.put(user);
+
+        Optional<CotaniUser> found = cache.findByUsername("Steve");
+        assertTrue(found.isPresent());
+        assertEquals(uniqueId, found.get().uniqueId());
+
+        Optional<CotaniUser> caseInsensitive = cache.findByUsername("steve");
+        assertTrue(caseInsensitive.isPresent());
+        assertEquals(uniqueId, caseInsensitive.get().uniqueId());
+
+        Optional<CotaniUser> notFound = cache.findByUsername("Alex");
+        assertTrue(notFound.isEmpty());
+    }
 }

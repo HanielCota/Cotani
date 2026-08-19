@@ -25,6 +25,18 @@ public final class Buttons {
     }
 
     /**
+     * A custom item button that closes the viewer's inventory.
+     *
+     * @param item the item to display
+     * @return the close button
+     */
+    public static Button close(ItemStack item) {
+        Objects.requireNonNull(item, "Parameter 'item' must not be null");
+
+        return Button.of(_ -> item, context -> context.player().closeInventory());
+    }
+
+    /**
      * A button running a custom action with a static item.
      *
      * @param item the item to display
@@ -62,6 +74,20 @@ public final class Buttons {
     }
 
     /**
+     * An arrow button that advances the given page state with a custom display item.
+     *
+     * @param page the page state property
+     * @param item the item to display
+     * @return the next-page button
+     */
+    public static Button nextPage(Property<Integer> page, ItemStack item) {
+        Objects.requireNonNull(page, "Parameter 'page' must not be null");
+        Objects.requireNonNull(item, "Parameter 'item' must not be null");
+
+        return Button.of(_ -> item, _ -> page.update(p -> p + 1));
+    }
+
+    /**
      * An arrow button that moves the given page state back, never below zero.
      *
      * @param page the page state property
@@ -72,5 +98,19 @@ public final class Buttons {
 
         return Button.of(
                 _ -> Items.item(Material.ARROW, "<yellow>Página anterior"), _ -> page.update(p -> Math.max(0, p - 1)));
+    }
+
+    /**
+     * An arrow button that moves the given page state back with a custom display item.
+     *
+     * @param page the page state property
+     * @param item the item to display
+     * @return the previous-page button
+     */
+    public static Button previousPage(Property<Integer> page, ItemStack item) {
+        Objects.requireNonNull(page, "Parameter 'page' must not be null");
+        Objects.requireNonNull(item, "Parameter 'item' must not be null");
+
+        return Button.of(_ -> item, _ -> page.update(p -> Math.max(0, p - 1)));
     }
 }

@@ -59,6 +59,9 @@ public final class SqlCooldownRepository implements CacheRepository<UUID, Player
                         }
                         map.put(entry.key().action().value(), entry);
                     }
+                    if (map.isEmpty()) {
+                        return Optional.empty();
+                    }
                     return Optional.of(new PlayerCooldowns(playerId, map));
                 });
     }

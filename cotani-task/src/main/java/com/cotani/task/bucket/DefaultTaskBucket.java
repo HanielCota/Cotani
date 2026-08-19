@@ -123,4 +123,9 @@ public final class DefaultTaskBucket implements TaskBucket {
                 },
                 delay);
     }
+
+    @Override
+    public void clear() {
+        limiters.clear();
+    }
 }

@@ -62,11 +62,11 @@ public final class EconomyFormatter implements AutoCloseable {
     }
 
     public void remove() {
-        // no-op, kept for backward compatibility
+        decimalFormat.remove();
     }
 
     @Override
     public void close() {
-        // no-op, kept for backward compatibility
+        decimalFormat.remove();
     }
 }

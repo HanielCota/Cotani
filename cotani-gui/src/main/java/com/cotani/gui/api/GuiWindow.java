@@ -27,6 +27,7 @@ import org.jspecify.annotations.Nullable;
 public final class GuiWindow {
     private final Component title;
     private final Map<Character, Button> buttons = new LinkedHashMap<>();
+    private final List<Character> interactableSymbols = new ArrayList<>();
     private final List<ObservedBinding> observedBindings = new ArrayList<>();
     private final List<PaginatedSpec<?>> paginatedSpecs = new ArrayList<>();
 
@@ -219,6 +220,19 @@ public final class GuiWindow {
     }
 
     /**
+     * Marks every slot assigned to the given symbol as interactable, allowing players to place and
+     * remove items directly while still protecting all other panel slots.
+     *
+     * @param symbol the structure symbol
+     * @return this builder
+     */
+    public GuiWindow allowPlayerInteraction(char symbol) {
+        requireBindableSymbol(symbol);
+        interactableSymbols.add(symbol);
+        return this;
+    }
+
+    /**
      * Opens the GUI for the given player.
      *
      * <p>Must be called on the thread that owns the player (main thread on Paper, the entity region
@@ -236,6 +250,12 @@ public final class GuiWindow {
         var borderItem = borderMaterial == null ? null : Items.borderPane(borderMaterial);
         var panel = GuiPanel.create(player, title, layout.rows(), borderItem, closeHandler);
 
+        for (var symbol : interactableSymbols) {
+            for (var slot : layout.slots(symbol)) {
+                panel.markInteractable(slot);
+            }
+        }
+
         for (var entry : buttons.entrySet()) {
             for (var slot : layout.slots(entry.getKey())) {
                 panel.bindSlot(slot, entry.getValue());
@@ -250,14 +270,17 @@ public final class GuiWindow {
             panel.addRegion(spec.toRegion(layout.slots(spec.symbol())));
         }
 
-        player.openInventory(panel.getInventory());
         panel.render();
+        player.openInventory(panel.getInventory());
 
         return panel;
     }
 
     private void validateSymbols(Structure layout) {
         for (var symbol : buttons.keySet()) {
+            requirePresentSymbol(layout, symbol);
+        }
+        for (var symbol : interactableSymbols) {
             requirePresentSymbol(layout, symbol);
         }
         for (var spec : paginatedSpecs) {

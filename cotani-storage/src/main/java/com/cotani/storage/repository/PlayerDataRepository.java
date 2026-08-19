@@ -11,13 +11,24 @@ public abstract class PlayerDataRepository<T> extends CrudRepository<UUID, T> {
         super(storage);
     }
 
-    public CompletionStage<T> findOrCreate(UUID playerId, String name) {
+    public CompletionStage<T> findOrCreateAsync(UUID playerId, String name) {
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(name, "name");
 
-        return findById(playerId)
+        return findByIdAsync(playerId)
                 .thenCompose(optional ->
-                        optional.map(CompletableFuture::completedStage).orElseGet(() -> create(playerId, name)));
+                        optional.map(CompletableFuture::completedStage).orElseGet(() -> createAsync(playerId, name)));
+    }
+
+    /** @deprecated use {@link #findOrCreateAsync(UUID, String)} */
+    @Deprecated(forRemoval = false)
+    @SuppressWarnings("InlineMeSuggester")
+    public CompletionStage<T> findOrCreate(UUID playerId, String name) {
+        return findOrCreateAsync(playerId, name);
+    }
+
+    protected CompletionStage<T> createAsync(UUID playerId, String name) {
+        return create(playerId, name);
     }
 
     protected abstract CompletionStage<T> create(UUID playerId, String name);

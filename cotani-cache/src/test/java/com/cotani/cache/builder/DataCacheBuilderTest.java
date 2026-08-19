@@ -53,6 +53,70 @@ class DataCacheBuilderTest {
     }
 
     @Test
+    void buildRejectsNullScheduler() {
+        DataCacheBuilder<String, String> builder =
+                CotaniCache.data(String.class, String.class).defaultValue(() -> "default");
+
+        assertThrows(NullPointerException.class, () -> builder.build(null));
+    }
+
+    @Test
+    void defaultValueSupplierNullRejects() {
+        DataCacheBuilder<String, String> builder = CotaniCache.data(String.class, String.class);
+
+        assertThrows(
+                NullPointerException.class, () -> builder.defaultValue((java.util.function.Supplier<String>) null));
+    }
+
+    @Test
+    void defaultValueFunctionNullRejects() {
+        DataCacheBuilder<String, String> builder = CotaniCache.data(String.class, String.class);
+
+        assertThrows(
+                NullPointerException.class,
+                () -> builder.defaultValue((java.util.function.Function<String, String>) null));
+    }
+
+    @Test
+    void repositoryNullRejects() {
+        DataCacheBuilder<String, String> builder = CotaniCache.data(String.class, String.class);
+
+        assertThrows(NullPointerException.class, () -> builder.repository(null));
+    }
+
+    @Test
+    void presetNullRejects() {
+        DataCacheBuilder<String, String> builder = CotaniCache.data(String.class, String.class);
+
+        assertThrows(NullPointerException.class, () -> builder.preset(null));
+    }
+
+    @Test
+    void invalidationBusNullRejects() {
+        DataCacheBuilder<String, String> builder = CotaniCache.data(String.class, String.class);
+
+        assertThrows(NullPointerException.class, () -> builder.invalidationBus(null));
+    }
+
+    @Test
+    void maximumConcurrentSavesRequiresPositive() {
+        DataCacheBuilder<String, String> builder = CotaniCache.data(String.class, String.class);
+
+        assertThrows(IllegalArgumentException.class, () -> builder.maximumConcurrentSaves(0));
+        assertThrows(IllegalArgumentException.class, () -> builder.maximumConcurrentSaves(-1));
+    }
+
+    @Test
+    void createRejectsNullKeyType() {
+        assertThrows(NullPointerException.class, () -> CotaniCache.data(null, String.class));
+    }
+
+    @Test
+    void createRejectsNullValueType() {
+        assertThrows(NullPointerException.class, () -> CotaniCache.data(String.class, null));
+    }
+
+    @Test
     void buildWithDefaultValueSucceeds() {
         DataCache<String, String> cache = CotaniCache.data(String.class, String.class)
                 .defaultValue(() -> "default")

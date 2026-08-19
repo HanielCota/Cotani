@@ -133,6 +133,11 @@ public final class DefaultUserModule implements UserModule {
         return userService;
     }
 
+    @Override
+    public CompletionStage<Void> closeAsync() {
+        return cotani.closeAsync();
+    }
+
     /**
      * Closes the module and propagates any shutdown failure as {@link com.cotani.CotaniCloseException}.
      *

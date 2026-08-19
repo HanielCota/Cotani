@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.bukkit.Bukkit;
 import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 @NullMarked
 public final class SkullTextureResolver implements AutoCloseable {
@@ -26,7 +27,9 @@ public final class SkullTextureResolver implements AutoCloseable {
     private static final int MAX_BASE64_LENGTH = 16_384;
     private static final int MAX_TEXTURE_URL_LENGTH = 2_048;
 
-    private final Cache<String, PlayerProfile> profileCache;
+    private final @Nullable Cache<String, PlayerProfile> profileCache;
+
+    private static final SkullTextureResolver UNCACHED = new SkullTextureResolver(null, UncachedMarker.INSTANCE);
 
     public SkullTextureResolver() {
         this(buildDefaultCache());
@@ -34,11 +37,20 @@ public final class SkullTextureResolver implements AutoCloseable {
 
     /** Returns a resolver without shared or retained cache state. */
     public static SkullTextureResolver uncached() {
-        return new SkullTextureResolver(Caffeine.newBuilder().maximumSize(0).build());
+        return UNCACHED;
     }
 
     public SkullTextureResolver(Cache<String, PlayerProfile> profileCache) {
         this.profileCache = Objects.requireNonNull(profileCache, "profileCache");
+    }
+
+    private SkullTextureResolver(@Nullable Cache<String, PlayerProfile> profileCache, UncachedMarker ignored) {
+        this.profileCache = profileCache;
+        Objects.requireNonNull(ignored, "ignored");
+    }
+
+    private enum UncachedMarker {
+        INSTANCE
     }
 
     /**
@@ -57,6 +69,9 @@ public final class SkullTextureResolver implements AutoCloseable {
             throw new IllegalArgumentException("Parameter 'base64' must be valid Base64", failure);
         }
 
+        if (profileCache == null) {
+            return buildProfile(base64);
+        }
         return profileCache.get(base64, SkullTextureResolver::buildProfile);
     }
 
@@ -71,6 +86,9 @@ public final class SkullTextureResolver implements AutoCloseable {
 
         var normalizedUrl = normalizeTextureUrl(textureUrl);
 
+        if (profileCache == null) {
+            return createProfile(normalizedUrl);
+        }
         return profileCache.get(normalizedUrl, SkullTextureResolver::createProfile);
     }
 
@@ -81,7 +99,9 @@ public final class SkullTextureResolver implements AutoCloseable {
     }
 
     public void clearCache() {
-        profileCache.invalidateAll();
+        if (profileCache != null) {
+            profileCache.invalidateAll();
+        }
     }
 
     @Override
@@ -126,6 +146,11 @@ public final class SkullTextureResolver implements AutoCloseable {
         }
         if (lower.startsWith(BARE_DOMAIN)) {
             return "https://" + stripped;
+        }
+
+        if (stripped.contains("://") || stripped.contains(":") || stripped.contains("@") || stripped.startsWith("//")) {
+            throw new IllegalArgumentException(
+                    "Parameter 'textureUrl' contains an unsupported scheme or host: " + stripped);
         }
 
         return TEXTURES_DOMAIN + stripped;

@@ -18,21 +18,21 @@ public abstract class CrudRepository<K, T> extends CotaniRepository implements R
     protected abstract EntityMapper<T> mapper();
 
     @Override
-    public CompletionStage<Optional<T>> findById(K id) {
+    public CompletionStage<Optional<T>> findByIdAsync(K id) {
         Objects.requireNonNull(id, "id");
 
         return table(tableName()).select().where(idColumn(), id).one(mapper());
     }
 
     @Override
-    public CompletionStage<Boolean> exists(K id) {
+    public CompletionStage<Boolean> existsAsync(K id) {
         Objects.requireNonNull(id, "id");
 
         return table(tableName()).exists().where(idColumn(), id).execute();
     }
 
     @Override
-    public CompletionStage<Void> deleteById(K id) {
+    public CompletionStage<Void> deleteByIdAsync(K id) {
         Objects.requireNonNull(id, "id");
 
         return table(tableName()).delete().where(idColumn(), id).execute();

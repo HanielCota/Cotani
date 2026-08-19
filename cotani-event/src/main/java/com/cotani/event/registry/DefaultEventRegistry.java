@@ -11,7 +11,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @InternalApi
@@ -19,7 +18,6 @@ public final class DefaultEventRegistry implements EventRegistry {
     private final CopyOnWriteArrayList<EventSubscription> subscriptions = new CopyOnWriteArrayList<>();
     private final Map<UUID, EventSubscription> subscriptionIndex = new ConcurrentHashMap<>();
     private final Map<Class<? extends CotaniEvent>, List<EventSubscription>> resolvedCache = new ConcurrentHashMap<>();
-    private final Map<Class<? extends CotaniEvent>, AtomicInteger> inactiveCounters = new ConcurrentHashMap<>();
     private final ReentrantReadWriteLock snapshotLock = new ReentrantReadWriteLock();
 
     @Override
@@ -31,7 +29,6 @@ public final class DefaultEventRegistry implements EventRegistry {
             subscriptions.add(subscription);
             subscriptionIndex.put(subscription.id(), subscription);
             resolvedCache.clear();
-            inactiveCounters.clear();
         } finally {
             snapshotLock.writeLock().unlock();
         }
@@ -46,7 +43,6 @@ public final class DefaultEventRegistry implements EventRegistry {
             subscription.unsubscribe();
             subscriptionIndex.remove(subscription.id());
             if (subscriptions.remove(subscription)) {
-                inactiveCounters.clear();
                 resolvedCache.clear();
             }
         } finally {
@@ -62,18 +58,11 @@ public final class DefaultEventRegistry implements EventRegistry {
         try {
             Class<? extends CotaniEvent> eventClass = event.getClass();
             List<EventSubscription> cached = resolvedCache.get(eventClass);
-            var inactiveCounter = inactiveCounters.get(eventClass);
-
-            if (cached != null && (inactiveCounter == null || inactiveCounter.get() == 0)) {
+            if (cached != null) {
                 return cached;
             }
 
-            return resolvedCache.computeIfAbsent(eventClass, cls -> {
-                var result = resolveSubscriptions(cls);
-                inactiveCounters.put(cls, new AtomicInteger(countInactive(result)));
-
-                return result;
-            });
+            return resolvedCache.computeIfAbsent(eventClass, this::resolveSubscriptions);
         } finally {
             snapshotLock.readLock().unlock();
         }
@@ -93,15 +82,6 @@ public final class DefaultEventRegistry implements EventRegistry {
         return List.copyOf(matchingSubscriptions);
     }
 
-    private static int countInactive(List<EventSubscription> subs) {
-        int count = 0;
-
-        for (var s : subs) {
-            if (!s.active()) count++;
-        }
-        return count;
-    }
-
     @Override
     public void removeInactive() {
         snapshotLock.writeLock().lock();
@@ -116,7 +96,6 @@ public final class DefaultEventRegistry implements EventRegistry {
             });
             if (changed) {
                 resolvedCache.clear();
-                inactiveCounters.clear();
             }
         } finally {
             snapshotLock.writeLock().unlock();
@@ -131,7 +110,6 @@ public final class DefaultEventRegistry implements EventRegistry {
             subscriptions.clear();
             subscriptionIndex.clear();
             resolvedCache.clear();
-            inactiveCounters.clear();
         } finally {
             snapshotLock.writeLock().unlock();
         }

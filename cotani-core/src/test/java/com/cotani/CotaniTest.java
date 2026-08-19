@@ -2,15 +2,22 @@ package com.cotani;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import org.bukkit.Bukkit;
+import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -20,6 +27,21 @@ class CotaniTest {
         Mockito.when(plugin.getLogger()).thenReturn(Logger.getLogger("cotani-test"));
 
         return plugin;
+    }
+
+    private static void setBukkitServer(@Nullable Server server) {
+        try {
+            var field = Bukkit.class.getDeclaredField("server");
+            field.setAccessible(true);
+            field.set(null, server);
+        } catch (ReflectiveOperationException failure) {
+            throw new RuntimeException("Failed to override Bukkit.server", failure);
+        }
+    }
+
+    @AfterEach
+    void restoreBukkitServer() {
+        setBukkitServer(null);
     }
 
     @Test
@@ -87,11 +109,10 @@ class CotaniTest {
     @Test
     void closeWrapsCheckedExceptions() {
         var plugin = pluginWithLogger();
-        var cotani = Cotani.forPlugin(plugin)
-                .with(() -> {
-                    throw new Exception("checked");
-                })
-                .build();
+        AutoCloseable closeable = () -> {
+            throw new Exception("checked");
+        };
+        var cotani = Cotani.forPlugin(plugin).with(closeable).build();
 
         var thrown = assertThrows(CotaniCloseException.class, cotani::close);
         var cause = thrown.getCause();
@@ -156,6 +177,47 @@ class CotaniTest {
     }
 
     @Test
+    @SuppressWarnings("NullAway")
+    void registerNullRejects() {
+        var plugin = pluginWithLogger();
+
+        assertThrows(
+                NullPointerException.class,
+                () -> Cotani.forPlugin(plugin).build().register(null));
+    }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void deregisterNullRejects() {
+        var plugin = pluginWithLogger();
+
+        assertThrows(
+                NullPointerException.class,
+                () -> Cotani.forPlugin(plugin).build().deregister(null));
+    }
+
+    @Test
+    void deregisterAfterCloseDoesNotThrow() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin).build();
+        cotani.close();
+
+        assertDoesNotThrow(() -> cotani.deregister(() -> {}));
+    }
+
+    @Test
+    void deregisterUnknownResourceIsSafe() {
+        var plugin = pluginWithLogger();
+        var closed = new AtomicBoolean();
+        var cotani = Cotani.forPlugin(plugin).with(() -> closed.set(true)).build();
+
+        cotani.deregister(() -> {});
+        cotani.close();
+
+        assertTrue(closed.get());
+    }
+
+    @Test
     void builderIsSingleUse() {
         var plugin = pluginWithLogger();
         var builder = Cotani.forPlugin(plugin).with(() -> {});
@@ -173,6 +235,24 @@ class CotaniTest {
         builder.build();
 
         assertThrows(IllegalStateException.class, () -> builder.with(() -> {}));
+    }
+
+    @Test
+    void builderWithAsyncAfterBuildThrows() {
+        var plugin = pluginWithLogger();
+        var builder = Cotani.forPlugin(plugin).withAsync(CompletableFuture::new);
+
+        builder.build();
+
+        assertThrows(IllegalStateException.class, () -> builder.withAsync(CompletableFuture::new));
+    }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void builderWithAsyncRejectsNull() {
+        var plugin = pluginWithLogger();
+
+        assertThrows(NullPointerException.class, () -> Cotani.forPlugin(plugin).withAsync(null));
     }
 
     @Test
@@ -268,6 +348,68 @@ class CotaniTest {
     }
 
     @Test
+    void registerAsyncAfterCloseThrows() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin).build();
+        cotani.close();
+
+        assertThrows(IllegalStateException.class, () -> cotani.registerAsync(CompletableFuture::new));
+    }
+
+    @Test
+    void deregisterAsyncAfterCloseDoesNotThrow() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin).build();
+        cotani.close();
+
+        assertDoesNotThrow(() -> cotani.deregisterAsync(CompletableFuture::new));
+    }
+
+    @Test
+    void registerAfterCloseAsyncThrows() {
+        var plugin = pluginWithLogger();
+        var gate = new CompletableFuture<Void>();
+        var cotani = Cotani.forPlugin(plugin).withAsync(() -> gate).build();
+
+        cotani.closeAsync();
+
+        assertThrows(IllegalStateException.class, () -> cotani.register(() -> {}));
+        gate.complete(null);
+    }
+
+    @Test
+    void concurrentCloseAndCloseAsyncRunTeardownOnce() throws InterruptedException {
+        var plugin = pluginWithLogger();
+        var teardownCount = new AtomicInteger();
+        var gate = new CompletableFuture<Void>();
+        var cotani = Cotani.forPlugin(plugin)
+                .withAsync(() -> {
+                    teardownCount.incrementAndGet();
+                    return gate;
+                })
+                .build();
+
+        var asyncStage = cotani.closeAsync();
+        var closeError = new AtomicReference<Throwable>();
+        var closeThread = new Thread(() -> {
+            try {
+                cotani.close();
+            } catch (Throwable failure) {
+                closeError.set(failure);
+            }
+        });
+
+        closeThread.start();
+        gate.complete(null);
+        closeThread.join(5000);
+
+        assertFalse(closeThread.isAlive());
+        assertNull(closeError.get());
+        assertDoesNotThrow(() -> asyncStage.toCompletableFuture().join());
+        assertEquals(1, teardownCount.get());
+    }
+
+    @Test
     void asyncSupplierExceptionIsAggregated() {
         var plugin = pluginWithLogger();
         var cotani = Cotani.forPlugin(plugin)
@@ -311,6 +453,80 @@ class CotaniTest {
     }
 
     @Test
+    void closePreservesAsyncCloseableFailureAsCause() {
+        var plugin = pluginWithLogger();
+        var expected = new CotaniCloseException("async closeable boom", new IllegalStateException("root"));
+        var cotani = Cotani.forPlugin(plugin)
+                .withAsync(() -> {
+                    var failed = new CompletableFuture<Void>();
+                    failed.completeExceptionally(expected);
+
+                    return failed;
+                })
+                .build();
+
+        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+
+        assertEquals("Failed to close resource", thrown.getMessage());
+        assertSame(expected, thrown.getCause());
+    }
+
+    @Test
+    void closeCombinesAsyncAndSyncFailures() {
+        var plugin = pluginWithLogger();
+        var cotani = Cotani.forPlugin(plugin)
+                .withAsync(() -> {
+                    throw new RuntimeException("async boom");
+                })
+                .with(() -> {
+                    throw new RuntimeException("sync boom");
+                })
+                .build();
+
+        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+
+        assertNotNull(thrown.getCause());
+        assertEquals("async boom", thrown.getCause().getMessage());
+        assertEquals(1, thrown.getSuppressed().length);
+        assertEquals("sync boom", thrown.getSuppressed()[0].getMessage());
+    }
+
+    @Test
+    void closeAsyncAfterCloseReturnsCompletedStage() {
+        var plugin = pluginWithLogger();
+        var closed = new AtomicBoolean();
+        var cotani = Cotani.forPlugin(plugin).with(() -> closed.set(true)).build();
+
+        cotani.close();
+
+        assertDoesNotThrow(() -> cotani.closeAsync().toCompletableFuture().join());
+        assertTrue(closed.get());
+    }
+
+    @Test
+    void closeTimesOutWithoutCancellingAsyncTeardown() {
+        var plugin = pluginWithLogger();
+        var teardownStarted = new AtomicBoolean();
+        var gate = new CompletableFuture<Void>();
+        var cotani = Cotani.forPlugin(plugin)
+                .timeout(Duration.ofMillis(50))
+                .withAsync(() -> {
+                    teardownStarted.set(true);
+                    return gate;
+                })
+                .build();
+
+        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+
+        assertEquals("Failed to close resource within timeout", thrown.getMessage());
+        assertTrue(teardownStarted.get());
+        assertFalse(gate.isDone());
+
+        gate.complete(null);
+        assertDoesNotThrow(() -> cotani.closeAsync().toCompletableFuture().get(5, TimeUnit.SECONDS));
+    }
+
+    @Test
     void closeRestoresInterruptFlag() {
         var plugin = pluginWithLogger();
         var cotani = Cotani.forPlugin(plugin)
@@ -326,5 +542,59 @@ class CotaniTest {
         } finally {
             Thread.interrupted(); // clear the flag for subsequent tests
         }
+    }
+
+    @Test
+    void closeWithoutInitializedServerDoesNotThrowNullPointer() {
+        var plugin = pluginWithLogger();
+        var closed = new AtomicBoolean();
+        var cotani = Cotani.forPlugin(plugin).with(() -> closed.set(true)).build();
+
+        assertDoesNotThrow(cotani::close);
+
+        assertTrue(closed.get());
+    }
+
+    @Test
+    void closeOnPrimaryThreadThrowsAndSkipsResources() {
+        var plugin = pluginWithLogger();
+        var server = Mockito.mock(Server.class);
+        Mockito.when(server.isPrimaryThread()).thenReturn(true);
+        setBukkitServer(server);
+        var closed = new AtomicBoolean();
+        var cotani = Cotani.forPlugin(plugin).with(() -> closed.set(true)).build();
+
+        var thrown = assertThrows(IllegalStateException.class, cotani::close);
+
+        assertEquals("Cotani.close() blocks; use closeAsync() on the server thread.", thrown.getMessage());
+        assertFalse(closed.get());
+    }
+
+    @Test
+    void closeOnNonPrimaryThreadClosesResources() {
+        var plugin = pluginWithLogger();
+        var server = Mockito.mock(Server.class);
+        Mockito.when(server.isPrimaryThread()).thenReturn(false);
+        setBukkitServer(server);
+        var closed = new AtomicBoolean();
+        var cotani = Cotani.forPlugin(plugin).with(() -> closed.set(true)).build();
+
+        assertDoesNotThrow(cotani::close);
+
+        assertTrue(closed.get());
+    }
+
+    @Test
+    void closeAsyncIsAllowedOnPrimaryThread() {
+        var plugin = pluginWithLogger();
+        var server = Mockito.mock(Server.class);
+        Mockito.when(server.isPrimaryThread()).thenReturn(true);
+        setBukkitServer(server);
+        var closed = new AtomicBoolean();
+        var cotani = Cotani.forPlugin(plugin).with(() -> closed.set(true)).build();
+
+        assertDoesNotThrow(() -> cotani.closeAsync().toCompletableFuture().join());
+
+        assertTrue(closed.get());
     }
 }

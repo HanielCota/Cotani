@@ -36,6 +36,7 @@ public final class GuiPanel implements InventoryHolder {
     private final Consumer<CloseContext> closeHandler;
     private final Map<Integer, Button> buttons = new HashMap<>();
     private final Set<Integer> dynamicSlots = new HashSet<>();
+    private final Set<Integer> interactableSlots = new HashSet<>();
     private final List<Consumer<GuiPanel>> regionRenderers = new ArrayList<>();
     private final List<Property.Subscription> subscriptions = new ArrayList<>();
     private final AtomicBoolean disposed = new AtomicBoolean();
@@ -79,6 +80,25 @@ public final class GuiPanel implements InventoryHolder {
      */
     public boolean isDisposed() {
         return disposed.get();
+    }
+
+    /**
+     * Returns whether the specified slot is marked as interactable (allowing player item transfers).
+     *
+     * @param slot the slot index
+     * @return {@code true} if the slot is interactable
+     */
+    public boolean isInteractable(int slot) {
+        return interactableSlots.contains(slot);
+    }
+
+    /**
+     * Marks the specified slot as interactable, allowing player item transfers.
+     *
+     * @param slot the slot index
+     */
+    public void markInteractable(int slot) {
+        interactableSlots.add(slot);
     }
 
     @Override

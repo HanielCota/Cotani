@@ -94,4 +94,19 @@ class SkullTextureResolverTest {
             assertThrows(IllegalArgumentException.class, () -> resolver.fromBase64("A".repeat(16_385)));
         }
     }
+
+    @Test
+    void rejectsUnsupportedSchemesAndHosts() {
+        var externalHttp =
+                assertThrows(InvocationTargetException.class, () -> normalize("http://evil.com/texture.png"));
+        assertTrue(externalHttp.getCause() instanceof IllegalArgumentException);
+
+        var externalHttps =
+                assertThrows(InvocationTargetException.class, () -> normalize("https://evil.com/texture.png"));
+        assertTrue(externalHttps.getCause() instanceof IllegalArgumentException);
+
+        var userInfoHost =
+                assertThrows(InvocationTargetException.class, () -> normalize("textures.minecraft.net@evil.com"));
+        assertTrue(userInfoHost.getCause() instanceof IllegalArgumentException);
+    }
 }

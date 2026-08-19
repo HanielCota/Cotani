@@ -284,6 +284,37 @@ scheduler.supplyAsync(() -> heavyComputation(uuid))
 
 ---
 
+## 11. Declarative GUI with pagination and reactive toggle
+
+```java
+public void openShopMenu(Player player, List<ItemStack> items) {
+    Property<Integer> page = State.of(0);
+    BoolProperty autoSell = State.of(false);
+
+    GuiWindow.panel("<gold><bold>Shop Menu</bold></gold>")
+        .structure(
+            "# # # # # # # # #",
+            "# I I I I I I I #",
+            "# I I I I I I I #",
+            "# < . . T . . > X"
+        )
+        .border(Material.BLACK_STAINED_GLASS_PANE)
+        .paginated('I', page, items, item -> Button.of(
+            _ -> item,
+            ctx -> ctx.player().sendMessage(Component.text("Clicked item"))
+        ))
+        .bind('<', Buttons.previousPage(page))
+        .bind('>', Buttons.nextPage(page))
+        .bindToggle('T', autoSell, Material.LEVER, "<yellow>Auto Sell", enabled -> {
+            player.sendMessage(Component.text("Auto Sell: " + enabled));
+        })
+        .bind('X', Buttons.close())
+        .open(player);
+}
+```
+
+---
+
 ## Checklist for every recipe
 
 - [ ] No `join()`, `get()` or `Thread.sleep(...)` in application code.
