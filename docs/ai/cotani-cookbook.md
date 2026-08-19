@@ -315,6 +315,31 @@ public void openShopMenu(Player player, List<ItemStack> items) {
 
 ---
 
+## 12. Interactive input / deposit GUI (Trash Bin / Recycler)
+
+```java
+public void openRecyclerMenu(Player player) {
+    GuiWindow.panel("<gold><bold>Item Recycler</bold></gold>")
+        .structure(
+            "# # # # # # # # #",
+            "# I I I I I I I #",
+            "# # # # C # # # #"
+        )
+        .border(Material.GRAY_STAINED_GLASS_PANE)
+        .allowPlayerInteraction('I') // Players can place and remove items directly in 'I' slots
+        .bind('C', Button.of(
+            _ -> Items.item(Material.EMERALD, "<green>Reciclar Itens", "<gray>Clique para processar os itens depositados"),
+            ctx -> {
+                Inventory inv = ctx.view().getTopInventory();
+                ctx.player().sendMessage(Component.text("Itens processados!"));
+            }
+        ))
+        .open(player);
+}
+```
+
+---
+
 ## Checklist for every recipe
 
 - [ ] No `join()`, `get()` or `Thread.sleep(...)` in application code.
