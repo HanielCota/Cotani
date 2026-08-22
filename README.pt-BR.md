@@ -38,13 +38,13 @@ Cotani é um framework moderno Java 25 multimódulo projetado para desenvolvimen
 
 ## Compatibilidade
 
-| Versão do Cotani | Versão Java | API Paper | Status de Lançamento | Módulos Incluídos |
+| Versão Cotani | Versão Java | Paper API | Status do Release | Módulos Incluídos |
 | :--- | :---: | :---: | :--- | :--- |
 | `1.0.0` | 25 | 26.2 | Tag estável no JitPack | Core, task, text, item, config, storage, cache, user, economy, cooldown, teleport, event |
-| `1.1.0-SNAPSHOT` | 25 | 26.2 | Apenas código-fonte ou build por commit | Todos os módulos estáveis, além de BOM, GUI reativa e métricas Micrometer |
+| `1.1.0-SNAPSHOT` | 25 | 26.2 | Snapshot ativo na master | Todos os módulos 1.0.0 mais BOM, GUI, Display, Command, HUD, Nametag, Dialog, Redis e Metrics |
 
 > [!NOTE]
-> `1.0.0` é a versão mais recente com tag publicada. Não use a versão literal `1.1.0` antes de a tag ser publicada. A documentação em `master` reflete o snapshot ativo; consulte a [tag `1.0.0`](https://github.com/HanielCota/Cotani/tree/1.0.0) para a API estável de lançamento.
+> `1.0.0` é a tag de release mais recente publicada. Não use a versão literal `1.1.0` até que a release seja oficialmente publicada. A documentação na `master` reflete o snapshot ativo; consulte a [tag `1.0.0`](https://github.com/HanielCota/Cotani/tree/1.0.0) para a API publicada.
 
 ---
 

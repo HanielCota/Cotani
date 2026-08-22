@@ -41,7 +41,7 @@ Cotani is a modern Java 25 multi-module framework designed for Paper and Folia p
 | Cotani Version | Java Version | Paper API | Release Status | Included Modules |
 | :--- | :---: | :---: | :--- | :--- |
 | `1.0.0` | 25 | 26.2 | Stable tag on JitPack | Core, task, text, item, config, storage, cache, user, economy, cooldown, teleport, event |
-| `1.1.0-SNAPSHOT` | 25 | 26.2 | Source or commit build only | All stable modules plus BOM, reactive GUI, and Micrometer metrics |
+| `1.1.0-SNAPSHOT` | 25 | 26.2 | Active snapshot on master | All 1.0.0 modules plus BOM, GUI, Display, Command, HUD, Nametag, Dialog, Redis, and Metrics |
 
 > [!NOTE]
 > `1.0.0` is the latest tagged release. Do not use the literal version `1.1.0` until that release tag is published. Documentation on `master` reflects the active snapshot; browse the [`1.0.0` tag](https://github.com/HanielCota/Cotani/tree/1.0.0) for the published release API.
