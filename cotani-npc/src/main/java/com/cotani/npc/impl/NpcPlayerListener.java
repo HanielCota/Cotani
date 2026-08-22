@@ -92,6 +92,9 @@ public final class NpcPlayerListener implements Listener {
         // NPC bounding box approximate center (head/chest at +1.0 Y)
         var npcCenter = npcLoc.clone().add(0, 1.0, 0);
         var toNpc = npcCenter.toVector().subtract(eyeLoc.toVector());
+        if (toNpc.lengthSquared() < 0.0001) {
+            return true;
+        }
         var dot = toNpc.normalize().dot(eyeDir);
 
         // Dot product > 0.96 corresponds to within ~16 degrees of NPC center

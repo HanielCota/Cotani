@@ -88,7 +88,7 @@ public final class NpcTracker {
         }
 
         var yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
-        var pitch = (float) Math.toDegrees(-Math.atan2(dy, distanceXZ));
+        var pitch = Math.clamp((float) Math.toDegrees(-Math.atan2(dy, distanceXZ)), -90.0f, 90.0f);
 
         return new float[] {yaw, pitch};
     }
