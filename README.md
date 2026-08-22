@@ -40,17 +40,14 @@ Cotani is a modern Java 25 multi-module framework designed for Paper and Folia p
 
 | Cotani Version | Java Version | Paper API | Release Status | Included Modules |
 | :--- | :---: | :---: | :--- | :--- |
-| `1.0.0` | 25 | 26.2 | Stable tag on JitPack | Core, task, text, item, config, storage, cache, user, economy, cooldown, teleport, event |
-| `1.1.0-SNAPSHOT` | 25 | 26.2 | Active snapshot on master | All 1.0.0 modules plus BOM, GUI, Display, Command, HUD, Nametag, Dialog, Redis, and Metrics |
-
-> [!NOTE]
-> `1.0.0` is the latest tagged release. Do not use the literal version `1.1.0` until that release tag is published. Documentation on `master` reflects the active snapshot; browse the [`1.0.0` tag](https://github.com/HanielCota/Cotani/tree/1.0.0) for the published release API.
+| `1.1.0` | 25 | 26.2 | Stable tag on JitPack | All 20 modules (Core, Task, Text, Item, Config, Storage, Cache, Redis, User, Economy, Cooldown, Teleport, Event, GUI, Display, Command, HUD, Nametag, Dialog, Metrics, BOM) |
+| `1.0.0` | 25 | 26.2 | Legacy tag on JitPack | Core, task, text, item, config, storage, cache, user, economy, cooldown, teleport, event |
 
 ---
 
 ## Installation
 
-### Stable Release (`1.0.0`)
+### Stable Release (`1.1.0`)
 
 Add PaperMC and JitPack to your build script repositories, then declare only the top-level modules your plugin needs:
 
@@ -62,7 +59,7 @@ repositories {
 }
 
 dependencies {
-    val cotaniVersion = "1.0.0"
+    val cotaniVersion = "1.1.0"
 
     implementation("com.github.HanielCota.Cotani:cotani-task:$cotaniVersion")
     implementation("com.github.HanielCota.Cotani:cotani-storage:$cotaniVersion")
