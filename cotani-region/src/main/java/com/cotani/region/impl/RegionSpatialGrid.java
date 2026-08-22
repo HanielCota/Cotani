@@ -16,19 +16,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Location;
 
 /**
- * High-performance 3D spatial chunk grid for rapid region containment queries.
+ * High-performance 3D spatial chunk grid for rapid region containment queries with zero-allocation chunk coordinate packing.
  */
 @InternalApi
 public final class RegionSpatialGrid {
 
-    public record ChunkKey(UUID worldId, int chunkX, int chunkZ) {
-        public ChunkKey {
-            Objects.requireNonNull(worldId, "Parameter 'worldId' must not be null");
-        }
-    }
-
     private final Map<String, Region3D> regionsById = new ConcurrentHashMap<>();
-    private final Map<ChunkKey, Set<Region3D>> chunkGrid = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<Long, Set<Region3D>>> chunkGrid = new ConcurrentHashMap<>();
+
+    public static long packChunk(int chunkX, int chunkZ) {
+        return (((long) chunkX) << 32) | (chunkZ & 0xFFFFFFFFL);
+    }
 
     public void add(Region3D region) {
         Objects.requireNonNull(region, "Parameter 'region' must not be null");
@@ -41,11 +39,13 @@ public final class RegionSpatialGrid {
         var minCz = region.minZ() >> 4;
         var maxCz = region.maxZ() >> 4;
 
+        var worldGrid = chunkGrid.computeIfAbsent(region.worldId(), _ -> new ConcurrentHashMap<>());
+
         for (var cx = minCx; cx <= maxCx; cx++) {
             for (var cz = minCz; cz <= maxCz; cz++) {
-                var key = new ChunkKey(region.worldId(), cx, cz);
-                chunkGrid
-                        .computeIfAbsent(key, _ -> ConcurrentHashMap.newKeySet())
+                var packed = packChunk(cx, cz);
+                worldGrid
+                        .computeIfAbsent(packed, _ -> ConcurrentHashMap.newKeySet())
                         .add(region);
             }
         }
@@ -64,14 +64,17 @@ public final class RegionSpatialGrid {
         var minCz = removed.minZ() >> 4;
         var maxCz = removed.maxZ() >> 4;
 
-        for (var cx = minCx; cx <= maxCx; cx++) {
-            for (var cz = minCz; cz <= maxCz; cz++) {
-                var key = new ChunkKey(removed.worldId(), cx, cz);
-                var set = chunkGrid.get(key);
-                if (set != null) {
-                    set.removeIf(r -> r.id().equals(regionId));
-                    if (set.isEmpty()) {
-                        chunkGrid.remove(key);
+        var worldGrid = chunkGrid.get(removed.worldId());
+        if (worldGrid != null) {
+            for (var cx = minCx; cx <= maxCx; cx++) {
+                for (var cz = minCz; cz <= maxCz; cz++) {
+                    var packed = packChunk(cx, cz);
+                    var set = worldGrid.get(packed);
+                    if (set != null) {
+                        set.removeIf(r -> r.id().equals(regionId));
+                        if (set.isEmpty()) {
+                            worldGrid.remove(packed);
+                        }
                     }
                 }
             }
@@ -96,8 +99,13 @@ public final class RegionSpatialGrid {
             return List.of();
         }
 
-        var key = new ChunkKey(world.getUID(), location.getBlockX() >> 4, location.getBlockZ() >> 4);
-        var candidates = chunkGrid.get(key);
+        var worldGrid = chunkGrid.get(world.getUID());
+        if (worldGrid == null || worldGrid.isEmpty()) {
+            return List.of();
+        }
+
+        var packed = packChunk(location.getBlockX() >> 4, location.getBlockZ() >> 4);
+        var candidates = worldGrid.get(packed);
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }

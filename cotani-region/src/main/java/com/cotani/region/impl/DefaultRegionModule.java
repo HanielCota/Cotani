@@ -87,7 +87,7 @@ public final class DefaultRegionModule implements RegionModule {
         Objects.requireNonNull(location, "Parameter 'location' must not be null");
 
         var regions = spatialGrid.regionsAt(location);
-        return regions.isEmpty() ? Optional.empty() : Optional.of(regions.get(0));
+        return regions.isEmpty() ? Optional.empty() : Optional.of(regions.getFirst());
     }
 
     @Override

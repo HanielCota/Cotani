@@ -10,10 +10,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import org.bukkit.Location;
 
 /**
- * High-performance spatial chunk grid indexer for virtual NPCs.
+ * High-performance spatial chunk grid indexer for virtual NPCs with zero-allocation packed chunk coordinate hashing.
  * Reduces tracking overhead from O(Players * TotalNpcs) to O(Players * LocalChunkNpcs).
  */
 @InternalApi
@@ -22,39 +21,45 @@ public final class NpcSpatialIndex {
     private static final String NPC_NULL_MSG = "Parameter 'npc' must not be null";
     private static final String WORLD_ID_NULL_MSG = "Parameter 'worldId' must not be null";
 
-    public record ChunkKey(UUID worldId, int chunkX, int chunkZ) {
-        public ChunkKey {
-            Objects.requireNonNull(worldId, WORLD_ID_NULL_MSG);
-        }
+    private final Map<UUID, Map<Long, Set<Npc>>> grid = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> npcChunkPositions = new ConcurrentHashMap<>();
+    private final Map<UUID, UUID> npcWorldIds = new ConcurrentHashMap<>();
 
-        public static ChunkKey from(Location location) {
-            var world = location.getWorld();
-            var worldId = world != null ? world.getUID() : new UUID(0L, 0L);
-            return new ChunkKey(worldId, location.getBlockX() >> 4, location.getBlockZ() >> 4);
-        }
+    public static long packChunk(int chunkX, int chunkZ) {
+        return (((long) chunkX) << 32) | (chunkZ & 0xFFFFFFFFL);
     }
-
-    private final Map<ChunkKey, Set<Npc>> grid = new ConcurrentHashMap<>();
-    private final Map<UUID, ChunkKey> npcLocations = new ConcurrentHashMap<>();
 
     public void add(Npc npc) {
         Objects.requireNonNull(npc, NPC_NULL_MSG);
 
-        var key = ChunkKey.from(npc.location());
-        npcLocations.put(npc.id(), key);
-        grid.computeIfAbsent(key, _ -> ConcurrentHashMap.newKeySet()).add(npc);
+        var loc = npc.location();
+        var world = loc.getWorld();
+        var worldId = world != null ? world.getUID() : new UUID(0L, 0L);
+        var packed = packChunk(loc.getBlockX() >> 4, loc.getBlockZ() >> 4);
+
+        npcWorldIds.put(npc.id(), worldId);
+        npcChunkPositions.put(npc.id(), packed);
+
+        grid.computeIfAbsent(worldId, _ -> new ConcurrentHashMap<>())
+                .computeIfAbsent(packed, _ -> ConcurrentHashMap.newKeySet())
+                .add(npc);
     }
 
     public void remove(UUID npcId) {
         Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
 
-        var oldKey = npcLocations.remove(npcId);
-        if (oldKey != null) {
-            var set = grid.get(oldKey);
-            if (set != null) {
-                set.removeIf(n -> n.id().equals(npcId));
-                if (set.isEmpty()) {
-                    grid.remove(oldKey);
+        var worldId = npcWorldIds.remove(npcId);
+        var packed = npcChunkPositions.remove(npcId);
+
+        if (worldId != null && packed != null) {
+            var worldGrid = grid.get(worldId);
+            if (worldGrid != null) {
+                var set = worldGrid.get(packed);
+                if (set != null) {
+                    set.removeIf(n -> n.id().equals(npcId));
+                    if (set.isEmpty()) {
+                        worldGrid.remove(packed);
+                    }
                 }
             }
         }
@@ -70,11 +75,16 @@ public final class NpcSpatialIndex {
     public List<Npc> getNearby(UUID worldId, int centerChunkX, int centerChunkZ, int chunkRadius) {
         Objects.requireNonNull(worldId, WORLD_ID_NULL_MSG);
 
+        var worldGrid = grid.get(worldId);
+        if (worldGrid == null || worldGrid.isEmpty()) {
+            return List.of();
+        }
+
         var result = new ArrayList<Npc>();
         for (var dx = -chunkRadius; dx <= chunkRadius; dx++) {
             for (var dz = -chunkRadius; dz <= chunkRadius; dz++) {
-                var key = new ChunkKey(worldId, centerChunkX + dx, centerChunkZ + dz);
-                var chunkNpcs = grid.get(key);
+                var packed = packChunk(centerChunkX + dx, centerChunkZ + dz);
+                var chunkNpcs = worldGrid.get(packed);
                 if (chunkNpcs != null && !chunkNpcs.isEmpty()) {
                     result.addAll(chunkNpcs);
                 }
@@ -85,6 +95,7 @@ public final class NpcSpatialIndex {
 
     public void clear() {
         grid.clear();
-        npcLocations.clear();
+        npcChunkPositions.clear();
+        npcWorldIds.clear();
     }
 }

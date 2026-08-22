@@ -47,13 +47,13 @@ class RegionSpatialGridTest {
         var regions = grid.regionsAt(queryLocInsideBoth);
 
         assertEquals(2, regions.size());
-        assertEquals("inner-vip", regions.get(0).id()); // Priority 10 first
-        assertEquals("outer", regions.get(1).id()); // Priority 1 second
+        assertEquals("inner-vip", regions.getFirst().id()); // Priority 10 first
+        assertEquals("outer", regions.getLast().id()); // Priority 1 second
 
         var queryLocOuterOnly = new Location(world, 5, 5, 5);
         var outerOnly = grid.regionsAt(queryLocOuterOnly);
         assertEquals(1, outerOnly.size());
-        assertEquals("outer", outerOnly.get(0).id());
+        assertEquals("outer", outerOnly.getFirst().id());
     }
 
     @Test

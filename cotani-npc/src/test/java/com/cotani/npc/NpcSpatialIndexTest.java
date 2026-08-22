@@ -47,12 +47,12 @@ class NpcSpatialIndexTest {
         // Query radius 2 chunks around (0, 0)
         var nearby = spatialIndex.getNearby(worldId, 0, 0, 2);
         assertEquals(1, nearby.size());
-        assertEquals(npc1, nearby.get(0));
+        assertEquals(npc1, nearby.getFirst());
 
         // Query radius around far NPC
         var farNearby = spatialIndex.getNearby(worldId, 62, 62, 2);
         assertEquals(1, farNearby.size());
-        assertEquals(npc2, farNearby.get(0));
+        assertEquals(npc2, farNearby.getFirst());
     }
 
     @Test
