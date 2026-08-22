@@ -147,9 +147,9 @@ public final class QueryExecutor {
                             executeTransactionOperation(state, operation).whenComplete((opResult, opError) -> {
                                 if (opError != null) {
                                     result.completeExceptionally(opError);
-                                } else {
-                                    result.complete(opResult);
+                                    return;
                                 }
+                                result.complete(opResult);
                             });
                         } catch (Throwable failure) {
                             result.completeExceptionally(failure);
@@ -380,7 +380,8 @@ public final class QueryExecutor {
         try {
             if (error != null) {
                 rollback(connection, error);
-            } else {
+            }
+            if (error == null) {
                 connection.commit();
             }
         } catch (SQLException failure) {
@@ -388,9 +389,9 @@ public final class QueryExecutor {
 
             if (error != null) {
                 error.addSuppressed(wrapped);
-            } else {
-                throw wrapped;
+                return;
             }
+            throw wrapped;
         } finally {
             try {
                 restoreAutoCommit(connection, state.previousAutoCommit);

@@ -106,7 +106,9 @@ public final class RegionProtectionListener implements Listener {
             if (!module.isFlagAllowed(loc, RegionFlag.USE_CONTAINERS, true)) {
                 event.setCancelled(true);
             }
-        } else if (isDoor(mat)) {
+            return;
+        }
+        if (isDoor(mat)) {
             if (!module.isFlagAllowed(loc, RegionFlag.USE_DOORS, true)) {
                 event.setCancelled(true);
             }

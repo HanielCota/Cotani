@@ -60,9 +60,9 @@ final class SchedulerLifecycleCoordinator {
 
             if (closeFailure == null) {
                 promise.complete(null);
-            } else {
-                promise.completeExceptionally(closeFailure);
+                return;
             }
+            promise.completeExceptionally(closeFailure);
         });
 
         return promise;

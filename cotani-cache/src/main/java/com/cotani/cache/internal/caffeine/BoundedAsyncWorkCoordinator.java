@@ -115,8 +115,8 @@ final class BoundedAsyncWorkCoordinator<T> {
 
         if (failure == null) {
             result.complete(null);
-        } else {
-            result.completeExceptionally(failure);
+            return;
         }
+        result.completeExceptionally(failure);
     }
 }

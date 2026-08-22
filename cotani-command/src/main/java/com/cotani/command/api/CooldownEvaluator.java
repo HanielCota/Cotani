@@ -86,6 +86,8 @@ final class ServiceCooldownEvaluator implements CooldownEvaluator {
 
     @Override
     public void apply(CommandSender sender, String commandName) {
+        Objects.requireNonNull(sender, "Parameter 'sender' must not be null");
+        Objects.requireNonNull(commandName, "Parameter 'commandName' must not be null");
         String action = "cmd:" + commandName.toLowerCase(java.util.Locale.ROOT);
         if (sender instanceof Player player) {
             var _ = cooldownService
@@ -93,9 +95,9 @@ final class ServiceCooldownEvaluator implements CooldownEvaluator {
                     .action(action)
                     .duration(duration)
                     .start();
-        } else {
-            var _ = cooldownService.global().action(action).duration(duration).start();
+            return;
         }
+        var _ = cooldownService.global().action(action).duration(duration).start();
     }
 }
 

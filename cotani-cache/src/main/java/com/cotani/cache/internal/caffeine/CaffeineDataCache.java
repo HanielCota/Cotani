@@ -343,12 +343,12 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                     .thenCompose(_ -> cacheExecutor.whenIdle())
                     .whenComplete((_, error) -> {
                         invalidationSubscription.close();
-                        if (error == null) {
-                            entryTracker.clearGenerations();
-                            result.complete(null);
-                        } else {
+                        if (error != null) {
                             result.completeExceptionally(error);
+                            return;
                         }
+                        entryTracker.clearGenerations();
+                        result.complete(null);
                     });
 
             return result;

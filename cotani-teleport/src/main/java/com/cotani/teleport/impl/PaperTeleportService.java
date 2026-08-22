@@ -78,11 +78,11 @@ public final class PaperTeleportService implements TeleportService {
                     .thenCompose(_ -> gate)
                     .thenCompose(_ -> teleportOnce(request))
                     .<Void>handle((teleportResult, error) -> {
-                        if (error == null) {
-                            result.complete(teleportResult);
-                        } else {
+                        if (error != null) {
                             result.completeExceptionally(error);
+                            return null;
                         }
+                        result.complete(teleportResult);
                         return null;
                     });
             startGate.set(gate);
@@ -438,7 +438,8 @@ public final class PaperTeleportService implements TeleportService {
 
         if (context.options().preserveVelocity()) {
             player.setVelocity(velocity);
-        } else {
+        }
+        if (!context.options().preserveVelocity()) {
             player.setVelocity(new Vector(0, 0, 0));
             player.setFallDistance(0.0f);
         }

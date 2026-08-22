@@ -146,7 +146,9 @@ final class YamlInputLimits {
                 if (flowDepth > MAXIMUM_NESTING_DEPTH) {
                     throw new ConfigException("YAML exceeds maximum flow nesting depth " + MAXIMUM_NESTING_DEPTH);
                 }
-            } else if (current == ']' || current == '}') {
+                return;
+            }
+            if (current == ']' || current == '}') {
                 flowDepth = Math.max(0, flowDepth - 1);
             }
         }

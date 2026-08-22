@@ -31,9 +31,9 @@ public final class NametagRegistry {
 
         if (nametag.equals(Nametag.EMPTY)) {
             globalTags.remove(playerId);
-        } else {
-            globalTags.put(playerId, nametag);
+            return;
         }
+        globalTags.put(playerId, nametag);
     }
 
     public void removeGlobal(UUID playerId) {

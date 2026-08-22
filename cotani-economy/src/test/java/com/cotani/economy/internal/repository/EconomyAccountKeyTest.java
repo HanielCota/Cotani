@@ -42,7 +42,8 @@ class EconomyAccountKeyTest {
         if (smallerUser.userId().compareTo(otherUser.userId()) < 0) {
             assertTrue(key.compareTo(new EconomyAccountKey(otherUser.userId(), COINS)) < 0);
             assertTrue(new EconomyAccountKey(otherUser.userId(), COINS).compareTo(key) > 0);
-        } else {
+        }
+        if (smallerUser.userId().compareTo(otherUser.userId()) > 0) {
             assertTrue(key.compareTo(new EconomyAccountKey(otherUser.userId(), COINS)) > 0);
             assertTrue(new EconomyAccountKey(otherUser.userId(), COINS).compareTo(key) < 0);
         }

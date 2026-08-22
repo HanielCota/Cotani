@@ -51,21 +51,22 @@ public final class NpcTracker {
             var maxDistance = npc.viewDistance();
             var maxDistanceSquared = maxDistance * maxDistance;
 
-            if (distanceSquared <= maxDistanceSquared) {
-                // In range
-                if (!renderer.isVisibleTo(viewer, npc.id())) {
-                    renderer.renderSpawn(viewer, npc);
-                }
-
-                if (npc.lookAtPlayer()) {
-                    var rotation = calculateLookAt(npcLoc, viewer.getEyeLocation());
-                    renderer.renderRotation(viewer, npc, rotation[0], rotation[1]);
-                }
-            } else {
+            if (distanceSquared > maxDistanceSquared) {
                 // Out of range
                 if (renderer.isVisibleTo(viewer, npc.id())) {
                     renderer.renderDespawn(viewer, npc);
                 }
+                continue;
+            }
+
+            // In range
+            if (!renderer.isVisibleTo(viewer, npc.id())) {
+                renderer.renderSpawn(viewer, npc);
+            }
+
+            if (npc.lookAtPlayer()) {
+                var rotation = calculateLookAt(npcLoc, viewer.getEyeLocation());
+                renderer.renderRotation(viewer, npc, rotation[0], rotation[1]);
             }
         }
     }

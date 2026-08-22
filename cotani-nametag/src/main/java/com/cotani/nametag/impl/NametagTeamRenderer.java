@@ -47,16 +47,15 @@ public final class NametagTeamRenderer {
 
         var currentTeam = board.getEntryTeam(targetEntry);
         if (currentTeam != null) {
-            if (currentTeam.getName().startsWith(TEAM_PREFIX)) {
-                if (!currentTeam.getName().equals(teamName)) {
-                    currentTeam.removeEntry(targetEntry);
-                    if (currentTeam.getEntries().isEmpty()) {
-                        currentTeam.unregister();
-                    }
-                    currentTeam = null;
-                }
-            } else {
+            if (!currentTeam.getName().startsWith(TEAM_PREFIX)) {
                 currentTeam.removeEntry(targetEntry);
+                currentTeam = null;
+            }
+            if (currentTeam != null && !currentTeam.getName().equals(teamName)) {
+                currentTeam.removeEntry(targetEntry);
+                if (currentTeam.getEntries().isEmpty()) {
+                    currentTeam.unregister();
+                }
                 currentTeam = null;
             }
         }

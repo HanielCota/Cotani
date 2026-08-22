@@ -75,9 +75,9 @@ public final class DefaultActionBarManager implements ActionBarManager {
                     var elapsed = System.currentTimeMillis() - startTime;
                     if (elapsed >= totalMillis) {
                         state.cancelTimedTask();
-                    } else {
-                        send(p, message);
+                        return;
                     }
+                    send(p, message);
                 },
                 Duration.ofSeconds(1),
                 Duration.ofSeconds(1));

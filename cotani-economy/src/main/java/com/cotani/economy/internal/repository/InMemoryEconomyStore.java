@@ -305,11 +305,11 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             var execution =
                     CompletableFuture.supplyAsync(() -> executeOrReuse(operationId, fingerprint, action), executor);
             var _ = execution.whenComplete((transaction, error) -> {
-                if (error == null) {
-                    selected.result().complete(transaction);
-                } else {
+                if (error != null) {
                     selected.result().completeExceptionally(error);
+                    return;
                 }
+                selected.result().complete(transaction);
             });
         } catch (RuntimeException schedulingFailure) {
             selected.result().completeExceptionally(schedulingFailure);

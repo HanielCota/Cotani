@@ -397,9 +397,9 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
         }
         if (failure == null) {
             closePromise.complete(null);
-        } else {
-            closePromise.completeExceptionally(failure);
+            return;
         }
+        closePromise.completeExceptionally(failure);
     }
 
     private static Throwable unwrapCompletionFailure(Throwable failure) {

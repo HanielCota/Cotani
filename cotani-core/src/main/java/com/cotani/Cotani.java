@@ -71,9 +71,9 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
             if (closeable instanceof AsyncCloseable asyncCloseable) {
                 asyncCloseables.add(asyncCloseable::closeAsync);
-            } else {
-                closeables.add(closeable);
+                return this;
             }
+            closeables.add(closeable);
         }
 
         return this;
@@ -279,9 +279,9 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
             if (closeable instanceof AsyncCloseable asyncCloseable) {
                 asyncCloseables.add(asyncCloseable::closeAsync);
-            } else {
-                closeables.add(closeable);
+                return this;
             }
+            closeables.add(closeable);
 
             return this;
         }

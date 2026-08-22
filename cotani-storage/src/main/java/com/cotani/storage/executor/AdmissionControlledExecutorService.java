@@ -59,10 +59,12 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
             if (activeOperations < concurrencyLimit) {
                 activeOperations++;
                 startImmediately = true;
-            } else if (queue.size() < queueCapacity) {
+            }
+            if (!startImmediately) {
+                if (queue.size() >= queueCapacity) {
+                    reject("Storage admission queue is full (capacity=" + queueCapacity + ").");
+                }
                 queue.addLast(command);
-            } else {
-                reject("Storage admission queue is full (capacity=" + queueCapacity + ").");
             }
         }
         if (startImmediately) {
@@ -178,7 +180,8 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
         synchronized (lock) {
             if (!queue.isEmpty()) {
                 next = queue.removeFirst();
-            } else {
+            }
+            if (next == null) {
                 activeOperations--;
                 terminateWorkers = shutdown && activeOperations == 0;
                 lock.notifyAll();
@@ -186,7 +189,9 @@ public final class AdmissionControlledExecutorService extends AbstractExecutorSe
         }
         if (next != null) {
             submitToWorker(next);
-        } else if (terminateWorkers) {
+            return;
+        }
+        if (terminateWorkers) {
             workers.shutdown();
         }
     }

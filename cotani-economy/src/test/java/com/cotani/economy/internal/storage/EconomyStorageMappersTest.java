@@ -274,13 +274,17 @@ class EconomyStorageMappersTest {
 
                 if (value == null) {
                     when(resultSet.getString(column)).thenReturn(null);
-                } else if (value instanceof Instant instant) {
-                    when(resultSet.getObject(column)).thenReturn(Timestamp.from(instant));
-                } else if (value instanceof UUID uuid) {
-                    when(resultSet.getString(column)).thenReturn(uuid.toString());
-                } else {
-                    when(resultSet.getString(column)).thenReturn(value.toString());
+                    continue;
                 }
+                if (value instanceof Instant instant) {
+                    when(resultSet.getObject(column)).thenReturn(Timestamp.from(instant));
+                    continue;
+                }
+                if (value instanceof UUID uuid) {
+                    when(resultSet.getString(column)).thenReturn(uuid.toString());
+                    continue;
+                }
+                when(resultSet.getString(column)).thenReturn(value.toString());
             }
         } catch (SQLException impossible) {
             throw new AssertionError(impossible);

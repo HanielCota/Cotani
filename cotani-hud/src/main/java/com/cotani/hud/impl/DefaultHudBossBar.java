@@ -69,10 +69,10 @@ public final class DefaultHudBossBar implements HudBossBar {
                     if (remaining <= 0) {
                         bar.progress(0.0f);
                         close();
-                    } else {
-                        var progress = Math.clamp((float) remaining / (float) totalMillis, 0.0f, 1.0f);
-                        bar.progress(progress);
+                        return;
                     }
+                    var progress = Math.clamp((float) remaining / (float) totalMillis, 0.0f, 1.0f);
+                    bar.progress(progress);
                 },
                 Duration.ZERO,
                 Duration.ofMillis(50));
