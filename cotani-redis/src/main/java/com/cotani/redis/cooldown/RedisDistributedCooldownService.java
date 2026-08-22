@@ -53,25 +53,20 @@ public final class RedisDistributedCooldownService implements DistributedCooldow
         String rawKey = keyPrefix + formatKey(key);
 
         var redisKey = RedisKey.of(rawKey);
-        return redis.store().getAsync(redisKey).thenCompose(optVal -> {
-            if (optVal.isPresent()) {
-                try {
-                    long expiresAtMillis = Long.parseLong(optVal.get());
-                    if (expiresAtMillis > now) {
-                        Duration remaining = Duration.ofMillis(expiresAtMillis - now);
-                        Instant expiresAt = Instant.ofEpochMilli(expiresAtMillis);
-                        return CompletableFuture.completedFuture(CooldownResult.denied(key, remaining, expiresAt));
-                    }
-                } catch (NumberFormatException _) {
-                    // Fallthrough to overwrite invalid state
-                }
-            }
+        long newExpiresMillis = now + durationMillis;
 
-            long newExpiresMillis = now + durationMillis;
-            return redis.store()
-                    .setAsync(redisKey, String.valueOf(newExpiresMillis), duration)
-                    .thenApply(_ -> CooldownResult.allowed(key));
-        });
+        return redis.store()
+                .setIfAbsentAsync(redisKey, String.valueOf(newExpiresMillis), duration)
+                .thenCompose(acquired -> {
+                    if (Boolean.TRUE.equals(acquired)) {
+                        return CompletableFuture.completedFuture(CooldownResult.allowed(key));
+                    }
+                    return findAsync(key)
+                            .thenApply(
+                                    opt -> opt.map(e -> CooldownResult.denied(key, e.remaining(clock), e.expiresAt()))
+                                            .orElseGet(() -> CooldownResult.denied(
+                                                    key, duration, Instant.ofEpochMilli(newExpiresMillis))));
+                });
     }
 
     @Override

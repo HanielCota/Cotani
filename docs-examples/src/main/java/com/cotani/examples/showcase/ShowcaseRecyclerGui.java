@@ -4,8 +4,8 @@ import com.cotani.gui.api.GuiWindow;
 import com.cotani.gui.button.Button;
 import com.cotani.gui.button.Buttons;
 import com.cotani.item.ItemBuilder;
+import com.cotani.text.MiniMessages;
 import java.util.Objects;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -63,10 +63,11 @@ public final class ShowcaseRecyclerGui {
         }
 
         if (recycledCount == 0) {
-            player.sendMessage(Component.text("§cNenhum item válido encontrado nos slots de depósito."));
+            player.sendMessage(MiniMessages.parse("<red>Nenhum item válido encontrado nos slots de depósito.</red>"));
             return;
         }
 
-        player.sendMessage(Component.text("§aVocê reciclou com sucesso §e" + recycledCount + " §aitens!"));
+        player.sendMessage(MiniMessages.parse(
+                "<green>Você reciclou com sucesso <yellow>" + recycledCount + "</yellow> itens!</green>"));
     }
 }

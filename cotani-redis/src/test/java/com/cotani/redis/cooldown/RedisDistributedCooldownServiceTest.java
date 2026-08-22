@@ -36,9 +36,8 @@ class RedisDistributedCooldownServiceTest {
     @Test
     void shouldAllowWhenNotOnCooldown() {
         var key = new CooldownKey(new UserCooldownTarget(UUID.randomUUID()), new CooldownAction("pay"));
-        when(store.getAsync(any(RedisKey.class))).thenReturn(CompletableFuture.completedFuture(Optional.empty()));
-        when(store.setAsync(any(RedisKey.class), any(), any(Duration.class)))
-                .thenReturn(CompletableFuture.completedFuture(null));
+        when(store.setIfAbsentAsync(any(RedisKey.class), any(), any(Duration.class)))
+                .thenReturn(CompletableFuture.completedFuture(true));
 
         var result = service.checkAndStartAsync(key, Duration.ofSeconds(10))
                 .toCompletableFuture()
@@ -51,6 +50,8 @@ class RedisDistributedCooldownServiceTest {
     void shouldDenyWhenOnCooldown() {
         var key = new CooldownKey(new UserCooldownTarget(UUID.randomUUID()), new CooldownAction("pay"));
         long futureMillis = System.currentTimeMillis() + 5000;
+        when(store.setIfAbsentAsync(any(RedisKey.class), any(), any(Duration.class)))
+                .thenReturn(CompletableFuture.completedFuture(false));
         when(store.getAsync(any(RedisKey.class)))
                 .thenReturn(CompletableFuture.completedFuture(Optional.of(String.valueOf(futureMillis))));
 

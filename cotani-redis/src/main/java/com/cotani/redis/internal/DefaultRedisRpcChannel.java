@@ -113,11 +113,11 @@ public final class DefaultRedisRpcChannel<Q, R> implements RedisRpcChannel<Q, R>
             }
         };
 
-        if (scheduler != null) {
-            var _ = scheduler.asyncLater(timeoutAction, timeout);
-        }
         if (fallbackExecutor != null && !fallbackExecutor.isShutdown()) {
             return fallbackExecutor.schedule(timeoutAction, timeout.toMillis(), TimeUnit.MILLISECONDS);
+        }
+        if (scheduler != null) {
+            var _ = scheduler.asyncLater(timeoutAction, timeout);
         }
         return null;
     }

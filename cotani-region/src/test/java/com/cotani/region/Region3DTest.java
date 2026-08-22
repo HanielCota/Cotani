@@ -76,4 +76,25 @@ class Region3DTest {
                         null,
                         null));
     }
+
+    @Test
+    void shouldAllowEmptyFlagsMap() {
+        var worldId = UUID.randomUUID();
+        var region = new Region3D(
+                "empty-flags",
+                net.kyori.adventure.text.Component.empty(),
+                worldId,
+                0,
+                0,
+                0,
+                10,
+                10,
+                10,
+                0,
+                java.util.Map.of(),
+                null,
+                null);
+
+        assertTrue(region.flags().isEmpty());
+    }
 }

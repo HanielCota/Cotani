@@ -46,7 +46,10 @@ public final class UserListener implements Listener {
         String username = event.getName();
 
         try {
-            userService.load(uniqueId, username);
+            var _ = userService.load(uniqueId, username).exceptionally(throwable -> {
+                plugin.getLogger().log(Level.WARNING, throwable, () -> "Failed to pre-load user " + uniqueId);
+                return null;
+            });
         } catch (RuntimeException exception) {
             plugin.getLogger().log(Level.WARNING, exception, () -> "Failed to pre-load user " + uniqueId);
         }

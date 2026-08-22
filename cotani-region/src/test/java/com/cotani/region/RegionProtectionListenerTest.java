@@ -135,4 +135,48 @@ class RegionProtectionListenerTest {
 
         assertTrue(moveEvent.isCancelled());
     }
+
+    @Test
+    void shouldCancelPvpWhenVictimIsInSafeZone() {
+        var region = Region3D.builder("safe-zone", worldId)
+                .bounds(0, 0, 0, 50, 50, 50)
+                .flag(RegionFlag.PVP, false)
+                .build();
+        module.registerRegion(region);
+
+        var victim = mock(Player.class);
+        var attacker = mock(Player.class);
+        when(victim.getLocation()).thenReturn(new Location(world, 10, 10, 10));
+        when(attacker.getLocation()).thenReturn(new Location(world, 100, 100, 100));
+
+        var event = mock(org.bukkit.event.entity.EntityDamageByEntityEvent.class);
+        when(event.getEntity()).thenReturn(victim);
+        when(event.getDamager()).thenReturn(attacker);
+
+        listener.onPvP(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void shouldCancelPvpWhenDamagerIsInSafeZone() {
+        var region = Region3D.builder("safe-zone", worldId)
+                .bounds(0, 0, 0, 50, 50, 50)
+                .flag(RegionFlag.PVP, false)
+                .build();
+        module.registerRegion(region);
+
+        var victim = mock(Player.class);
+        var attacker = mock(Player.class);
+        when(victim.getLocation()).thenReturn(new Location(world, 100, 100, 100));
+        when(attacker.getLocation()).thenReturn(new Location(world, 10, 10, 10));
+
+        var event = mock(org.bukkit.event.entity.EntityDamageByEntityEvent.class);
+        when(event.getEntity()).thenReturn(victim);
+        when(event.getDamager()).thenReturn(attacker);
+
+        listener.onPvP(event);
+
+        verify(event).setCancelled(true);
+    }
 }

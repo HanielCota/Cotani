@@ -12,7 +12,7 @@ public final class CompositeEventSubscription implements AutoCloseable {
 
     public CompositeEventSubscription() {}
 
-    public void add(EventSubscription subscription) {
+    public synchronized void add(EventSubscription subscription) {
         Objects.requireNonNull(subscription, "subscription cannot be null");
 
         if (closed) {
@@ -28,7 +28,7 @@ public final class CompositeEventSubscription implements AutoCloseable {
         subscriptions.remove(subscription);
     }
 
-    public void unsubscribeAll() {
+    public synchronized void unsubscribeAll() {
         closed = true;
         subscriptions.forEach(EventSubscription::unsubscribe);
         subscriptions.clear();

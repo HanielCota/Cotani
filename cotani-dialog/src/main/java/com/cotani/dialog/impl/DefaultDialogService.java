@@ -34,14 +34,18 @@ public final class DefaultDialogService implements DialogService {
 
     private final PaperTaskScheduler scheduler;
     private final ConcurrentHashMap<UUID, ActivePrompt> activePrompts = new ConcurrentHashMap<>();
+    private final DialogChatListener chatListener;
+    private final DialogAnvilListener anvilListener;
 
     public DefaultDialogService(Plugin plugin, PaperTaskScheduler scheduler) {
         Objects.requireNonNull(plugin, "plugin");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
 
         var pm = plugin.getServer().getPluginManager();
-        pm.registerEvents(new DialogChatListener(this), plugin);
-        pm.registerEvents(new DialogAnvilListener(this), plugin);
+        this.chatListener = new DialogChatListener(this);
+        this.anvilListener = new DialogAnvilListener(this);
+        pm.registerEvents(chatListener, plugin);
+        pm.registerEvents(anvilListener, plugin);
     }
 
     @Override
@@ -137,6 +141,8 @@ public final class DefaultDialogService implements DialogService {
 
     @Override
     public void close() {
+        org.bukkit.event.HandlerList.unregisterAll(chatListener);
+        org.bukkit.event.HandlerList.unregisterAll(anvilListener);
         for (var prompt : activePrompts.values()) {
             prompt.cancel(CancelReason.PLUGIN_DISABLE);
         }

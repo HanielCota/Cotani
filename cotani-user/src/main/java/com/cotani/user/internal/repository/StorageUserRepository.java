@@ -73,7 +73,7 @@ public final class StorageUserRepository implements UserRepository {
                 .select()
                 .where(USERNAME_COL, username)
                 .limit(1)
-                .one(row -> mapper.toUser(row, UUID.randomUUID(), username, now));
+                .one(row -> mapper.toUser(row, null, username, now));
     }
 
     @Override

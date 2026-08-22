@@ -108,6 +108,20 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
     }
 
     @Override
+    public CompletionStage<Boolean> setIfAbsentAsync(RedisKey key, String value, Duration ttl) {
+        Objects.requireNonNull(key, KEY_PARAM);
+        Objects.requireNonNull(value, VALUE_PARAM);
+        Objects.requireNonNull(ttl, TTL_PARAM);
+        if (ttl.isNegative() || ttl.isZero()) {
+            throw new IllegalArgumentException("ttl must be positive");
+        }
+
+        var commands = stringConnectionSupplier.get().async();
+        var setArgs = SetArgs.Builder.nx().px(ttl.toMillis());
+        return commands.set(key.value(), value, setArgs).thenApply("OK"::equalsIgnoreCase);
+    }
+
+    @Override
     public <T> CompletionStage<Void> setAsync(RedisKey key, T value, RedisCodec<T> codec) {
         Objects.requireNonNull(key, KEY_PARAM);
         Objects.requireNonNull(value, VALUE_PARAM);

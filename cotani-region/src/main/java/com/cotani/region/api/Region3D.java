@@ -49,7 +49,7 @@ public record Region3D(
         Objects.requireNonNull(worldId, "Parameter 'worldId' must not be null");
         Objects.requireNonNull(flags, "Parameter 'flags' must not be null");
 
-        flags = Collections.unmodifiableMap(new EnumMap<>(flags));
+        flags = flags.isEmpty() ? Map.of() : Collections.unmodifiableMap(new EnumMap<>(flags));
 
         if (minX > maxX || minY > maxY || minZ > maxZ) {
             throw new IllegalArgumentException("Minimum coordinates cannot exceed maximum coordinates");

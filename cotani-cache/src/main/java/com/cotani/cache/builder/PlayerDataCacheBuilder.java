@@ -188,7 +188,17 @@ public final class PlayerDataCacheBuilder<V> {
             return;
         }
 
-        plugin.getServer().getOnlinePlayers().forEach(player -> playerCache.loadAsync(player.getUniqueId()));
+        plugin.getServer().getOnlinePlayers().forEach(player -> {
+            var _ = playerCache.loadAsync(player.getUniqueId()).whenComplete((_, error) -> {
+                if (error != null) {
+                    plugin.getLogger()
+                            .log(
+                                    java.util.logging.Level.WARNING,
+                                    "Failed to pre-load cache for online player " + player.getUniqueId(),
+                                    error);
+                }
+            });
+        });
     }
 
     private CacheRepository<UUID, V> resolveRepository() {

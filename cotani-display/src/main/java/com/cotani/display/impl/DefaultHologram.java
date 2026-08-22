@@ -199,8 +199,12 @@ public final class DefaultHologram implements Hologram {
             return CompletableFuture.completedFuture(null);
         }
 
+        long generation = mutationGeneration.incrementAndGet();
         return CompletableFuture.runAsync(
                 () -> {
+                    if (mutationGeneration.get() != generation || !spawned.get()) {
+                        return;
+                    }
                     if (index < lineEntityIds.size()) {
                         var currentEntityId = lineEntityIds.get(index);
                         var lineLoc = calculateLineLocation(loc, index);
@@ -227,8 +231,12 @@ public final class DefaultHologram implements Hologram {
             return CompletableFuture.completedFuture(null);
         }
 
+        long generation = mutationGeneration.incrementAndGet();
         return CompletableFuture.runAsync(
                 () -> {
+                    if (mutationGeneration.get() != generation || !spawned.get()) {
+                        return;
+                    }
                     despawnSync();
                     spawnSync(loc);
                 },
@@ -248,8 +256,12 @@ public final class DefaultHologram implements Hologram {
             return CompletableFuture.completedFuture(null);
         }
 
+        long generation = mutationGeneration.incrementAndGet();
         return CompletableFuture.runAsync(
                 () -> {
+                    if (mutationGeneration.get() != generation || !spawned.get()) {
+                        return;
+                    }
                     despawnSync();
                     spawnSync(loc);
                 },
@@ -265,19 +277,34 @@ public final class DefaultHologram implements Hologram {
             return CompletableFuture.completedFuture(null);
         }
 
-        return CompletableFuture.runAsync(this::despawnSync, scheduler.regionExecutor(loc));
+        long generation = mutationGeneration.incrementAndGet();
+        return CompletableFuture.runAsync(
+                () -> {
+                    if (mutationGeneration.get() != generation) {
+                        return;
+                    }
+                    despawnSync();
+                },
+                scheduler.regionExecutor(loc));
     }
 
     @Override
     public CompletionStage<Void> destroyAsync() {
-        mutationGeneration.incrementAndGet();
+        long generation = mutationGeneration.incrementAndGet();
         var loc = locationRef.get();
         spawned.set(false);
         if (loc == null || loc.getWorld() == null) {
             return CompletableFuture.completedFuture(null);
         }
 
-        return CompletableFuture.runAsync(this::despawnSync, scheduler.regionExecutor(loc));
+        return CompletableFuture.runAsync(
+                () -> {
+                    if (mutationGeneration.get() != generation) {
+                        return;
+                    }
+                    despawnSync();
+                },
+                scheduler.regionExecutor(loc));
     }
 
     private Location calculateLineLocation(Location baseLocation, int targetIndex) {

@@ -233,9 +233,8 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                                     }
                                 }
                             })
-                            .exceptionallyCompose(error -> {
-                                throw new CacheSaveException("Could not save cache entry: " + key, error);
-                            });
+                            .exceptionallyCompose(error -> CompletableFuture.failedFuture(
+                                    new CacheSaveException("Could not save cache entry: " + key, error)));
                 })
                 .orElseGet(CompletionStages::completedVoid);
     }

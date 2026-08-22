@@ -7,10 +7,8 @@ import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.bukkit.Bukkit;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
@@ -64,15 +62,6 @@ public final class DefaultDisplayModule implements DisplayModule {
 
     @Override
     public void close() {
-        if (Bukkit.isPrimaryThread()) {
-            throw new IllegalStateException("DisplayModule.close() blocks; use closeAsync() on the server thread.");
-        }
-        try {
-            closeAsync().toCompletableFuture().get(30, TimeUnit.SECONDS);
-        } catch (RuntimeException failure) {
-            throw failure;
-        } catch (Exception failure) {
-            throw new IllegalStateException("DisplayModule.close() failed", failure);
-        }
+        var _ = closeAsync();
     }
 }

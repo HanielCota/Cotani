@@ -86,19 +86,33 @@ public final class DefaultAnvilPrompt implements AnvilPrompt, ActivePrompt {
 
         dialogService.registerActivePrompt(this);
 
-        this.inventory = Bukkit.createInventory(player, InventoryType.ANVIL, title);
-
-        ItemStack item = leftItem.clone();
-        if (!initialText.isEmpty()) {
-            ItemMeta meta = item.getItemMeta();
-            if (meta != null) {
-                meta.displayName(Component.text(initialText));
-                item.setItemMeta(meta);
+        if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
+            scheduler.entity(player, () -> {
+                this.inventory = Bukkit.createInventory(player, InventoryType.ANVIL, title);
+                ItemStack item = leftItem.clone();
+                if (!initialText.isEmpty()) {
+                    ItemMeta meta = item.getItemMeta();
+                    if (meta != null) {
+                        meta.displayName(Component.text(initialText));
+                        item.setItemMeta(meta);
+                    }
+                }
+                inventory.setItem(0, item);
+                player.openInventory(inventory);
+            });
+        } else {
+            this.inventory = Bukkit.createInventory(player, InventoryType.ANVIL, title);
+            ItemStack item = leftItem.clone();
+            if (!initialText.isEmpty()) {
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.displayName(Component.text(initialText));
+                    item.setItemMeta(meta);
+                }
             }
+            inventory.setItem(0, item);
+            player.openInventory(inventory);
         }
-        inventory.setItem(0, item);
-
-        player.openInventory(inventory);
 
         this.timeoutTask = scheduler.asyncLater(
                 () -> {

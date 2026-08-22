@@ -218,6 +218,21 @@ class DefaultTaskChainTest {
     }
 
     @Test
+    void allOfHandlesNullAndVoidResultsSafely() throws Exception {
+        TaskChain<Void> a = DefaultTaskChain.create(CompletableFuture.completedFuture(null), scheduler);
+        TaskChain<Void> b = DefaultTaskChain.create(CompletableFuture.completedFuture(null), scheduler);
+
+        List<Void> result = TaskChain.allOf(scheduler, a, b)
+                .toCompletionStage()
+                .toCompletableFuture()
+                .get();
+
+        assertEquals(2, result.size());
+        assertNull(result.getFirst());
+        assertNull(result.getLast());
+    }
+
+    @Test
     void anyOfReturnsFirstResult() throws Exception {
         TaskChain<String> a = DefaultTaskChain.create(CompletableFuture.completedFuture("a"), scheduler);
         TaskChain<String> b = DefaultTaskChain.create(CompletableFuture.completedFuture("b"), scheduler);

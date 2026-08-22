@@ -239,12 +239,7 @@ public final class SimpleUserService implements InternalUserService {
             return CompletionStages.completedVoid();
         }
 
-        CompletionStage<Void> all = CompletionStages.completedVoid();
-        for (SimpleCotaniUser user : updatedUsers) {
-            var persisted = persistSequentially(user.uniqueId(), () -> repository.save(user));
-            all = all.thenCombine(persisted, (first, second) -> VoidResult.nullValue());
-        }
-        return all;
+        return repository.saveAll(updatedUsers);
     }
 
     public void clearCache() {

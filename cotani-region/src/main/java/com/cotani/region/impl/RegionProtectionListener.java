@@ -67,8 +67,10 @@ public final class RegionProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onPvP(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player && event.getDamager() instanceof Player) {
-            var loc = event.getEntity().getLocation();
-            if (loc != null && !module.isFlagAllowed(loc, RegionFlag.PVP, true)) {
+            var victimLoc = event.getEntity().getLocation();
+            var damagerLoc = event.getDamager().getLocation();
+            if ((victimLoc != null && !module.isFlagAllowed(victimLoc, RegionFlag.PVP, true))
+                    || (damagerLoc != null && !module.isFlagAllowed(damagerLoc, RegionFlag.PVP, true))) {
                 event.setCancelled(true);
             }
         }

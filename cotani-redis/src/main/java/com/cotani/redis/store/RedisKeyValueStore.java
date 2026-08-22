@@ -57,6 +57,16 @@ public interface RedisKeyValueStore {
     CompletionStage<Void> setAsync(RedisKey key, String value, Duration ttl);
 
     /**
+     * Sets a string value with a time-to-live expiration only if the key does not already exist (SET NX PX).
+     *
+     * @param key target key
+     * @param value value string
+     * @param ttl duration before key expires
+     * @return stage completing with true if key was set, false if key already existed
+     */
+    CompletionStage<Boolean> setIfAbsentAsync(RedisKey key, String value, Duration ttl);
+
+    /**
      * Sets a typed object encoded using the specified codec with no expiration.
      *
      * @param key target key

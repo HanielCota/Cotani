@@ -4,14 +4,15 @@ import com.cotani.api.InternalApi;
 import com.cotani.storage.query.Row;
 import com.cotani.user.internal.model.SimpleCotaniUser;
 import java.sql.SQLException;
+import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class UserMapper {
-    public SimpleCotaniUser toUser(Row row, UUID fallbackUniqueId, @Nullable String fallbackUsername, long now)
-            throws SQLException {
-        UUID uniqueId = row.getUuidOptional("unique_id").orElse(fallbackUniqueId);
+    public SimpleCotaniUser toUser(
+            Row row, @Nullable UUID fallbackUniqueId, @Nullable String fallbackUsername, long now) throws SQLException {
+        UUID uniqueId = Objects.requireNonNull(row.getUuidOptional("unique_id").orElse(fallbackUniqueId), "unique_id");
 
         String username = row.getStringOptional("username")
                 .filter(value -> !value.isBlank())

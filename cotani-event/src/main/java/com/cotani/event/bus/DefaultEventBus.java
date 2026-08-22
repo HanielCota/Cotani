@@ -27,9 +27,10 @@ public final class DefaultEventBus implements EventBus {
     private final EventDispatcher dispatcher;
     private final Executor asyncExecutor;
     private final Optional<ExecutorService> ownedListenerExecutor;
+    private final Optional<ExecutorService> ownedAsyncExecutor;
 
     private DefaultEventBus(EventRegistry registry, EventDispatcher dispatcher, Executor asyncExecutor) {
-        this(registry, dispatcher, asyncExecutor, Optional.empty());
+        this(registry, dispatcher, asyncExecutor, Optional.empty(), Optional.empty());
     }
 
     public static DefaultEventBus create(EventRegistry registry, EventDispatcher dispatcher, Executor asyncExecutor) {
@@ -40,11 +41,13 @@ public final class DefaultEventBus implements EventBus {
             EventRegistry registry,
             EventDispatcher dispatcher,
             Executor asyncExecutor,
-            Optional<ExecutorService> ownedListenerExecutor) {
+            Optional<ExecutorService> ownedListenerExecutor,
+            Optional<ExecutorService> ownedAsyncExecutor) {
         this.registry = Objects.requireNonNull(registry, "registry cannot be null");
         this.dispatcher = Objects.requireNonNull(dispatcher, "dispatcher cannot be null");
         this.asyncExecutor = Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
         this.ownedListenerExecutor = Objects.requireNonNull(ownedListenerExecutor, "ownedListenerExecutor");
+        this.ownedAsyncExecutor = Objects.requireNonNull(ownedAsyncExecutor, "ownedAsyncExecutor");
     }
 
     public static DefaultEventBus create(EventExceptionHandler exceptionHandler, Executor asyncExecutor) {
@@ -55,16 +58,18 @@ public final class DefaultEventBus implements EventBus {
             EventExceptionHandler exceptionHandler, Executor asyncExecutor, EventDispatchPolicy policy) {
         Objects.requireNonNull(exceptionHandler, "exceptionHandler cannot be null");
         Objects.requireNonNull(asyncExecutor, "asyncExecutor cannot be null");
-
         Objects.requireNonNull(policy, "policy cannot be null");
 
         var listenerExecutor = Executors.newVirtualThreadPerTaskExecutor();
+        Optional<ExecutorService> ownedAsync =
+                (asyncExecutor instanceof ExecutorService es) ? Optional.of(es) : Optional.empty();
 
         return new DefaultEventBus(
                 new DefaultEventRegistry(),
                 new DefaultEventDispatcher(exceptionHandler, listenerExecutor, policy),
                 asyncExecutor,
-                Optional.of(listenerExecutor));
+                Optional.of(listenerExecutor),
+                ownedAsync);
     }
 
     @Override
@@ -137,5 +142,6 @@ public final class DefaultEventBus implements EventBus {
     public void close() {
         clear();
         ownedListenerExecutor.ifPresent(ExecutorService::shutdownNow);
+        ownedAsyncExecutor.ifPresent(ExecutorService::shutdownNow);
     }
 }

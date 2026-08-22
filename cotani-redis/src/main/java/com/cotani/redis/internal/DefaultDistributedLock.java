@@ -67,7 +67,7 @@ public final class DefaultDistributedLock implements DistributedLock {
 
     @Override
     public void close() {
-        if (Bukkit.isPrimaryThread()) {
+        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
             throw new IllegalStateException(
                     "DistributedLock.close() must not be called from the server main thread. Use releaseAsync() instead.");
         }

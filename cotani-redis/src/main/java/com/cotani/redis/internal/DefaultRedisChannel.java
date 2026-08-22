@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import org.bukkit.Bukkit;
 
 /**
  * Default implementation of {@link RedisChannel}.
@@ -130,22 +129,7 @@ public final class DefaultRedisChannel<T> implements RedisChannel<T> {
 
         @Override
         public void close() {
-            if (Bukkit.isPrimaryThread()) {
-                throw new IllegalStateException(
-                        "ChannelSubscription.close() must not be called from the server main thread. Use unsubscribeAsync() instead.");
-            }
-            try {
-                unsubscribeAsync().toCompletableFuture().get(10, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException("Interrupted while unsubscribing ChannelSubscription", e);
-            } catch (Exception e) {
-                Throwable cause = e.getCause() != null ? e.getCause() : e;
-                if (cause instanceof RuntimeException re) {
-                    throw re;
-                }
-                throw new IllegalStateException("Failed to unsubscribe ChannelSubscription", cause);
-            }
+            var _ = unsubscribeAsync();
         }
     }
 }

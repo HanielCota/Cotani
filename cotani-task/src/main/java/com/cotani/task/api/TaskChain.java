@@ -38,7 +38,7 @@ public interface TaskChain<T> {
                             for (var future : futures) {
                                 result.add(future.getNow(null));
                             }
-                            return List.copyOf(result);
+                            return java.util.Collections.unmodifiableList(result);
                         },
                         scheduler.asyncExecutor());
 
