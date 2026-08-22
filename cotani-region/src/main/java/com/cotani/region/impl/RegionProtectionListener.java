@@ -4,6 +4,7 @@ import com.cotani.api.InternalApi;
 import com.cotani.region.api.RegionEnterEvent;
 import com.cotani.region.api.RegionFlag;
 import com.cotani.region.api.RegionLeaveEvent;
+import com.cotani.text.MiniMessages;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -16,8 +17,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -25,7 +31,7 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
- * Event listener enforcing protection flags and triggering region transition events.
+ * Event listener enforcing all 3D protection flags and triggering region transition events.
  */
 @InternalApi
 public final class RegionProtectionListener implements Listener {
@@ -107,7 +113,54 @@ public final class RegionProtectionListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onCreatureSpawn(CreatureSpawnEvent event) {
+        var reason = event.getSpawnReason();
+        if (reason == CreatureSpawnEvent.SpawnReason.CUSTOM || reason == CreatureSpawnEvent.SpawnReason.COMMAND) {
+            return;
+        }
+
+        var loc = event.getLocation();
+        if (!module.isFlagAllowed(loc, RegionFlag.MOB_SPAWN, true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        var loc = event.getLocation();
+        if (!module.isFlagAllowed(loc, RegionFlag.EXPLOSIONS, true)) {
+            event.blockList().clear();
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        var loc = event.getBlock().getLocation();
+        if (!module.isFlagAllowed(loc, RegionFlag.EXPLOSIONS, true)) {
+            event.blockList().clear();
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onBlockBurn(BlockBurnEvent event) {
+        var loc = event.getBlock().getLocation();
+        if (!module.isFlagAllowed(loc, RegionFlag.FIRE_SPREAD, true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onBlockIgnite(BlockIgniteEvent event) {
+        var loc = event.getBlock().getLocation();
+        if (!module.isFlagAllowed(loc, RegionFlag.FIRE_SPREAD, true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent event) {
         var from = event.getFrom();
         var to = event.getTo();
@@ -120,8 +173,15 @@ public final class RegionProtectionListener implements Listener {
         }
 
         var player = event.getPlayer();
-        var playerId = player.getUniqueId();
 
+        // Check ENTRY denial flag
+        if (!module.isFlagAllowed(to, RegionFlag.ENTRY, true)) {
+            event.setCancelled(true);
+            player.sendMessage(MiniMessages.parse("<red>You cannot enter this protected region.</red>"));
+            return;
+        }
+
+        var playerId = player.getUniqueId();
         var currentRegions = module.regionsAt(to);
         var currentRegionIds = new HashSet<String>();
         for (var r : currentRegions) {

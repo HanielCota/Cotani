@@ -152,21 +152,21 @@ public final class BankerNpcPluginExample extends JavaPlugin {
         var playerId = player.getUniqueId();
         var currency = CurrencyId.of("coins");
 
+        final net.kyori.adventure.audience.Audience audience = player;
+
         // 3. Prompt for deposit amount non-blockingly using cotani-dialog
         dialog.promptChat(player, MiniMessages.parse("<yellow>Enter deposit amount (or 'cancel'):</yellow>"))
                 .thenAccept(result -> {
                     result.ifSuccess(input -> {
                         if (input.equalsIgnoreCase("cancel")) {
-                            ((net.kyori.adventure.audience.Audience) player)
-                                    .sendMessage(MiniMessages.parse("<red>Deposit cancelled.</red>"));
+                            audience.sendMessage(MiniMessages.parse("<red>Deposit cancelled.</red>"));
                             return;
                         }
 
                         try {
                             var amount = new BigDecimal(input);
                             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                                ((net.kyori.adventure.audience.Audience) player)
-                                        .sendMessage(MiniMessages.parse("<red>Amount must be positive!</red>"));
+                                audience.sendMessage(MiniMessages.parse("<red>Amount must be positive!</red>"));
                                 return;
                             }
 
@@ -178,16 +178,14 @@ public final class BankerNpcPluginExample extends JavaPlugin {
                                             EconomyReason.plugin("bank_deposit", "banking"),
                                             EconomyOperationId.random())
                                     .thenAccept(transaction -> {
-                                        ((net.kyori.adventure.audience.Audience) player)
-                                                .sendMessage(
-                                                        MiniMessages.parse("<green>Deposit complete! Transaction ID: "
-                                                                + transaction
-                                                                        .operationId()
-                                                                        .value() + "</green>"));
+                                        audience.sendMessage(
+                                                MiniMessages.parse("<green>Deposit complete! Transaction ID: "
+                                                        + transaction
+                                                                .operationId()
+                                                                .value() + "</green>"));
                                     });
                         } catch (NumberFormatException e) {
-                            ((net.kyori.adventure.audience.Audience) player)
-                                    .sendMessage(MiniMessages.parse("<red>Invalid numeric amount!</red>"));
+                            audience.sendMessage(MiniMessages.parse("<red>Invalid numeric amount!</red>"));
                         }
                     });
                 });
