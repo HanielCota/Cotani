@@ -16,6 +16,7 @@ dependencies {
         api(project(":item"))
         api(project(":metrics"))
         api(project(":nametag"))
+        api(project(":npc"))
         api(project(":redis"))
         api(project(":storage"))
         api(project(":task"))

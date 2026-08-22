@@ -134,6 +134,7 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | [`cotani-command`](cotani-command/README.md) | Framework declarativo de comandos com argumentos assíncronos, cooldowns e segurança para Folia | `1.1.0-SNAPSHOT` |
 | [`cotani-hud`](cotani-hud/README.md) | Scoreboards reativas zero-flicker, tablist dinâmico, bossbars e actionbars | `1.1.0-SNAPSHOT` |
 | [`cotani-nametag`](cotani-nametag/README.md) | Formatação de nametags via Scoreboard Teams, prioridade de ordenação no tablist e regras de colisão | `1.1.0-SNAPSHOT` |
+| [`cotani-npc`](cotani-npc/README.md) | NPCs virtuais por pacote com look-at dinâmico, skins, equipamentos e raycasting de cliques | `1.1.0-SNAPSHOT` |
 | [`cotani-dialog`](cotani-dialog/README.md) | Diálogos reativos não-bloqueantes de chat, placa e bigorna com wizards | `1.1.0-SNAPSHOT` |
 
 ### 📊 Operações & Ferramentas

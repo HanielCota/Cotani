@@ -36,6 +36,7 @@ include(
     "command",
     "hud",
     "nametag",
+    "npc",
     "redis",
     "examples"
 )
@@ -60,6 +61,7 @@ project(":display").projectDir = file("cotani-display")
 project(":command").projectDir = file("cotani-command")
 project(":hud").projectDir = file("cotani-hud")
 project(":nametag").projectDir = file("cotani-nametag")
+project(":npc").projectDir = file("cotani-npc")
 project(":redis").projectDir = file("cotani-redis")
 project(":examples").projectDir = file("docs-examples")
 

@@ -375,6 +375,13 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 - Compose prompt results with `thenAccept(result -> result.ifSuccess(...))` without blocking the main thread.
 - Use `ConversationWizard` for multi-step questionnaires and forms.
 
+### cotani-npc
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniNpcs.create(plugin, scheduler))`.
+- Construct virtual NPCs with `Npc.builder()` or `npcModule.create(...)`.
+- Use `npcModule.updateLocation(...)` and `npcModule.updateEquipment(...)` to mutate NPCs without ticking server entities.
+- Handle click interactions (`NpcInteractEvent`) non-blockingly without heavy I/O in the callback.
+
 ## Anti-patterns by module
 
 | Module | Do not | Do instead |

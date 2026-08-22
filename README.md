@@ -134,6 +134,7 @@ Declare only the modules required for your feature set; transitive dependencies 
 | [`cotani-command`](cotani-command/README.md) | Declarative command framework with async arguments, cooldowns, and Folia thread safety | `1.1.0-SNAPSHOT` |
 | [`cotani-hud`](cotani-hud/README.md) | Reactive zero-flicker scoreboards, dynamic tablist, bossbars, and actionbars | `1.1.0-SNAPSHOT` |
 | [`cotani-nametag`](cotani-nametag/README.md) | Scoreboard team-driven nametag formatting, tablist sorting priority, and collision rules | `1.1.0-SNAPSHOT` |
+| [`cotani-npc`](cotani-npc/README.md) | Virtual packet-based player NPCs with dynamic look-at, skins, equipment, and click raycasting | `1.1.0-SNAPSHOT` |
 | [`cotani-dialog`](cotani-dialog/README.md) | Non-blocking reactive chat, sign, and anvil input prompts and multi-step wizards | `1.1.0-SNAPSHOT` |
 
 ### 📊 Operations & Tooling

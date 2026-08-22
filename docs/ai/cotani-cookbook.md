@@ -528,6 +528,33 @@ nametags.registerProvider((viewer, target) -> {
 
 ---
 
+## 20. Virtual Packet-Based NPCs (`cotani-npc`)
+
+Create interactive, client-side virtual NPCs without entity tick lag:
+
+```java
+NpcModule npcs = CotaniNpcs.create(plugin, scheduler);
+
+// 1. Create interactive Quest NPC with skin texture and look-at player
+var questNpc = npcs.create(builder -> builder
+    .location(spawnLocation)
+    .name("<gold><bold>Quest Master</bold></gold>")
+    .skin(textureValue, textureSignature)
+    .lookAtPlayer(true)
+    .equipment(NpcEquipment.builder()
+        .helmet(new ItemStack(Material.GOLDEN_HELMET))
+        .mainHand(new ItemStack(Material.ENCHANTED_BOOK))
+        .build())
+    .onInteract(event -> {
+        var player = event.player();
+        if (event.action() == NpcInteractEvent.Action.RIGHT_CLICK) {
+            player.sendMessage(MiniMessages.parse("<yellow>Quest Master: Greetings, adventurer!</yellow>"));
+        }
+    }));
+```
+
+---
+
 ## Checklist for every recipe
 
 - [ ] No `join()`, `get()` or `Thread.sleep(...)` in application code.

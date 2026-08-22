@@ -319,7 +319,7 @@ val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("val
     group = "verification"
     description = "Validates Cotani module boundaries and Gradle dependency cycles."
     rootDirectory.set(layout.projectDirectory)
-    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display", "command", "hud", "nametag", "redis", "dialog"))
+    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display", "command", "hud", "nametag", "npc", "redis", "dialog"))
 }
 
 val validateDocumentation = tasks.register<ValidateDocumentation>("validateDocumentation") {
