@@ -10,7 +10,7 @@ Build scalable Minecraft plugins with explicit execution boundaries, zero-reflec
 [![Java 25](https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk)](https://adoptium.net/)
 [![Paper 26.2](https://img.shields.io/badge/Paper-26.2-3f48cc?style=flat-square)](https://papermc.io/)
 [![Javadoc](https://img.shields.io/badge/docs-javadoc-0969da?style=flat-square&logo=gitbook)](https://hanielcota.github.io/Cotani/)
-[![JitPack](https://img.shields.io/jitpack/v/github/HanielCota/Cotani?style=flat-square&logo=jitpack)](https://jitpack.io/#HanielCota/Cotani)
+[![JitPack](https://jitpack.io/v/HanielCota/Cotani.svg)](https://jitpack.io/#HanielCota/Cotani)
 [![MIT](https://img.shields.io/github/license/HanielCota/Cotani?style=flat-square)](LICENSE)
 
 [English](README.md) · [Português](README.pt-BR.md)
