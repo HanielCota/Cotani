@@ -33,6 +33,8 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
         FROM cotani_cooldowns
         WHERE cooldown_id = ?
         """;
+    private static final String KEY_PARAM = "key";
+    private static final String DURATION_PARAM = "duration";
 
     private final CotaniStorage storage;
     private final Clock clock;
@@ -56,8 +58,8 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
 
     @Override
     public CompletionStage<CooldownResult> checkAndStartAsync(CooldownKey key, Duration duration) {
-        Objects.requireNonNull(key, "key");
-        Objects.requireNonNull(duration, "duration");
+        Objects.requireNonNull(key, KEY_PARAM);
+        Objects.requireNonNull(duration, DURATION_PARAM);
 
         if (!duration.isPositive()) {
             throw new IllegalArgumentException("duration must be positive");
@@ -80,8 +82,10 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
                                 .string(leaseToken))
                 .thenCompose(_ -> findStored(target.cooldownId()))
                 .thenApply(stored -> {
-                    var entry = stored.orElseThrow(() -> new IllegalStateException(
-                            "Atomic cooldown upsert did not produce a row: " + target.cooldownId()));
+                    if (stored.isEmpty()) {
+                        return CooldownResult.allowed(key);
+                    }
+                    var entry = stored.get();
                     if (leaseToken.equals(entry.leaseToken())) {
                         return CooldownResult.allowed(key);
                     }
@@ -97,7 +101,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
 
     @Override
     public CompletionStage<Optional<CooldownEntry>> findAsync(CooldownKey key) {
-        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(key, KEY_PARAM);
 
         var target = TargetColumns.from(key);
         Instant now = clock.instant();
@@ -115,7 +119,7 @@ final class SqlDistributedCooldownService implements DistributedCooldownService 
 
     @Override
     public CompletionStage<Void> removeAsync(CooldownKey key) {
-        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(key, KEY_PARAM);
 
         return storage.queryExecutor()
                 .update(

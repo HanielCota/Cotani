@@ -103,6 +103,9 @@ public final class ConfigSerializerRegistry {
         if (value.raw() != null && wrapped.isInstance(value.raw())) {
             return wrapped.cast(value.raw());
         }
+        if (value.raw() == null) {
+            throw new ConfigException("Missing value for " + wrapped.getName() + " at " + value.location());
+        }
 
         throw new ConfigException("Unsupported config type " + wrapped.getName() + " at " + value.location());
     }

@@ -38,6 +38,16 @@ class YamlInputLimitsTest {
     }
 
     @Test
+    void rejectsApostropheInPlainScalarWithoutDisablingAliasLimits() {
+        var yaml = new StringBuilder("it's:\n");
+        for (int alias = 0; alias < 51; alias++) {
+            yaml.append("  item").append(alias).append(": *anchor\n");
+        }
+
+        assertThrows(ConfigException.class, () -> YamlInputLimits.validate(yaml.toString()));
+    }
+
+    @Test
     void rejectsExcessiveAliasReferences() {
         var yaml = new StringBuilder("value:");
 

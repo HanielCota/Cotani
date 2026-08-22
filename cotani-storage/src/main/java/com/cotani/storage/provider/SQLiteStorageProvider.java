@@ -159,10 +159,8 @@ public final class SQLiteStorageProvider implements StorageProvider {
         }
     }
 
-    private static final class NonClosingConnection implements Connection {
-        private final Connection delegate;
-
-        NonClosingConnection(Connection delegate) {
+    private record NonClosingConnection(Connection delegate) implements Connection {
+        private NonClosingConnection(Connection delegate) {
             this.delegate = Objects.requireNonNull(delegate, "delegate");
         }
 

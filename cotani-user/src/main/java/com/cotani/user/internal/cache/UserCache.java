@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,6 +31,7 @@ public final class UserCache {
 
     private final int maxCachedUsers;
     private final Map<UUID, SimpleCotaniUser> users;
+    private final Set<UUID> pinnedUsers;
 
     public UserCache() {
         this(DEFAULT_MAX_CACHED_USERS);
@@ -42,6 +44,7 @@ public final class UserCache {
 
         this.maxCachedUsers = maxCachedUsers;
         this.users = new ConcurrentHashMap<>();
+        this.pinnedUsers = ConcurrentHashMap.newKeySet();
     }
 
     public Optional<SimpleCotaniUser> findInternal(UUID uniqueId) {
@@ -75,21 +78,26 @@ public final class UserCache {
         evictIfNeeded();
     }
 
+    public void pin(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+        pinnedUsers.add(uniqueId);
+    }
+
+    public void unpin(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+        pinnedUsers.remove(uniqueId);
+    }
+
     public boolean remove(UUID uniqueId, UUID expectedSessionId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
         Objects.requireNonNull(expectedSessionId, "expectedSessionId");
 
-        boolean[] removed = new boolean[1];
-        users.computeIfPresent(uniqueId, (id, current) -> {
-            if (current.sessionId().equals(expectedSessionId)) {
-                removed[0] = true;
-                return null;
-            }
+        var current = users.get(uniqueId);
+        if (current == null || !current.sessionId().equals(expectedSessionId)) {
+            return false;
+        }
 
-            return current;
-        });
-
-        return removed[0];
+        return users.remove(uniqueId, current);
     }
 
     public Optional<SimpleCotaniUser> updateIfSession(
@@ -114,6 +122,7 @@ public final class UserCache {
     }
 
     public void clear() {
+        pinnedUsers.clear();
         users.clear();
     }
 
@@ -128,13 +137,17 @@ public final class UserCache {
     }
 
     private void evictIfNeeded() {
-        while (users.size() > maxCachedUsers) {
-            var iterator = users.keySet().iterator();
+        if (users.size() <= maxCachedUsers) {
+            return;
+        }
 
-            if (iterator.hasNext()) {
-                iterator.next();
-                iterator.remove();
+        var iterator = users.entrySet().iterator();
+        while (users.size() > maxCachedUsers && iterator.hasNext()) {
+            var entry = iterator.next();
+            if (pinnedUsers.contains(entry.getKey())) {
+                continue;
             }
+            iterator.remove();
         }
     }
 }

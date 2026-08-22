@@ -40,17 +40,20 @@ public final class DefaultEconomyGuard implements EconomyGuard {
             throw new InvalidAmountException(amount, "amount must be greater than zero");
         }
 
-        if (amount.scale() > decimalPlaces) {
+        BigDecimal normalized;
+        try {
+            normalized = amount.setScale(decimalPlaces, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException _) {
             throw new InvalidAmountException(amount, "amount scale cannot be greater than " + decimalPlaces);
         }
 
         var maximumOperationAmount = settings.maximumOperationAmount(currencyId);
 
-        if (amount.compareTo(maximumOperationAmount) > 0) {
+        if (normalized.compareTo(maximumOperationAmount) > 0) {
             throw new InvalidAmountException(amount, "amount cannot be greater than " + maximumOperationAmount);
         }
 
-        return amount.setScale(decimalPlaces, RoundingMode.UNNECESSARY);
+        return normalized;
     }
 
     @Override
@@ -71,13 +74,16 @@ public final class DefaultEconomyGuard implements EconomyGuard {
             throw new InvalidAmountException(amount, "balance cannot be negative");
         }
 
-        if (amount.scale() > decimalPlaces) {
+        BigDecimal normalized;
+        try {
+            normalized = amount.setScale(decimalPlaces, RoundingMode.UNNECESSARY);
+        } catch (ArithmeticException _) {
             throw new InvalidAmountException(amount, "balance scale cannot be greater than " + decimalPlaces);
         }
 
         var maximumBalance = settings.maximumBalance(currencyId);
 
-        if (amount.compareTo(maximumBalance) > 0) {
+        if (normalized.compareTo(maximumBalance) > 0) {
             throw new InvalidAmountException(amount, "balance cannot be greater than " + maximumBalance);
         }
     }

@@ -171,13 +171,12 @@ final class EconomyStorageMappers {
     private static boolean isUniqueSqlException(SQLException sqlException) {
         String sqlState = sqlException.getSQLState();
 
-        if (sqlState != null && sqlState.startsWith("23")) {
+        if ("23505".equals(sqlState)) {
             return true;
         }
 
         int errorCode = sqlException.getErrorCode();
-        // MySQL/MariaDB ER_DUP_ENTRY = 1062; SQLite SQLITE_CONSTRAINT = 19
-        if (errorCode == 1062 || errorCode == 19) {
+        if (errorCode == 1062) {
             return true;
         }
 
@@ -188,7 +187,9 @@ final class EconomyStorageMappers {
         }
 
         String lower = message.toLowerCase(Locale.ROOT);
-
+        if (lower.contains("not null") || lower.contains("foreign key") || lower.contains("check constraint")) {
+            return false;
+        }
         return lower.contains("unique") || lower.contains("duplicate");
     }
 

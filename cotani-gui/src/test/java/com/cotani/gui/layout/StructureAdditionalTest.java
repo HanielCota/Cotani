@@ -2,7 +2,6 @@ package com.cotani.gui.layout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Set;
@@ -59,6 +58,6 @@ final class StructureAdditionalTest {
     @SuppressWarnings("NullAway")
     void shouldRejectNullRowsArray() {
         assertThrows(NullPointerException.class, () -> Structure.parse((String[]) null));
-        assertTrue(Structure.EMPTY == '.');
+        assertEquals(Structure.EMPTY, '.');
     }
 }

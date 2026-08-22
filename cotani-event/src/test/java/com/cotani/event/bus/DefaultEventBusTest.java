@@ -1,10 +1,6 @@
 package com.cotani.event.bus;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -120,7 +116,7 @@ final class DefaultEventBusTest {
         ArgumentCaptor<EventListenerException> captor = ArgumentCaptor.forClass(EventListenerException.class);
         verify(handler).handle(captor.capture());
         assertSame(event, captor.getValue().event());
-        assertTrue(captor.getValue().getCause() instanceof IllegalStateException);
+        assertInstanceOf(IllegalStateException.class, captor.getValue().getCause());
     }
 
     @Test
@@ -200,7 +196,7 @@ final class DefaultEventBusTest {
 
             ExecutionException failure = assertThrows(ExecutionException.class, () -> stage.get(5, TimeUnit.SECONDS));
 
-            assertTrue(failure.getCause() instanceof RejectedExecutionException);
+            assertInstanceOf(RejectedExecutionException.class, failure.getCause());
         }
     }
 
@@ -229,7 +225,7 @@ final class DefaultEventBusTest {
 
             ExecutionException failure = assertThrows(ExecutionException.class, () -> stage.get(5, TimeUnit.SECONDS));
 
-            assertTrue(failure.getCause() instanceof RejectedExecutionException);
+            assertInstanceOf(RejectedExecutionException.class, failure.getCause());
         }
     }
 

@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.Location;
@@ -55,6 +56,7 @@ public final class PaperTeleportService implements TeleportService {
     private final Dependencies deps;
     private final ConcurrentHashMap<UUID, CompletableFuture<Void>> playerPipelines = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, IndeterminateTeleport> indeterminateTeleports = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, BooleanSupplier> abortSignals = new ConcurrentHashMap<>();
 
     public PaperTeleportService(Dependencies deps) {
         this.deps = Objects.requireNonNull(deps, "deps");
@@ -107,9 +109,11 @@ public final class PaperTeleportService implements TeleportService {
     }
 
     private CompletionStage<TeleportResult> teleportOnce(TeleportRequest request) {
+        abortSignals.put(request.playerId(), request.abortIf());
         return deps.scheduler()
                 .supply(ExecutionTarget.entity(request.playerId()), "teleport-prepare", () -> prepare(request))
-                .thenCompose(this::resolveAndFinish);
+                .thenCompose(this::resolveAndFinish)
+                .whenComplete((_, _) -> abortSignals.remove(request.playerId(), request.abortIf()));
     }
 
     private PreparedTeleport prepare(TeleportRequest request) {
@@ -196,15 +200,17 @@ public final class PaperTeleportService implements TeleportService {
 
         PolicyResult policyResult = deps.policyChain().validate(context);
 
-        if (!(policyResult instanceof PolicyResult.Denied denied)) {
+        if (!(policyResult
+                instanceof
+                PolicyResult.Denied(TeleportFailureReason reason, net.kyori.adventure.text.Component message))) {
             return Optional.empty();
         }
 
         if (context.options().sendMessages()) {
-            AudienceMessages.sendMessage(player, denied.message());
+            AudienceMessages.sendMessage(player, message);
         }
 
-        return Optional.of(TeleportResults.failure(context, denied.reason()));
+        return Optional.of(TeleportResults.failure(context, reason));
     }
 
     private CompletionStage<TeleportResult> firePreTeleportAndExecute(
@@ -278,6 +284,19 @@ public final class PaperTeleportService implements TeleportService {
                 return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.PLAYER_OFFLINE));
             }
 
+            if (isAborted(context.playerId())) {
+                return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.CANCELLED_BY_EVENT));
+            }
+
+            var policyFailure = validateOrStart(context);
+            if (policyFailure.isPresent()) {
+                return notifyFailure(policyFailure.get());
+            }
+
+            if (isAborted(context.playerId())) {
+                return notifyFailure(TeleportResults.failure(context, TeleportFailureReason.CANCELLED_BY_EVENT));
+            }
+
             preparePlayer(player, options.player());
             Vector velocity = player.getVelocity().clone();
 
@@ -324,9 +343,8 @@ public final class PaperTeleportService implements TeleportService {
                             .thenApply(
                                     success -> (PhysicalTeleportOutcome) new PhysicalTeleportOutcome.Confirmed(success))
                             .exceptionallyCompose(reconciliationError -> isTimeout(reconciliationError)
-                                    ? CompletableFuture.<PhysicalTeleportOutcome>completedFuture(
-                                            new PhysicalTeleportOutcome.Indeterminate())
-                                    : CompletableFuture.<PhysicalTeleportOutcome>failedFuture(reconciliationError));
+                                    ? CompletableFuture.completedFuture(new PhysicalTeleportOutcome.Indeterminate())
+                                    : CompletableFuture.failedFuture(reconciliationError));
                 });
     }
 
@@ -337,12 +355,12 @@ public final class PaperTeleportService implements TeleportService {
             Instant startedAt,
             CompletableFuture<Boolean> physicalTeleport,
             PhysicalTeleportOutcome outcome) {
-        if (outcome instanceof PhysicalTeleportOutcome.Confirmed confirmed) {
+        if (outcome instanceof PhysicalTeleportOutcome.Confirmed(boolean success)) {
             return flatten(deps.scheduler()
                     .supply(
                             ExecutionTarget.entity(context.playerId()),
                             "teleport-complete",
-                            () -> completeTeleport(context, eventTarget, velocity, confirmed.success(), startedAt)));
+                            () -> completeTeleport(context, eventTarget, velocity, success, startedAt)));
         }
 
         registerLateReconciliation(context, eventTarget, velocity, startedAt, physicalTeleport);
@@ -420,6 +438,9 @@ public final class PaperTeleportService implements TeleportService {
 
         if (context.options().preserveVelocity()) {
             player.setVelocity(velocity);
+        } else {
+            player.setVelocity(new Vector(0, 0, 0));
+            player.setFallDistance(0.0f);
         }
 
         if (context.options().checkCooldown()) {
@@ -445,6 +466,11 @@ public final class PaperTeleportService implements TeleportService {
 
     private @Nullable Player resolvePlayer(UUID playerId) {
         return deps.playerResolver().resolve(playerId);
+    }
+
+    private boolean isAborted(UUID playerId) {
+        BooleanSupplier abortIf = abortSignals.get(playerId);
+        return abortIf != null && abortIf.getAsBoolean();
     }
 
     record Dependencies(

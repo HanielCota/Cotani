@@ -60,7 +60,7 @@ public final class UserListener implements Listener {
 
         userService
                 .load(uniqueId, username)
-                .thenAccept(user -> scheduler.global("user-load-complete", () -> {
+                .thenAccept(user -> scheduler.entity("user-load-complete", uniqueId, () -> {
                     try {
                         Player onlinePlayer = Bukkit.getPlayer(uniqueId);
 
@@ -83,7 +83,7 @@ public final class UserListener implements Listener {
                             : throwable;
                     plugin.getLogger().log(Level.SEVERE, cause, () -> "Failed to load user " + uniqueId);
 
-                    scheduler.global("user-load-failed", () -> {
+                    scheduler.entity("user-load-failed", uniqueId, () -> {
                         try {
                             Player onlinePlayer = Bukkit.getPlayer(uniqueId);
 
@@ -110,6 +110,7 @@ public final class UserListener implements Listener {
         userService
                 .unload(uniqueId)
                 .toCompletableFuture()
+                .copy()
                 .orTimeout(10, TimeUnit.SECONDS)
                 .exceptionally(throwable -> {
                     plugin.getLogger().log(Level.SEVERE, throwable, () -> "Failed to unload user " + uniqueId);

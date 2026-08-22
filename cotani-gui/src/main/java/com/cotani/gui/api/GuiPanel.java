@@ -93,6 +93,15 @@ public final class GuiPanel implements InventoryHolder {
     }
 
     /**
+     * Returns whether this panel has at least one interactable slot.
+     *
+     * @return {@code true} when the viewer may place items into the panel
+     */
+    public boolean hasInteractableSlots() {
+        return !interactableSlots.isEmpty();
+    }
+
+    /**
      * Marks the specified slot as interactable, allowing player item transfers.
      *
      * @param slot the slot index
@@ -147,7 +156,8 @@ public final class GuiPanel implements InventoryHolder {
 
     /**
      * Internal close dispatch invoked by the anti-exploit guard. Runs the close handler and releases
-     * property subscriptions exactly once.
+     * property subscriptions exactly once. Items still in interactable slots after the handler are
+     * returned to the viewer (or dropped at their location if the inventory is full).
      */
     public void handleClose() {
         if (!disposed.compareAndSet(false, true)) {
@@ -159,7 +169,59 @@ public final class GuiPanel implements InventoryHolder {
         }
         subscriptions.clear();
 
-        closeHandler.accept(new CloseContext(viewer));
+        var leftovers = snapshotInteractableItems();
+        closeHandler.accept(new CloseContext(viewer, leftovers));
+        returnRemainingInteractableItems();
+    }
+
+    private Map<Integer, ItemStack> snapshotInteractableItems() {
+        if (interactableSlots.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, ItemStack> leftovers = new HashMap<>();
+        for (var slot : interactableSlots) {
+            var item = inventory.getItem(slot);
+            if (item != null && !item.getType().isAir() && item.getAmount() > 0) {
+                leftovers.put(slot, item.clone());
+            }
+        }
+        return Map.copyOf(leftovers);
+    }
+
+    private void returnRemainingInteractableItems() {
+        if (interactableSlots.isEmpty()) {
+            return;
+        }
+
+        var playerInventory = viewer.getInventory();
+        for (var slot : interactableSlots) {
+            var item = inventory.getItem(slot);
+            if (item == null || item.getType().isAir() || item.getAmount() <= 0) {
+                continue;
+            }
+            inventory.clear(slot);
+            var overflow = playerInventory.addItem(item);
+            dropOverflow(overflow);
+        }
+    }
+
+    private void dropOverflow(Map<Integer, ItemStack> overflow) {
+        if (overflow.isEmpty()) {
+            return;
+        }
+
+        var location = viewer.getLocation();
+        if (location == null) {
+            return;
+        }
+        var world = location.getWorld();
+        if (world == null) {
+            return;
+        }
+        for (var item : overflow.values()) {
+            world.dropItemNaturally(location, item);
+        }
     }
 
     void bindSlot(int slot, Button button) {

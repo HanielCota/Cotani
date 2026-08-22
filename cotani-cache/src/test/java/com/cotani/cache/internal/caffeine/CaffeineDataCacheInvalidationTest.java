@@ -2,6 +2,7 @@ package com.cotani.cache.internal.caffeine;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -62,8 +63,10 @@ class CaffeineDataCacheInvalidationTest {
     @Test
     void invalidationFromOtherSourceEvictsCleanEntry() {
         var bus = new LocalCacheInvalidationBus<String>();
+        when(repository.save(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
         DataCache<String, String> cache = createCache(bus);
         cache.put("key", "value");
+        cache.save("key").toCompletableFuture().join();
 
         bus.publish(new CacheInvalidation<>(UUID.randomUUID(), "key"))
                 .toCompletableFuture()

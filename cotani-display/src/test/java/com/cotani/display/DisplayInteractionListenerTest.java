@@ -90,4 +90,47 @@ class DisplayInteractionListenerTest {
 
         assertEquals(HologramClickType.SHIFT_LEFT_CLICK, receivedClick.get());
     }
+
+    @Test
+    void shouldDebounceRapidClicks() {
+        var scheduler = mock(PaperTaskScheduler.class);
+        var service = new DefaultHologramService(scheduler);
+        var listener = new DisplayInteractionListener(service);
+
+        var entityId = UUID.randomUUID();
+        var hologram = mock(Hologram.class);
+        when(hologram.id()).thenReturn(UUID.randomUUID());
+        when(hologram.name()).thenReturn(Optional.empty());
+        when(hologram.entityIds()).thenReturn(java.util.List.of(entityId));
+
+        java.util.concurrent.atomic.AtomicInteger clickCount = new java.util.concurrent.atomic.AtomicInteger();
+        HologramClickHandler handler = (player, h, clickType) -> clickCount.incrementAndGet();
+        when(hologram.clickHandler()).thenReturn(Optional.of(handler));
+
+        service.register(hologram);
+
+        var player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+
+        var interactionEntity = mock(Interaction.class);
+        when(interactionEntity.getUniqueId()).thenReturn(entityId);
+
+        var event = mock(PlayerInteractEntityEvent.class);
+        when(event.getHand()).thenReturn(EquipmentSlot.HAND);
+        when(event.getRightClicked()).thenReturn(interactionEntity);
+        when(event.getPlayer()).thenReturn(player);
+
+        // First click executes
+        listener.onPlayerInteract(event);
+        assertEquals(1, clickCount.get());
+
+        // Immediate second click is debounced
+        listener.onPlayerInteract(event);
+        assertEquals(1, clickCount.get());
+
+        // After clear, next click executes
+        listener.clear();
+        listener.onPlayerInteract(event);
+        assertEquals(2, clickCount.get());
+    }
 }

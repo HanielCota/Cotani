@@ -69,4 +69,25 @@ class HologramLineTest {
         assertEquals(newBlockData, updated.blockData());
         assertEquals(1.0, updated.heightOffset());
     }
+
+    @Test
+    @SuppressWarnings("NullAway")
+    void shouldThrowOnNullArguments() {
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> TextLine.of((Component) null));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> TextLine.of((String) null));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> ItemLine.of(null));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> BlockLine.of(null));
+
+        var textLine = TextLine.of(Component.text("Hi"));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> textLine.withText(null));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> textLine.withBillboard(null));
+
+        var itemLine = ItemLine.of(mock(ItemStack.class));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> itemLine.withItem(null));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> itemLine.withBillboard(null));
+
+        var blockLine = BlockLine.of(mock(BlockData.class));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> blockLine.withBlockData(null));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> blockLine.withBillboard(null));
+    }
 }

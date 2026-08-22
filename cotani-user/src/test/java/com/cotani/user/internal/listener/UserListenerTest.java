@@ -52,13 +52,13 @@ class UserListenerTest {
         when(userService.load(uniqueId, "Steve"))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("boom")));
 
-        ArgumentCaptor<Runnable> global = ArgumentCaptor.forClass(Runnable.class);
+        ArgumentCaptor<Runnable> entityTask = ArgumentCaptor.forClass(Runnable.class);
         listener.onJoin(new PlayerJoinEvent(player, Component.empty()));
-        verify(scheduler).global(anyString(), global.capture());
+        verify(scheduler).entity(anyString(), eq(uniqueId), entityTask.capture());
 
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
             bukkit.when(() -> Bukkit.getPlayer(uniqueId)).thenReturn(player);
-            global.getValue().run();
+            entityTask.getValue().run();
         }
 
         verify(player).kick(failureMessage);
@@ -73,13 +73,13 @@ class UserListenerTest {
         when(userService.load(uniqueId, "Steve")).thenReturn(CompletableFuture.completedFuture(null));
         when(userService.unload(uniqueId)).thenReturn(CompletableFuture.completedFuture(null));
 
-        ArgumentCaptor<Runnable> global = ArgumentCaptor.forClass(Runnable.class);
+        ArgumentCaptor<Runnable> entityTask = ArgumentCaptor.forClass(Runnable.class);
         listener.onJoin(new PlayerJoinEvent(player, Component.empty()));
-        verify(scheduler).global(anyString(), global.capture());
+        verify(scheduler).entity(anyString(), eq(uniqueId), entityTask.capture());
 
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
             bukkit.when(() -> Bukkit.getPlayer(uniqueId)).thenReturn(null);
-            global.getValue().run();
+            entityTask.getValue().run();
         }
 
         verify(userService).unload(uniqueId);

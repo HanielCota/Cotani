@@ -42,6 +42,11 @@ public final class PrometheusServer implements AutoCloseable {
             return;
         }
 
+        if (isPublicBind(host)) {
+            throw new IllegalStateException(
+                    "Prometheus scrape server refuses non-loopback bind '" + host + "'; use 127.0.0.1");
+        }
+
         try {
             HttpServer http = HttpServer.create(new InetSocketAddress(host, port), 0);
             ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor();
@@ -56,23 +61,33 @@ public final class PrometheusServer implements AutoCloseable {
     }
 
     private void handleScrape(HttpExchange exchange) throws IOException {
-        if (!path.equals(exchange.getRequestURI().getPath())) {
-            exchange.sendResponseHeaders(404, -1);
-            exchange.close();
-            return;
-        }
-        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-            exchange.sendResponseHeaders(405, -1);
-            exchange.close();
-            return;
-        }
+        try {
+            if (!path.equals(exchange.getRequestURI().getPath())) {
+                exchange.sendResponseHeaders(404, -1);
+                return;
+            }
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
 
-        byte[] response = registry.scrape().getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
-        exchange.sendResponseHeaders(200, response.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(response);
+            byte[] response = registry.scrape().getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+            exchange.sendResponseHeaders(200, response.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response);
+            }
+        } finally {
+            exchange.close();
         }
+    }
+
+    private static boolean isPublicBind(String bindHost) {
+        var normalized = bindHost.strip();
+        return "0.0.0.0".equals(normalized)
+                || "::".equals(normalized)
+                || "*".equals(normalized)
+                || "0:0:0:0:0:0:0:0".equals(normalized);
     }
 
     public synchronized boolean isRunning() {

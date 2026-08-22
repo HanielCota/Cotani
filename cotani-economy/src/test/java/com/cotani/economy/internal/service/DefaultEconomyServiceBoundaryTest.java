@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -44,8 +45,15 @@ class DefaultEconomyServiceBoundaryTest {
     private final EconomyEventPublisher eventPublisher = mock(EconomyEventPublisher.class);
 
     private DefaultEconomyService newService() {
+        when(eventPublisher.publishAsync(any())).thenReturn(CompletableFuture.completedFuture(null));
         return DefaultEconomyService.create(
                 SETTINGS, new DefaultEconomyGuard(SETTINGS), accountRepository, transferRepository, eventPublisher);
+    }
+
+    private static <T extends Throwable> T assertCause(Class<T> type, CompletableFuture<?> future) {
+        var exception = assertThrows(CompletionException.class, future::join);
+        assertTrue(type.isInstance(exception.getCause()));
+        return type.cast(exception.getCause());
     }
 
     private static EconomyAccount account(BigDecimal balance) {
@@ -169,10 +177,10 @@ class DefaultEconomyServiceBoundaryTest {
     void shouldRejectInvalidDepositAmountsSynchronously(String rawAmount) {
         var service = newService();
 
-        assertThrows(
+        assertCause(
                 InvalidAmountException.class,
-                () -> service.deposit(
-                        USER_ID, CURRENCY, new BigDecimal(rawAmount), REASON, EconomyOperationId.random()));
+                service.deposit(USER_ID, CURRENCY, new BigDecimal(rawAmount), REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
         verifyNoInteractions(accountRepository);
     }
 
@@ -181,9 +189,10 @@ class DefaultEconomyServiceBoundaryTest {
         var service = newService();
         var tooLarge = SETTINGS.maximumOperationAmount().add(BigDecimal.ONE);
 
-        assertThrows(
+        assertCause(
                 InvalidAmountException.class,
-                () -> service.deposit(USER_ID, CURRENCY, tooLarge, REASON, EconomyOperationId.random()));
+                service.deposit(USER_ID, CURRENCY, tooLarge, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
     }
 
     @Test
@@ -191,9 +200,10 @@ class DefaultEconomyServiceBoundaryTest {
         var service = newService();
         var tooLarge = SETTINGS.maximumBalance().add(BigDecimal.ONE);
 
-        assertThrows(
+        assertCause(
                 InvalidAmountException.class,
-                () -> service.set(USER_ID, CURRENCY, tooLarge, REASON, EconomyOperationId.random()));
+                service.set(USER_ID, CURRENCY, tooLarge, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
     }
 
     @Test
@@ -201,10 +211,13 @@ class DefaultEconomyServiceBoundaryTest {
         var service = newService();
         var unknown = CurrencyId.of("unknown");
 
-        assertThrows(IllegalArgumentException.class, () -> service.balance(USER_ID, unknown));
-        assertThrows(
+        assertCause(
                 IllegalArgumentException.class,
-                () -> service.deposit(USER_ID, unknown, BigDecimal.TEN, REASON, EconomyOperationId.random()));
+                service.balance(USER_ID, unknown).toCompletableFuture());
+        assertCause(
+                IllegalArgumentException.class,
+                service.deposit(USER_ID, unknown, BigDecimal.TEN, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
         verifyNoInteractions(accountRepository);
     }
 
@@ -212,10 +225,10 @@ class DefaultEconomyServiceBoundaryTest {
     void shouldRejectSameAccountTransferSynchronously() {
         var service = newService();
 
-        assertThrows(
+        assertCause(
                 SameEconomyAccountTransferException.class,
-                () -> service.transfer(
-                        USER_ID, USER_ID, CURRENCY, BigDecimal.TEN, REASON, EconomyOperationId.random()));
+                service.transfer(USER_ID, USER_ID, CURRENCY, BigDecimal.TEN, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
         verifyNoInteractions(transferRepository);
     }
 
@@ -224,23 +237,29 @@ class DefaultEconomyServiceBoundaryTest {
     void shouldRejectNullArgumentsForRemainingOperations() {
         var service = newService();
 
-        assertThrows(NullPointerException.class, () -> service.balance(null));
-        assertThrows(NullPointerException.class, () -> service.balance(null, CURRENCY));
-        assertThrows(NullPointerException.class, () -> service.has(null, BigDecimal.TEN));
-        assertThrows(NullPointerException.class, () -> service.has(USER_ID, null));
-        assertThrows(NullPointerException.class, () -> service.has(USER_ID, CURRENCY, null));
-        assertThrows(
+        assertCause(NullPointerException.class, service.balance(null).toCompletableFuture());
+        assertCause(NullPointerException.class, service.balance(null, CURRENCY).toCompletableFuture());
+        assertCause(
+                NullPointerException.class, service.has(null, BigDecimal.TEN).toCompletableFuture());
+        assertCause(NullPointerException.class, service.has(USER_ID, null).toCompletableFuture());
+        assertCause(
+                NullPointerException.class, service.has(USER_ID, CURRENCY, null).toCompletableFuture());
+        assertCause(
                 NullPointerException.class,
-                () -> service.withdraw(null, BigDecimal.TEN, REASON, EconomyOperationId.random()));
-        assertThrows(
+                service.withdraw(null, BigDecimal.TEN, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
+        assertCause(
                 NullPointerException.class,
-                () -> service.set(null, BigDecimal.TEN, REASON, EconomyOperationId.random()));
-        assertThrows(
+                service.set(null, BigDecimal.TEN, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
+        assertCause(
                 NullPointerException.class,
-                () -> service.transfer(null, OTHER_USER_ID, BigDecimal.TEN, REASON, EconomyOperationId.random()));
-        assertThrows(
+                service.transfer(null, OTHER_USER_ID, BigDecimal.TEN, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
+        assertCause(
                 NullPointerException.class,
-                () -> service.transfer(USER_ID, null, BigDecimal.TEN, REASON, EconomyOperationId.random()));
+                service.transfer(USER_ID, null, BigDecimal.TEN, REASON, EconomyOperationId.random())
+                        .toCompletableFuture());
 
         verifyNoInteractions(accountRepository);
         verifyNoInteractions(transferRepository);

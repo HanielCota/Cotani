@@ -15,6 +15,7 @@ flowchart LR
     config["config"]
     storage["storage"]
     cache["cache"]
+    redis["redis"]
     user["user"]
     economy["economy"]
     cooldown["cooldown"]
@@ -22,6 +23,10 @@ flowchart LR
     event["event"]
     gui["gui"]
     display["display"]
+    command["command"]
+    hud["hud"]
+    nametag["nametag"]
+    dialog["dialog"]
     metrics["metrics"]
 
     task --> core
@@ -37,6 +42,9 @@ flowchart LR
     cache --> task
     cache --> storage
     cache --> config
+    redis --> core
+    redis --> task
+    redis --> config
     user --> core
     user --> task
     user --> text
@@ -63,6 +71,19 @@ flowchart LR
     display --> task
     display --> text
     display --> item
+    command --> core
+    command --> task
+    command --> text
+    hud --> core
+    hud --> task
+    hud --> text
+    hud --> gui
+    nametag --> core
+    nametag --> task
+    nametag --> text
+    dialog --> core
+    dialog --> task
+    dialog --> text
     metrics --> task
     metrics --> config
     metrics --> storage
@@ -75,8 +96,8 @@ flowchart LR
 | --- | --- | --- |
 | Lifecycle | `core` | Own and close resources without acting as a service locator |
 | Execution and presentation | `task`, `text`, `item` | Thread transitions, messages and item construction |
-| Infrastructure | `config`, `storage`, `cache` | Configuration, persistence and state coordination |
-| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display` | Reusable plugin use cases and user-facing behavior |
+| Infrastructure | `config`, `storage`, `cache`, `redis` | Configuration, persistence, caching, and distributed synchronization |
+| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display`, `command`, `hud`, `nametag`, `dialog` | Reusable plugin use cases, HUD, nametags, and reactive user interfaces |
 | Operations | `metrics` | Runtime measurements and optional Prometheus export |
 
 ## Runtime execution boundary
@@ -88,7 +109,7 @@ sequenceDiagram
     actor Server as Paper / Folia owner thread
     participant Scheduler as cotani-task
     participant Service as Cotani service
-    participant IO as storage / cache
+    participant IO as storage / cache / redis
 
     Server->>Scheduler: UUID and immutable input
     Scheduler->>Service: run on explicit async executor

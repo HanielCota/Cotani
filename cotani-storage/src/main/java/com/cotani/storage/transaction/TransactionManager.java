@@ -45,8 +45,37 @@ public final class TransactionManager {
     public <T> CompletionStage<T> runAsync(Function<TransactionContext, CompletionStage<T>> operation) {
         Objects.requireNonNull(operation, "operation");
 
-        return CompletableFuture.supplyAsync(this::beginTransaction, executor)
-                .thenCompose(state -> executeOperation(state, operation));
+        try {
+            var result = new CompletableFuture<T>();
+            var _ = CompletableFuture.supplyAsync(this::beginTransaction, executor)
+                    .whenComplete((state, error) -> {
+                        if (error != null) {
+                            result.completeExceptionally(error);
+                            return;
+                        }
+                        if (result.isCancelled()) {
+                            finishTransaction(
+                                    state,
+                                    new java.util.concurrent.CancellationException(
+                                            "Transaction cancelled before execution"));
+                            return;
+                        }
+                        try {
+                            executeOperation(state, operation).whenComplete((opResult, opError) -> {
+                                if (opError != null) {
+                                    result.completeExceptionally(opError);
+                                } else {
+                                    result.complete(opResult);
+                                }
+                            });
+                        } catch (Throwable failure) {
+                            result.completeExceptionally(failure);
+                        }
+                    });
+            return result;
+        } catch (RuntimeException schedulingFailure) {
+            return CompletableFuture.failedFuture(schedulingFailure);
+        }
     }
 
     private <T> CompletionStage<T> executeOperation(
@@ -80,7 +109,7 @@ public final class TransactionManager {
                     QueryExecutor.create(provider, Runnable::run, serializers, queryTimeoutSeconds, connection);
 
             return new TransactionState(connection, previousAutoCommit, new TransactionContext(transactional));
-        } catch (SQLException exception) {
+        } catch (Throwable exception) {
             if (connection != null) {
                 try {
                     connection.close();
@@ -88,8 +117,14 @@ public final class TransactionManager {
                     exception.addSuppressed(closeFailure);
                 }
             }
-            throw new StorageException(
-                    new TransactionError("Could not acquire connection for transaction.", exception));
+            if (exception instanceof SQLException sqlEx) {
+                throw new StorageException(
+                        new TransactionError("Could not acquire connection for transaction.", sqlEx));
+            }
+            if (exception instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new RuntimeException(exception);
         }
     }
 

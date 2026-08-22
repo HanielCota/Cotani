@@ -319,7 +319,7 @@ val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("val
     group = "verification"
     description = "Validates Cotani module boundaries and Gradle dependency cycles."
     rootDirectory.set(layout.projectDirectory)
-    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display"))
+    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display", "command", "hud", "nametag", "redis", "dialog"))
 }
 
 val validateDocumentation = tasks.register<ValidateDocumentation>("validateDocumentation") {
@@ -363,12 +363,13 @@ abstract class GenerateJavadocIndex : DefaultTask() {
 
         val metadata = mapOf(
             "core" to Pair("🧱", "Foundation"),
-            "task" to Pair("⚡", "Foundation"),
-            "text" to Pair("💬", "Foundation"),
-            "item" to Pair("⚔️", "Foundation"),
+            "task" to Pair("🧵", "Foundation"),
+            "text" to Pair("✍️", "Foundation"),
+            "item" to Pair("🗡️", "Foundation"),
             "config" to Pair("⚙️", "Infrastructure"),
             "storage" to Pair("💾", "Infrastructure"),
             "cache" to Pair("🧠", "Infrastructure"),
+            "redis" to Pair("🌐", "Infrastructure"),
             "user" to Pair("👤", "Gameplay"),
             "economy" to Pair("💰", "Gameplay"),
             "cooldown" to Pair("⏱️", "Gameplay"),
@@ -376,6 +377,10 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "event" to Pair("📢", "Gameplay"),
             "gui" to Pair("📦", "Gameplay"),
             "display" to Pair("🪄", "Gameplay"),
+            "command" to Pair("⚡", "Gameplay"),
+            "hud" to Pair("🖥️", "Gameplay"),
+            "nametag" to Pair("🏷️", "Gameplay"),
+            "dialog" to Pair("💬", "Gameplay"),
             "metrics" to Pair("📊", "Operations")
         )
 
@@ -387,6 +392,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "config" to "YAML binding to immutable records with constraint validation and async reloads.",
             "storage" to "SQLite, MySQL, and MariaDB queries, schema migrations, and transaction management.",
             "cache" to "Caffeine-backed caches with automatic dirty tracking, bulk flushing, and persistence.",
+            "redis" to "Non-blocking Redis client, pub/sub messaging, distributed locks, and cross-server sync.",
             "user" to "Async user profile resolution, online caching, and session lifecycle management.",
             "economy" to "Exact BigDecimal economy with atomic transactions and idempotency guarantees.",
             "cooldown" to "Local and distributed SQL-backed cooldown limiters with automatic expiration pruning.",
@@ -394,6 +400,10 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "event" to "Reflection-free, high-performance event bus with execution order prioritizations.",
             "gui" to "Declarative reactive inventory interfaces, pagination, and anti-exploit click debounce.",
             "display" to "Modern Display Entity engine for text, item, and block holograms.",
+            "command" to "Declarative command framework with async arguments, cooldowns, and Folia thread safety.",
+            "hud" to "Reactive zero-flicker scoreboards, dynamic tablist, bossbars, and actionbars.",
+            "nametag" to "Scoreboard team-driven nametag formatting, tablist sorting priority, and collision rules.",
+            "dialog" to "Non-blocking reactive chat, sign, and anvil prompt dialogs with cancellation and timeouts.",
             "metrics" to "Micrometer metrics instrumentation with optional Prometheus HTTP exporter endpoint."
         )
 

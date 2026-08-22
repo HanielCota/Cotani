@@ -2,11 +2,17 @@ package com.cotani.teleport.api;
 
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import org.bukkit.Location;
 import org.jspecify.annotations.Nullable;
 
 public record TeleportRequest(
-        UUID playerId, Location target, TeleportCause cause, TeleportOptions options, String source) {
+        UUID playerId,
+        Location target,
+        TeleportCause cause,
+        TeleportOptions options,
+        String source,
+        BooleanSupplier abortIf) {
     private static final String PLAYER_ID_PARAM = "playerId";
     private static final String TARGET_PARAM = "target";
 
@@ -21,6 +27,9 @@ public record TeleportRequest(
         if (source == null || source.isBlank()) {
             source = "unknown";
         }
+        if (abortIf == null) {
+            abortIf = () -> false;
+        }
     }
 
     public static Builder builder() {
@@ -33,6 +42,7 @@ public record TeleportRequest(
         private TeleportCause cause = TeleportCause.UNKNOWN;
         private TeleportOptions options = TeleportOptions.defaults();
         private String source = "unknown";
+        private BooleanSupplier abortIf = () -> false;
 
         public Builder playerId(UUID playerId) {
             this.playerId = Objects.requireNonNull(playerId, PLAYER_ID_PARAM);
@@ -59,13 +69,19 @@ public record TeleportRequest(
             return this;
         }
 
+        public Builder abortIf(BooleanSupplier abortIf) {
+            this.abortIf = Objects.requireNonNull(abortIf, "abortIf");
+            return this;
+        }
+
         public TeleportRequest build() {
             return new TeleportRequest(
                     Objects.requireNonNull(playerId, PLAYER_ID_PARAM),
                     Objects.requireNonNull(target, TARGET_PARAM),
                     cause,
                     options,
-                    source);
+                    source,
+                    abortIf);
         }
     }
 }

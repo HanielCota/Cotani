@@ -42,8 +42,8 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
 
     private static List<Offset> getOrComputeOffsets(int horizontal, int vertical) {
         // Candidates are clamped to the target chunk (~16x16), so radii beyond that only waste memory.
-        int effectiveHorizontal = Math.min(Math.max(0, horizontal), 15);
-        int effectiveVertical = Math.min(Math.max(0, vertical), 64);
+        int effectiveHorizontal = Math.clamp(horizontal, 0, 15);
+        int effectiveVertical = Math.clamp(vertical, 0, 64);
         long key = (((long) effectiveHorizontal) << 32) | (effectiveVertical & 0xFFFFFFFFL);
 
         return OFFSET_CACHE.computeIfAbsent(key, _ -> {
@@ -83,11 +83,6 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
         int horizontal = Math.max(0, options.horizontalRadius());
         int vertical = Math.max(0, options.verticalRadius());
 
-        int chunkMinX = (baseX >> 4) << 4;
-        int chunkMaxX = chunkMinX + 15;
-        int chunkMinZ = (baseZ >> 4) << 4;
-        int chunkMaxZ = chunkMinZ + 15;
-
         int minWorldY = world.getMinHeight() + 1;
         int maxWorldY = world.getMaxHeight() - 1;
 
@@ -97,18 +92,14 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
 
         for (Offset offset : offsets) {
             int x = baseX + offset.dx();
-
-            if (x < chunkMinX || x > chunkMaxX) {
-                continue;
-            }
             int z = baseZ + offset.dz();
-
-            if (z < chunkMinZ || z > chunkMaxZ) {
-                continue;
-            }
             int y = baseY + offset.dy();
 
             if (y < minWorldY || y >= maxWorldY) {
+                continue;
+            }
+
+            if ((x >> 4) != (baseX >> 4) || (z >> 4) != (baseZ >> 4)) {
                 continue;
             }
 

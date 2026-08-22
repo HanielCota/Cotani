@@ -49,9 +49,7 @@ public final class CotaniQuickStartPlugin extends JavaPlugin {
         });
     }
 
-    private static final class HelloCommand implements CommandExecutor {
-        private final HelloService helloService;
-
+    private record HelloCommand(HelloService helloService) implements CommandExecutor {
         private HelloCommand(HelloService helloService) {
             this.helloService = Objects.requireNonNull(helloService, "helloService");
         }
@@ -69,9 +67,7 @@ public final class CotaniQuickStartPlugin extends JavaPlugin {
         }
     }
 
-    private static final class HelloService {
-        private final PaperTaskScheduler scheduler;
-
+    private record HelloService(PaperTaskScheduler scheduler) {
         private HelloService(PaperTaskScheduler scheduler) {
             this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         }

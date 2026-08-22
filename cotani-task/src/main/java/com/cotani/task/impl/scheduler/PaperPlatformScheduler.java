@@ -5,16 +5,19 @@ import com.cotani.task.api.PlatformScheduler;
 import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskMetadata;
 import com.cotani.task.impl.executor.VirtualThreadExecutor;
-import com.cotani.task.impl.task.CompositeSchedulerTask;
 import com.cotani.task.impl.task.FutureSchedulerTask;
+import com.cotani.task.impl.task.LazySchedulerTask;
 import com.cotani.task.impl.task.PaperSchedulerTask;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 
@@ -22,6 +25,7 @@ import org.bukkit.plugin.Plugin;
 public final class PaperPlatformScheduler implements PlatformScheduler, AutoCloseable {
     private final Plugin plugin;
     private final VirtualThreadExecutor virtualThreadExecutor;
+    private final Set<SchedulerTask> ownedLookupTasks = ConcurrentHashMap.newKeySet();
 
     private PaperPlatformScheduler(Plugin plugin, VirtualThreadExecutor virtualThreadExecutor) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -141,33 +145,19 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
 
     @Override
     public SchedulerTask runRegion(TaskMetadata metadata, UUID worldId, int chunkX, int chunkZ, Runnable runnable) {
-        var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobal(metadata, () -> {
-            var world = Bukkit.getWorld(worldId);
-
-            if (world == null) {
-                return;
-            }
-            delegate.set(runRegion(metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable));
-        });
-
-        return new CompositeSchedulerTask(setup, delegate);
+        return scheduleAfterWorldLookup(
+                metadata,
+                worldId,
+                (world) -> runRegion(metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable));
     }
 
     @Override
     public SchedulerTask runRegionLater(
             TaskMetadata metadata, UUID worldId, int chunkX, int chunkZ, Runnable runnable, Duration delay) {
-        var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobal(metadata, () -> {
-            var world = Bukkit.getWorld(worldId);
-
-            if (world == null) {
-                return;
-            }
-            delegate.set(runRegionLater(metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, delay));
-        });
-
-        return new CompositeSchedulerTask(setup, delegate);
+        return scheduleAfterWorldLookup(
+                metadata,
+                worldId,
+                world -> runRegionLater(metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, delay));
     }
 
     @Override
@@ -179,51 +169,24 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
             Runnable runnable,
             Duration initialDelay,
             Duration period) {
-        var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobal(metadata, () -> {
-            var world = Bukkit.getWorld(worldId);
-
-            if (world == null) {
-                return;
-            }
-            delegate.set(runRegionTimer(
-                    metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, initialDelay, period));
-        });
-
-        return new CompositeSchedulerTask(setup, delegate);
+        return scheduleAfterWorldLookup(
+                metadata,
+                worldId,
+                world -> runRegionTimer(
+                        metadata, new Location(world, chunkX << 4, 0, chunkZ << 4), runnable, initialDelay, period));
     }
 
     @Override
     public SchedulerTask runEntity(TaskMetadata metadata, UUID entityId, Runnable runnable, Runnable retired) {
-        var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobal(metadata, () -> {
-            var entity = Bukkit.getEntity(entityId);
-
-            if (entity == null) {
-                retired.run();
-                return;
-            }
-            delegate.set(runEntity(metadata, entity, runnable, retired));
-        });
-
-        return new CompositeSchedulerTask(setup, delegate);
+        return scheduleAfterEntityLookup(
+                metadata, entityId, retired, entity -> runEntity(metadata, entity, runnable, retired));
     }
 
     @Override
     public SchedulerTask runEntityLater(
             TaskMetadata metadata, UUID entityId, Runnable runnable, Runnable retired, Duration delay) {
-        var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobal(metadata, () -> {
-            var entity = Bukkit.getEntity(entityId);
-
-            if (entity == null) {
-                retired.run();
-                return;
-            }
-            delegate.set(runEntityLater(metadata, entity, runnable, retired, delay));
-        });
-
-        return new CompositeSchedulerTask(setup, delegate);
+        return scheduleAfterEntityLookup(
+                metadata, entityId, retired, entity -> runEntityLater(metadata, entity, runnable, retired, delay));
     }
 
     @Override
@@ -234,24 +197,50 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
             Runnable retired,
             Duration initialDelay,
             Duration period) {
-        var delegate = new AtomicReference<SchedulerTask>();
-        var setup = runGlobal(metadata, () -> {
-            var entity = Bukkit.getEntity(entityId);
-
-            if (entity == null) {
-                retired.run();
-                return;
-            }
-            delegate.set(runEntityTimer(metadata, entity, runnable, retired, initialDelay, period));
-        });
-
-        return new CompositeSchedulerTask(setup, delegate);
+        return scheduleAfterEntityLookup(
+                metadata,
+                entityId,
+                retired,
+                entity -> runEntityTimer(metadata, entity, runnable, retired, initialDelay, period));
     }
 
     @Override
     public void cancelOwnedTasks() {
+        ownedLookupTasks.forEach(SchedulerTask::cancel);
+        ownedLookupTasks.clear();
         Bukkit.getAsyncScheduler().cancelTasks(plugin);
         Bukkit.getGlobalRegionScheduler().cancelTasks(plugin);
+    }
+
+    private SchedulerTask scheduleAfterWorldLookup(
+            TaskMetadata metadata, UUID worldId, Function<World, SchedulerTask> factory) {
+        var lazy = new LazySchedulerTask();
+        var setup = runGlobal(metadata, () -> {
+            var world = Bukkit.getWorld(worldId);
+            if (world == null) {
+                return;
+            }
+            lazy.setDelegate(factory.apply(world));
+        });
+        lazy.setSetupTask(setup);
+        ownedLookupTasks.add(lazy);
+        return lazy;
+    }
+
+    private SchedulerTask scheduleAfterEntityLookup(
+            TaskMetadata metadata, UUID entityId, Runnable retired, Function<Entity, SchedulerTask> factory) {
+        var lazy = new LazySchedulerTask();
+        var setup = runGlobal(metadata, () -> {
+            var entity = Bukkit.getEntity(entityId);
+            if (entity == null) {
+                retired.run();
+                return;
+            }
+            lazy.setDelegate(factory.apply(entity));
+        });
+        lazy.setSetupTask(setup);
+        ownedLookupTasks.add(lazy);
+        return lazy;
     }
 
     @Override

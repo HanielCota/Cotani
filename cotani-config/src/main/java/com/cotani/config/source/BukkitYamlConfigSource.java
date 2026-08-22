@@ -226,14 +226,15 @@ public final class BukkitYamlConfigSource implements ConfigSource {
     }
 
     private void createFileWhenNeeded() {
-        if (Files.exists(path)) {
+        var contained = ConfigPaths.requireContained(path, root);
+        if (Files.exists(contained)) {
             return;
         }
         if (!createMissing) {
             return;
         }
         try {
-            var parent = path.getParent();
+            var parent = contained.getParent();
 
             if (parent != null) {
                 Files.createDirectories(parent);

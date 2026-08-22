@@ -24,12 +24,12 @@ final class SchedulerTaskChainFactory {
 
         Supplier<CompletableFuture<T>> factory = () -> dispatcher.supply(ExecutionTarget.async(), name, supplier);
 
-        return DefaultTaskChain.<T>create(factory.get(), scheduler, factory);
+        return DefaultTaskChain.create(factory.get(), scheduler, factory);
     }
 
     <T> TaskChain<T> chain(CompletionStage<T> stage) {
         Objects.requireNonNull(stage, "stage");
 
-        return DefaultTaskChain.<T>create(stage.toCompletableFuture(), scheduler);
+        return DefaultTaskChain.create(stage.toCompletableFuture(), scheduler);
     }
 }

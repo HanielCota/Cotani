@@ -323,6 +323,58 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 - All spawned display entities are marked with `setPersistent(false)` automatically to prevent orphaned entities across server restarts.
 - Use `Hologram.updateLineAsync(...)` for live updates on the Folia region thread.
 
+### cotani-command
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniCommands.create(plugin, scheduler))`.
+- Build commands with `CommandBuilder.of(...)` or `CotaniCommands.builder(...)`.
+- Use `executesAsync` for heavy I/O, storage queries, and async service orchestration returning `CompletionStage`.
+- Use `executesEntity` for player/region mutations (Paper main thread and Folia entity-region safe).
+- Use `ctx.requirePlayer()` when the sender must be an in-game player.
+- Always escape user inputs interpolated into feedback components via `MiniMessages.escape(raw)`.
+- Use typed argument parsers from `Arguments.*`.
+
+### cotani-hud
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniHuds.create(plugin, scheduler))`.
+- Build scoreboards with `hud.sidebar()` and apply to player with `.apply(player)`.
+- Mutate reactive properties (`State<T>`, `Property<T>`) or call update methods; line/title/tablist updates are automatically dispatched to the player's entity thread.
+- Use `hud.tabList()` for dynamic header/footer and `hud.bossBar()` for timed or reactive Adventure bossbars.
+
+### cotani-nametag
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniNametags.create(plugin, scheduler))`.
+- Build nametags with `Nametag.builder()` and apply using `nametagModule.apply(...)` or `nametagModule.applyForViewer(...)`.
+- Use priority (e.g. `0` to `9999`) to deterministically control tablist sorting order without scoreboard team collisions.
+- Use `NametagProvider` for dynamic or context-dependent per-viewer nametag resolution (clans, parties, friend tags).
+
+### cotani-redis
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniRedises.create(plugin, config, scheduler))`.
+- Start connections asynchronously: `redis.startAsync().thenAccept(...)`.
+- Use `DistributedLockService.withWatchdogLockAsync(...)` for auto-renewed distributed locks.
+- Use `RedisCacheInvalidationBus` to synchronize local L1 Caffeine caches across a cluster.
+- Use `RedisDistributedCooldownService` for network-wide player/action cooldowns.
+- Use `RedisDistributedEventBus` to publish and subscribe to domain events across Minecraft servers.
+- Use `RedisRpcChannel` for asynchronous cross-server request-reply communication.
+
+### cotani-cooldown
+
+- Use `cooldownService.user(uuid).action("action").duration(d).checkAndStart()` for fluent cooldown evaluation.
+- Use `RedisDistributedCooldownService` when cooldowns must be synchronized across a network.
+
+### cotani-event
+
+- Register the event bus in `onEnable` via `CotaniEvents.create(plugin)`.
+- Use `publishAsync(event)` for non-blocking event dispatching.
+- Bridge with `RedisDistributedEventBus` for cross-server network broadcast.
+
+### cotani-dialog
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniDialogs.create(plugin, scheduler))`.
+- Use `CotaniDialogs.chat()` or `CotaniDialogs.anvil()` for non-blocking player input.
+- Compose prompt results with `thenAccept(result -> result.ifSuccess(...))` without blocking the main thread.
+- Use `ConversationWizard` for multi-step questionnaires and forms.
+
 ## Anti-patterns by module
 
 | Module | Do not | Do instead |
@@ -340,6 +392,14 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 | teleport | call `player.teleport(...)` directly | use `TeleportService.teleport(...)` |
 | teleport | ignore `TeleportResult.Failure` | handle failure reason and notify player |
 | display | touch `Display` entities on async threads | use `spawnAsync` / `updateLineAsync` via region scheduler |
+| command | block inside `executes(...)` | use `executesAsync` or compose with `CompletionStage` |
+| command | touch player/world entities inside `executesAsync` | use `executesEntity` or transition via `scheduler.entity(...)` |
+| hud | recreate scoreboard objectives per line update | use `hud.sidebar()` reactive zero-flicker bindings |
+| nametag | manipulate scoreboard teams manually | route via `NametagModule` with entity thread safety |
+| redis | call `redis.close()` on server main thread | use `closeAsync()` or compose with `Cotani.forPlugin(...)` |
+| cooldown | query database synchronously on command | use `cooldownService` / `checkAndStartAsync` |
+| event | block the thread in an event listener | use `publishAsync` or async composition |
+| dialog | block waiting for chat response | use `promptChat(...).thenAccept(...)` |
 
 ## Agent Cookbook
 

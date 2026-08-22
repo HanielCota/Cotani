@@ -1,12 +1,14 @@
 package com.cotani.display.impl;
 
 import com.cotani.api.InternalApi;
+import com.cotani.display.api.BlockLine;
 import com.cotani.display.api.DisplayBillboard;
 import com.cotani.display.api.Hologram;
 import com.cotani.display.api.HologramBuilder;
 import com.cotani.display.api.HologramClickHandler;
 import com.cotani.display.api.HologramLine;
 import com.cotani.display.api.HologramService;
+import com.cotani.display.api.ItemLine;
 import com.cotani.display.api.TextLine;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.text.MiniMessages;
@@ -15,7 +17,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 @InternalApi
@@ -55,10 +60,34 @@ public final class DefaultHologramBuilder implements HologramBuilder {
     }
 
     @Override
+    public HologramBuilder addLine(Component component) {
+        Objects.requireNonNull(component, "component cannot be null");
+        return addLine(TextLine.of(component, defaultBillboard, 1.0f).withHeightOffset(spacing));
+    }
+
+    @Override
     public HologramBuilder addLine(String miniMessageText) {
         Objects.requireNonNull(miniMessageText, "miniMessageText cannot be null");
         var component = MiniMessages.parse(miniMessageText);
-        return addLine(TextLine.of(component, defaultBillboard, 1.0f));
+        return addLine(TextLine.of(component, defaultBillboard, 1.0f).withHeightOffset(spacing));
+    }
+
+    @Override
+    public HologramBuilder addItemLine(ItemStack item) {
+        Objects.requireNonNull(item, "item cannot be null");
+        return addLine(ItemLine.of(item).withBillboard(defaultBillboard).withHeightOffset(spacing));
+    }
+
+    @Override
+    public HologramBuilder addItemLine(ItemStack item, float scale) {
+        Objects.requireNonNull(item, "item cannot be null");
+        return addLine(ItemLine.of(item, scale).withBillboard(defaultBillboard).withHeightOffset(spacing));
+    }
+
+    @Override
+    public HologramBuilder addBlockLine(BlockData blockData) {
+        Objects.requireNonNull(blockData, "blockData cannot be null");
+        return addLine(BlockLine.of(blockData, defaultBillboard, 0.5f).withHeightOffset(spacing));
     }
 
     @Override
@@ -99,6 +128,7 @@ public final class DefaultHologramBuilder implements HologramBuilder {
 
     @Override
     public CompletionStage<Hologram> spawnAsync(Location location) {
+        Objects.requireNonNull(location, "location cannot be null");
         var hologram = build();
         return hologram.spawnAsync(location);
     }

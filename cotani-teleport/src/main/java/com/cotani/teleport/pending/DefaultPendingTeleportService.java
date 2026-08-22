@@ -146,6 +146,7 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
                 .cause(data.cause())
                 .source(data.source())
                 .options(data.options())
+                .abortIf(pending::isCancelled)
                 .build();
 
         // Final gate immediately before starting the teleport pipeline.

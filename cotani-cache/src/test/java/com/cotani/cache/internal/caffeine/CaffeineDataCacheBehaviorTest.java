@@ -159,6 +159,7 @@ class CaffeineDataCacheBehaviorTest {
 
     @Test
     void operationsAreRejectedAfterClose() {
+        when(repository.save(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
         DataCache<String, String> cache = createCache();
         cache.put("key", "value");
         cache.close();
@@ -265,7 +266,7 @@ class CaffeineDataCacheBehaviorTest {
         assertEquals(1, stats.size());
         assertEquals(1, stats.hitCount());
         assertEquals(2, stats.missCount());
-        assertEquals(0, stats.dirtyEntries());
+        assertEquals(1, stats.dirtyEntries());
     }
 
     private static Throwable findCause(Throwable failure, Class<? extends Throwable> type) {

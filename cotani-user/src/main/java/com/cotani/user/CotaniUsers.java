@@ -11,6 +11,7 @@ import java.util.Objects;
 import org.bukkit.plugin.Plugin;
 
 public final class CotaniUsers {
+
     private CotaniUsers() {
         throw new UnsupportedOperationException("Utility class cannot be instantiated.");
     }

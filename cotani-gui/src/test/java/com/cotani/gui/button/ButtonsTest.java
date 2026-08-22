@@ -126,7 +126,7 @@ final class ButtonsTest {
     @Test
     @SuppressWarnings("NullAway")
     void shouldRejectNullArgumentsInActionButtons() {
-        assertThrows(NullPointerException.class, () -> Buttons.close((ItemStack) null));
+        assertThrows(NullPointerException.class, () -> Buttons.close(null));
         assertThrows(NullPointerException.class, () -> Buttons.action((ItemStack) null, _ -> {}));
         assertThrows(NullPointerException.class, () -> Buttons.action(item, null));
         assertThrows(NullPointerException.class, () -> Buttons.action((ItemProvider) null, _ -> {}));

@@ -340,8 +340,7 @@ class EconomySettingsTest {
     @Test
     void shouldRejectNullArguments() {
         assertThrows(NullPointerException.class, () -> EconomySettings.defaultSettings(null));
-        assertThrows(
-                NullPointerException.class, () -> EconomySettings.defaultSettings(COINS, (List<EconomyCurrency>) null));
+        assertThrows(NullPointerException.class, () -> EconomySettings.defaultSettings(COINS, null));
         assertThrows(
                 NullPointerException.class,
                 () -> new EconomySettings(
@@ -356,14 +355,7 @@ class EconomySettingsTest {
         assertThrows(
                 NullPointerException.class,
                 () -> new EconomySettings(
-                        COINS,
-                        (Map<CurrencyId, EconomyCurrency>) null,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        30,
-                        60));
+                        COINS, null, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, 30, 60));
         assertThrows(
                 NullPointerException.class, () -> settingsWith(null, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO));
         assertThrows(

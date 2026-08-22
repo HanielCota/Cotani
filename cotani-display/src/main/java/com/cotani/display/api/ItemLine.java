@@ -39,6 +39,7 @@ public record ItemLine(
      * @return the created item line
      */
     public static ItemLine of(ItemStack item) {
+        Objects.requireNonNull(item, "item cannot be null");
         return new ItemLine(
                 item,
                 ItemDisplayTransform.FIXED,
@@ -57,6 +58,7 @@ public record ItemLine(
      * @return the created item line
      */
     public static ItemLine of(ItemStack item, float scale) {
+        Objects.requireNonNull(item, "item cannot be null");
         return new ItemLine(
                 item,
                 ItemDisplayTransform.FIXED,
@@ -76,6 +78,27 @@ public record ItemLine(
     public ItemLine withItem(ItemStack newItem) {
         Objects.requireNonNull(newItem, "newItem cannot be null");
         return new ItemLine(newItem, itemTransform, billboard, scale, viewRange, heightOffset, spin);
+    }
+
+    /**
+     * Returns a copy with the specified billboard mode.
+     *
+     * @param newBillboard the billboard mode
+     * @return the updated ItemLine
+     */
+    public ItemLine withBillboard(DisplayBillboard newBillboard) {
+        Objects.requireNonNull(newBillboard, "newBillboard cannot be null");
+        return new ItemLine(item, itemTransform, newBillboard, scale, viewRange, heightOffset, spin);
+    }
+
+    /**
+     * Returns a copy with the specified scale.
+     *
+     * @param newScale the scale factor
+     * @return the updated ItemLine
+     */
+    public ItemLine withScale(float newScale) {
+        return new ItemLine(item, itemTransform, billboard, newScale, viewRange, heightOffset, spin);
     }
 
     /**

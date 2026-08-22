@@ -1,9 +1,6 @@
 package com.cotani.user.api;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Duration;
 import net.kyori.adventure.text.Component;
@@ -34,7 +31,7 @@ class UserModuleOptionsTest {
     void compactConstructorAllowsDisabledAutoSave() {
         UserModuleOptions options = new UserModuleOptions(false, Duration.ofMinutes(1), Component.text("fail"));
 
-        assertTrue(!options.autoSaveEnabled());
+        assertFalse(options.autoSaveEnabled());
         assertEquals(Duration.ofMinutes(1), options.autoSaveInterval());
     }
 }

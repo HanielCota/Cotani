@@ -33,6 +33,7 @@ final class YamlInputLimits {
         private int flowDepth;
         private int aliases;
         private int contentLines;
+        private int sequenceNestingOnLine;
         private boolean singleQuoted;
         private boolean doubleQuoted;
         private boolean escaped;
@@ -45,6 +46,7 @@ final class YamlInputLimits {
                 return;
             }
             validateContentLineCount();
+            sequenceNestingOnLine = 0;
             updateIndentation(indentation);
             scanContent(content);
         }
@@ -100,11 +102,11 @@ final class YamlInputLimits {
             if (consumeEscapedCharacter(current)) {
                 return false;
             }
-            if (!doubleQuoted && current == '\'') {
+            if (!doubleQuoted && current == '\'' && (singleQuoted || isTokenStart(content, index))) {
                 singleQuoted = !singleQuoted;
                 return false;
             }
-            if (!singleQuoted && current == '"') {
+            if (!singleQuoted && current == '"' && (doubleQuoted || isTokenStart(content, index))) {
                 doubleQuoted = !doubleQuoted;
                 return false;
             }
@@ -117,6 +119,7 @@ final class YamlInputLimits {
 
             updateFlowDepth(current);
             countAlias(content, index, current);
+            countSequenceEntry(content, index, current);
 
             return false;
         }
@@ -151,6 +154,19 @@ final class YamlInputLimits {
         private void countAlias(String content, int index, char current) {
             if (current == '*' && isTokenStart(content, index) && ++aliases > MAXIMUM_ALIAS_REFERENCES) {
                 throw new ConfigException("YAML exceeds maximum alias references " + MAXIMUM_ALIAS_REFERENCES);
+            }
+        }
+
+        private void countSequenceEntry(String content, int index, char current) {
+            if (current != '-' || !isTokenStart(content, index)) {
+                return;
+            }
+            if (index + 1 < content.length() && !Character.isWhitespace(content.charAt(index + 1))) {
+                return;
+            }
+            sequenceNestingOnLine++;
+            if (sequenceNestingOnLine > MAXIMUM_NESTING_DEPTH) {
+                throw new ConfigException("YAML exceeds maximum nesting depth " + MAXIMUM_NESTING_DEPTH);
             }
         }
     }

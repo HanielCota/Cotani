@@ -1,8 +1,6 @@
 package com.cotani.event;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.api.EventBus;
@@ -160,11 +158,11 @@ final class EventBusTest {
             assertFalse(slow.active());
             assertEquals(1, laterListenerCalls.get());
             assertEquals(1, failures.size());
-            assertTrue(failures.getFirst().getCause() instanceof TimeoutException);
+            assertInstanceOf(TimeoutException.class, failures.getFirst().getCause());
         }
     }
 
-    private static record TestUserEvent(UUID userId) implements CotaniEvent {}
+    private record TestUserEvent(UUID userId) implements CotaniEvent {}
 
     private static final class TestCancellableEvent extends AbstractCancellableEvent {}
 }

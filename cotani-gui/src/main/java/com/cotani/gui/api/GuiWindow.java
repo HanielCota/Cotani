@@ -160,11 +160,10 @@ public final class GuiWindow {
         Objects.requireNonNull(offLabel, "Parameter 'offLabel' must not be null");
         Objects.requireNonNull(onChange, "Parameter 'onChange' must not be null");
 
-        var button =
-                Button.of(_ -> Items.item(icon, title, Boolean.TRUE.equals(state.get()) ? onLabel : offLabel), _ -> {
-                    state.update(on -> !Boolean.TRUE.equals(on));
-                    onChange.accept(state.get());
-                });
+        var button = Button.of(_ -> Items.item(icon, title, state.get() ? onLabel : offLabel), _ -> {
+            state.update(on -> !on);
+            onChange.accept(state.get());
+        });
 
         bind(symbol, button);
         observedBindings.add(new ObservedBinding(state, symbol));

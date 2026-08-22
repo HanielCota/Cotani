@@ -34,6 +34,7 @@ public record TextLine(
      * @return the created text line
      */
     public static TextLine of(Component text) {
+        Objects.requireNonNull(text, "text cannot be null");
         return new TextLine(
                 text, DisplayBillboard.CENTER, null, true, false, (byte) -1, 1.0f, 1.0f, DEFAULT_HEIGHT_OFFSET);
     }
@@ -58,6 +59,8 @@ public record TextLine(
      * @return the created text line
      */
     public static TextLine of(Component text, DisplayBillboard billboard, float scale) {
+        Objects.requireNonNull(text, "text cannot be null");
+        Objects.requireNonNull(billboard, "billboard cannot be null");
         return new TextLine(text, billboard, null, true, false, (byte) -1, scale, 1.0f, DEFAULT_HEIGHT_OFFSET);
     }
 
@@ -81,6 +84,40 @@ public record TextLine(
      */
     public TextLine withBackground(@Nullable Color color) {
         return new TextLine(text, billboard, color, shadow, seeThrough, textOpacity, scale, viewRange, heightOffset);
+    }
+
+    /**
+     * Returns a copy with the specified billboard mode.
+     *
+     * @param newBillboard the billboard mode
+     * @return the updated TextLine
+     */
+    public TextLine withBillboard(DisplayBillboard newBillboard) {
+        Objects.requireNonNull(newBillboard, "newBillboard cannot be null");
+        return new TextLine(
+                text, newBillboard, backgroundColor, shadow, seeThrough, textOpacity, scale, viewRange, heightOffset);
+    }
+
+    /**
+     * Returns a copy with the specified scale.
+     *
+     * @param newScale the scale factor
+     * @return the updated TextLine
+     */
+    public TextLine withScale(float newScale) {
+        return new TextLine(
+                text, billboard, backgroundColor, shadow, seeThrough, textOpacity, newScale, viewRange, heightOffset);
+    }
+
+    /**
+     * Returns a copy with the specified text opacity.
+     *
+     * @param opacity the text opacity byte
+     * @return the updated TextLine
+     */
+    public TextLine withOpacity(byte opacity) {
+        return new TextLine(
+                text, billboard, backgroundColor, shadow, seeThrough, opacity, scale, viewRange, heightOffset);
     }
 
     /**

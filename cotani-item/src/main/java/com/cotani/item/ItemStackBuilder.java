@@ -580,7 +580,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
 
     public final T useCooldown(float seconds, @Nullable Key group) {
         if (group == null) {
-            return useCooldown(seconds, (NamespacedKey) null);
+            return useCooldown(seconds, null);
         }
 
         var namespaced = NamespacedKey.fromString(group.asString());

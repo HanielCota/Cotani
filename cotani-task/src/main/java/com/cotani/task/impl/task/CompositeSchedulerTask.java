@@ -14,26 +14,35 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class CompositeSchedulerTask implements SchedulerTask {
     private final SchedulerTask setupTask;
     private final AtomicReference<SchedulerTask> delegate;
+    private final java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean();
 
     public CompositeSchedulerTask(SchedulerTask setupTask, AtomicReference<SchedulerTask> delegate) {
         this.setupTask = setupTask;
         this.delegate = delegate;
     }
 
+    public void assignDelegate(SchedulerTask task) {
+        delegate.set(task);
+        if (cancelled.get() || setupTask.cancelled()) {
+            task.cancel();
+        }
+    }
+
     @Override
     public boolean cancel() {
-        boolean cancelled = setupTask.cancel();
+        cancelled.set(true);
+        boolean cancelledSetup = setupTask.cancel();
         SchedulerTask scheduled = delegate.get();
 
         if (scheduled != null) {
-            cancelled |= scheduled.cancel();
+            cancelledSetup |= scheduled.cancel();
         }
-        return cancelled;
+        return cancelledSetup;
     }
 
     @Override
     public boolean cancelled() {
         SchedulerTask scheduled = delegate.get();
-        return setupTask.cancelled() || (scheduled != null && scheduled.cancelled());
+        return cancelled.get() || setupTask.cancelled() || (scheduled != null && scheduled.cancelled());
     }
 }

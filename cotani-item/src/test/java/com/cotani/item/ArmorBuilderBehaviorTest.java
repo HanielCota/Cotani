@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
@@ -59,7 +58,7 @@ class ArmorBuilderBehaviorTest {
         withArmorMaterials(helmetStack -> {
             ArmorBuilder builder = ArmorBuilder.of(Material.IRON_HELMET);
 
-            assertThrows(NullPointerException.class, () -> builder.trim((ArmorTrim) null));
+            assertThrows(NullPointerException.class, () -> builder.trim(null));
             assertThrows(NullPointerException.class, () -> builder.trim(null, null));
         });
     }

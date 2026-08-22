@@ -22,6 +22,8 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 public final class PlayerDataCacheBuilder<V> {
+    private static final String DEFAULT_VALUE_PARAM = "defaultValue";
+
     private final Class<V> valueType;
     private final CacheSettingsBuilder settingsBuilder = CacheSettings.builder()
             .maximumSize(10_000)
@@ -51,7 +53,7 @@ public final class PlayerDataCacheBuilder<V> {
     }
 
     public PlayerDataCacheBuilder<V> defaultValue(PlayerValueFactory<V> defaultValue) {
-        this.defaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
+        this.defaultValue = Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
         return this;
     }
 
@@ -151,7 +153,7 @@ public final class PlayerDataCacheBuilder<V> {
         validate();
 
         var resolvedRepository = resolveRepository();
-        var resolvedDefaultValue = Objects.requireNonNull(defaultValue, "defaultValue");
+        var resolvedDefaultValue = Objects.requireNonNull(defaultValue, DEFAULT_VALUE_PARAM);
         var dataCache = createDataCache(resolvedRepository, scheduler, resolvedDefaultValue);
         var playerCache =
                 CaffeinePlayerDataCache.create(dataCache, resolvedRepository, resolvedDefaultValue, scheduler);
@@ -174,11 +176,11 @@ public final class PlayerDataCacheBuilder<V> {
     }
 
     private void registerListener(Plugin plugin, PlayerDataCache<V> playerCache) {
-        plugin.getServer()
-                .getPluginManager()
-                .registerEvents(
-                        PlayerDataCacheListener.create(playerCache, settingsBuilder.build(), plugin.getLogger()),
-                        plugin);
+        var listener = PlayerDataCacheListener.create(playerCache, settingsBuilder.build(), plugin.getLogger());
+        plugin.getServer().getPluginManager().registerEvents(listener, plugin);
+        if (playerCache instanceof CaffeinePlayerDataCache<V> caffeineCache) {
+            caffeineCache.attachListener(listener);
+        }
     }
 
     private void loadOnlinePlayers(Plugin plugin, PlayerDataCache<V> playerCache) {

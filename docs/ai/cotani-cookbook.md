@@ -363,6 +363,171 @@ public void spawnServerWelcomeHologram(Location location, DisplayModule displays
 
 ---
 
+## 14. Declarative Command with Async Pipeline and Cooldown
+
+```java
+public void registerCommands(CotaniCommands commands, EconomyService economy) {
+    CommandNode payCommand = CotaniCommands.builder("pay")
+        .aliases("transfer", "pagar")
+        .description("Transfer money to another player")
+        .permission("cotani.command.pay")
+        .playerOnly()
+        .cooldown(Duration.ofSeconds(3))
+        .argument(Arguments.player("target"))
+        .argument(Arguments.bigDecimal("amount", BigDecimal.ONE, new BigDecimal("1000000")))
+        .executesAsync(ctx -> {
+            Player sender = ctx.requirePlayer();
+            Player target = ctx.get("target", Player.class);
+            BigDecimal amount = ctx.get("amount", BigDecimal.class);
+
+            return economy.transferAsync(
+                sender.getUniqueId(),
+                target.getUniqueId(),
+                amount,
+                EconomyReason.custom("PAY_COMMAND")
+            ).thenAccept(result -> {
+                ctx.reply("<green>Transferred <gold>$" + amount + "</gold> to <yellow>" + target.getName() + "</yellow>!</green>");
+            });
+        })
+        .build();
+
+    commands.register(payCommand);
+}
+```
+
+---
+
+## 15. Redis Multi-Tier Distributed Cache Invalidation
+
+Synchronize local Caffeine L1 cache across all server instances in a network using Redis Pub/Sub invalidation bus.
+
+```java
+public PlayerDataCache<User> setupDistributedCache(
+        Plugin plugin,
+        PaperTaskScheduler scheduler,
+        CotaniRedis redis) {
+
+    var invalidationBus = RedisCacheInvalidationBus.of(
+            redis,
+            ChannelId.of("cache:invalidation:users"),
+            RedisCodec.uuid()
+    );
+
+    return CotaniCaches.players(User.class)
+            .repository(RedisCacheRepository.ofPrefix(redis.store(), "cache:users", UserCodec.INSTANCE))
+            .invalidationBus(invalidationBus)
+            .defaultValue(User::createDefault)
+            .preset(CachePreset.PLAYER_DATA)
+            .build(plugin, scheduler);
+}
+```
+
+---
+
+## 16. Redis Distributed Global Network Cooldowns
+
+```java
+DistributedCooldownService networkCooldowns = new RedisDistributedCooldownService(redis);
+
+// Check if player has cooldown for daily reward across any network server
+var key = new CooldownKey(new UserCooldownTarget(player.getUniqueId()), new CooldownAction("reward:daily"));
+
+networkCooldowns.checkAndStartAsync(key, Duration.ofHours(24))
+    .thenAccept(result -> {
+        if (result.denied()) {
+            player.sendMessage(Component.text("Already claimed! Remaining: " + result.remaining().toHours() + "h"));
+            return;
+        }
+        // Give daily reward
+    });
+```
+
+---
+
+## 17. Cross-Server Distributed Event Bus
+
+```java
+EventBus localBus = CotaniEvents.create(plugin);
+EventBus networkEventBus = new RedisDistributedEventBus(localBus, redis, ChannelId.of("events:global"))
+    .registerCodec(GlobalAnnouncementEvent.class, AnnouncementCodec.INSTANCE);
+
+// Publish an event to the local server AND broadcast to the entire network
+networkEventBus.publishAsync(new GlobalAnnouncementEvent("Maintenance starting in 10 minutes!"));
+```
+
+---
+
+## 18. Interactive Chat & Anvil Dialog Prompts
+
+```java
+DialogService dialogs = CotaniDialogs.create(plugin, scheduler);
+
+// 1. Chat Prompt with custom parser and cancellation keywords
+dialogs.chat()
+    .message("<yellow>Type the amount of coins to transfer (or 'cancel'):</yellow>")
+    .timeout(Duration.ofSeconds(30))
+    .parser(raw -> {
+        try {
+            int amount = Integer.parseInt(raw);
+            return amount > 0 ? Optional.of(amount) : Optional.empty();
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    })
+    .onInvalidInput(Component.text("Please enter a valid positive number!"))
+    .build(dialogs)
+    .start(player)
+    .thenAccept(result -> {
+        result.ifSuccess(amount -> player.sendMessage(Component.text("Transferring " + amount + " coins...")));
+        result.ifCancelled(reason -> player.sendMessage(Component.text("Transfer cancelled: " + reason)));
+    });
+
+// 2. Anvil GUI Prompt
+dialogs.anvil()
+    .title(Component.text("Enter Clan Name"))
+    .initialText("MyClan")
+    .timeout(Duration.ofMinutes(1))
+    .build(dialogs)
+    .open(player)
+    .thenAccept(result -> {
+        result.ifSuccess(name -> player.sendMessage(Component.text("Clan created: " + name)));
+    });
+```
+
+---
+
+## 19. Player Nametag Formatting & TabList Priority
+
+```java
+NametagModule nametags = CotaniNametags.create(plugin, scheduler);
+
+// 1. Global Admin Tag with sorting priority 1 (appears at the top of TabList)
+var adminTag = Nametag.builder()
+    .priority(1)
+    .prefix("<red><bold>[ADMIN]</bold></red> ")
+    .suffix(" <gray>[Staff]</gray>")
+    .color(NamedTextColor.RED)
+    .visibility(NametagVisibility.ALWAYS)
+    .collisionRule(CollisionRule.NEVER)
+    .build();
+
+nametags.apply(player, adminTag);
+
+// 2. Dynamic Clan / Ally Tag Provider
+nametags.registerProvider((viewer, target) -> {
+    if (clanService.areAllies(viewer, target)) {
+        return Optional.of(Nametag.builder()
+            .prefix("<aqua>[Ally]</aqua> ")
+            .color(NamedTextColor.AQUA)
+            .friendlyFire(false)
+            .build());
+    }
+    return Optional.empty(); // Falls back to global tag
+});
+```
+
+---
+
 ## Checklist for every recipe
 
 - [ ] No `join()`, `get()` or `Thread.sleep(...)` in application code.
@@ -371,4 +536,5 @@ public void spawnServerWelcomeHologram(Location location, DisplayModule displays
 - [ ] Async results are composed through `CompletionStage` or `TaskChain`.
 - [ ] Domain exceptions are handled in `whenComplete` or `exceptionallyCompose`.
 - [ ] Resources created at startup are registered in `Cotani`.
+
 

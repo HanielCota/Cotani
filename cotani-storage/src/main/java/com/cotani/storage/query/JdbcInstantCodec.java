@@ -65,9 +65,9 @@ final class JdbcInstantCodec {
             try {
                 return Timestamp.valueOf(value).toLocalDateTime().toInstant(ZoneOffset.UTC);
             } catch (IllegalArgumentException notSqlTimestamp) {
-                var failure = new SQLException("Invalid timestamp value in column '" + column + "': " + value);
+                var failure = new SQLException(
+                        "Invalid timestamp value in column '" + column + "': " + value, notSqlTimestamp);
                 failure.addSuppressed(notIsoInstant);
-                failure.initCause(notSqlTimestamp);
                 throw failure;
             }
         }

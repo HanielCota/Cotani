@@ -194,17 +194,18 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
         if (previous != null) {
             synchronized (previous) {
                 if (previous.dirty()) {
-                    // Capture dirty value before replace; mark clean so onRemoval cannot save it twice.
-                    saveCoordinator.queue(
-                            key,
-                            previous.value(),
-                            new SaveOrder(entryTracker.generationOf(previous), previous.version()));
                     previous.markSavedIfVersionMatches(previous.version());
                     entryTracker.markClean(key, previous);
                 }
             }
         }
-        cache.synchronous().put(key, entryTracker.createEntry(value));
+        CacheEntry<V> next = entryTracker.createEntry(value);
+        cache.synchronous().put(key, next);
+        synchronized (next) {
+            if (next.markDirty()) {
+                entryTracker.markDirty(key, next);
+            }
+        }
     }
 
     @Override
@@ -335,6 +336,11 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
                         return cacheExecutor.whenIdle();
                     })
+                    .thenCompose(_ -> saveCoordinator.awaitEvictionWork())
+                    .thenCompose(_ -> saveCoordinator.savePending())
+                    .thenCompose(_ -> saveDirtyEntries())
+                    .thenCompose(_ -> saveCoordinator.awaitSaveLanes())
+                    .thenCompose(_ -> cacheExecutor.whenIdle())
                     .whenComplete((_, error) -> {
                         invalidationSubscription.close();
                         if (error == null) {
@@ -362,11 +368,16 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
                     Level.SEVERE,
                     "Cache close timed out after 30s; some dirty entries may not have been persisted: "
                             + entryTracker.dirtyCount() + " dirty entries remain");
+            throw new CacheException(
+                    "DataCache.close() timed out with " + entryTracker.dirtyCount() + " dirty entries", timeout);
         } catch (ExecutionException error) {
             LOGGER.log(Level.SEVERE, "Cache close failed", error.getCause());
+            Throwable cause = error.getCause() == null ? error : error.getCause();
+            throw new CacheException("DataCache.close() failed", cause);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             LOGGER.log(Level.SEVERE, "Cache close was interrupted; dirty entries may not have been persisted");
+            throw new CacheException("DataCache.close() was interrupted", interrupted);
         }
     }
 

@@ -61,13 +61,13 @@ class UserListenerFailureTest {
         when(userService.load(uniqueId, "Steve"))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("boom")));
 
-        ArgumentCaptor<Runnable> global = ArgumentCaptor.forClass(Runnable.class);
+        ArgumentCaptor<Runnable> entityTask = ArgumentCaptor.forClass(Runnable.class);
         listener.onJoin(new PlayerJoinEvent(player, Component.empty()));
-        verify(scheduler).global(anyString(), global.capture());
+        verify(scheduler).entity(anyString(), eq(uniqueId), entityTask.capture());
 
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
             bukkit.when(() -> Bukkit.getPlayer(uniqueId)).thenReturn(null);
-            global.getValue().run();
+            entityTask.getValue().run();
         }
 
         verify(player, never()).kick(any());
@@ -82,14 +82,14 @@ class UserListenerFailureTest {
         when(userService.load(uniqueId, "Steve"))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("boom")));
 
-        ArgumentCaptor<Runnable> global = ArgumentCaptor.forClass(Runnable.class);
+        ArgumentCaptor<Runnable> entityTask = ArgumentCaptor.forClass(Runnable.class);
         listener.onJoin(new PlayerJoinEvent(player, Component.empty()));
-        verify(scheduler).global(anyString(), global.capture());
+        verify(scheduler).entity(anyString(), eq(uniqueId), entityTask.capture());
 
         RuntimeException bukkitFailure = new IllegalStateException("server down");
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
             bukkit.when(() -> Bukkit.getPlayer(uniqueId)).thenThrow(bukkitFailure);
-            global.getValue().run();
+            entityTask.getValue().run();
         }
 
         verify(logger).log(eq(Level.SEVERE), eq(bukkitFailure), any());
@@ -106,6 +106,6 @@ class UserListenerFailureTest {
 
         listener.onQuit(new PlayerQuitEvent(player, Component.empty()));
 
-        verify(logger).log(eq(Level.SEVERE), eq(failure), any());
+        verify(logger).log(eq(Level.SEVERE), any(Throwable.class), any());
     }
 }

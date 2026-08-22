@@ -8,6 +8,7 @@ import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.util.VoidResult;
 import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,9 +34,14 @@ public final class MainThreadEconomyEventPublisher implements EconomyEventPublis
 
     @Override
     public void publish(EconomyTransactionEvent event) {
+        var _ = publishAsync(event);
+    }
+
+    @Override
+    public CompletionStage<Void> publishAsync(EconomyTransactionEvent event) {
         Objects.requireNonNull(event, "event");
 
-        scheduler
+        return scheduler
                 .supply(ExecutionTarget.global(), "economy-event", () -> {
                     delegate.publish(event);
                     return VoidResult.nullValue();

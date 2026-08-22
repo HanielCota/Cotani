@@ -54,14 +54,15 @@ public final class ExistsQuery {
             if (i > 0) {
                 builder.append(" AND ");
             }
-            var conditionClause = conditions.get(i).column() + " = ?";
-            builder.append(conditionClause);
+            builder.append(conditions.get(i).sqlClause());
         }
     }
 
     private void bind(ParameterBinder binder) throws SQLException {
         for (var condition : conditions) {
-            binder.set(condition.value());
+            if (!condition.isNullValue()) {
+                binder.set(condition.value());
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ import com.cotani.api.InternalApi;
 import com.cotani.cache.api.DataCache;
 import com.cotani.cache.api.PlayerDataCache;
 import com.cotani.cache.api.PlayerValueFactory;
+import com.cotani.cache.listener.PlayerDataCacheListener;
 import com.cotani.cache.repository.CacheRepository;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Thin adapter that delegates all operations to a {@link DataCache} keyed by {@link UUID}.
@@ -24,6 +26,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
     private static final String PLAYER_PARAM = "player";
 
     private final DataCache<UUID, V> delegate;
+    private @Nullable PlayerDataCacheListener<V> listener;
 
     private CaffeinePlayerDataCache(
             DataCache<UUID, V> delegate,
@@ -149,13 +152,27 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
         return delegate.size();
     }
 
+    public void attachListener(PlayerDataCacheListener<V> listener) {
+        this.listener = Objects.requireNonNull(listener, "listener");
+    }
+
     @Override
     public CompletionStage<Void> closeAsync() {
+        closeListener();
         return delegate.closeAsync();
     }
 
     @Override
     public void close() {
+        closeListener();
         delegate.close();
+    }
+
+    private void closeListener() {
+        var attached = listener;
+        listener = null;
+        if (attached != null) {
+            attached.close();
+        }
     }
 }

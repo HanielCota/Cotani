@@ -1,5 +1,6 @@
 package com.cotani.display.api;
 
+import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
@@ -34,6 +35,7 @@ public interface HologramBuilder {
      * @return this builder
      */
     default HologramBuilder addLine(Component component) {
+        Objects.requireNonNull(component, "component cannot be null");
         return addLine(TextLine.of(component));
     }
 
@@ -52,6 +54,7 @@ public interface HologramBuilder {
      * @return this builder
      */
     default HologramBuilder addItemLine(ItemStack item) {
+        Objects.requireNonNull(item, "item cannot be null");
         return addLine(ItemLine.of(item));
     }
 
@@ -63,6 +66,7 @@ public interface HologramBuilder {
      * @return this builder
      */
     default HologramBuilder addItemLine(ItemStack item, float scale) {
+        Objects.requireNonNull(item, "item cannot be null");
         return addLine(ItemLine.of(item, scale));
     }
 
@@ -73,6 +77,7 @@ public interface HologramBuilder {
      * @return this builder
      */
     default HologramBuilder addBlockLine(BlockData blockData) {
+        Objects.requireNonNull(blockData, "blockData cannot be null");
         return addLine(BlockLine.of(blockData));
     }
 

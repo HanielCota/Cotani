@@ -43,7 +43,7 @@ class PlayerDataCacheListenerTest {
 
         listener.onJoin(event);
 
-        verify(cache).loadAsync(playerId);
+        verify(cache).getOrLoadAsync(playerId);
     }
 
     @Test

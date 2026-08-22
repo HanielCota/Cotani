@@ -159,7 +159,7 @@ class CaffeineDataCacheTest {
         DataCache<String, String> cache = createCache();
 
         cache.put("key", "value");
-        assertEquals(0, cache.dirtyCount());
+        assertEquals(1, cache.dirtyCount());
 
         cache.markDirty("key");
 
@@ -219,11 +219,12 @@ class CaffeineDataCacheTest {
         DataCache<String, String> cache = createCache();
         cache.put("a", "1");
         cache.put("b", "2");
-        cache.markDirty("a");
+        cache.save("b").toCompletableFuture().join();
 
         cache.saveDirty().toCompletableFuture().join();
 
-        verify(repository, times(1)).save(anyString(), anyString());
+        verify(repository).save("a", "1");
+        verify(repository).save("b", "2");
     }
 
     @Test
@@ -507,7 +508,7 @@ class CaffeineDataCacheTest {
     }
 
     @Test
-    void putOverwritingDirtyEntryDecrementsDirtyCount() {
+    void putOverwritingDirtyEntryKeepsReplacementDirty() {
         DataCache<String, String> cache = createCache(CacheSettings.staticData());
         cache.put("key", "old");
         cache.markDirty("key");
@@ -515,7 +516,7 @@ class CaffeineDataCacheTest {
 
         cache.put("key", "new");
 
-        assertEquals(0, cache.dirtyCount());
+        assertEquals(1, cache.dirtyCount());
         assertEquals("new", cache.get("key"));
     }
 

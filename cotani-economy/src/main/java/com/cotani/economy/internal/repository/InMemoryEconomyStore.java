@@ -5,6 +5,7 @@ import com.cotani.economy.EconomySettings;
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
+import com.cotani.economy.exception.InsufficientFundsException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.internal.EconomyOperationFingerprint;
 import com.cotani.economy.transaction.EconomyOperationId;
@@ -44,7 +45,6 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
     private final ConcurrentLinkedDeque<EconomyTransaction> transactions = new ConcurrentLinkedDeque<>();
     private final ConcurrentMap<EconomyAccountKey, Object> locks = new ConcurrentHashMap<>();
     private final ConcurrentMap<EconomyOperationId, InFlightOperation> inFlightOperations = new ConcurrentHashMap<>();
-    private static final int LOCK_CLEANUP_THRESHOLD = 10_000;
 
     public InMemoryEconomyStore(Executor executor, Clock clock, EconomySettings settings) {
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -178,6 +178,25 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                 () -> withBothLocks(sourceKey, targetKey, () -> {
                     var now = clock.instant();
                     var sourceAccount = getOrCreateLocked(sourceKey);
+                    if (sourceUserId.equals(targetUserId)) {
+                        if (sourceAccount.balance().compareTo(amount) < 0) {
+                            throw new InsufficientFundsException(sourceUserId, sourceAccount.balance(), amount);
+                        }
+                        var transaction = EconomyTransaction.transfer(
+                                operationId,
+                                sourceUserId,
+                                targetUserId,
+                                currencyId,
+                                amount,
+                                sourceAccount.balance(),
+                                sourceAccount.balance(),
+                                sourceAccount.balance(),
+                                sourceAccount.balance(),
+                                reason,
+                                now);
+                        return saveTransactionLocked(transaction);
+                    }
+
                     var targetAccount = getOrCreateLocked(targetKey);
                     var updatedSource = sourceAccount.withdraw(amount, now);
                     var updatedTarget = targetAccount.deposit(amount, now);
@@ -271,7 +290,6 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
         }
         var _ = selected.result().whenComplete((_, _) -> {
             inFlightOperations.remove(operationId, selected);
-            maybeCleanupStaleLocks();
         });
     }
 
@@ -304,12 +322,6 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
             Supplier<EconomyTransaction> action) {
         EconomyTransaction saved = transactionsByOperation.get(operationId);
         return saved == null ? action.get() : fingerprint.requireMatch(operationId, saved);
-    }
-
-    private void maybeCleanupStaleLocks() {
-        if (locks.size() > LOCK_CLEANUP_THRESHOLD) {
-            locks.keySet().removeIf(key -> !accounts.containsKey(key));
-        }
     }
 
     private EconomyAccount getOrCreateLocked(EconomyAccountKey key) {

@@ -58,7 +58,7 @@ class ValueSerializerRegistryTest {
 
         Object serialized = registry.serialize(value);
 
-        assertTrue(serialized instanceof String);
+        assertInstanceOf(String.class, serialized);
         assertEquals(value, registry.deserialize(serialized, Component.class));
     }
 

@@ -1,6 +1,7 @@
 package com.cotani.display.api;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
@@ -105,6 +106,7 @@ public interface Hologram {
      * @return a completion stage
      */
     default CompletionStage<Void> updateLineAsync(int index, Component component) {
+        Objects.requireNonNull(component, "component cannot be null");
         return updateLineAsync(index, TextLine.of(component));
     }
 
@@ -116,6 +118,7 @@ public interface Hologram {
      * @return a completion stage
      */
     default CompletionStage<Void> updateLineAsync(int index, ItemStack item) {
+        Objects.requireNonNull(item, "item cannot be null");
         return updateLineAsync(index, ItemLine.of(item));
     }
 
@@ -134,6 +137,7 @@ public interface Hologram {
      * @return a completion stage
      */
     default CompletionStage<Void> addLineAsync(Component component) {
+        Objects.requireNonNull(component, "component cannot be null");
         return addLineAsync(TextLine.of(component));
     }
 
@@ -144,6 +148,7 @@ public interface Hologram {
      * @return a completion stage
      */
     default CompletionStage<Void> addLineAsync(ItemStack item) {
+        Objects.requireNonNull(item, "item cannot be null");
         return addLineAsync(ItemLine.of(item));
     }
 

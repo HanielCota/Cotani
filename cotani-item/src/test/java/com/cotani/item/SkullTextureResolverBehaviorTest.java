@@ -23,9 +23,11 @@ import org.mockito.MockedStatic;
 
 @SuppressWarnings({"NullAway", "removal"})
 class SkullTextureResolverBehaviorTest {
-    private static final String BASE64 = "aGVsbG8=";
     private static final String TEXTURE_ID = "abc123";
     private static final String FULL_URL = "https://textures.minecraft.net/texture/abc123";
+    private static final String BASE64 = Base64.getEncoder()
+            .encodeToString(
+                    ("{\"textures\":{\"SKIN\":{\"url\":\"" + FULL_URL + "\"}}}").getBytes(StandardCharsets.UTF_8));
 
     private static PlayerProfile givenProfile(MockedStatic<Bukkit> bukkit) {
         PlayerProfile profile = mock(PlayerProfile.class);
@@ -73,12 +75,14 @@ class SkullTextureResolverBehaviorTest {
     @Test
     void fromBase64CachesProfilePerInput() {
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            givenProfile(bukkit);
+            PlayerProfile firstProfile = mock(PlayerProfile.class);
+            bukkit.when(() -> Bukkit.createProfile(any(UUID.class))).thenReturn(firstProfile);
             try (var resolver = new SkullTextureResolver()) {
                 PlayerProfile first = resolver.fromBase64(BASE64);
                 PlayerProfile second = resolver.fromBase64(BASE64);
 
                 assertSame(first, second);
+                assertSame(firstProfile, first);
                 bukkit.verify(() -> Bukkit.createProfile(any(UUID.class)), times(1));
             }
         }
@@ -92,7 +96,10 @@ class SkullTextureResolverBehaviorTest {
             bukkit.when(() -> Bukkit.createProfile(any(UUID.class))).thenReturn(firstProfile, secondProfile);
             try (var resolver = new SkullTextureResolver()) {
                 PlayerProfile first = resolver.fromBase64(BASE64);
-                PlayerProfile second = resolver.fromBase64("c2Vjb25k");
+                PlayerProfile second = resolver.fromBase64(Base64.getEncoder()
+                        .encodeToString(
+                                "{\"textures\":{\"SKIN\":{\"url\":\"https://textures.minecraft.net/texture/other\"}}}"
+                                        .getBytes(StandardCharsets.UTF_8)));
 
                 assertNotSame(first, second);
                 assertSame(firstProfile, first);

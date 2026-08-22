@@ -71,10 +71,10 @@ class DefaultSafeLocationResolverTest {
         var captor = ArgumentCaptor.forClass(ExecutionTarget.class);
         verify(scheduler).supply(captor.capture(), anyString(), any(Supplier.class));
         var targetRegion = captor.getValue();
-        assertTrue(targetRegion instanceof ExecutionTarget.Region region
-                && region.chunkX() == chunkX
-                && region.chunkZ() == chunkZ
-                && region.worldId().equals(world.getUID()));
+        assertTrue(targetRegion instanceof ExecutionTarget.Region(UUID worldId, int x, int z)
+                && x == chunkX
+                && z == chunkZ
+                && worldId.equals(world.getUID()));
     }
 
     @Test
@@ -104,9 +104,9 @@ class DefaultSafeLocationResolverTest {
         var captor = ArgumentCaptor.forClass(ExecutionTarget.class);
         verify(scheduler).supply(captor.capture(), anyString(), any(Supplier.class));
         var targetRegion = captor.getValue();
-        assertTrue(targetRegion instanceof ExecutionTarget.Region region
-                && region.chunkX() == targetChunkX
-                && region.chunkZ() == targetChunkZ
-                && region.worldId().equals(world.getUID()));
+        assertTrue(targetRegion instanceof ExecutionTarget.Region(UUID worldId, int chunkX, int chunkZ)
+                && chunkX == targetChunkX
+                && chunkZ == targetChunkZ
+                && worldId.equals(world.getUID()));
     }
 }

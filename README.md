@@ -121,6 +121,7 @@ Declare only the modules required for your feature set; transitive dependencies 
 | [`cotani-config`](cotani-config/README.md) | YAML binding to immutable records with constraint validation & async reload | `1.0.0` |
 | [`cotani-storage`](cotani-storage/README.md) | SQLite, MySQL, and MariaDB queries, schema migrations, and transactions | `1.0.0` |
 | [`cotani-cache`](cotani-cache/README.md) | Caffeine-backed caches with automatic dirty-tracking and persistence | `1.0.0` |
+| [`cotani-redis`](cotani-redis/README.md) | Non-blocking Redis client, pub/sub messaging, distributed locks & sync | `1.1.0-SNAPSHOT` |
 
 ### 🎮 Gameplay & Domain Systems
 
@@ -133,6 +134,10 @@ Declare only the modules required for your feature set; transitive dependencies 
 | [`cotani-event`](cotani-event/README.md) | Reflection-free, high-performance event bus with priority dispatching | `1.0.0` |
 | [`cotani-gui`](cotani-gui/README.md) | Reactive inventory UIs with declarative structure, pagination & anti-dupe guards | `1.1.0-SNAPSHOT` |
 | [`cotani-display`](cotani-display/README.md) | Modern Display Entity engine for text, item, and block holograms | `1.1.0-SNAPSHOT` |
+| [`cotani-command`](cotani-command/README.md) | Declarative command framework with async arguments, cooldowns, and Folia thread safety | `1.1.0-SNAPSHOT` |
+| [`cotani-hud`](cotani-hud/README.md) | Reactive zero-flicker scoreboards, dynamic tablist, bossbars, and actionbars | `1.1.0-SNAPSHOT` |
+| [`cotani-nametag`](cotani-nametag/README.md) | Scoreboard team-driven nametag formatting, tablist sorting priority, and collision rules | `1.1.0-SNAPSHOT` |
+| [`cotani-dialog`](cotani-dialog/README.md) | Non-blocking reactive chat, sign, and anvil input prompts and multi-step wizards | `1.1.0-SNAPSHOT` |
 
 ### 📊 Operations & Tooling
 

@@ -1,8 +1,6 @@
 package com.cotani.item;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import java.lang.reflect.InvocationTargetException;
@@ -81,10 +79,10 @@ class SkullTextureResolverTest {
     @Test
     void rejectsBlankAndOversizedTextureUrlsBeforeProfileCreation() {
         var blank = assertThrows(InvocationTargetException.class, () -> normalize("   "));
-        assertTrue(blank.getCause() instanceof IllegalArgumentException);
+        assertInstanceOf(IllegalArgumentException.class, blank.getCause());
 
         var oversized = assertThrows(InvocationTargetException.class, () -> normalize("x".repeat(2_049)));
-        assertTrue(oversized.getCause() instanceof IllegalArgumentException);
+        assertInstanceOf(IllegalArgumentException.class, oversized.getCause());
     }
 
     @Test
@@ -92,6 +90,11 @@ class SkullTextureResolverTest {
         try (var resolver = new SkullTextureResolver()) {
             assertThrows(IllegalArgumentException.class, () -> resolver.fromBase64("%%%"));
             assertThrows(IllegalArgumentException.class, () -> resolver.fromBase64("A".repeat(16_385)));
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> resolver.fromBase64(java.util.Base64.getEncoder()
+                            .encodeToString("{\"textures\":{\"SKIN\":{\"url\":\"http://evil.com/a\"}}}"
+                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8))));
         }
     }
 
@@ -99,14 +102,14 @@ class SkullTextureResolverTest {
     void rejectsUnsupportedSchemesAndHosts() {
         var externalHttp =
                 assertThrows(InvocationTargetException.class, () -> normalize("http://evil.com/texture.png"));
-        assertTrue(externalHttp.getCause() instanceof IllegalArgumentException);
+        assertInstanceOf(IllegalArgumentException.class, externalHttp.getCause());
 
         var externalHttps =
                 assertThrows(InvocationTargetException.class, () -> normalize("https://evil.com/texture.png"));
-        assertTrue(externalHttps.getCause() instanceof IllegalArgumentException);
+        assertInstanceOf(IllegalArgumentException.class, externalHttps.getCause());
 
         var userInfoHost =
                 assertThrows(InvocationTargetException.class, () -> normalize("textures.minecraft.net@evil.com"));
-        assertTrue(userInfoHost.getCause() instanceof IllegalArgumentException);
+        assertInstanceOf(IllegalArgumentException.class, userInfoHost.getCause());
     }
 }

@@ -5,6 +5,7 @@ import com.cotani.economy.EconomySettings;
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
+import com.cotani.economy.exception.InsufficientFundsException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.internal.EconomyOperationFingerprint;
 import com.cotani.economy.internal.repository.EconomyAccountRepository;
@@ -180,10 +181,34 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
         Objects.requireNonNull(reason, REASON_PARAM);
         Objects.requireNonNull(operationId, OPERATION_ID_PARAM);
 
+        Instant now = clock.instant();
+
+        if (sourceUserId.equals(targetUserId)) {
+            return runIdempotent(
+                    operationId,
+                    EconomyOperationFingerprint.transfer(sourceUserId, targetUserId, currencyId, amount, reason),
+                    tx -> getOrCreateLocked(tx, sourceUserId, currencyId).thenCompose(account -> {
+                        if (account.balance().compareTo(amount) < 0) {
+                            throw new InsufficientFundsException(sourceUserId, account.balance(), amount);
+                        }
+                        EconomyTransaction transaction = EconomyTransaction.transfer(
+                                operationId,
+                                sourceUserId,
+                                targetUserId,
+                                currencyId,
+                                amount,
+                                account.balance(),
+                                account.balance(),
+                                account.balance(),
+                                account.balance(),
+                                reason,
+                                now);
+                        return insertTransaction(tx, transaction).thenApply(_ -> transaction);
+                    }));
+        }
+
         UUID firstId = sourceUserId.compareTo(targetUserId) <= 0 ? sourceUserId : targetUserId;
         UUID secondId = firstId.equals(sourceUserId) ? targetUserId : sourceUserId;
-
-        Instant now = clock.instant();
 
         return runIdempotent(
                 operationId,
@@ -278,7 +303,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
 
                             return insertAccountDoNothing(tx, created)
                                     .thenCompose(_ -> findLocked(tx, userId, currencyId))
-                                    .thenApply(reloaded -> reloaded.orElse(created));
+                                    .thenApply(reloaded -> reloaded.orElseThrow(() -> new IllegalStateException(
+                                            "Could not load economy account after insert for " + userId)));
                         }));
     }
 

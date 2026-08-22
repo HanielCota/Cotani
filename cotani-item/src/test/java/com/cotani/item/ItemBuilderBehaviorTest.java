@@ -9,12 +9,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.papermc.paper.datacomponent.DataComponentType;
-import io.papermc.paper.datacomponent.item.CustomModelData;
 import io.papermc.paper.datacomponent.item.Equippable;
 import io.papermc.paper.registry.set.RegistryKeySet;
-import io.papermc.paper.registry.tag.Tag;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiConsumer;
 import net.kyori.adventure.key.InvalidKeyException;
 import net.kyori.adventure.key.Key;
@@ -23,16 +20,12 @@ import org.bukkit.Color;
 import org.bukkit.JukeboxSong;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.damage.DamageType;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemType;
 import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionType;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
@@ -116,11 +109,11 @@ class ItemBuilderBehaviorTest {
     @Test
     void enchantmentInputsRejectNullArguments() {
         withBuilder((builder, stack) -> {
-            assertThrows(NullPointerException.class, () -> builder.enchant((Enchantment) null, 1));
-            assertThrows(NullPointerException.class, () -> builder.enchant((Map<Enchantment, Integer>) null));
+            assertThrows(NullPointerException.class, () -> builder.enchant(null, 1));
+            assertThrows(NullPointerException.class, () -> builder.enchant(null));
             assertThrows(NullPointerException.class, () -> builder.removeEnchant(null));
-            assertThrows(NullPointerException.class, () -> builder.storedEnchant((Enchantment) null, 1));
-            assertThrows(NullPointerException.class, () -> builder.storedEnchant((Map<Enchantment, Integer>) null));
+            assertThrows(NullPointerException.class, () -> builder.storedEnchant(null, 1));
+            assertThrows(NullPointerException.class, () -> builder.storedEnchant(null));
             assertThrows(NullPointerException.class, () -> builder.flags((ItemFlag[]) null));
             assertThrows(NullPointerException.class, () -> builder.removeFlags((ItemFlag[]) null));
         });
@@ -129,9 +122,7 @@ class ItemBuilderBehaviorTest {
     @Test
     void dataComponentInputsRejectNullArguments() {
         withBuilder((builder, stack) -> {
-            assertThrows(
-                    NullPointerException.class,
-                    () -> builder.customModelData((java.util.function.Consumer<CustomModelData.Builder>) null));
+            assertThrows(NullPointerException.class, () -> builder.customModelData(null));
             assertThrows(NullPointerException.class, () -> builder.customModelDataFloats((float[]) null));
             assertThrows(NullPointerException.class, () -> builder.customModelDataFlags((boolean[]) null));
             assertThrows(NullPointerException.class, () -> builder.customModelDataStrings((String[]) null));
@@ -148,8 +139,7 @@ class ItemBuilderBehaviorTest {
     @Test
     void attributeInputsRejectNullArguments() {
         withBuilder((builder, stack) -> {
-            assertThrows(
-                    NullPointerException.class, () -> builder.attribute((Attribute) null, (AttributeModifier) null));
+            assertThrows(NullPointerException.class, () -> builder.attribute(null, null));
             assertThrows(NullPointerException.class, () -> builder.persistentData(null));
         });
     }
@@ -176,7 +166,7 @@ class ItemBuilderBehaviorTest {
             assertThrows(NullPointerException.class, () -> builder.repairable((ItemType[]) null));
             assertThrows(NullPointerException.class, () -> builder.repairable((List<ItemType>) null));
             assertThrows(NullPointerException.class, () -> builder.damageResistant((RegistryKeySet<DamageType>) null));
-            assertThrows(NullPointerException.class, () -> builder.damageResistant((Tag<DamageType>) null));
+            assertThrows(NullPointerException.class, () -> builder.damageResistant(null));
             assertThrows(NullPointerException.class, () -> builder.equippable((EquipmentSlot) null));
         });
     }
@@ -186,9 +176,9 @@ class ItemBuilderBehaviorTest {
         withBuilder((builder, stack) -> {
             assertThrows(NullPointerException.class, () -> builder.jukeboxPlayable((JukeboxSong) null));
             assertThrows(NullPointerException.class, () -> builder.jukeboxPlayable((NamespacedKey) null));
-            assertThrows(NullPointerException.class, () -> builder.potion((PotionType) null));
+            assertThrows(NullPointerException.class, () -> builder.potion(null));
             assertThrows(NullPointerException.class, () -> builder.potionEffects((PotionEffect[]) null));
-            assertThrows(NullPointerException.class, () -> builder.dye((Color) null));
+            assertThrows(NullPointerException.class, () -> builder.dye(null));
         });
     }
 

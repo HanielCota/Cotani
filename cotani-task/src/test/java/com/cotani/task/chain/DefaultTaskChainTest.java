@@ -98,7 +98,7 @@ class DefaultTaskChainTest {
                         .toCompletableFuture()
                         .get());
 
-        assertTrue(exception.getCause() instanceof TaskTimeoutException);
+        assertInstanceOf(TaskTimeoutException.class, exception.getCause());
     }
 
     @Test
@@ -110,7 +110,7 @@ class DefaultTaskChainTest {
                 .toCompletableFuture()
                 .get();
 
-        assertTrue(result.equals("value"));
+        assertEquals("value", result);
     }
 
     @Test
@@ -258,7 +258,7 @@ class DefaultTaskChainTest {
                         .toCompletableFuture()
                         .get());
 
-        assertTrue(exception.getCause() instanceof NoSuchElementException);
+        assertInstanceOf(NoSuchElementException.class, exception.getCause());
     }
 
     @Test

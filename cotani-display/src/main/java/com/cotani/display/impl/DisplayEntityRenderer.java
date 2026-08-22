@@ -57,65 +57,96 @@ public final class DisplayEntityRenderer {
      */
     public RenderedEntities spawn(
             Location baseLocation, List<HologramLine> lines, double lineSpacing, boolean clickable) {
+        Objects.requireNonNull(baseLocation, "baseLocation cannot be null");
+        Objects.requireNonNull(lines, "lines cannot be null");
         World world = baseLocation.getWorld();
         if (world == null) {
             return new RenderedEntities(List.of(), null);
         }
 
         List<UUID> spawnedIds = new ArrayList<>();
+        UUID interactionId = null;
         double currentY = baseLocation.getY();
 
-        for (HologramLine line : lines) {
-            var lineLocation = new Location(
-                    world,
-                    baseLocation.getX(),
-                    currentY,
-                    baseLocation.getZ(),
-                    baseLocation.getYaw(),
-                    baseLocation.getPitch());
+        try {
+            for (HologramLine line : lines) {
+                Objects.requireNonNull(line, "line cannot be null");
+                var lineLocation = new Location(
+                        world,
+                        baseLocation.getX(),
+                        currentY,
+                        baseLocation.getZ(),
+                        baseLocation.getYaw(),
+                        baseLocation.getPitch());
 
-            Entity entity = spawnLineEntity(world, lineLocation, line);
-            if (entity != null) {
+                Entity entity = spawnLineEntity(world, lineLocation, line);
                 spawnedIds.add(entity.getUniqueId());
+
+                double spacing = line.heightOffset() > 0 ? line.heightOffset() : lineSpacing;
+                currentY -= spacing;
             }
 
-            double spacing = line.heightOffset() > 0 ? line.heightOffset() : lineSpacing;
-            currentY -= spacing;
-        }
+            if (clickable && !lines.isEmpty()) {
+                double totalHeight = Math.max(0.5, (baseLocation.getY() - currentY) + 0.2);
+                var interactionLocation = new Location(
+                        world,
+                        baseLocation.getX(),
+                        currentY,
+                        baseLocation.getZ(),
+                        baseLocation.getYaw(),
+                        baseLocation.getPitch());
+                var interaction = (Interaction) world.spawnEntity(interactionLocation, EntityType.INTERACTION);
+                interaction.setPersistent(false);
+                interaction.setInteractionWidth(1.2f);
+                interaction.setInteractionHeight((float) totalHeight);
+                interaction.setResponsive(true);
+                interactionId = interaction.getUniqueId();
+            }
 
-        UUID interactionId = null;
-        if (clickable && !lines.isEmpty()) {
-            double totalHeight = Math.max(0.5, (baseLocation.getY() - currentY) + 0.2);
-            var interactionLocation = new Location(
-                    world,
-                    baseLocation.getX(),
-                    currentY,
-                    baseLocation.getZ(),
-                    baseLocation.getYaw(),
-                    baseLocation.getPitch());
-            var interaction = (Interaction) world.spawnEntity(interactionLocation, EntityType.INTERACTION);
-            interaction.setPersistent(false);
-            interaction.setInteractionWidth(1.2f);
-            interaction.setInteractionHeight((float) totalHeight);
-            interaction.setResponsive(true);
-            interactionId = interaction.getUniqueId();
+            return new RenderedEntities(spawnedIds, interactionId);
+        } catch (RuntimeException failure) {
+            despawn(spawnedIds);
+            if (interactionId != null) {
+                despawn(List.of(interactionId));
+            }
+            throw failure;
         }
-
-        return new RenderedEntities(spawnedIds, interactionId);
     }
 
     /**
-     * Updates an existing spawned line entity with new properties.
+     * Updates an existing spawned line entity with new properties, replacing it if incompatible.
      * Must be invoked on the region thread.
      *
      * @param entityId the entity UUID
      * @param line the line definition
+     * @param lineLocation the location of the line if respawning is required
+     * @return the resulting entity UUID (either the same or newly spawned)
      */
-    public void updateLine(UUID entityId, HologramLine line) {
-        var entity = Bukkit.getEntity(entityId);
-        if (entity != null && entity.isValid()) {
-            applyLineProperties(entity, line);
+    public UUID updateLine(UUID entityId, HologramLine line, Location lineLocation) {
+        Objects.requireNonNull(entityId, "entityId cannot be null");
+        Objects.requireNonNull(line, "line cannot be null");
+        Objects.requireNonNull(lineLocation, "lineLocation cannot be null");
+
+        Entity entity = null;
+        try {
+            entity = Bukkit.getEntity(entityId);
+        } catch (Exception _) {
+            // Uninitialized server or invalid lookup
         }
+
+        if (entity != null && entity.isValid() && isEntityCompatible(entity, line)) {
+            applyLineProperties(entity, line);
+            return entityId;
+        }
+
+        if (entity != null && entity.isValid()) {
+            entity.remove();
+        }
+        World world = lineLocation.getWorld();
+        if (world == null) {
+            return entityId;
+        }
+        return spawnLineEntity(world, lineLocation, line).getUniqueId();
     }
 
     /**
@@ -125,15 +156,24 @@ public final class DisplayEntityRenderer {
      * @param entityIds the entity UUIDs to remove
      */
     public void despawn(Iterable<UUID> entityIds) {
+        Objects.requireNonNull(entityIds, "entityIds cannot be null");
         for (UUID entityId : entityIds) {
-            var entity = Bukkit.getEntity(entityId);
-            if (entity != null && entity.isValid()) {
-                entity.remove();
+            try {
+                var entity = Bukkit.getEntity(entityId);
+                if (entity != null && entity.isValid()) {
+                    entity.remove();
+                }
+            } catch (Exception _) {
+                // Uninitialized server or entity already removed
             }
         }
     }
 
-    private Entity spawnLineEntity(World world, Location location, HologramLine line) {
+    public Entity spawnLineEntity(World world, Location location, HologramLine line) {
+        Objects.requireNonNull(world, "world cannot be null");
+        Objects.requireNonNull(location, "location cannot be null");
+        Objects.requireNonNull(line, "line cannot be null");
+
         return switch (line) {
             case TextLine textLine -> {
                 var textDisplay = (TextDisplay) world.spawnEntity(location, EntityType.TEXT_DISPLAY);
@@ -142,13 +182,10 @@ public final class DisplayEntityRenderer {
                 textDisplay.setBillboard(textLine.billboard().toBukkit());
                 textDisplay.setShadowed(textLine.shadow());
                 textDisplay.setSeeThrough(textLine.seeThrough());
+                textDisplay.setTextOpacity(textLine.textOpacity());
                 textDisplay.setViewRange(textLine.viewRange());
-                if (textLine.backgroundColor() != null) {
-                    textDisplay.setBackgroundColor(textLine.backgroundColor());
-                }
-                if (textLine.scale() != 1.0f) {
-                    textDisplay.setTransformation(scaleTransformation(textLine.scale()));
-                }
+                textDisplay.setBackgroundColor(textLine.backgroundColor());
+                textDisplay.setTransformation(scaleTransformation(textLine.scale()));
                 yield textDisplay;
             }
             case ItemLine itemLine -> {
@@ -158,9 +195,7 @@ public final class DisplayEntityRenderer {
                 itemDisplay.setItemDisplayTransform(itemLine.itemTransform());
                 itemDisplay.setBillboard(itemLine.billboard().toBukkit());
                 itemDisplay.setViewRange(itemLine.viewRange());
-                if (itemLine.scale() != 1.0f) {
-                    itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
-                }
+                itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
                 yield itemDisplay;
             }
             case BlockLine blockLine -> {
@@ -169,15 +204,16 @@ public final class DisplayEntityRenderer {
                 blockDisplay.setBlock(blockLine.blockData());
                 blockDisplay.setBillboard(blockLine.billboard().toBukkit());
                 blockDisplay.setViewRange(blockLine.viewRange());
-                if (blockLine.scale() != 1.0f) {
-                    blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
-                }
+                blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
                 yield blockDisplay;
             }
         };
     }
 
-    private void applyLineProperties(Entity entity, HologramLine line) {
+    public void applyLineProperties(Entity entity, HologramLine line) {
+        Objects.requireNonNull(entity, "entity cannot be null");
+        Objects.requireNonNull(line, "line cannot be null");
+
         switch (line) {
             case TextLine textLine
             when entity instanceof TextDisplay textDisplay -> {
@@ -185,13 +221,10 @@ public final class DisplayEntityRenderer {
                 textDisplay.setBillboard(textLine.billboard().toBukkit());
                 textDisplay.setShadowed(textLine.shadow());
                 textDisplay.setSeeThrough(textLine.seeThrough());
+                textDisplay.setTextOpacity(textLine.textOpacity());
                 textDisplay.setViewRange(textLine.viewRange());
-                if (textLine.backgroundColor() != null) {
-                    textDisplay.setBackgroundColor(textLine.backgroundColor());
-                }
-                if (textLine.scale() != 1.0f) {
-                    textDisplay.setTransformation(scaleTransformation(textLine.scale()));
-                }
+                textDisplay.setBackgroundColor(textLine.backgroundColor());
+                textDisplay.setTransformation(scaleTransformation(textLine.scale()));
             }
             case ItemLine itemLine
             when entity instanceof ItemDisplay itemDisplay -> {
@@ -199,21 +232,30 @@ public final class DisplayEntityRenderer {
                 itemDisplay.setItemDisplayTransform(itemLine.itemTransform());
                 itemDisplay.setBillboard(itemLine.billboard().toBukkit());
                 itemDisplay.setViewRange(itemLine.viewRange());
-                if (itemLine.scale() != 1.0f) {
-                    itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
-                }
+                itemDisplay.setTransformation(scaleTransformation(itemLine.scale()));
             }
             case BlockLine blockLine
             when entity instanceof BlockDisplay blockDisplay -> {
                 blockDisplay.setBlock(blockLine.blockData());
                 blockDisplay.setBillboard(blockLine.billboard().toBukkit());
                 blockDisplay.setViewRange(blockLine.viewRange());
-                if (blockLine.scale() != 1.0f) {
-                    blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
-                }
+                blockDisplay.setTransformation(scaleTransformation(blockLine.scale()));
             }
-            default -> {}
+            default -> {
+                // Line type does not match the live entity; the caller respawns it.
+            }
         }
+    }
+
+    public boolean isEntityCompatible(Entity entity, HologramLine line) {
+        Objects.requireNonNull(entity, "entity cannot be null");
+        Objects.requireNonNull(line, "line cannot be null");
+
+        return switch (line) {
+            case TextLine _ -> entity instanceof TextDisplay;
+            case ItemLine _ -> entity instanceof ItemDisplay;
+            case BlockLine _ -> entity instanceof BlockDisplay;
+        };
     }
 
     public static Transformation scaleTransformation(float scale) {

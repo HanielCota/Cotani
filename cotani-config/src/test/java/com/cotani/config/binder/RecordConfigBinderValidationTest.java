@@ -88,9 +88,7 @@ class RecordConfigBinderValidationTest {
         return ConfigSection.create("test.yml", "", new MapConfigSource(values), serializers, binder);
     }
 
-    private static final class MapConfigSource implements ConfigSource {
-        private final Map<String, Object> values;
-
+    private record MapConfigSource(Map<String, Object> values) implements ConfigSource {
         private MapConfigSource(Map<String, Object> values) {
             this.values = Map.copyOf(values);
         }

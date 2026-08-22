@@ -117,13 +117,11 @@ class SimpleUserServiceTest {
                 .thenAnswer(invocation -> Optional.of(invocation
                         .<UnaryOperator<SimpleCotaniUser>>getArgument(2)
                         .apply(user)));
-        when(repository.saveAll(any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.saveAll().toCompletableFuture().join();
 
-        verify(repository)
-                .saveAll(argThat(savedList ->
-                        savedList.size() == 1 && savedList.iterator().next().version() == 2L));
+        verify(repository).save(argThat(saved -> saved.version() == 2L));
     }
 
     @Test
@@ -185,7 +183,7 @@ class SimpleUserServiceTest {
                 CompletionException.class,
                 () -> service.getOrThrowAsync(uniqueId).toCompletableFuture().join());
 
-        assertTrue(exception.getCause() instanceof UserNotLoadedException);
+        assertInstanceOf(UserNotLoadedException.class, exception.getCause());
     }
 
     @Test

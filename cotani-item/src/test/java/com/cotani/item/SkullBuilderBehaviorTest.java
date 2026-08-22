@@ -12,9 +12,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import java.net.URI;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -53,10 +51,10 @@ class SkullBuilderBehaviorTest {
         withHeadItem(stack -> {
             SkullBuilder builder = SkullBuilder.create(mock(SkullTextureResolver.class));
 
-            assertThrows(NullPointerException.class, () -> builder.player((Player) null));
+            assertThrows(NullPointerException.class, () -> builder.player(null));
             assertThrows(NullPointerException.class, () -> builder.player((OfflinePlayer) null));
             assertThrows(NullPointerException.class, () -> builder.profile(null));
-            assertThrows(NullPointerException.class, () -> builder.noteBlockSound((NamespacedKey) null));
+            assertThrows(NullPointerException.class, () -> builder.noteBlockSound(null));
         });
     }
 

@@ -1,7 +1,6 @@
 package com.cotani.economy.transaction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -329,6 +328,6 @@ class EconomyTransactionTest {
         assertEquals(first, second);
         assertEquals(first.hashCode(), second.hashCode());
         assertNotEquals(first, differentAmount);
-        assertFalse(first.equals(null));
+        assertNotEquals(null, first);
     }
 }

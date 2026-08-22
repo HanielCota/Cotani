@@ -91,8 +91,7 @@ public final class UpdateQuery {
             if (i > 0) {
                 builder.append(" AND ");
             }
-            var conditionClause = conditions.get(i).column() + " = ?";
-            builder.append(conditionClause);
+            builder.append(conditions.get(i).sqlClause());
         }
     }
 
@@ -102,7 +101,9 @@ public final class UpdateQuery {
         }
 
         for (var condition : conditions) {
-            binder.set(condition.value());
+            if (!condition.isNullValue()) {
+                binder.set(condition.value());
+            }
         }
     }
 }

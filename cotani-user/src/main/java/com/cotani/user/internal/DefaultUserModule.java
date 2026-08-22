@@ -96,7 +96,7 @@ public final class DefaultUserModule implements UserModule {
                 : SchedulerTask.noop();
 
         Cotani cotani = Cotani.forPlugin(plugin)
-                .with(() -> HandlerList.unregisterAll(listener))
+                .with(() -> scheduler.global("user-unregister", () -> HandlerList.unregisterAll(listener)))
                 .with(autoSaveTask::cancel)
                 .withAsync(() -> saveAndClear(plugin, service))
                 .build();
@@ -105,7 +105,7 @@ public final class DefaultUserModule implements UserModule {
             plugin.getServer().getPluginManager().registerEvents(listener, plugin);
             return new DefaultUserModule(cotani, service);
         } catch (RuntimeException failure) {
-            cotani.close();
+            var _ = cotani.closeAsync();
             throw new IllegalStateException("Could not initialize user module", failure);
         }
     }
@@ -113,6 +113,7 @@ public final class DefaultUserModule implements UserModule {
     private static CompletionStage<Void> saveAndClear(Plugin plugin, SimpleUserService service) {
         return service.saveAll()
                 .toCompletableFuture()
+                .copy()
                 .orTimeout(10, TimeUnit.SECONDS)
                 .whenComplete((_, throwable) -> {
                     if (throwable != null) {

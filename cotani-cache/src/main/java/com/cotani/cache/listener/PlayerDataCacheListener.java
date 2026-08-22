@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -23,7 +24,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
  *
  * @param <V> the player data type
  */
-public final class PlayerDataCacheListener<V> implements Listener {
+public final class PlayerDataCacheListener<V> implements Listener, AutoCloseable {
     private final PlayerDataCache<V> cache;
     private final CacheSettings settings;
     private final Logger logger;
@@ -49,9 +50,10 @@ public final class PlayerDataCacheListener<V> implements Listener {
             return;
         }
 
-        cache.loadAsync(playerId).exceptionally(error -> {
-            logger.log(Level.SEVERE, error, () -> "Could not load player cache entry for " + playerId);
-            return null;
+        cache.getOrLoadAsync(playerId).whenComplete((_, error) -> {
+            if (error != null) {
+                logger.log(Level.SEVERE, error, () -> "Could not load player cache entry for " + playerId);
+            }
         });
     }
 
@@ -65,12 +67,16 @@ public final class PlayerDataCacheListener<V> implements Listener {
             return;
         }
 
-        cache.saveAsync(playerId).whenComplete((_, error) -> {
-            if (error != null) {
-                logger.log(Level.SEVERE, error, () -> "Could not save player cache entry for " + playerId);
-            }
-            unloadIfNeeded(playerId, generation);
-        });
+        try {
+            cache.saveAsync(playerId).whenComplete((_, error) -> {
+                if (error != null) {
+                    logger.log(Level.SEVERE, error, () -> "Could not save player cache entry for " + playerId);
+                }
+                unloadIfNeeded(playerId, generation);
+            });
+        } catch (RuntimeException closed) {
+            logger.log(Level.FINE, closed, () -> "Skipping player cache save after close for " + playerId);
+        }
     }
 
     private void unloadIfNeeded(UUID playerId, long generation) {
@@ -78,9 +84,19 @@ public final class PlayerDataCacheListener<V> implements Listener {
             return;
         }
         if (settings.unloadOnQuit()) {
-            cache.unload(playerId);
+            try {
+                cache.unload(playerId);
+            } catch (RuntimeException closed) {
+                logger.log(Level.FINE, closed, () -> "Skipping player cache unload after close for " + playerId);
+            }
         }
         generations.remove(playerId);
+    }
+
+    @Override
+    public void close() {
+        HandlerList.unregisterAll(this);
+        generations.clear();
     }
 
     private void bumpGeneration(UUID playerId) {

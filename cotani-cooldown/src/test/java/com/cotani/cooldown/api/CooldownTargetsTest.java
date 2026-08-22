@@ -1,9 +1,6 @@
 package com.cotani.cooldown.api;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -63,9 +60,9 @@ class CooldownTargetsTest {
     void shouldDistinguishTargetKinds() {
         var userId = UUID.randomUUID();
 
-        assertTrue(CooldownTargets.user(userId) instanceof UserCooldownTarget);
-        assertTrue(CooldownTargets.global() instanceof GlobalCooldownTarget);
-        assertTrue(CooldownTargets.resource("spawn") instanceof ResourceCooldownTarget);
+        assertInstanceOf(UserCooldownTarget.class, CooldownTargets.user(userId));
+        assertInstanceOf(GlobalCooldownTarget.class, CooldownTargets.global());
+        assertInstanceOf(ResourceCooldownTarget.class, CooldownTargets.resource("spawn"));
         assertNotEquals(CooldownTargets.user(userId), CooldownTargets.global());
         assertNotEquals(CooldownTargets.resource("spawn"), CooldownTargets.global());
     }

@@ -106,9 +106,16 @@ public final class DefaultEventBus implements EventBus {
         Objects.requireNonNull(priority, "priority cannot be null");
         Objects.requireNonNull(listener, "listener cannot be null");
 
+        java.util.concurrent.atomic.AtomicReference<EventSubscription> ref =
+                new java.util.concurrent.atomic.AtomicReference<>();
         EventSubscription subscription =
-                DefaultEventSubscription.create(eventType, priority, ignoreCancelled, listener);
-
+                DefaultEventSubscription.create(eventType, priority, ignoreCancelled, listener, () -> {
+                    var sub = ref.get();
+                    if (sub != null) {
+                        registry.unregister(sub);
+                    }
+                });
+        ref.set(subscription);
         registry.register(subscription);
 
         return subscription;

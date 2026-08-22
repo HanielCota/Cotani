@@ -128,7 +128,37 @@ public final class QueryExecutor {
             return CompletableFuture.failedFuture(new IllegalStateException("Nested transactions are not supported."));
         }
 
-        return supplyAsync(this::beginTransaction).thenCompose(state -> executeTransactionOperation(state, operation));
+        try {
+            var result = new CompletableFuture<T>();
+            var _ = CompletableFuture.supplyAsync(this::beginTransaction, executor)
+                    .whenComplete((state, error) -> {
+                        if (error != null) {
+                            result.completeExceptionally(error);
+                            return;
+                        }
+                        if (result.isCancelled()) {
+                            finishTransaction(
+                                    state,
+                                    new java.util.concurrent.CancellationException(
+                                            "Transaction cancelled before execution"));
+                            return;
+                        }
+                        try {
+                            executeTransactionOperation(state, operation).whenComplete((opResult, opError) -> {
+                                if (opError != null) {
+                                    result.completeExceptionally(opError);
+                                } else {
+                                    result.complete(opResult);
+                                }
+                            });
+                        } catch (Throwable failure) {
+                            result.completeExceptionally(failure);
+                        }
+                    });
+            return result;
+        } catch (RuntimeException schedulingFailure) {
+            return CompletableFuture.failedFuture(schedulingFailure);
+        }
     }
 
     private CompletionStage<Void> runAsync(Runnable operation) {
@@ -326,7 +356,7 @@ public final class QueryExecutor {
             connection.setAutoCommit(false);
 
             return new TransactionState(connection, previousAutoCommit);
-        } catch (SQLException exception) {
+        } catch (Throwable exception) {
             if (connection != null) {
                 try {
                     connection.close();
@@ -334,7 +364,13 @@ public final class QueryExecutor {
                     exception.addSuppressed(closeFailure);
                 }
             }
-            throw new StorageException(new QueryError("Could not acquire connection for transaction.", exception));
+            if (exception instanceof SQLException sqlEx) {
+                throw new StorageException(new QueryError("Could not acquire connection for transaction.", sqlEx));
+            }
+            if (exception instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new RuntimeException(exception);
         }
     }
 

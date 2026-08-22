@@ -13,10 +13,15 @@ import com.cotani.economy.internal.repository.EconomyTransferRepository;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.task.util.VoidResult;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,12 +29,19 @@ import java.util.logging.Logger;
 @InternalApi
 public final class DefaultEconomyService implements EconomyService {
     private static final Logger LOGGER = Logger.getLogger(DefaultEconomyService.class.getName());
+    private static final String FAILED_PUBLISH_MSG = "Failed to publish economy transaction event";
+    private static final int MAX_PUBLISHED_OPERATIONS_CACHE = 50_000;
+    private static final Duration PUBLISHED_OPERATIONS_EXPIRY = Duration.ofMinutes(15);
 
     private final EconomySettings settings;
     private final EconomyGuard guard;
     private final EconomyAccountRepository accountRepository;
     private final EconomyTransferRepository transferRepository;
     private final EconomyEventPublisher eventPublisher;
+    private final Cache<EconomyOperationId, Boolean> publishedOperations = Caffeine.newBuilder()
+            .maximumSize(MAX_PUBLISHED_OPERATIONS_CACHE)
+            .expireAfterWrite(PUBLISHED_OPERATIONS_EXPIRY)
+            .build();
 
     private DefaultEconomyService(
             EconomySettings settings,
@@ -60,10 +72,13 @@ public final class DefaultEconomyService implements EconomyService {
 
     @Override
     public CompletionStage<EconomyBalance> balance(UUID userId, CurrencyId currencyId) {
-        guard.validateUserId(userId);
-        guard.validateCurrencyId(currencyId);
-
-        return accountRepository.getOrCreate(userId, currencyId).thenApply(EconomyBalance::from);
+        return runGuarded(
+                () -> {
+                    guard.validateUserId(userId);
+                    guard.validateCurrencyId(currencyId);
+                    return userId;
+                },
+                ignored -> accountRepository.getOrCreate(userId, currencyId).thenApply(EconomyBalance::from));
     }
 
     @Override
@@ -73,12 +88,14 @@ public final class DefaultEconomyService implements EconomyService {
 
     @Override
     public CompletionStage<Boolean> has(UUID userId, CurrencyId currencyId, BigDecimal amount) {
-        guard.validateUserId(userId);
-        guard.validateCurrencyId(currencyId);
-
-        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
-
-        return balance(userId, currencyId).thenApply(balance -> balance.amount().compareTo(normalizedAmount) >= 0);
+        return runGuarded(
+                () -> {
+                    guard.validateUserId(userId);
+                    guard.validateCurrencyId(currencyId);
+                    return guard.normalizeAmount(currencyId, amount);
+                },
+                normalizedAmount -> balance(userId, currencyId)
+                        .thenApply(balance -> balance.amount().compareTo(normalizedAmount) >= 0));
     }
 
     @Override
@@ -88,16 +105,17 @@ public final class DefaultEconomyService implements EconomyService {
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        guard.validateUserId(userId);
-        guard.validateCurrencyId(currencyId);
-        guard.validateReason(reason);
-        guard.validateOperationId(operationId);
-
-        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
-
-        return accountRepository
-                .deposit(userId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+        return runGuarded(
+                () -> {
+                    guard.validateUserId(userId);
+                    guard.validateCurrencyId(currencyId);
+                    guard.validateReason(reason);
+                    guard.validateOperationId(operationId);
+                    return guard.normalizeAmount(currencyId, amount);
+                },
+                normalizedAmount -> accountRepository
+                        .deposit(userId, currencyId, normalizedAmount, reason, operationId)
+                        .thenCompose(this::publishAndReturn));
     }
 
     @Override
@@ -113,16 +131,17 @@ public final class DefaultEconomyService implements EconomyService {
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        guard.validateUserId(userId);
-        guard.validateCurrencyId(currencyId);
-        guard.validateReason(reason);
-        guard.validateOperationId(operationId);
-
-        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
-
-        return accountRepository
-                .withdraw(userId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+        return runGuarded(
+                () -> {
+                    guard.validateUserId(userId);
+                    guard.validateCurrencyId(currencyId);
+                    guard.validateReason(reason);
+                    guard.validateOperationId(operationId);
+                    return guard.normalizeAmount(currencyId, amount);
+                },
+                normalizedAmount -> accountRepository
+                        .withdraw(userId, currencyId, normalizedAmount, reason, operationId)
+                        .thenCompose(this::publishAndReturn));
     }
 
     @Override
@@ -138,17 +157,18 @@ public final class DefaultEconomyService implements EconomyService {
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        guard.validateUserId(userId);
-        guard.validateCurrencyId(currencyId);
-        guard.validateReason(reason);
-        guard.validateOperationId(operationId);
-        guard.validateBalanceAmount(currencyId, amount);
-
-        var normalizedAmount = amount.setScale(settings.decimalPlaces(currencyId), RoundingMode.UNNECESSARY);
-
-        return accountRepository
-                .set(userId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+        return runGuarded(
+                () -> {
+                    guard.validateUserId(userId);
+                    guard.validateCurrencyId(currencyId);
+                    guard.validateReason(reason);
+                    guard.validateOperationId(operationId);
+                    guard.validateBalanceAmount(currencyId, amount);
+                    return amount.setScale(settings.decimalPlaces(currencyId), RoundingMode.UNNECESSARY);
+                },
+                normalizedAmount -> accountRepository
+                        .set(userId, currencyId, normalizedAmount, reason, operationId)
+                        .thenCompose(this::publishAndReturn));
     }
 
     @Override
@@ -165,16 +185,17 @@ public final class DefaultEconomyService implements EconomyService {
             BigDecimal amount,
             EconomyReason reason,
             EconomyOperationId operationId) {
-        guard.validateTransfer(sourceUserId, targetUserId, currencyId, amount);
-        guard.validateCurrencyId(currencyId);
-        guard.validateReason(reason);
-        guard.validateOperationId(operationId);
-
-        var normalizedAmount = guard.normalizeAmount(currencyId, amount);
-
-        return transferRepository
-                .transfer(sourceUserId, targetUserId, currencyId, normalizedAmount, reason, operationId)
-                .thenApply(this::publishAndReturn);
+        return runGuarded(
+                () -> {
+                    guard.validateTransfer(sourceUserId, targetUserId, currencyId, amount);
+                    guard.validateCurrencyId(currencyId);
+                    guard.validateReason(reason);
+                    guard.validateOperationId(operationId);
+                    return guard.normalizeAmount(currencyId, amount);
+                },
+                normalizedAmount -> transferRepository
+                        .transfer(sourceUserId, targetUserId, currencyId, normalizedAmount, reason, operationId)
+                        .thenCompose(this::publishAndReturn));
     }
 
     @Override
@@ -187,12 +208,30 @@ public final class DefaultEconomyService implements EconomyService {
         return transfer(sourceUserId, targetUserId, settings.defaultCurrency().id(), amount, reason, operationId);
     }
 
-    private EconomyTransaction publishAndReturn(EconomyTransaction transaction) {
-        try {
-            eventPublisher.publish(new EconomyTransactionEvent(transaction));
-        } catch (RuntimeException exception) {
-            LOGGER.log(Level.WARNING, "Failed to publish economy transaction event", exception);
+    private CompletionStage<EconomyTransaction> publishAndReturn(EconomyTransaction transaction) {
+        if (publishedOperations.asMap().putIfAbsent(transaction.operationId(), Boolean.TRUE) != null) {
+            return CompletableFuture.completedFuture(transaction);
         }
-        return transaction;
+        try {
+            return eventPublisher
+                    .publishAsync(new EconomyTransactionEvent(transaction))
+                    .exceptionally(error -> {
+                        LOGGER.log(Level.WARNING, FAILED_PUBLISH_MSG, error);
+                        return VoidResult.nullValue();
+                    })
+                    .thenApply(_ -> transaction);
+        } catch (RuntimeException exception) {
+            LOGGER.log(Level.WARNING, FAILED_PUBLISH_MSG, exception);
+            return CompletableFuture.completedFuture(transaction);
+        }
+    }
+
+    private <I, O> CompletionStage<O> runGuarded(
+            java.util.function.Supplier<I> validation, java.util.function.Function<I, CompletionStage<O>> action) {
+        try {
+            return action.apply(validation.get());
+        } catch (RuntimeException exception) {
+            return CompletableFuture.failedFuture(exception);
+        }
     }
 }

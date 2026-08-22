@@ -1,7 +1,6 @@
 package com.cotani.economy.transaction;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,7 @@ class EconomyTransactionTypeTest {
     @Test
     void shouldRoundTripByName() {
         for (var type : EconomyTransactionType.values()) {
-            assertTrue(Enum.valueOf(EconomyTransactionType.class, type.name()) == type);
+            assertSame(Enum.valueOf(EconomyTransactionType.class, type.name()), type);
         }
     }
 }

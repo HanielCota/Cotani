@@ -63,16 +63,19 @@ public final class SkullTextureResolver implements AutoCloseable {
         Objects.requireNonNull(base64, "Parameter 'base64' must not be null");
 
         requireBoundedInput(base64, "base64", MAX_BASE64_LENGTH);
+        byte[] decoded;
         try {
-            Base64.getDecoder().decode(base64);
+            decoded = Base64.getDecoder().decode(base64);
         } catch (IllegalArgumentException failure) {
             throw new IllegalArgumentException("Parameter 'base64' must be valid Base64", failure);
         }
+        requireTrustedSkinUrl(new String(decoded, StandardCharsets.UTF_8));
 
-        if (profileCache == null) {
-            return buildProfile(base64);
+        if (profileCache != null) {
+            return profileCache.get(base64, SkullTextureResolver::buildProfile);
         }
-        return profileCache.get(base64, SkullTextureResolver::buildProfile);
+
+        return buildProfile(base64);
     }
 
     /**
@@ -86,10 +89,11 @@ public final class SkullTextureResolver implements AutoCloseable {
 
         var normalizedUrl = normalizeTextureUrl(textureUrl);
 
-        if (profileCache == null) {
-            return createProfile(normalizedUrl);
+        if (profileCache != null) {
+            return profileCache.get(normalizedUrl, SkullTextureResolver::createProfile);
         }
-        return profileCache.get(normalizedUrl, SkullTextureResolver::createProfile);
+
+        return createProfile(normalizedUrl);
     }
 
     public PlayerProfile fromUrl(URI textureUri) {
@@ -126,6 +130,21 @@ public final class SkullTextureResolver implements AutoCloseable {
         profile.setProperty(new ProfileProperty(TEXTURES_PROPERTY, base64));
 
         return profile;
+    }
+
+    private static void requireTrustedSkinUrl(String jsonPayload) {
+        var marker = "\"url\"";
+        int urlKey = jsonPayload.indexOf(marker);
+        if (urlKey < 0) {
+            throw new IllegalArgumentException("Parameter 'base64' must contain a textures.minecraft.net skin URL");
+        }
+        int colon = jsonPayload.indexOf(':', urlKey + marker.length());
+        int quoteStart = jsonPayload.indexOf('"', colon + 1);
+        int quoteEnd = quoteStart >= 0 ? jsonPayload.indexOf('"', quoteStart + 1) : -1;
+        if (quoteStart < 0 || quoteEnd < 0) {
+            throw new IllegalArgumentException("Parameter 'base64' must contain a textures.minecraft.net skin URL");
+        }
+        normalizeTextureUrl(jsonPayload.substring(quoteStart + 1, quoteEnd));
     }
 
     private static String toBase64Payload(String normalizedUrl) {

@@ -121,6 +121,7 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | [`cotani-config`](cotani-config/README.md) | Mapeamento de YAML para records imutáveis com validação de restrições e reload async | `1.0.0` |
 | [`cotani-storage`](cotani-storage/README.md) | Consultas SQLite, MySQL e MariaDB, migrações de schema e transações | `1.0.0` |
 | [`cotani-cache`](cotani-cache/README.md) | Caches baseados em Caffeine com dirty-tracking automático e persistência | `1.0.0` |
+| [`cotani-redis`](cotani-redis/README.md) | Cliente Redis não-bloqueante, mensageria pub/sub, locks distribuídos e sync | `1.1.0-SNAPSHOT` |
 
 ### 🎮 Sistemas de Gameplay & Domínio
 
@@ -133,6 +134,10 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | [`cotani-event`](cotani-event/README.md) | Event Bus de alta performance e livre de reflexão com despacho por prioridades | `1.0.0` |
 | [`cotani-gui`](cotani-gui/README.md) | Interfaces declarativas de inventário com estado reativo, paginação e proteção contra exploits | `1.1.0-SNAPSHOT` |
 | [`cotani-display`](cotani-display/README.md) | Motor moderno de Display Entities para hologramas de texto, itens e blocos | `1.1.0-SNAPSHOT` |
+| [`cotani-command`](cotani-command/README.md) | Framework declarativo de comandos com argumentos assíncronos, cooldowns e segurança para Folia | `1.1.0-SNAPSHOT` |
+| [`cotani-hud`](cotani-hud/README.md) | Scoreboards reativas zero-flicker, tablist dinâmico, bossbars e actionbars | `1.1.0-SNAPSHOT` |
+| [`cotani-nametag`](cotani-nametag/README.md) | Formatação de nametags via Scoreboard Teams, prioridade de ordenação no tablist e regras de colisão | `1.1.0-SNAPSHOT` |
+| [`cotani-dialog`](cotani-dialog/README.md) | Diálogos reativos não-bloqueantes de chat, placa e bigorna com wizards | `1.1.0-SNAPSHOT` |
 
 ### 📊 Operações & Ferramentas
 

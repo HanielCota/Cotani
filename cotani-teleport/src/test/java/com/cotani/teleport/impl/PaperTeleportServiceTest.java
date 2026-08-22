@@ -225,8 +225,9 @@ class PaperTeleportServiceTest {
                 .toCompletableFuture()
                 .join();
 
-        assertTrue(
-                result instanceof TeleportResult.Success,
+        assertInstanceOf(
+                TeleportResult.Success.class,
+                result,
                 "expected success but got: "
                         + (result instanceof TeleportResult.Failure failure
                                 ? failure.reason() + " cause=" + failure.cause()
@@ -253,7 +254,7 @@ class PaperTeleportServiceTest {
                 .toCompletableFuture()
                 .join();
 
-        assertTrue(result instanceof TeleportResult.Success);
+        assertInstanceOf(TeleportResult.Success.class, result);
         verify(player).teleportAsync(any(Location.class));
         verify(player, never()).teleport(any(Location.class));
     }
@@ -360,8 +361,7 @@ class PaperTeleportServiceTest {
         verify(scheduler, times(3)).supply(captor.capture(), anyString(), any(Supplier.class));
         var targets = captor.getAllValues();
         assertTrue(targets.stream()
-                .allMatch(t -> t instanceof ExecutionTarget.EntityTarget entity
-                        && entity.entityId().equals(PLAYER_ID)));
+                .allMatch(t -> t instanceof ExecutionTarget.EntityTarget(UUID entityId) && entityId.equals(PLAYER_ID)));
     }
 
     @Test
@@ -394,8 +394,7 @@ class PaperTeleportServiceTest {
         verify(scheduler, atLeast(3)).supply(captor.capture(), anyString(), any(Supplier.class));
         var targets = captor.getAllValues();
         assertTrue(targets.stream()
-                .allMatch(t -> t instanceof ExecutionTarget.EntityTarget entity
-                        && entity.entityId().equals(PLAYER_ID)));
+                .allMatch(t -> t instanceof ExecutionTarget.EntityTarget(UUID entityId) && entityId.equals(PLAYER_ID)));
     }
 
     @Test
@@ -518,7 +517,7 @@ class PaperTeleportServiceTest {
                 .toCompletableFuture()
                 .join();
 
-        assertTrue(result instanceof TeleportResult.Success);
+        assertInstanceOf(TeleportResult.Success.class, result);
         var captor = ArgumentCaptor.forClass(Location.class);
         verify(player).teleport(captor.capture());
         assertEquals(resolved, captor.getValue());
@@ -559,7 +558,7 @@ class PaperTeleportServiceTest {
         assertInstanceOf(TeleportResult.Success.class, result);
         verify(safeLocationResolver).resolve(eq(requested), any(SafeLocationOptions.class));
         verify(safeLocationResolver).resolve(eq(eventTarget), any(SafeLocationOptions.class));
-        verify(policyChain, times(2)).validate(any(TeleportContext.class));
+        verify(policyChain, times(3)).validate(any(TeleportContext.class));
         verify(player).teleport(finalResolved);
     }
 
@@ -627,6 +626,29 @@ class PaperTeleportServiceTest {
                 .join();
 
         verify(player).setVelocity(new Vector(1, 2, 3));
+    }
+
+    @Test
+    void velocityAndFallDistanceAreResetWhenNotPreserved() {
+        var service = newService();
+        var world = mockWorld();
+        var from = location(world, 0, 64, 0);
+        var player = mockPlayer(PLAYER_ID, from);
+        var target = location(world, 10, 64, 10);
+        when(playerResolver.resolve(PLAYER_ID)).thenReturn(player);
+        when(policyChain.validate(any(TeleportContext.class))).thenReturn(PolicyResult.allowed());
+        var preEvent = new CotaniPreTeleportEvent(player, from, target, TeleportCause.PLUGIN_INTERNAL, "test");
+        when(eventNotifier.firePreTeleportSync(
+                        eq(player), any(Location.class), eq(target), eq(TeleportCause.PLUGIN_INTERNAL), eq("test")))
+                .thenReturn(preEvent);
+        when(player.teleport(any(Location.class))).thenReturn(true);
+
+        service.teleport(request(player, target, adminSyncOptions()))
+                .toCompletableFuture()
+                .join();
+
+        verify(player).setVelocity(new Vector(0, 0, 0));
+        verify(player).setFallDistance(0.0f);
     }
 
     @Test

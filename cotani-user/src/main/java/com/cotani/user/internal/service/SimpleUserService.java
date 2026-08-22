@@ -2,6 +2,7 @@ package com.cotani.user.internal.service;
 
 import com.cotani.api.InternalApi;
 import com.cotani.task.util.CompletionStages;
+import com.cotani.task.util.VoidResult;
 import com.cotani.user.api.CotaniUser;
 import com.cotani.user.api.UserNotLoadedException;
 import com.cotani.user.internal.cache.UserCache;
@@ -29,6 +30,7 @@ public final class SimpleUserService implements InternalUserService {
     private final ConcurrentMap<UUID, CompletableFuture<SimpleCotaniUser>> loadingUsers = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, UUID> activeSessions = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, WriteLane> writeLanes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, AtomicLong> playerGenerations = new ConcurrentHashMap<>();
     private final AtomicLong cacheGeneration = new AtomicLong();
 
     public SimpleUserService(UserCache cache, UserRepository repository) {
@@ -121,6 +123,7 @@ public final class SimpleUserService implements InternalUserService {
                     user.withUsername(username).withLastJoinAt(now).withNewSessionId();
             activeSessions.put(uniqueId, updated.sessionId());
             cache.put(updated);
+            cache.pin(uniqueId);
 
             return CompletableFuture.completedStage(updated);
         }
@@ -133,7 +136,8 @@ public final class SimpleUserService implements InternalUserService {
         }
 
         long now = System.currentTimeMillis();
-        long generationAtStart = cacheGeneration.get();
+        long generationAtStart = playerGeneration(uniqueId).get();
+        long cacheGenerationAtStart = cacheGeneration.get();
         var _ = repository
                 .find(uniqueId, username)
                 .toCompletableFuture()
@@ -144,9 +148,11 @@ public final class SimpleUserService implements InternalUserService {
                             optionalUser.orElseGet(() -> SimpleCotaniUser.createNew(uniqueId, username, now));
                     SimpleCotaniUser updated =
                             loaded.withUsername(username).withLastJoinAt(now).withNewSessionId();
-                    activeSessions.put(uniqueId, updated.sessionId());
-                    if (cacheGeneration.get() == generationAtStart) {
+                    if (cacheGeneration.get() == cacheGenerationAtStart
+                            && playerGeneration(uniqueId).get() == generationAtStart) {
+                        activeSessions.put(uniqueId, updated.sessionId());
                         cache.put(updated);
+                        cache.pin(uniqueId);
                     }
                     return updated;
                 })
@@ -166,6 +172,9 @@ public final class SimpleUserService implements InternalUserService {
     @Override
     public CompletionStage<Void> unload(UUID uniqueId) {
         Objects.requireNonNull(uniqueId, UNIQUE_ID_PARAM);
+
+        playerGeneration(uniqueId).incrementAndGet();
+        cache.unpin(uniqueId);
 
         UUID sessionId = activeSessions.remove(uniqueId);
         if (sessionId == null) {
@@ -230,13 +239,25 @@ public final class SimpleUserService implements InternalUserService {
             return CompletionStages.completedVoid();
         }
 
-        return repository.saveAll(updatedUsers);
+        CompletionStage<Void> all = CompletionStages.completedVoid();
+        for (SimpleCotaniUser user : updatedUsers) {
+            var persisted = persistSequentially(user.uniqueId(), () -> repository.save(user));
+            all = all.thenCombine(persisted, (first, second) -> VoidResult.nullValue());
+        }
+        return all;
     }
 
     public void clearCache() {
         cacheGeneration.incrementAndGet();
+        for (AtomicLong generation : playerGenerations.values()) {
+            generation.incrementAndGet();
+        }
         activeSessions.clear();
         cache.clear();
+    }
+
+    private AtomicLong playerGeneration(UUID uniqueId) {
+        return playerGenerations.computeIfAbsent(uniqueId, _ -> new AtomicLong());
     }
 
     private CompletionStage<Void> persistSequentially(UUID uniqueId, Supplier<CompletionStage<Void>> persistence) {
@@ -261,11 +282,11 @@ public final class SimpleUserService implements InternalUserService {
     }
 
     private static final class WriteLane {
-        private CompletableFuture<Void> tail = CompletableFuture.completedFuture(null);
+        private CompletableFuture<Void> tail = CompletionStages.completedVoid().toCompletableFuture();
         private long sequence;
 
         synchronized WriteTicket enqueue(Supplier<CompletionStage<Void>> persistence) {
-            tail = tail.handle((_, _) -> null)
+            tail = tail.handle((_, _) -> VoidResult.nullValue())
                     .thenCompose(_ -> {
                         try {
                             return Objects.requireNonNull(persistence.get(), "repository persistence returned null");

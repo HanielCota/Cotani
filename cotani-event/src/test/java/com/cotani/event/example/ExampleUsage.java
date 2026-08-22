@@ -10,7 +10,7 @@ public final class ExampleUsage {
         throw new UnsupportedOperationException("utility class");
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         EventBus eventBus = DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), Runnable::run);
 
         eventBus.subscribe(UserLoadedEvent.class, event -> {

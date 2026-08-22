@@ -40,6 +40,7 @@ class DefaultEconomyServiceTest {
     private final EconomyEventPublisher eventPublisher = Mockito.mock(EconomyEventPublisher.class);
 
     private DefaultEconomyService newService() {
+        when(eventPublisher.publishAsync(any())).thenReturn(CompletableFuture.completedFuture(null));
         return DefaultEconomyService.create(
                 SETTINGS, new DefaultEconomyGuard(SETTINGS), accountRepository, transferRepository, eventPublisher);
     }
@@ -105,7 +106,7 @@ class DefaultEconomyServiceTest {
         assertEquals(transaction, result);
         verify(accountRepository).deposit(USER_ID, CURRENCY, NORMALIZED_TEN, REASON, OP_ID);
         var captor = ArgumentCaptor.forClass(EconomyTransactionEvent.class);
-        verify(eventPublisher).publish(captor.capture());
+        verify(eventPublisher).publishAsync(captor.capture());
         assertEquals(transaction, captor.getValue().transaction());
     }
 
@@ -143,14 +144,15 @@ class DefaultEconomyServiceTest {
         var transaction = sampleDeposit();
         when(accountRepository.deposit(USER_ID, CURRENCY, NORMALIZED_TEN, REASON, OP_ID))
                 .thenReturn(CompletableFuture.completedFuture(transaction));
-        doThrow(new RuntimeException("boom")).when(eventPublisher).publish(any(EconomyTransactionEvent.class));
+        when(eventPublisher.publishAsync(any(EconomyTransactionEvent.class)))
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("boom")));
 
         var result = service.deposit(USER_ID, CURRENCY, BigDecimal.TEN, REASON, OP_ID)
                 .toCompletableFuture()
                 .join();
 
         assertEquals(transaction, result);
-        verify(eventPublisher).publish(any(EconomyTransactionEvent.class));
+        verify(eventPublisher).publishAsync(any(EconomyTransactionEvent.class));
     }
 
     @Test
@@ -217,9 +219,10 @@ class DefaultEconomyServiceTest {
     void transferToSameUserThrowsSynchronousValidationError() {
         var service = newService();
 
-        assertThrows(
+        assertCause(
                 SameEconomyAccountTransferException.class,
-                () -> service.transfer(USER_ID, USER_ID, BigDecimal.TEN, REASON, OP_ID));
+                service.transfer(USER_ID, USER_ID, BigDecimal.TEN, REASON, OP_ID)
+                        .toCompletableFuture());
         verifyNoInteractions(transferRepository);
     }
 
@@ -228,12 +231,21 @@ class DefaultEconomyServiceTest {
     void nullArgumentsAreRejectedBeforeRepositoryCall() {
         var service = newService();
 
-        assertThrows(NullPointerException.class, () -> service.deposit(null, CURRENCY, BigDecimal.TEN, REASON, OP_ID));
-        assertThrows(NullPointerException.class, () -> service.deposit(USER_ID, null, BigDecimal.TEN, REASON, OP_ID));
-        assertThrows(NullPointerException.class, () -> service.deposit(USER_ID, CURRENCY, null, REASON, OP_ID));
-        assertThrows(NullPointerException.class, () -> service.deposit(USER_ID, CURRENCY, BigDecimal.TEN, null, OP_ID));
-        assertThrows(
-                NullPointerException.class, () -> service.deposit(USER_ID, CURRENCY, BigDecimal.TEN, REASON, null));
+        assertCause(
+                NullPointerException.class,
+                service.deposit(null, CURRENCY, BigDecimal.TEN, REASON, OP_ID).toCompletableFuture());
+        assertCause(
+                NullPointerException.class,
+                service.deposit(USER_ID, null, BigDecimal.TEN, REASON, OP_ID).toCompletableFuture());
+        assertCause(
+                NullPointerException.class,
+                service.deposit(USER_ID, CURRENCY, null, REASON, OP_ID).toCompletableFuture());
+        assertCause(
+                NullPointerException.class,
+                service.deposit(USER_ID, CURRENCY, BigDecimal.TEN, null, OP_ID).toCompletableFuture());
+        assertCause(
+                NullPointerException.class,
+                service.deposit(USER_ID, CURRENCY, BigDecimal.TEN, REASON, null).toCompletableFuture());
 
         verifyNoInteractions(accountRepository);
     }

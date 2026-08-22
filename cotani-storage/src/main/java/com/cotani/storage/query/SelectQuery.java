@@ -98,8 +98,7 @@ public final class SelectQuery {
             if (i > 0) {
                 builder.append(" AND ");
             }
-            var conditionClause = conditions.get(i).column() + " = ?";
-            builder.append(conditionClause);
+            builder.append(conditions.get(i).sqlClause());
         }
     }
 
@@ -121,7 +120,9 @@ public final class SelectQuery {
 
     private void bind(ParameterBinder binder) throws SQLException {
         for (var condition : conditions) {
-            binder.set(condition.value());
+            if (!condition.isNullValue()) {
+                binder.set(condition.value());
+            }
         }
     }
 }

@@ -158,7 +158,7 @@ class EconomyStorageMappersTest {
                 "reason_key", "reward",
                 "reason_source", "cotani",
                 "created_at", NOW,
-                "target_user_id", (Object) null,
+                "target_user_id", null,
                 "target_balance_before", "0.00",
                 "target_balance_after", "10.00");
 
@@ -168,7 +168,7 @@ class EconomyStorageMappersTest {
 
     @Test
     void shouldFailMappingWhenRequiredTimestampColumnIsNull() {
-        var row = rowWith("balance", "10.00", "created_at", (Object) null, "updated_at", NOW);
+        var row = rowWith("balance", "10.00", "created_at", null, "updated_at", NOW);
 
         var failure = assertThrows(
                 IllegalStateException.class, () -> EconomyStorageMappers.accountFromRow(USER_ID, CURRENCY, row));
@@ -218,13 +218,13 @@ class EconomyStorageMappersTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"23505", "23000"})
+    @ValueSource(strings = {"23505"})
     void shouldDetectUniqueViolationBySqlState(String sqlState) {
         assertTrue(EconomyStorageMappers.isUniqueViolation(new SQLException("constraint failed", sqlState)));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {1062, 19})
+    @ValueSource(ints = {1062})
     void shouldDetectUniqueViolationByErrorCode(int errorCode) {
         assertTrue(EconomyStorageMappers.isUniqueViolation(new SQLException("constraint", null, errorCode)));
     }
@@ -259,6 +259,8 @@ class EconomyStorageMappersTest {
         assertFalse(EconomyStorageMappers.isUniqueViolation(new RuntimeException(sqlFailure)));
         assertFalse(EconomyStorageMappers.isUniqueViolation(new StorageException(new QueryError("boom", sqlFailure))));
         assertFalse(EconomyStorageMappers.isUniqueViolation(new SQLException((String) null)));
+        assertFalse(EconomyStorageMappers.isUniqueViolation(new SQLException("NOT NULL constraint failed", "23000")));
+        assertFalse(EconomyStorageMappers.isUniqueViolation(new SQLException("constraint", null, 19)));
     }
 
     private static Row rowWith(Object... columnValuePairs) {

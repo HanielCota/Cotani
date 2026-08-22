@@ -3,10 +3,11 @@ package com.cotani.display.impl;
 import com.cotani.api.InternalApi;
 import com.cotani.display.api.HologramClickType;
 import com.cotani.display.api.HologramService;
-import java.util.Map;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,6 +15,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
 /**
@@ -22,10 +24,10 @@ import org.bukkit.inventory.EquipmentSlot;
 @InternalApi
 public final class DisplayInteractionListener implements Listener {
 
-    private static final long DEBOUNCE_NANOS = 100_000_000L; // 100ms
+    private static final long DEBOUNCE_NANOS = Duration.ofMillis(100).toNanos();
 
     private final HologramService hologramService;
-    private final Map<UUID, Long> lastClickNanos = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, AtomicLong> lastClickNanos = new ConcurrentHashMap<>();
 
     public DisplayInteractionListener(HologramService hologramService) {
         this.hologramService = Objects.requireNonNull(hologramService, "hologramService cannot be null");
@@ -88,13 +90,23 @@ public final class DisplayInteractionListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        lastClickNanos.remove(event.getPlayer().getUniqueId());
+    }
+
     private boolean isDebounced(UUID playerId) {
+        var lastClick = lastClickNanos.computeIfAbsent(playerId, _ -> new AtomicLong(Long.MIN_VALUE));
         long now = System.nanoTime();
-        if (lastClickNanos.size() > 500) {
-            lastClickNanos.entrySet().removeIf(entry -> (now - entry.getValue()) > 5_000_000_000L);
+        while (true) {
+            long previous = lastClick.get();
+            if (previous != Long.MIN_VALUE && now - previous < DEBOUNCE_NANOS) {
+                return true;
+            }
+            if (lastClick.compareAndSet(previous, now)) {
+                return false;
+            }
         }
-        Long previous = lastClickNanos.put(playerId, now);
-        return previous != null && (now - previous) < DEBOUNCE_NANOS;
     }
 
     public void clear() {

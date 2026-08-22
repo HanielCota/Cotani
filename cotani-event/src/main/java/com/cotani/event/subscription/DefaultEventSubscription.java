@@ -7,6 +7,7 @@ import com.cotani.event.api.EventPriority;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class DefaultEventSubscription implements EventSubscription {
@@ -15,6 +16,7 @@ public final class DefaultEventSubscription implements EventSubscription {
     private final EventPriority priority;
     private final boolean ignoreCancelled;
     private final EventListener<? extends CotaniEvent> listener;
+    private final @Nullable Runnable onUnsubscribe;
     private final AtomicBoolean active;
 
     public DefaultEventSubscription(
@@ -22,7 +24,7 @@ public final class DefaultEventSubscription implements EventSubscription {
             Class<? extends CotaniEvent> eventType,
             EventPriority priority,
             EventListener<? extends CotaniEvent> listener) {
-        this(id, eventType, priority, false, listener);
+        this(id, eventType, priority, false, listener, null);
     }
 
     public DefaultEventSubscription(
@@ -31,11 +33,22 @@ public final class DefaultEventSubscription implements EventSubscription {
             EventPriority priority,
             boolean ignoreCancelled,
             EventListener<? extends CotaniEvent> listener) {
+        this(id, eventType, priority, ignoreCancelled, listener, null);
+    }
+
+    public DefaultEventSubscription(
+            UUID id,
+            Class<? extends CotaniEvent> eventType,
+            EventPriority priority,
+            boolean ignoreCancelled,
+            EventListener<? extends CotaniEvent> listener,
+            @Nullable Runnable onUnsubscribe) {
         this.id = Objects.requireNonNull(id, "id cannot be null");
         this.eventType = Objects.requireNonNull(eventType, "eventType cannot be null");
         this.priority = Objects.requireNonNull(priority, "priority cannot be null");
         this.ignoreCancelled = ignoreCancelled;
         this.listener = Objects.requireNonNull(listener, "listener cannot be null");
+        this.onUnsubscribe = onUnsubscribe;
         this.active = new AtomicBoolean(true);
     }
 
@@ -43,7 +56,7 @@ public final class DefaultEventSubscription implements EventSubscription {
             Class<? extends CotaniEvent> eventType,
             EventPriority priority,
             EventListener<? extends CotaniEvent> listener) {
-        return create(eventType, priority, false, listener);
+        return create(eventType, priority, false, listener, null);
     }
 
     public static DefaultEventSubscription create(
@@ -51,7 +64,17 @@ public final class DefaultEventSubscription implements EventSubscription {
             EventPriority priority,
             boolean ignoreCancelled,
             EventListener<? extends CotaniEvent> listener) {
-        return new DefaultEventSubscription(UUID.randomUUID(), eventType, priority, ignoreCancelled, listener);
+        return new DefaultEventSubscription(UUID.randomUUID(), eventType, priority, ignoreCancelled, listener, null);
+    }
+
+    public static DefaultEventSubscription create(
+            Class<? extends CotaniEvent> eventType,
+            EventPriority priority,
+            boolean ignoreCancelled,
+            EventListener<? extends CotaniEvent> listener,
+            @Nullable Runnable onUnsubscribe) {
+        return new DefaultEventSubscription(
+                UUID.randomUUID(), eventType, priority, ignoreCancelled, listener, onUnsubscribe);
     }
 
     @Override
@@ -86,6 +109,8 @@ public final class DefaultEventSubscription implements EventSubscription {
 
     @Override
     public void unsubscribe() {
-        active.set(false);
+        if (active.compareAndSet(true, false) && onUnsubscribe != null) {
+            onUnsubscribe.run();
+        }
     }
 }

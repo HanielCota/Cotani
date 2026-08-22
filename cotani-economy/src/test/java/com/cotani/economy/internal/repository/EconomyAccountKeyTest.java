@@ -1,9 +1,6 @@
 package com.cotani.economy.internal.repository;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.economy.currency.CurrencyId;
 import java.util.UUID;
@@ -63,6 +60,6 @@ class EconomyAccountKeyTest {
         map.put(key, "value");
 
         assertEquals("value", map.get(new EconomyAccountKey(USER_ID, COINS)));
-        assertTrue(map.get(new EconomyAccountKey(USER_ID, GEMS)) == null);
+        assertNull(map.get(new EconomyAccountKey(USER_ID, GEMS)));
     }
 }

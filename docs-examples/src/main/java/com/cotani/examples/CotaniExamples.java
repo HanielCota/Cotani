@@ -11,6 +11,7 @@ import com.cotani.event.bus.DefaultEventBus;
 import com.cotani.event.exception.LoggingEventExceptionHandler;
 import com.cotani.metrics.CotaniMetrics;
 import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.task.util.VoidResult;
 import com.cotani.teleport.api.TeleportRequest;
 import com.cotani.teleport.api.TeleportResult;
 import com.cotani.teleport.api.TeleportService;
@@ -65,6 +66,10 @@ public final class CotaniExamples {
                     }
                 })
                 .toCompletionStage()
-                .thenApply(_ -> null);
+                .thenApply(_ -> VoidResult.nullValue());
+    }
+
+    public static com.cotani.command.CotaniCommands commands(Plugin plugin, PaperTaskScheduler scheduler) {
+        return com.cotani.command.CotaniCommands.create(plugin, scheduler);
     }
 }

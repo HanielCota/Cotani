@@ -1,10 +1,6 @@
 package com.cotani.user.internal.repository;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -307,6 +303,6 @@ class StorageUserRepositoryTest {
                 .orElseThrow();
 
         assertNotNull(firstLoad.sessionId());
-        assertTrue(!firstLoad.sessionId().equals(secondLoad.sessionId()));
+        assertFalse(firstLoad.sessionId().equals(secondLoad.sessionId()));
     }
 }
