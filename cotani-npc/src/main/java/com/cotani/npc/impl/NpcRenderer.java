@@ -16,11 +16,14 @@ import org.bukkit.entity.Player;
 @InternalApi
 public final class NpcRenderer {
 
+    private static final String VIEWER_NULL_MSG = "Parameter 'viewer' must not be null";
+    private static final String NPC_NULL_MSG = "Parameter 'npc' must not be null";
+
     // Tracks which NPCs are currently rendered/spawned for each online viewer
     private final Map<UUID, Set<UUID>> viewerVisibleNpcs = new ConcurrentHashMap<>();
 
     public boolean isVisibleTo(Player viewer, UUID npcId) {
-        Objects.requireNonNull(viewer, "Parameter 'viewer' must not be null");
+        Objects.requireNonNull(viewer, VIEWER_NULL_MSG);
         Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
 
         var set = viewerVisibleNpcs.get(viewer.getUniqueId());
@@ -28,8 +31,8 @@ public final class NpcRenderer {
     }
 
     public void renderSpawn(Player viewer, Npc npc) {
-        Objects.requireNonNull(viewer, "Parameter 'viewer' must not be null");
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(viewer, VIEWER_NULL_MSG);
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
 
         if (!viewer.isOnline()) {
             return;
@@ -46,8 +49,8 @@ public final class NpcRenderer {
     }
 
     public void renderDespawn(Player viewer, Npc npc) {
-        Objects.requireNonNull(viewer, "Parameter 'viewer' must not be null");
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(viewer, VIEWER_NULL_MSG);
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
 
         var visibleSet = viewerVisibleNpcs.get(viewer.getUniqueId());
         if (visibleSet != null && visibleSet.remove(npc.id())) {
@@ -56,8 +59,8 @@ public final class NpcRenderer {
     }
 
     public void renderRotation(Player viewer, Npc npc, float yaw, float pitch) {
-        Objects.requireNonNull(viewer, "Parameter 'viewer' must not be null");
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(viewer, VIEWER_NULL_MSG);
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
 
         if (!isVisibleTo(viewer, npc.id()) || !viewer.isOnline()) {
             return;
@@ -67,8 +70,8 @@ public final class NpcRenderer {
     }
 
     public void renderEquipment(Player viewer, Npc npc) {
-        Objects.requireNonNull(viewer, "Parameter 'viewer' must not be null");
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(viewer, VIEWER_NULL_MSG);
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
 
         if (!isVisibleTo(viewer, npc.id()) || !viewer.isOnline()) {
             return;
@@ -83,7 +86,7 @@ public final class NpcRenderer {
     }
 
     public void clearAllForViewer(Player viewer, Collection<Npc> npcs) {
-        Objects.requireNonNull(viewer, "Parameter 'viewer' must not be null");
+        Objects.requireNonNull(viewer, VIEWER_NULL_MSG);
         Objects.requireNonNull(npcs, "Parameter 'npcs' must not be null");
 
         for (var npc : npcs) {

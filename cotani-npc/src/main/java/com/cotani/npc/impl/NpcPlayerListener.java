@@ -44,12 +44,20 @@ public final class NpcPlayerListener implements Listener {
             return;
         }
 
-        var npcs = module.registry().all();
+        var eyeLoc = player.getEyeLocation();
+        var world = eyeLoc.getWorld();
+        if (world == null) {
+            return;
+        }
+
+        var cx = eyeLoc.getBlockX() >> 4;
+        var cz = eyeLoc.getBlockZ() >> 4;
+        var worldId = world.getUID() != null ? world.getUID() : new java.util.UUID(0L, 0L);
+        var npcs = module.spatialIndex().getNearby(worldId, cx, cz, 1);
         if (npcs.isEmpty()) {
             return;
         }
 
-        var eyeLoc = player.getEyeLocation();
         var eyeDir = eyeLoc.getDirection().normalize();
 
         Npc targetNpc = null;

@@ -5,6 +5,7 @@ import com.cotani.npc.api.Npc;
 import com.cotani.npc.api.NpcEquipment;
 import com.cotani.npc.api.NpcModule;
 import com.cotani.npc.api.NpcSkin;
+import com.cotani.npc.api.NpcSkinFetcher;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import java.time.Duration;
@@ -30,10 +31,15 @@ import org.bukkit.plugin.Plugin;
 @InternalApi
 public final class DefaultNpcModule implements NpcModule {
 
+    private static final String NPC_NULL_MSG = "Parameter 'npc' must not be null";
+    private static final String NPC_ID_NULL_MSG = "Parameter 'npcId' must not be null";
+
     private final PaperTaskScheduler scheduler;
     private final NpcRegistry registry;
+    private final NpcSpatialIndex spatialIndex;
     private final NpcRenderer renderer;
     private final NpcTracker tracker;
+    private final NpcSkinFetcher skinFetcher;
     private final NpcPlayerListener listener;
     private final SchedulerTask trackingTask;
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -42,8 +48,10 @@ public final class DefaultNpcModule implements NpcModule {
         Objects.requireNonNull(plugin, "Parameter 'plugin' must not be null");
         this.scheduler = Objects.requireNonNull(scheduler, "Parameter 'scheduler' must not be null");
         this.registry = new NpcRegistry();
+        this.spatialIndex = new NpcSpatialIndex();
         this.renderer = new NpcRenderer();
         this.tracker = new NpcTracker(renderer);
+        this.skinFetcher = new DefaultNpcSkinFetcher();
 
         this.listener = new NpcPlayerListener(this);
         var server = plugin.getServer();
@@ -57,6 +65,15 @@ public final class DefaultNpcModule implements NpcModule {
 
     NpcRegistry registry() {
         return registry;
+    }
+
+    NpcSpatialIndex spatialIndex() {
+        return spatialIndex;
+    }
+
+    @Override
+    public NpcSkinFetcher skins() {
+        return skinFetcher;
     }
 
     @Override
@@ -82,28 +99,30 @@ public final class DefaultNpcModule implements NpcModule {
 
     @Override
     public void spawn(Npc npc) {
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
         if (closed.get()) {
             return;
         }
 
         registry.register(npc);
+        spatialIndex.add(npc);
         refresh(npc);
     }
 
     @Override
     public void despawn(Npc npc) {
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
         despawn(npc.id());
     }
 
     @Override
     public void despawn(UUID npcId) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         if (closed.get()) {
             return;
         }
 
+        spatialIndex.remove(npcId);
         var optNpc = registry.unregister(npcId);
         if (optNpc.isEmpty()) {
             return;
@@ -130,7 +149,7 @@ public final class DefaultNpcModule implements NpcModule {
 
     @Override
     public Optional<Npc> findNpc(UUID npcId) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         return registry.find(npcId);
     }
 
@@ -141,7 +160,7 @@ public final class DefaultNpcModule implements NpcModule {
 
     @Override
     public void updateLocation(UUID npcId, Location newLocation) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         Objects.requireNonNull(newLocation, "Parameter 'newLocation' must not be null");
 
         if (closed.get()) {
@@ -152,13 +171,14 @@ public final class DefaultNpcModule implements NpcModule {
         if (optNpc.isPresent()) {
             var updated = optNpc.get().toBuilder().location(newLocation).build();
             registry.update(updated);
+            spatialIndex.update(updated);
             refresh(updated);
         }
     }
 
     @Override
     public void updateSkin(UUID npcId, NpcSkin skin) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         Objects.requireNonNull(skin, "Parameter 'skin' must not be null");
 
         if (closed.get()) {
@@ -175,7 +195,7 @@ public final class DefaultNpcModule implements NpcModule {
 
     @Override
     public void updateEquipment(UUID npcId, NpcEquipment equipment) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         Objects.requireNonNull(equipment, "Parameter 'equipment' must not be null");
 
         if (closed.get()) {
@@ -206,7 +226,7 @@ public final class DefaultNpcModule implements NpcModule {
 
     @Override
     public void refresh(Npc npc) {
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
         if (closed.get()) {
             return;
         }
@@ -270,11 +290,6 @@ public final class DefaultNpcModule implements NpcModule {
             return;
         }
 
-        var npcs = List.copyOf(registry.all());
-        if (npcs.isEmpty()) {
-            return;
-        }
-
         var server = Bukkit.getServer();
         if (server == null) {
             return;
@@ -288,7 +303,18 @@ public final class DefaultNpcModule implements NpcModule {
                 }
                 var currentViewer = Bukkit.getPlayer(viewerId);
                 if (currentViewer != null && currentViewer.isOnline()) {
-                    tracker.trackViewer(currentViewer, npcs);
+                    var loc = currentViewer.getLocation();
+                    if (loc == null) {
+                        return;
+                    }
+                    var world = loc.getWorld();
+                    if (world != null) {
+                        var worldId = world.getUID() != null ? world.getUID() : new UUID(0L, 0L);
+                        var cx = loc.getBlockX() >> 4;
+                        var cz = loc.getBlockZ() >> 4;
+                        var nearbyNpcs = spatialIndex.getNearby(worldId, cx, cz, 4);
+                        tracker.trackViewer(currentViewer, nearbyNpcs);
+                    }
                 }
             });
         }
@@ -305,6 +331,7 @@ public final class DefaultNpcModule implements NpcModule {
 
         var npcs = List.copyOf(registry.all());
         registry.clear();
+        spatialIndex.clear();
 
         var server = Bukkit.getServer();
         if (server == null || server.getOnlinePlayers().isEmpty() || npcs.isEmpty()) {

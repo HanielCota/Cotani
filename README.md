@@ -135,6 +135,7 @@ Declare only the modules required for your feature set; transitive dependencies 
 | [`cotani-hud`](cotani-hud/README.md) | Reactive zero-flicker scoreboards, dynamic tablist, bossbars, and actionbars | `1.1.0-SNAPSHOT` |
 | [`cotani-nametag`](cotani-nametag/README.md) | Scoreboard team-driven nametag formatting, tablist sorting priority, and collision rules | `1.1.0-SNAPSHOT` |
 | [`cotani-npc`](cotani-npc/README.md) | Virtual packet-based player NPCs with dynamic look-at, skins, equipment, and click raycasting | `1.1.0-SNAPSHOT` |
+| [`cotani-region`](cotani-region/README.md) | 3D spatial regions, chunk grid indexer, protection flags, and transition events | `1.1.0-SNAPSHOT` |
 | [`cotani-dialog`](cotani-dialog/README.md) | Non-blocking reactive chat, sign, and anvil input prompts and multi-step wizards | `1.1.0-SNAPSHOT` |
 
 ### 📊 Operations & Tooling

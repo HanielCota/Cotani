@@ -555,6 +555,31 @@ var questNpc = npcs.create(builder -> builder
 
 ---
 
+## 21. 3D Spawn & Protection Region (`cotani-region`)
+
+Register a protected spawn area with PvP disabled, block interaction guards, and dynamic entry/exit greetings:
+
+```java
+var regionModule = CotaniRegions.create(plugin, scheduler);
+
+var spawnRegion = Region3D.builder("spawn-hub", world.getUID())
+    .name("<gold><bold>Spawn Hub</bold></gold>")
+    .bounds(pos1, pos2)
+    .priority(100)
+    .flag(RegionFlag.PVP, false)
+    .flag(RegionFlag.BLOCK_BREAK, false)
+    .flag(RegionFlag.BLOCK_PLACE, false)
+    .flag(RegionFlag.USE_CONTAINERS, true)
+    .flag(RegionFlag.ITEM_DROP, true)
+    .greeting("<green>Welcome to Spawn!</green>")
+    .farewell("<red>You left the safe zone!</red>")
+    .build();
+
+regionModule.registerRegion(spawnRegion);
+```
+
+---
+
 ## Checklist for every recipe
 
 - [ ] No `join()`, `get()` or `Thread.sleep(...)` in application code.

@@ -101,6 +101,13 @@ public interface NpcModule extends AutoCloseable, AsyncCloseable {
      */
     void refreshAll();
 
+    /**
+     * Returns the skin fetcher service for resolving Mojang textures asynchronously.
+     *
+     * @return the NpcSkinFetcher instance
+     */
+    NpcSkinFetcher skins();
+
     @Override
     void close();
 }

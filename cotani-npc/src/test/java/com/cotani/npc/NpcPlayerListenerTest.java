@@ -56,6 +56,7 @@ class NpcPlayerListenerTest {
         module = new DefaultNpcModule(plugin, scheduler);
         listener = new NpcPlayerListener(module);
         world = mock(World.class);
+        when(world.getUID()).thenReturn(java.util.UUID.randomUUID());
     }
 
     @Test

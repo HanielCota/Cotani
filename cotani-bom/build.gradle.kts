@@ -18,6 +18,7 @@ dependencies {
         api(project(":nametag"))
         api(project(":npc"))
         api(project(":redis"))
+        api(project(":region"))
         api(project(":storage"))
         api(project(":task"))
         api(project(":teleport"))

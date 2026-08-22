@@ -27,6 +27,7 @@ flowchart LR
     hud["hud"]
     nametag["nametag"]
     npc["npc"]
+    region["region"]
     dialog["dialog"]
     metrics["metrics"]
 
@@ -85,6 +86,9 @@ flowchart LR
     npc --> core
     npc --> task
     npc --> text
+    region --> core
+    region --> task
+    region --> text
     dialog --> core
     dialog --> task
     dialog --> text
@@ -101,7 +105,7 @@ flowchart LR
 | Lifecycle | `core` | Own and close resources without acting as a service locator |
 | Execution and presentation | `task`, `text`, `item` | Thread transitions, messages and item construction |
 | Infrastructure | `config`, `storage`, `cache`, `redis` | Configuration, persistence, caching, and distributed synchronization |
-| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display`, `command`, `hud`, `nametag`, `npc`, `dialog` | Reusable plugin use cases, NPCs, HUD, nametags, and reactive user interfaces |
+| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display`, `command`, `hud`, `nametag`, `npc`, `region`, `dialog` | Reusable plugin use cases, NPCs, 3D regions & protection, HUD, nametags, and reactive user interfaces |
 | Operations | `metrics` | Runtime measurements and optional Prometheus export |
 
 ## Runtime execution boundary

@@ -382,6 +382,13 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 - Use `npcModule.updateLocation(...)` and `npcModule.updateEquipment(...)` to mutate NPCs without ticking server entities.
 - Handle click interactions (`NpcInteractEvent`) non-blockingly without heavy I/O in the callback.
 
+### cotani-region
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniRegions.create(plugin, scheduler))`.
+- Construct immutable regions with `Region3D.builder(id, worldId)` and register via `regionModule.registerRegion(region)`.
+- Use `isFlagAllowed(location, flag, defaultVal)` for fast hierarchical priority evaluation.
+- Handle `RegionEnterEvent` and `RegionLeaveEvent` safely across Paper main thread and Folia region threads.
+
 ## Anti-patterns by module
 
 | Module | Do not | Do instead |

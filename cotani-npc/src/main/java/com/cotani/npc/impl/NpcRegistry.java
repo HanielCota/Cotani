@@ -16,20 +16,23 @@ import java.util.concurrent.ConcurrentHashMap;
 @InternalApi
 public final class NpcRegistry {
 
+    private static final String NPC_NULL_MSG = "Parameter 'npc' must not be null";
+    private static final String NPC_ID_NULL_MSG = "Parameter 'npcId' must not be null";
+
     private final Map<UUID, Npc> npcs = new ConcurrentHashMap<>();
 
     public void register(Npc npc) {
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
         npcs.put(npc.id(), npc);
     }
 
     public Optional<Npc> unregister(UUID npcId) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         return Optional.ofNullable(npcs.remove(npcId));
     }
 
     public Optional<Npc> find(UUID npcId) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         return Optional.ofNullable(npcs.get(npcId));
     }
 
@@ -38,12 +41,12 @@ public final class NpcRegistry {
     }
 
     public boolean contains(UUID npcId) {
-        Objects.requireNonNull(npcId, "Parameter 'npcId' must not be null");
+        Objects.requireNonNull(npcId, NPC_ID_NULL_MSG);
         return npcs.containsKey(npcId);
     }
 
     public void update(Npc npc) {
-        Objects.requireNonNull(npc, "Parameter 'npc' must not be null");
+        Objects.requireNonNull(npc, NPC_NULL_MSG);
         npcs.put(npc.id(), npc);
     }
 
