@@ -27,10 +27,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class DefaultRedisRpcChannel<Q, R> implements RedisRpcChannel<Q, R> {
+
+    private static final Logger LOGGER = Logger.getLogger(DefaultRedisRpcChannel.class.getName());
 
     private final RedisCodec<Q> requestCodec;
     private final RedisCodec<R> responseCodec;
@@ -253,12 +257,10 @@ public final class DefaultRedisRpcChannel<Q, R> implements RedisRpcChannel<Q, R>
 
     @Override
     public void close() {
-        try {
-            closeAsync().toCompletableFuture().get(10, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } catch (Exception _) {
-            // Best effort close
-        }
+        closeAsync().whenComplete((_, failure) -> {
+            if (failure != null) {
+                LOGGER.log(Level.SEVERE, "Failed to close Redis RPC channel: " + inboxChannelId, failure);
+            }
+        });
     }
 }

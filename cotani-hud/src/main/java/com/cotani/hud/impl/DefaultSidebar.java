@@ -46,6 +46,8 @@ public final class DefaultSidebar implements Sidebar {
             Map<Integer, Supplier<Component>> initialLines,
             @Nullable Consumer<UUID> onDestroy) {
         Objects.requireNonNull(player, "Parameter 'player' must not be null");
+        Objects.requireNonNull(scheduler, "Parameter 'scheduler' must not be null");
+        Objects.requireNonNull(initialLines, "Parameter 'initialLines' must not be null");
         this.playerId = player.getUniqueId();
         this.renderer = new ScoreboardRenderer(playerId, scheduler);
         this.titleSupplier =

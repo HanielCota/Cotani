@@ -21,7 +21,7 @@ public final class ExistsQuery {
         this.executor = executor;
     }
 
-    public ExistsQuery where(String column, Object value) {
+    public ExistsQuery where(String column, @Nullable Object value) {
         conditions.add(new Condition(Identifiers.requireValid(column, "Where column"), value));
         cachedSql = null;
         return this;

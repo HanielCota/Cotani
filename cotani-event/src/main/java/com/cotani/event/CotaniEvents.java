@@ -30,6 +30,8 @@ public final class CotaniEvents {
     /**
      * Creates an {@link EventBus} instance with a custom async executor.
      *
+     * <p>The executor remains owned by the caller and is never shut down by the returned bus.
+     *
      * @param plugin owning plugin
      * @param asyncExecutor async execution thread pool
      * @return event bus instance

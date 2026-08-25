@@ -162,7 +162,7 @@ class CaffeineDataCacheBehaviorTest {
         when(repository.save(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
         DataCache<String, String> cache = createCache();
         cache.put("key", "value");
-        cache.close();
+        cache.closeAsync().toCompletableFuture().join();
 
         assertThrows(IllegalStateException.class, () -> cache.get("key"));
         assertThrows(IllegalStateException.class, () -> cache.find("key"));

@@ -25,6 +25,7 @@ import org.bukkit.plugin.Plugin;
 public final class PaperPlatformScheduler implements PlatformScheduler, AutoCloseable {
     private final Plugin plugin;
     private final VirtualThreadExecutor virtualThreadExecutor;
+    private final Set<SchedulerTask> ownedTasks = ConcurrentHashMap.newKeySet();
     private final Set<SchedulerTask> ownedLookupTasks = ConcurrentHashMap.newKeySet();
 
     private PaperPlatformScheduler(Plugin plugin, VirtualThreadExecutor virtualThreadExecutor) {
@@ -38,33 +39,33 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
 
     @Override
     public SchedulerTask runAsync(TaskMetadata metadata, Runnable runnable) {
-        return new FutureSchedulerTask(virtualThreadExecutor.submit(metadata, runnable));
+        return track(new FutureSchedulerTask(virtualThreadExecutor.submit(metadata, runnable)));
     }
 
     @Override
     public SchedulerTask runAsyncLater(TaskMetadata metadata, Runnable runnable, Duration delay) {
-        return new FutureSchedulerTask(virtualThreadExecutor.schedule(metadata, runnable, delay.toMillis()));
+        return track(new FutureSchedulerTask(virtualThreadExecutor.schedule(metadata, runnable, delay.toMillis())));
     }
 
     @Override
     public SchedulerTask runAsyncTimer(
             TaskMetadata metadata, Runnable runnable, Duration initialDelay, Duration period) {
-        return new FutureSchedulerTask(virtualThreadExecutor.scheduleAtFixedRate(
-                metadata, runnable, initialDelay.toMillis(), period.toMillis()));
+        return track(new FutureSchedulerTask(virtualThreadExecutor.scheduleAtFixedRate(
+                metadata, runnable, initialDelay.toMillis(), period.toMillis())));
     }
 
     @Override
     public SchedulerTask runGlobal(TaskMetadata metadata, Runnable runnable) {
         var task = Bukkit.getGlobalRegionScheduler().run(plugin, ignored -> runnable.run());
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
     public SchedulerTask runGlobalLater(TaskMetadata metadata, Runnable runnable, Duration delay) {
         var task = Bukkit.getGlobalRegionScheduler().runDelayed(plugin, ignored -> runnable.run(), Ticks.from(delay));
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
@@ -73,14 +74,14 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var task = Bukkit.getGlobalRegionScheduler()
                 .runAtFixedRate(plugin, ignored -> runnable.run(), Ticks.from(initialDelay), Ticks.from(period));
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
     public SchedulerTask runRegion(TaskMetadata metadata, Location location, Runnable runnable) {
         var task = Bukkit.getRegionScheduler().run(plugin, location, ignored -> runnable.run());
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
@@ -88,7 +89,7 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var task =
                 Bukkit.getRegionScheduler().runDelayed(plugin, location, ignored -> runnable.run(), Ticks.from(delay));
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
@@ -98,7 +99,7 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
                 .runAtFixedRate(
                         plugin, location, ignored -> runnable.run(), Ticks.from(initialDelay), Ticks.from(period));
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
@@ -106,10 +107,10 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var task = entity.getScheduler().run(plugin, ignored -> runnable.run(), retired);
 
         if (task == null) {
-            return SchedulerTask.noop();
+            return track(SchedulerTask.noop());
         }
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
@@ -118,10 +119,10 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
         var task = entity.getScheduler().runDelayed(plugin, ignored -> runnable.run(), retired, Ticks.from(delay));
 
         if (task == null) {
-            return SchedulerTask.noop();
+            return track(SchedulerTask.noop());
         }
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
@@ -137,10 +138,10 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
                         plugin, ignored -> runnable.run(), retired, Ticks.from(initialDelay), Ticks.from(period));
 
         if (task == null) {
-            return SchedulerTask.noop();
+            return track(SchedulerTask.noop());
         }
 
-        return new PaperSchedulerTask(task);
+        return track(new PaperSchedulerTask(task));
     }
 
     @Override
@@ -206,40 +207,57 @@ public final class PaperPlatformScheduler implements PlatformScheduler, AutoClos
 
     @Override
     public void cancelOwnedTasks() {
+        ownedTasks.forEach(SchedulerTask::cancel);
+        ownedTasks.clear();
         ownedLookupTasks.forEach(SchedulerTask::cancel);
         ownedLookupTasks.clear();
         Bukkit.getAsyncScheduler().cancelTasks(plugin);
         Bukkit.getGlobalRegionScheduler().cancelTasks(plugin);
     }
 
+    private SchedulerTask track(SchedulerTask task) {
+        ownedTasks.add(Objects.requireNonNull(task, "task"));
+        return task;
+    }
+
     private SchedulerTask scheduleAfterWorldLookup(
             TaskMetadata metadata, UUID worldId, Function<World, SchedulerTask> factory) {
         var lazy = new LazySchedulerTask();
+        track(lazy);
+        ownedLookupTasks.add(lazy);
+        lazy.setupResult().whenComplete((_, _) -> ownedLookupTasks.remove(lazy));
         var setup = runGlobal(metadata, () -> {
             var world = Bukkit.getWorld(worldId);
             if (world == null) {
+                lazy.failSetup(new IllegalStateException("World not found: " + worldId));
                 return;
             }
-            lazy.setDelegate(factory.apply(world));
+            var task = factory.apply(world);
+            lazy.setDelegate(task);
+            lazy.completeSetup(task);
         });
         lazy.setSetupTask(setup);
-        ownedLookupTasks.add(lazy);
         return lazy;
     }
 
     private SchedulerTask scheduleAfterEntityLookup(
             TaskMetadata metadata, UUID entityId, Runnable retired, Function<Entity, SchedulerTask> factory) {
         var lazy = new LazySchedulerTask();
+        track(lazy);
+        ownedLookupTasks.add(lazy);
+        lazy.setupResult().whenComplete((_, _) -> ownedLookupTasks.remove(lazy));
         var setup = runGlobal(metadata, () -> {
             var entity = Bukkit.getEntity(entityId);
             if (entity == null) {
                 retired.run();
+                lazy.failSetup(new IllegalStateException("Entity not found: " + entityId));
                 return;
             }
-            lazy.setDelegate(factory.apply(entity));
+            var task = factory.apply(entity);
+            lazy.setDelegate(task);
+            lazy.completeSetup(task);
         });
         lazy.setSetupTask(setup);
-        ownedLookupTasks.add(lazy);
         return lazy;
     }
 

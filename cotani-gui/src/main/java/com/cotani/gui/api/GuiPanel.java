@@ -143,6 +143,8 @@ public final class GuiPanel implements InventoryHolder {
      * @param context the click snapshot
      */
     public void handleClick(ClickContext context) {
+        Objects.requireNonNull(context, "Parameter 'context' must not be null");
+
         if (disposed.get()) {
             return;
         }
@@ -225,6 +227,7 @@ public final class GuiPanel implements InventoryHolder {
     }
 
     void bindSlot(int slot, Button button) {
+        Objects.requireNonNull(button, "Parameter 'button' must not be null");
         buttons.put(slot, button);
     }
 
@@ -238,6 +241,7 @@ public final class GuiPanel implements InventoryHolder {
     }
 
     void setDynamicSlot(int slot, Button button) {
+        Objects.requireNonNull(button, "Parameter 'button' must not be null");
         dynamicSlots.add(slot);
         buttons.put(slot, button);
 

@@ -62,6 +62,11 @@ public final class DefaultDisplayModule implements DisplayModule {
 
     @Override
     public void close() {
-        var _ = closeAsync();
+        closeAsync().whenComplete((_, error) -> {
+            if (error != null) {
+                java.util.logging.Logger.getLogger(DefaultDisplayModule.class.getName())
+                        .log(java.util.logging.Level.SEVERE, "Failed to close display module", error);
+            }
+        });
     }
 }

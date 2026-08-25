@@ -65,13 +65,11 @@ public final class DefaultCommandDispatcher {
         }
 
         var cooldownRemaining =
-                currentNode.cooldown().check(sender, currentNode.name()).orElse(null);
+                currentNode.cooldown().tryAcquire(sender, currentNode.name()).orElse(null);
         if (cooldownRemaining != null) {
             sender.sendMessage(feedback.formatCooldownActive(cooldownRemaining));
             return;
         }
-
-        currentNode.cooldown().apply(sender, currentNode.name());
 
         var context = new DefaultCommandContext(sender, parsedValues, rawArgs, alias, scheduler);
         executeNode(currentNode, currentNode.executionTarget(), context, sender);
@@ -242,7 +240,7 @@ public final class DefaultCommandDispatcher {
             argIndex++;
         }
 
-        var currentToken = rawArgs.get(rawArgs.size() - 1);
+        var currentToken = rawArgs.getLast();
         var currentTokenLower = currentToken.toLowerCase(Locale.ROOT);
         var suggestions = new java.util.LinkedHashSet<String>();
 
@@ -272,8 +270,9 @@ public final class DefaultCommandDispatcher {
     private void handleExecutionFailure(CommandSender sender, CommandNode node, Throwable failure) {
         var cause = failure instanceof CompletionException && failure.getCause() != null ? failure.getCause() : failure;
 
-        if (cause instanceof CommandExecutionException cmdEx && cmdEx.userMessage() != null) {
-            sender.sendMessage(cmdEx.userMessage());
+        if (cause instanceof CommandExecutionException cmdEx
+                && cmdEx.userMessage().isPresent()) {
+            sender.sendMessage(cmdEx.userMessage().get());
             return;
         }
 

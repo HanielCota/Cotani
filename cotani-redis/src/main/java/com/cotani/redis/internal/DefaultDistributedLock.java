@@ -10,13 +10,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
-import org.bukkit.Bukkit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Default implementation of {@link DistributedLock} with monotonic nanoTime expiry checking.
  */
 @InternalApi
 public final class DefaultDistributedLock implements DistributedLock {
+
+    private static final Logger LOGGER = Logger.getLogger(DefaultDistributedLock.class.getName());
 
     private final LockKey key;
     private final LockToken token;
@@ -67,21 +70,10 @@ public final class DefaultDistributedLock implements DistributedLock {
 
     @Override
     public void close() {
-        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
-            throw new IllegalStateException(
-                    "DistributedLock.close() must not be called from the server main thread. Use releaseAsync() instead.");
-        }
-        try {
-            releaseAsync().toCompletableFuture().get(10, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while releasing distributed lock", e);
-        } catch (Exception e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            if (cause instanceof RuntimeException re) {
-                throw re;
+        releaseAsync().whenComplete((_, failure) -> {
+            if (failure != null) {
+                LOGGER.log(Level.SEVERE, "Failed to release distributed lock: " + key, failure);
             }
-            throw new IllegalStateException("Failed to release distributed lock", cause);
-        }
+        });
     }
 }

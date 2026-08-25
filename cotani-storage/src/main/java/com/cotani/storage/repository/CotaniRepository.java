@@ -10,7 +10,7 @@ public abstract class CotaniRepository {
     private final CotaniStorage storage;
 
     protected CotaniRepository(CotaniStorage storage) {
-        this.storage = storage;
+        this.storage = java.util.Objects.requireNonNull(storage, "storage");
     }
 
     protected TableQuery table(String name) {

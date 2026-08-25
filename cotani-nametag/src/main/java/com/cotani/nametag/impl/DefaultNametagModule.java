@@ -374,7 +374,7 @@ public final class DefaultNametagModule implements NametagModule {
         var quittingId = quittingPlayer.getUniqueId();
         var quittingName = quittingPlayer.getName();
 
-        registry.removeViewer(quittingId);
+        registry.removeAll(quittingId);
 
         var server = Bukkit.getServer();
         if (server != null) {
@@ -499,6 +499,11 @@ public final class DefaultNametagModule implements NametagModule {
 
     @Override
     public void close() {
-        closeAsync();
+        closeAsync().whenComplete((_, error) -> {
+            if (error != null) {
+                java.util.logging.Logger.getLogger(DefaultNametagModule.class.getName())
+                        .log(java.util.logging.Level.SEVERE, "Failed to close nametag module", error);
+            }
+        });
     }
 }

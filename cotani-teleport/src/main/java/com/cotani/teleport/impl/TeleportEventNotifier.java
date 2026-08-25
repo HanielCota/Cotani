@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class TeleportEventNotifier {
@@ -34,7 +35,7 @@ public final class TeleportEventNotifier {
         this.playerResolver = Objects.requireNonNull(playerResolver, "playerResolver");
     }
 
-    public CompletionStage<CotaniPreTeleportEvent> firePreTeleport(
+    public CompletionStage<@Nullable CotaniPreTeleportEvent> firePreTeleport(
             UUID playerId, Location from, Location resolvedTarget, TeleportCause cause, String source) {
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(from, "from");

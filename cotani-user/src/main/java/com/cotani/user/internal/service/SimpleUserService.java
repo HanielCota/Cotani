@@ -195,7 +195,12 @@ public final class SimpleUserService implements InternalUserService {
         }
 
         return persistSequentially(uniqueId, () -> repository.save(quitting.get()))
-                .thenRun(() -> cache.remove(uniqueId, finalSessionId));
+                .thenRun(() -> {
+                    cache.remove(uniqueId, finalSessionId);
+                    if (!loadingUsers.containsKey(uniqueId) && !activeSessions.containsKey(uniqueId)) {
+                        playerGenerations.remove(uniqueId);
+                    }
+                });
     }
 
     @Override

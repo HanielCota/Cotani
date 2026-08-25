@@ -30,6 +30,30 @@ public interface CooldownEvaluator {
     void apply(CommandSender sender, String commandName);
 
     /**
+     * Atomically checks and applies the cooldown for one command execution.
+     * Implementations backed by a distributed store should override this method with their
+     * store's atomic operation.
+     *
+     * @param sender the command sender
+     * @param commandName the canonical command name
+     * @return remaining duration when denied, or empty when acquired
+     */
+    default Optional<Duration> tryAcquire(CommandSender sender, String commandName) {
+        Objects.requireNonNull(sender, "Parameter 'sender' must not be null");
+        Objects.requireNonNull(commandName, "Parameter 'commandName' must not be null");
+
+        synchronized (this) {
+            var remaining = check(sender, commandName);
+            if (remaining.isPresent()) {
+                return remaining;
+            }
+
+            apply(sender, commandName);
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Returns a no-op cooldown evaluator (no cooldown enforced).
      *
      * @return no-op evaluator
@@ -71,12 +95,14 @@ final class ServiceCooldownEvaluator implements CooldownEvaluator {
     private final Duration duration;
 
     ServiceCooldownEvaluator(com.cotani.cooldown.api.CooldownService cooldownService, Duration duration) {
-        this.cooldownService = cooldownService;
-        this.duration = duration;
+        this.cooldownService = Objects.requireNonNull(cooldownService, "cooldownService");
+        this.duration = Objects.requireNonNull(duration, "duration");
     }
 
     @Override
     public Optional<Duration> check(CommandSender sender, String commandName) {
+        Objects.requireNonNull(sender, "Parameter 'sender' must not be null");
+        Objects.requireNonNull(commandName, "Parameter 'commandName' must not be null");
         String action = "cmd:" + commandName.toLowerCase(java.util.Locale.ROOT);
         if (sender instanceof Player player) {
             return cooldownService.user(player.getUniqueId()).action(action).remaining();
@@ -99,6 +125,23 @@ final class ServiceCooldownEvaluator implements CooldownEvaluator {
         }
         var _ = cooldownService.global().action(action).duration(duration).start();
     }
+
+    @Override
+    public Optional<Duration> tryAcquire(CommandSender sender, String commandName) {
+        Objects.requireNonNull(sender, "Parameter 'sender' must not be null");
+        Objects.requireNonNull(commandName, "Parameter 'commandName' must not be null");
+        String action = "cmd:" + commandName.toLowerCase(java.util.Locale.ROOT);
+
+        var result = sender instanceof Player player
+                ? cooldownService
+                        .user(player.getUniqueId())
+                        .action(action)
+                        .duration(duration)
+                        .checkAndStart()
+                : cooldownService.global().action(action).duration(duration).checkAndStart();
+
+        return result.denied() ? Optional.of(result.remaining()) : Optional.empty();
+    }
 }
 
 final class NoopCooldownEvaluator implements CooldownEvaluator {
@@ -118,13 +161,21 @@ final class NoopCooldownEvaluator implements CooldownEvaluator {
 final class InMemoryDurationCooldownEvaluator implements CooldownEvaluator {
     private final Duration duration;
     private final Map<String, Long> expiryNanos = new ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicLong lastCleanupNanos =
+            new java.util.concurrent.atomic.AtomicLong();
+    private static final long CLEANUP_INTERVAL_NANOS =
+            java.time.Duration.ofMinutes(1).toNanos();
 
     InMemoryDurationCooldownEvaluator(Duration duration) {
-        this.duration = duration;
+        this.duration = Objects.requireNonNull(duration, "duration");
     }
 
     @Override
     public Optional<Duration> check(CommandSender sender, String commandName) {
+        Objects.requireNonNull(sender, "Parameter 'sender' must not be null");
+        Objects.requireNonNull(commandName, "Parameter 'commandName' must not be null");
+        cleanupExpiredIfNeeded();
+
         var key = resolveKey(sender, commandName);
         var expiry = expiryNanos.get(key);
         if (expiry == null) {
@@ -143,9 +194,22 @@ final class InMemoryDurationCooldownEvaluator implements CooldownEvaluator {
 
     @Override
     public void apply(CommandSender sender, String commandName) {
+        Objects.requireNonNull(sender, "Parameter 'sender' must not be null");
+        Objects.requireNonNull(commandName, "Parameter 'commandName' must not be null");
+        cleanupExpiredIfNeeded();
+
         var key = resolveKey(sender, commandName);
         var expiry = System.nanoTime() + duration.toNanos();
         expiryNanos.put(key, expiry);
+    }
+
+    private void cleanupExpiredIfNeeded() {
+        var now = System.nanoTime();
+        var last = lastCleanupNanos.get();
+        if ((now - last > CLEANUP_INTERVAL_NANOS || expiryNanos.size() > 5_000)
+                && lastCleanupNanos.compareAndSet(last, now)) {
+            expiryNanos.entrySet().removeIf(entry -> entry.getValue() - now <= 0);
+        }
     }
 
     private static String resolveKey(CommandSender sender, String commandName) {

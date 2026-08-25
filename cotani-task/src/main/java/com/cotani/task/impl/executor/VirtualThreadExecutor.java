@@ -142,6 +142,9 @@ public final class VirtualThreadExecutor implements AutoCloseable {
             return Objects.requireNonNull(closeFuture.get(), "closeFuture");
         }
 
+        taskExecutor.shutdown();
+        delayedExecutor.shutdown();
+
         Thread.ofPlatform().daemon(true).name(THREAD_NAME + "shutdown").start(() -> {
             try {
                 shutdownExecutors();
@@ -156,12 +159,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
 
     @Override
     public void close() {
-        shutdownExecutors();
-        var existing = closeFuture.get();
-
-        if (existing != null) {
-            existing.complete(null);
-        }
+        closeAsync();
     }
 
     private void shutdownExecutors() {

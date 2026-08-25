@@ -38,7 +38,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
@@ -233,10 +232,12 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
     }
 
     public TableQuery table(String table) {
+        Objects.requireNonNull(table, "table");
         return new TableQuery(table, executor, dialect);
     }
 
     public <T extends CotaniRepository> T repository(Class<T> type) {
+        Objects.requireNonNull(type, "type");
         return Optional.ofNullable(repositories.get(type))
                 .map(type::cast)
                 .orElseThrow(() -> new IllegalStateException("Repository is not registered: " + type.getName()));
@@ -244,24 +245,11 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
 
     @Override
     public void close() {
-        if (Bukkit.isPrimaryThread()) {
-            throw new IllegalStateException("CotaniStorage.close() blocks; call closeAsync() off the main thread.");
-        }
-
-        synchronized (lifecycleLock) {
-            if (state == LifecycleState.CLOSED) {
-                return;
+        closeAsync().whenComplete((_, failure) -> {
+            if (failure != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to close Cotani storage", failure);
             }
-
-            state = LifecycleState.CLOSING;
-        }
-        try {
-            closeResources();
-            completeClose(null);
-        } catch (RuntimeException failure) {
-            completeClose(failure);
-            throw failure;
-        }
+        });
     }
 
     @Override

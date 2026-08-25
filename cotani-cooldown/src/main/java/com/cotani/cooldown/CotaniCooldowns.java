@@ -37,6 +37,15 @@ public final class CotaniCooldowns {
         return DefaultCooldownService.cacheBacked(playerCache);
     }
 
+    public static com.cotani.cooldown.api.TokenBucket tokenBucket(long capacity, double refillRatePerSecond) {
+        return com.cotani.cooldown.api.TokenBucket.of(capacity, refillRatePerSecond);
+    }
+
+    public static <K> com.cotani.cooldown.api.TokenBucketRateLimiter<K> tokenBucketRateLimiter(
+            long capacity, double refillRatePerSecond) {
+        return com.cotani.cooldown.api.TokenBucketRateLimiter.create(capacity, refillRatePerSecond);
+    }
+
     /** Migrations required by {@link #distributed}. Register them before starting storage. */
     public static List<Migration> migrations() {
         return List.of(new CreateCooldownsTableMigration(), new AddCooldownLeaseTokenMigration());

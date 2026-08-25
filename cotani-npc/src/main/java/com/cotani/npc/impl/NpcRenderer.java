@@ -2,6 +2,7 @@ package com.cotani.npc.impl;
 
 import com.cotani.api.InternalApi;
 import com.cotani.npc.api.Npc;
+import com.cotani.npc.api.NpcPacketAdapter;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -19,8 +20,17 @@ public final class NpcRenderer {
     private static final String VIEWER_NULL_MSG = "Parameter 'viewer' must not be null";
     private static final String NPC_NULL_MSG = "Parameter 'npc' must not be null";
 
+    private final NpcPacketAdapter packetAdapter;
     // Tracks which NPCs are currently rendered/spawned for each online viewer
     private final Map<UUID, Set<UUID>> viewerVisibleNpcs = new ConcurrentHashMap<>();
+
+    public NpcRenderer() {
+        this(NpcPacketAdapter.noop());
+    }
+
+    public NpcRenderer(NpcPacketAdapter packetAdapter) {
+        this.packetAdapter = Objects.requireNonNull(packetAdapter, "packetAdapter");
+    }
 
     public boolean isVisibleTo(Player viewer, UUID npcId) {
         Objects.requireNonNull(viewer, VIEWER_NULL_MSG);
@@ -95,23 +105,19 @@ public final class NpcRenderer {
         viewerVisibleNpcs.remove(viewer.getUniqueId());
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void sendSpawnPackets(Player viewer, Npc npc) {
-        // Dispatches virtual player spawn packets
+        packetAdapter.sendSpawn(viewer, npc);
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void sendDespawnPackets(Player viewer, Npc npc) {
-        // Dispatches entity destroy packets
+        packetAdapter.sendDespawn(viewer, npc);
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void sendRotationPackets(Player viewer, Npc npc, float yaw, float pitch) {
-        // Dispatches entity look/head rotation packets
+        packetAdapter.sendRotation(viewer, npc, yaw, pitch);
     }
 
-    @SuppressWarnings("UnusedVariable")
     private void sendEquipmentPackets(Player viewer, Npc npc) {
-        // Dispatches equipment slot packets
+        packetAdapter.sendEquipment(viewer, npc);
     }
 }

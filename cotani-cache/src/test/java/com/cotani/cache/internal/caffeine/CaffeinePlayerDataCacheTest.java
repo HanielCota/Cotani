@@ -262,7 +262,7 @@ class CaffeinePlayerDataCacheTest {
     }
 
     @Test
-    void closeIsSynchronous() {
+    void closeAsyncPersistsDirtyEntries() {
         when(repository.find(any(UUID.class))).thenReturn(CompletableFuture.completedFuture(Optional.of("value")));
         when(repository.save(any(UUID.class), anyString())).thenReturn(CompletableFuture.completedFuture(null));
 
@@ -272,7 +272,7 @@ class CaffeinePlayerDataCacheTest {
         cache.getOrLoadAsync(id).toCompletableFuture().join();
         cache.markDirty(id);
 
-        cache.close();
+        cache.closeAsync().toCompletableFuture().join();
 
         assertEquals(0, cache.size());
         verify(repository).save(id, "value");

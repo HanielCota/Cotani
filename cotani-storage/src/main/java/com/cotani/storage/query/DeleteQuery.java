@@ -25,7 +25,7 @@ public final class DeleteQuery {
         this.executor = executor;
     }
 
-    public DeleteQuery where(String column, Object value) {
+    public DeleteQuery where(String column, @Nullable Object value) {
         conditions.add(new Condition(Identifiers.requireValid(column, "Where column"), value));
         cachedSql = null;
         return this;

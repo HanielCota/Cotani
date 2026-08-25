@@ -16,6 +16,7 @@ public final class MiniMessages {
     private static final String INPUTS_NULL_MESSAGE = "Parameter 'inputs' must not be null";
     private static final String TARGET_NULL_MESSAGE = "Parameter 'target' must not be null";
     private static final String COMPONENT_NULL_MESSAGE = "Parameter 'component' must not be null";
+    private static final String RESOLVERS_NULL_MESSAGE = "Parameter 'resolvers' must not be null";
     private static final int PARSE_CACHE_MAX_SIZE = 512;
     private static final int MAX_TEMPLATE_LENGTH = 32_768;
 
@@ -49,6 +50,7 @@ public final class MiniMessages {
      */
     public static Component parse(String input, TagResolver... resolvers) {
         requireBoundedTemplate(input);
+        Objects.requireNonNull(resolvers, RESOLVERS_NULL_MESSAGE);
 
         return ComponentSerializers.MINIMESSAGE.deserialize(input, resolvers);
     }
@@ -65,6 +67,7 @@ public final class MiniMessages {
     public static Component parse(String input, Audience target, TagResolver... resolvers) {
         requireBoundedTemplate(input);
         Objects.requireNonNull(target, TARGET_NULL_MESSAGE);
+        Objects.requireNonNull(resolvers, RESOLVERS_NULL_MESSAGE);
 
         return ComponentSerializers.MINIMESSAGE.deserialize(input, target, resolvers);
     }
@@ -109,6 +112,7 @@ public final class MiniMessages {
      */
     public static String escape(String input, TagResolver... resolvers) {
         Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+        Objects.requireNonNull(resolvers, RESOLVERS_NULL_MESSAGE);
 
         return ComponentSerializers.MINIMESSAGE.escapeTags(input, resolvers);
     }
@@ -134,6 +138,7 @@ public final class MiniMessages {
      */
     public static String strip(String input, TagResolver... resolvers) {
         Objects.requireNonNull(input, INPUT_NULL_MESSAGE);
+        Objects.requireNonNull(resolvers, RESOLVERS_NULL_MESSAGE);
 
         return ComponentSerializers.MINIMESSAGE.stripTags(input, resolvers);
     }

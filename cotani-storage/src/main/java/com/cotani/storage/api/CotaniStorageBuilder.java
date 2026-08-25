@@ -13,7 +13,6 @@ import com.cotani.storage.security.Paths;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;
@@ -43,6 +42,7 @@ public final class CotaniStorageBuilder {
     }
 
     public CotaniStorageBuilder sqlite(String fileName) {
+        Objects.requireNonNull(fileName, "fileName");
         var dataFolder = plugin.getDataFolder().toPath();
         var path = Paths.requireContained(dataFolder.resolve(fileName), dataFolder);
         this.backend = new SQLiteBackend(new SQLiteCredentials(path));
@@ -116,14 +116,20 @@ public final class CotaniStorageBuilder {
     }
 
     public CotaniStorageBuilder migrations(Migration... values) {
-        Collections.addAll(migrations, values);
+        Objects.requireNonNull(values, "values");
+        for (var migration : values) {
+            migrations.add(Objects.requireNonNull(migration, "migration"));
+        }
         return this;
     }
 
     @SafeVarargs
     @SuppressWarnings({"varargs"})
     public final CotaniStorageBuilder repositories(Class<? extends CotaniRepository>... values) {
-        Collections.addAll(repositories, values);
+        Objects.requireNonNull(values, "values");
+        for (var repo : values) {
+            repositories.add(Objects.requireNonNull(repo, "repository"));
+        }
         return this;
     }
 

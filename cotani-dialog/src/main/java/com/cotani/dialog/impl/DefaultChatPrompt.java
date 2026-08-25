@@ -89,7 +89,10 @@ public final class DefaultChatPrompt<T> implements ChatPrompt<T>, ActivePrompt {
 
     @Override
     public UUID playerId() {
-        return Objects.requireNonNull(targetPlayerId, "targetPlayerId");
+        if (targetPlayerId == null) {
+            throw new IllegalStateException("Prompt has not been started for a player yet");
+        }
+        return targetPlayerId;
     }
 
     @Override

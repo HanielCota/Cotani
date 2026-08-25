@@ -424,6 +424,9 @@ public final class Arguments {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(enumClass, "enumClass");
         var constants = enumClass.getEnumConstants();
+        if (constants == null) {
+            throw new IllegalArgumentException("Class " + enumClass.getName() + " does not contain enum constants");
+        }
         var names = Arrays.stream(constants)
                 .map(e -> e.name().toLowerCase(Locale.ROOT))
                 .toList();

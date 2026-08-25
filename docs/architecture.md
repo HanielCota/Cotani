@@ -9,8 +9,11 @@ An arrow from `A` to `B` means that module `A` directly depends on module `B`. T
 ```mermaid
 flowchart LR
     core["core"]
+    audit["audit"]
+    auditStorage["audit-storage"]
     task["task"]
     text["text"]
+    locale["locale"]
     item["item"]
     config["config"]
     storage["storage"]
@@ -30,9 +33,25 @@ flowchart LR
     region["region"]
     dialog["dialog"]
     metrics["metrics"]
+    punishment["punishment"]
+    location["location"]
+    mail["mail"]
+    inventory["inventory"]
+    permission["permission"]
+    placeholder["placeholder"]
+    reward["reward"]
+    rewardIntegration["reward-integration"]
+    friend["friend"]
+    queue["queue"]
+    trade["trade"]
 
     task --> core
+    audit --> core
+    auditStorage --> audit
+    auditStorage --> storage
     text --> core
+    locale --> core
+    locale --> text
     item --> core
     item --> text
     config --> core
@@ -96,6 +115,36 @@ flowchart LR
     metrics --> config
     metrics --> storage
     metrics --> cache
+    punishment --> core
+    punishment --> audit
+    punishment --> storage
+    location --> core
+    location --> task
+    location --> teleport
+    location --> storage
+    mail --> core
+    mail --> storage
+    reward --> core
+    reward --> storage
+    rewardIntegration --> reward
+    rewardIntegration --> economy
+    rewardIntegration --> inventory
+    rewardIntegration --> task
+    inventory --> core
+    inventory --> task
+    inventory --> storage
+    permission --> core
+    permission --> storage
+    placeholder --> core
+    placeholder --> task
+    placeholder --> text
+    friend --> core
+    friend --> event
+    queue --> core
+    queue --> event
+    trade --> core
+    trade --> event
+    trade --> economy
 ```
 
 ## Responsibility layers
@@ -103,10 +152,11 @@ flowchart LR
 | Layer | Modules | Responsibility |
 | --- | --- | --- |
 | Lifecycle | `core` | Own and close resources without acting as a service locator |
-| Execution and presentation | `task`, `text`, `item` | Thread transitions, messages and item construction |
-| Infrastructure | `config`, `storage`, `cache`, `redis` | Configuration, persistence, caching, and distributed synchronization |
-| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display`, `command`, `hud`, `nametag`, `npc`, `region`, `dialog` | Reusable plugin use cases, NPCs, 3D regions & protection, HUD, nametags, and reactive user interfaces |
-| Operations | `metrics` | Runtime measurements and optional Prometheus export |
+| Execution and presentation | `task`, `text`, `item`, `locale` | Thread transitions, messages, localized catalogs and item construction |
+| Infrastructure | `config`, `storage`, `cache`, `redis` | Configuration, persistence, caching, distributed synchronization, and admission-controlled external I/O |
+| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display`, `command`, `hud`, `nametag`, `npc`, `region`, `dialog`, `permission`, `placeholder`, `inventory`, `friend`, `queue`, `trade`, `punishment`, `location`, `mail`, `reward` | Reusable player and gameplay use cases, permission decisions, placeholder expansion, inventory synchronization, friendships, matchmaking queues, confirmation-based trading, moderation punishments, saved homes and warps, persistent player mail, idempotent rewards, NPCs, 3D regions, HUD, nametags, and reactive interfaces |
+| Integration | `reward-integration` | Standard settlement adapters that deliver reward currency and items |
+| Operations | `audit`, `audit-storage`, `metrics` | Immutable audit history, SQL audit persistence, runtime measurements, and optional Prometheus export |
 
 ## Runtime execution boundary
 

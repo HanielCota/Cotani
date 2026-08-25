@@ -116,5 +116,6 @@ public final class DefaultHudModule implements HudModule {
 
         bossBarManager.close();
         actionBarManager.close();
+        tabListManager.close();
     }
 }

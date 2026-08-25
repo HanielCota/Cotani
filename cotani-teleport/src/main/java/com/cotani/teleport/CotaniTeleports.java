@@ -16,6 +16,10 @@ public final class CotaniTeleports {
             CombatAdapter combatAdapter,
             RegionProtectionAdapter regionAdapter,
             PaperTaskScheduler scheduler) {
+        java.util.Objects.requireNonNull(plugin, "plugin");
+        java.util.Objects.requireNonNull(combatAdapter, "combatAdapter");
+        java.util.Objects.requireNonNull(regionAdapter, "regionAdapter");
+        java.util.Objects.requireNonNull(scheduler, "scheduler");
         return DefaultTeleportModule.create(plugin, combatAdapter, regionAdapter, scheduler);
     }
 
@@ -25,6 +29,11 @@ public final class CotaniTeleports {
             RegionProtectionAdapter regionAdapter,
             PaperTaskScheduler scheduler,
             TeleportMessages messages) {
+        java.util.Objects.requireNonNull(plugin, "plugin");
+        java.util.Objects.requireNonNull(combatAdapter, "combatAdapter");
+        java.util.Objects.requireNonNull(regionAdapter, "regionAdapter");
+        java.util.Objects.requireNonNull(scheduler, "scheduler");
+        java.util.Objects.requireNonNull(messages, "messages");
         return DefaultTeleportModule.create(plugin, combatAdapter, regionAdapter, scheduler, messages);
     }
 }

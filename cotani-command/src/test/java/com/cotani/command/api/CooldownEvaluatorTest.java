@@ -71,4 +71,14 @@ class CooldownEvaluatorTest {
 
         assertTrue(evaluator.check(console, "broadcast").isPresent());
     }
+
+    @Test
+    void shouldAcquireCooldownOnlyOnce() {
+        var evaluator = CooldownEvaluator.of(Duration.ofSeconds(5));
+        var player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+
+        assertTrue(evaluator.tryAcquire(player, "daily").isEmpty());
+        assertTrue(evaluator.tryAcquire(player, "daily").isPresent());
+    }
 }

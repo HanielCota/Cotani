@@ -12,9 +12,19 @@ public final class ConversationWizardBuilder {
 
     private final List<WizardStepDefinition> steps = new ArrayList<>();
 
-    public record WizardStepDefinition(String key, Function<WizardContext, ChatPromptBuilder<?>> promptSupplier) {}
+    public record WizardStepDefinition(String key, Function<WizardContext, ChatPromptBuilder<?>> promptSupplier) {
+        public WizardStepDefinition {
+            Objects.requireNonNull(key, "key");
+            Objects.requireNonNull(promptSupplier, "promptSupplier");
+        }
+    }
 
     public record WizardContext(org.bukkit.entity.Player player, java.util.Map<String, Object> previousAnswers) {
+        public WizardContext {
+            Objects.requireNonNull(player, "player");
+            previousAnswers = java.util.Map.copyOf(Objects.requireNonNull(previousAnswers, "previousAnswers"));
+        }
+
         public java.util.Optional<Object> get(String key) {
             Objects.requireNonNull(key, "key");
             return java.util.Optional.ofNullable(previousAnswers.get(key));

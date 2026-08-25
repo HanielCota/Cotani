@@ -9,6 +9,10 @@ public record PolicySettings(
         Duration cooldownDuration,
         boolean checkPermission,
         boolean checkRegion) {
+    public PolicySettings {
+        Objects.requireNonNull(cooldownDuration, "cooldownDuration");
+    }
+
     public static PolicySettings defaults() {
         return builder().build();
     }

@@ -8,6 +8,8 @@ public final class TeleportResults {
 
     public static TeleportResult.Success success(
             TeleportContext context, Location resolvedTarget, long durationMillis) {
+        java.util.Objects.requireNonNull(context, "context");
+        java.util.Objects.requireNonNull(resolvedTarget, "resolvedTarget");
         return new TeleportResult.Success(
                 context.playerId(), context.from().clone(), resolvedTarget.clone(), durationMillis);
     }
@@ -18,6 +20,8 @@ public final class TeleportResults {
 
     public static TeleportResult.Failure failure(
             TeleportContext context, TeleportFailureReason reason, @Nullable Throwable cause) {
+        java.util.Objects.requireNonNull(context, "context");
+        java.util.Objects.requireNonNull(reason, "reason");
         return new TeleportResult.Failure(
                 context.playerId(), context.from().clone(), context.target().clone(), reason, cause);
     }

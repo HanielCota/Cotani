@@ -6,8 +6,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,6 +37,13 @@ class CotaniTest {
         } catch (ReflectiveOperationException failure) {
             throw new RuntimeException("Failed to override Bukkit.server", failure);
         }
+    }
+
+    private static CotaniCloseException awaitFailure(Cotani cotani) {
+        var completion = assertThrows(
+                CompletionException.class,
+                () -> cotani.closeAsync().toCompletableFuture().join());
+        return assertInstanceOf(CotaniCloseException.class, completion.getCause());
     }
 
     @AfterEach
@@ -98,7 +105,7 @@ class CotaniTest {
                 })
                 .build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
         var cause = thrown.getCause();
 
         assertEquals("Failed to close resource", thrown.getMessage());
@@ -114,7 +121,7 @@ class CotaniTest {
         };
         var cotani = Cotani.forPlugin(plugin).with(closeable).build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
         var cause = thrown.getCause();
 
         assertEquals("Failed to close resource", thrown.getMessage());
@@ -132,7 +139,7 @@ class CotaniTest {
                 })
                 .build();
 
-        assertThrows(CotaniCloseException.class, cotani::close);
+        awaitFailure(cotani);
         assertTrue(closed.get());
     }
 
@@ -275,7 +282,7 @@ class CotaniTest {
                 })
                 .build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
 
         assertNotNull(thrown.getCause());
         assertEquals(1, thrown.getSuppressed().length);
@@ -418,7 +425,7 @@ class CotaniTest {
                 })
                 .build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
         assertEquals("Failed to close resource", thrown.getMessage());
         assertNotNull(thrown.getCause());
         assertEquals("Async supplier boom", thrown.getCause().getMessage());
@@ -445,7 +452,7 @@ class CotaniTest {
                 })
                 .build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
 
         assertEquals("Failed to close resource", thrown.getMessage());
         assertNotNull(thrown.getCause());
@@ -465,7 +472,7 @@ class CotaniTest {
                 })
                 .build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
 
         assertEquals("Failed to close resource", thrown.getMessage());
         assertSame(expected, thrown.getCause());
@@ -483,7 +490,7 @@ class CotaniTest {
                 })
                 .build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
 
         assertNotNull(thrown.getCause());
         assertEquals("async boom", thrown.getCause().getMessage());
@@ -516,32 +523,27 @@ class CotaniTest {
                 })
                 .build();
 
-        var thrown = assertThrows(CotaniCloseException.class, cotani::close);
+        var thrown = awaitFailure(cotani);
 
         assertEquals("Failed to close resource within timeout", thrown.getMessage());
         assertTrue(teardownStarted.get());
         assertFalse(gate.isDone());
 
         gate.complete(null);
-        assertDoesNotThrow(() -> cotani.closeAsync().toCompletableFuture().get(5, TimeUnit.SECONDS));
+        assertThrows(
+                CompletionException.class,
+                () -> cotani.closeAsync().toCompletableFuture().join());
     }
 
     @Test
-    void closeRestoresInterruptFlag() {
+    void closeStartsTimeoutWithoutBlockingOrInterrupting() {
         var plugin = pluginWithLogger();
         var cotani = Cotani.forPlugin(plugin)
-                .withAsync(CompletableFuture::new) // never completes
+                .timeout(Duration.ofMillis(10))
+                .withAsync(CompletableFuture::new)
                 .build();
 
-        Thread.currentThread().interrupt();
-        try {
-            var thrown = assertThrows(CotaniCloseException.class, cotani::close);
-
-            assertEquals("Interrupted while closing resources", thrown.getMessage());
-            assertTrue(Thread.currentThread().isInterrupted());
-        } finally {
-            Thread.interrupted(); // clear the flag for subsequent tests
-        }
+        assertDoesNotThrow(cotani::close);
     }
 
     @Test
@@ -556,7 +558,7 @@ class CotaniTest {
     }
 
     @Test
-    void closeOnPrimaryThreadThrowsAndSkipsResources() {
+    void closeOnPrimaryThreadStartsNonBlockingTeardown() {
         var plugin = pluginWithLogger();
         var server = Mockito.mock(Server.class);
         Mockito.when(server.isPrimaryThread()).thenReturn(true);
@@ -564,10 +566,8 @@ class CotaniTest {
         var closed = new AtomicBoolean();
         var cotani = Cotani.forPlugin(plugin).with(() -> closed.set(true)).build();
 
-        var thrown = assertThrows(IllegalStateException.class, cotani::close);
-
-        assertEquals("Cotani.close() blocks; use closeAsync() on the server thread.", thrown.getMessage());
-        assertFalse(closed.get());
+        assertDoesNotThrow(cotani::close);
+        assertTrue(closed.get());
     }
 
     @Test

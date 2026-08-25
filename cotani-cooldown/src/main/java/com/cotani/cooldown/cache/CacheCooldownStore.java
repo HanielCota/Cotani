@@ -61,10 +61,11 @@ public final class CacheCooldownStore implements CooldownStore {
                 return;
             }
 
-            PlayerCooldowns playerCooldowns = optional.get();
-            playerCooldowns.put(entry);
-            playerCache.markDirty(userId);
-            playerCache.mutateAsync(userId, pc -> pc.put(entry));
+            playerCache.mutateAsync(userId, pc -> pc.put(entry)).whenComplete((_, failure) -> {
+                if (failure != null) {
+                    LOGGER.log(Level.SEVERE, "Failed to save cooldown for user " + userId, failure);
+                }
+            });
             return;
         }
 
@@ -79,10 +80,13 @@ public final class CacheCooldownStore implements CooldownStore {
             Optional<PlayerCooldowns> optional = playerCache.find(userId);
 
             if (optional.isPresent()) {
-                PlayerCooldowns playerCooldowns = optional.get();
-                playerCooldowns.remove(key.action().value());
-                playerCache.markDirty(userId);
-                playerCache.mutateAsync(userId, pc -> pc.remove(key.action().value()));
+                playerCache
+                        .mutateAsync(userId, pc -> pc.remove(key.action().value()))
+                        .whenComplete((_, failure) -> {
+                            if (failure != null) {
+                                LOGGER.log(Level.SEVERE, "Failed to remove cooldown for user " + userId, failure);
+                            }
+                        });
             }
             return;
         }

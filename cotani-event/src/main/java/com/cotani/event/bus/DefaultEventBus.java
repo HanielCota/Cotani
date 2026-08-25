@@ -61,15 +61,12 @@ public final class DefaultEventBus implements EventBus {
         Objects.requireNonNull(policy, "policy cannot be null");
 
         var listenerExecutor = Executors.newVirtualThreadPerTaskExecutor();
-        Optional<ExecutorService> ownedAsync =
-                (asyncExecutor instanceof ExecutorService es) ? Optional.of(es) : Optional.empty();
-
         return new DefaultEventBus(
                 new DefaultEventRegistry(),
                 new DefaultEventDispatcher(exceptionHandler, listenerExecutor, policy),
                 asyncExecutor,
                 Optional.of(listenerExecutor),
-                ownedAsync);
+                Optional.empty());
     }
 
     @Override

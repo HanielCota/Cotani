@@ -71,7 +71,10 @@ public final class DefaultAnvilPrompt implements AnvilPrompt, ActivePrompt {
 
     @Override
     public UUID playerId() {
-        return Objects.requireNonNull(targetPlayerId, "targetPlayerId");
+        if (targetPlayerId == null) {
+            throw new IllegalStateException("Prompt has not been opened for a player yet");
+        }
+        return targetPlayerId;
     }
 
     public @Nullable Inventory inventory() {
@@ -86,33 +89,7 @@ public final class DefaultAnvilPrompt implements AnvilPrompt, ActivePrompt {
 
         dialogService.registerActivePrompt(this);
 
-        if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
-            scheduler.entity(player, () -> {
-                this.inventory = Bukkit.createInventory(player, InventoryType.ANVIL, title);
-                ItemStack item = leftItem.clone();
-                if (!initialText.isEmpty()) {
-                    ItemMeta meta = item.getItemMeta();
-                    if (meta != null) {
-                        meta.displayName(Component.text(initialText));
-                        item.setItemMeta(meta);
-                    }
-                }
-                inventory.setItem(0, item);
-                player.openInventory(inventory);
-            });
-        } else {
-            this.inventory = Bukkit.createInventory(player, InventoryType.ANVIL, title);
-            ItemStack item = leftItem.clone();
-            if (!initialText.isEmpty()) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
-                    meta.displayName(Component.text(initialText));
-                    item.setItemMeta(meta);
-                }
-            }
-            inventory.setItem(0, item);
-            player.openInventory(inventory);
-        }
+        initializeInventory(player);
 
         this.timeoutTask = scheduler.asyncLater(
                 () -> {
@@ -125,6 +102,29 @@ public final class DefaultAnvilPrompt implements AnvilPrompt, ActivePrompt {
             cleanup();
             dialogService.unregisterActivePrompt(playerId, this);
         });
+    }
+
+    private void initializeInventory(Player player) {
+        if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
+            scheduler.entity(player, () -> openInventory(player));
+            return;
+        }
+
+        openInventory(player);
+    }
+
+    private void openInventory(Player player) {
+        this.inventory = Bukkit.createInventory(player, InventoryType.ANVIL, title);
+        ItemStack item = leftItem.clone();
+        if (!initialText.isEmpty()) {
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.displayName(Component.text(initialText));
+                item.setItemMeta(meta);
+            }
+        }
+        inventory.setItem(0, item);
+        player.openInventory(inventory);
     }
 
     /**

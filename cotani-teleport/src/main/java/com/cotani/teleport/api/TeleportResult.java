@@ -12,6 +12,12 @@ public sealed interface TeleportResult permits TeleportResult.Success, TeleportR
     Location to();
 
     record Success(UUID playerId, Location from, Location to, long durationMillis) implements TeleportResult {
+        public Success {
+            java.util.Objects.requireNonNull(playerId, "playerId");
+            java.util.Objects.requireNonNull(from, "from");
+            java.util.Objects.requireNonNull(to, "to");
+        }
+
         @Override
         public Location from() {
             return from.clone();
@@ -29,6 +35,13 @@ public sealed interface TeleportResult permits TeleportResult.Success, TeleportR
             Location to,
             TeleportFailureReason reason,
             @Nullable Throwable cause) implements TeleportResult {
+        public Failure {
+            java.util.Objects.requireNonNull(playerId, "playerId");
+            java.util.Objects.requireNonNull(from, "from");
+            java.util.Objects.requireNonNull(to, "to");
+            java.util.Objects.requireNonNull(reason, "reason");
+        }
+
         @Override
         public Location from() {
             return from.clone();

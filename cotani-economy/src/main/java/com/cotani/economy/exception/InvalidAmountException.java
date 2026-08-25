@@ -8,6 +8,7 @@ public final class InvalidAmountException extends EconomyException {
     private static final long serialVersionUID = 1L;
 
     public InvalidAmountException(BigDecimal amount, String reason) {
-        super("Invalid economy amount " + amount + ": " + reason);
+        super("Invalid economy amount " + java.util.Objects.requireNonNull(amount, "amount") + ": "
+                + java.util.Objects.requireNonNull(reason, "reason"));
     }
 }

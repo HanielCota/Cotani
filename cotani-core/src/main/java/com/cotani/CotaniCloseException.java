@@ -9,6 +9,6 @@ public final class CotaniCloseException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     public CotaniCloseException(String message, Throwable cause) {
-        super(message, cause);
+        super(java.util.Objects.requireNonNull(message, "message"), java.util.Objects.requireNonNull(cause, "cause"));
     }
 }

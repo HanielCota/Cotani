@@ -50,6 +50,8 @@ public final class StorageUserRepository implements UserRepository {
 
     @Override
     public CompletionStage<Optional<SimpleCotaniUser>> find(UUID uniqueId, String username) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(username, "username");
         long now = System.currentTimeMillis();
 
         return storage.table(TABLE)
@@ -61,6 +63,7 @@ public final class StorageUserRepository implements UserRepository {
 
     @Override
     public CompletionStage<Optional<SimpleCotaniUser>> findByUniqueId(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return find(uniqueId, "unknown");
     }
 
@@ -78,6 +81,7 @@ public final class StorageUserRepository implements UserRepository {
 
     @Override
     public CompletionStage<Void> save(SimpleCotaniUser user) {
+        Objects.requireNonNull(user, "user");
         return storage.table(TABLE)
                 .upsert()
                 .value(UNIQUE_ID_COL, user.uniqueId())
@@ -93,6 +97,7 @@ public final class StorageUserRepository implements UserRepository {
 
     @Override
     public CompletionStage<Void> saveAll(Collection<SimpleCotaniUser> users) {
+        Objects.requireNonNull(users, "users");
         if (users.isEmpty()) {
             return CompletionStages.completedVoid();
         }

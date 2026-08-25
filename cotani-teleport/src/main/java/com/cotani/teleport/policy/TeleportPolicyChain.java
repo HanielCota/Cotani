@@ -5,15 +5,16 @@ import java.util.List;
 
 public record TeleportPolicyChain(List<TeleportPolicy> policies) {
     public TeleportPolicyChain {
-        policies = List.copyOf(policies);
+        policies = List.copyOf(java.util.Objects.requireNonNull(policies, "policies"));
     }
 
     public PolicyResult validate(TeleportContext context) {
+        java.util.Objects.requireNonNull(context, "context");
         for (TeleportPolicy policy : policies) {
             PolicyResult result = policy.validate(context);
 
-            if (result instanceof PolicyResult.Denied) {
-                return result;
+            if (result instanceof PolicyResult.Denied(var reason, var message)) {
+                return PolicyResult.denied(reason, message);
             }
         }
 

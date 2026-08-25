@@ -103,10 +103,13 @@ public final class DefaultDialogService implements DialogService {
     }
 
     public void unregisterActivePrompt(UUID playerId, ActivePrompt prompt) {
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(prompt, "prompt");
         activePrompts.remove(playerId, prompt);
     }
 
     public @Nullable ActivePrompt getActivePrompt(UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
         return activePrompts.get(playerId);
     }
 

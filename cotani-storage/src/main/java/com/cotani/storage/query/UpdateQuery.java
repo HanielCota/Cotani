@@ -28,13 +28,13 @@ public final class UpdateQuery {
         this.executor = executor;
     }
 
-    public UpdateQuery set(String column, Object value) {
+    public UpdateQuery set(String column, @Nullable Object value) {
         values.put(Identifiers.requireValid(column, "Set column"), value);
         cachedSql = null;
         return this;
     }
 
-    public UpdateQuery where(String column, Object value) {
+    public UpdateQuery where(String column, @Nullable Object value) {
         conditions.add(new Condition(Identifiers.requireValid(column, "Where column"), value));
         cachedSql = null;
         return this;

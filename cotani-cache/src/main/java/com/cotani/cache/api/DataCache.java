@@ -166,7 +166,9 @@ public interface DataCache<K, V>
     CompletionStage<Void> closeAsync();
 
     /**
-     * Synchronously closes the cache, blocking until all pending saves complete.
+     * Begins closing the cache without blocking.
+     *
+     * <p>Use {@link #closeAsync()} to observe completion and failures.
      */
     @Override
     void close();

@@ -37,9 +37,9 @@ public final class CommandExecutionException extends RuntimeException {
     /**
      * Returns the formatted message intended for the command sender, if provided.
      *
-     * @return the user message or null
+     * @return the user message if present
      */
-    public @Nullable Component userMessage() {
-        return userMessage;
+    public java.util.Optional<Component> userMessage() {
+        return java.util.Optional.ofNullable(userMessage);
     }
 }

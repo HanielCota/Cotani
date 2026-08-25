@@ -121,7 +121,7 @@ public final class FilePersistentTaskStore implements PersistentTaskStore {
                 return Optional.empty();
             }
 
-            UUID id = UUID.fromString(lines.get(0));
+            UUID id = UUID.fromString(lines.getFirst());
             String taskName = lines.get(1);
             Instant scheduledAt = Instant.parse(lines.get(2));
             Duration delay = Duration.parse(lines.get(3));

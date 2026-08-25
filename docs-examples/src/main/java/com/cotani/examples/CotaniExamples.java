@@ -29,33 +29,47 @@ public final class CotaniExamples {
     private CotaniExamples() {}
 
     public static Cotani lifecycle(Plugin plugin, PaperTaskScheduler scheduler) {
+        java.util.Objects.requireNonNull(plugin, "plugin");
+        java.util.Objects.requireNonNull(scheduler, "scheduler");
         return Cotani.forPlugin(plugin).withAsync(scheduler::closeAsync).build();
     }
 
     public static CompletionStage<CotaniConfigs> loadConfigAsync(Plugin plugin, PaperTaskScheduler scheduler) {
+        java.util.Objects.requireNonNull(plugin, "plugin");
+        java.util.Objects.requireNonNull(scheduler, "scheduler");
         return CotaniConfigs.builder(plugin, scheduler).file("config.yml").loadAsync();
     }
 
     public static CompletionStage<EconomyTransaction> rewardAsync(
             EconomyService economy, UUID userId, BigDecimal amount) {
+        java.util.Objects.requireNonNull(economy, "economy");
+        java.util.Objects.requireNonNull(userId, "userId");
+        java.util.Objects.requireNonNull(amount, "amount");
         return economy.depositAsync(
                 userId, amount, EconomyReason.system("example.reward"), EconomyOperationId.random());
     }
 
     public static CompletionStage<TeleportResult> teleportAsync(TeleportService teleports, TeleportRequest request) {
+        java.util.Objects.requireNonNull(teleports, "teleports");
+        java.util.Objects.requireNonNull(request, "request");
         return teleports.teleportAsync(request);
     }
 
     public static EventBus eventBus(PaperTaskScheduler scheduler) {
+        java.util.Objects.requireNonNull(scheduler, "scheduler");
         return DefaultEventBus.create(LoggingEventExceptionHandler.usingJavaLogger(), scheduler.asyncExecutor());
     }
 
     public static CotaniMetricsModule metrics(MetricsConfig config) {
+        java.util.Objects.requireNonNull(config, "config");
         return CotaniMetrics.create(config);
     }
 
     public static CompletionStage<Void> messagePlayerAsync(
             CompletionStage<String> messageStage, UUID playerId, PaperTaskScheduler scheduler) {
+        java.util.Objects.requireNonNull(messageStage, "messageStage");
+        java.util.Objects.requireNonNull(playerId, "playerId");
+        java.util.Objects.requireNonNull(scheduler, "scheduler");
         return scheduler
                 .chain(messageStage)
                 .consumeEntity(playerId, message -> {
@@ -70,6 +84,8 @@ public final class CotaniExamples {
     }
 
     public static com.cotani.command.CotaniCommands commands(Plugin plugin, PaperTaskScheduler scheduler) {
+        java.util.Objects.requireNonNull(plugin, "plugin");
+        java.util.Objects.requireNonNull(scheduler, "scheduler");
         return com.cotani.command.CotaniCommands.create(plugin, scheduler);
     }
 }

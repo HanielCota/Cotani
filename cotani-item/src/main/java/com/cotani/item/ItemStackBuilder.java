@@ -68,6 +68,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     private final ItemStack item;
 
     protected ItemStackBuilder(Material material) {
+        Objects.requireNonNull(material, "Parameter 'material' must not be null");
         this.item = ItemStack.of(material);
     }
 
@@ -353,6 +354,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T itemModel(NamespacedKey key) {
+        Objects.requireNonNull(key, "Parameter 'key' must not be null");
         item.setData(DataComponentTypes.ITEM_MODEL, key);
         return self();
     }
@@ -444,6 +446,7 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     }
 
     public final T tooltipStyle(NamespacedKey key) {
+        Objects.requireNonNull(key, "Parameter 'key' must not be null");
         item.setData(DataComponentTypes.TOOLTIP_STYLE, key);
         return self();
     }
@@ -683,7 +686,9 @@ public abstract class ItemStackBuilder<T extends ItemStackBuilder<T>> {
     public final T jukeboxPlayable(NamespacedKey songKey) {
         Objects.requireNonNull(songKey, "Parameter 'songKey' must not be null");
 
-        var registry = RegistryAccess.registryAccess().getRegistry(RegistryKey.JUKEBOX_SONG);
+        var registry = Objects.requireNonNull(
+                RegistryAccess.registryAccess().getRegistry(RegistryKey.JUKEBOX_SONG),
+                "Jukebox song registry is not available");
         var song = registry.get(songKey);
         Objects.requireNonNull(song, "Jukebox song not found for key: " + songKey);
 

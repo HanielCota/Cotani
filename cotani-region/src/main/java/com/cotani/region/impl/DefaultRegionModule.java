@@ -129,6 +129,11 @@ public final class DefaultRegionModule implements RegionModule {
 
     @Override
     public void close() {
-        closeAsync();
+        closeAsync().whenComplete((_, error) -> {
+            if (error != null) {
+                java.util.logging.Logger.getLogger(DefaultRegionModule.class.getName())
+                        .log(java.util.logging.Level.SEVERE, "Failed to close region module", error);
+            }
+        });
     }
 }

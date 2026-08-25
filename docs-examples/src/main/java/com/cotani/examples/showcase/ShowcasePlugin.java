@@ -4,12 +4,23 @@ import com.cotani.Cotani;
 import com.cotani.command.CotaniCommands;
 import com.cotani.economy.EconomyBootstrap;
 import com.cotani.gui.CotaniGuiModule;
+import com.cotani.inventory.CotaniInventories;
+import com.cotani.reward.CotaniRewards;
+import com.cotani.reward.api.CurrencyGrant;
+import com.cotani.reward.api.ItemGrant;
+import com.cotani.reward.api.RewardDefinition;
+import com.cotani.reward.api.RewardId;
+import com.cotani.reward.api.RewardSettlementService;
+import com.cotani.reward.integration.CotaniRewardIntegrations;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.scheduler.SchedulerFactory;
 import com.cotani.teleport.CotaniTeleports;
 import com.cotani.teleport.adapter.CombatAdapter;
 import com.cotani.teleport.adapter.RegionProtectionAdapter;
 import com.cotani.teleport.api.PendingTeleportService;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.List;
 import java.util.logging.Level;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.NullMarked;
@@ -26,6 +37,21 @@ public final class ShowcasePlugin extends JavaPlugin {
         var bootstrap = EconomyBootstrap.createDefault();
         this.economyBootstrap = bootstrap;
         var economyService = bootstrap.service();
+        var inventoryModule = CotaniInventories.create(this, scheduler, new ShowcaseInventoryRepository());
+
+        var rewards = CotaniRewards.inMemory();
+        var dailyReward = new RewardDefinition(
+                RewardId.of("daily"),
+                Duration.ofHours(24),
+                Duration.ofDays(2),
+                7,
+                List.of(new CurrencyGrant("coins", BigDecimal.valueOf(100)), new ItemGrant("minecraft:diamond", 1)));
+        rewards.register(dailyReward);
+        RewardSettlementService settlement = CotaniRewards.settlement(
+                rewards,
+                List.of(
+                        CotaniRewardIntegrations.economy(economyService),
+                        CotaniRewardIntegrations.vanillaInventory(this, inventoryModule.service())));
 
         // Demo-only: production plugins must supply real CombatAdapter and RegionProtectionAdapter
         // implementations. The noop adapters skip combat-tag and region protection checks.
@@ -40,8 +66,23 @@ public final class ShowcasePlugin extends JavaPlugin {
                 .with(guiModule)
                 .with(commands)
                 .with(dialogs)
+                .withAsync(inventoryModule::closeAsync)
+                .withAsync(rewards::closeAsync)
                 .withAsync(scheduler::closeAsync)
                 .build();
+
+        commands.register(
+                "daily",
+                command -> command.description("Resgata a recompensa diária")
+                        .playerOnly()
+                        .executesAsync(ctx -> {
+                            var playerId = ctx.requirePlayer().getUniqueId();
+                            return settlement
+                                    .claimOrRecoverAsync(playerId, dailyReward.id())
+                                    .thenAccept(
+                                            claim -> ctx.reply("<green>Recompensa diária entregue! <gray>(sequência: "
+                                                    + claim.streak() + ")"));
+                        }));
 
         commands.register("cotanieco", eco -> {
             eco.description("Sistema de economia de exemplo")

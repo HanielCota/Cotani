@@ -6,11 +6,15 @@ import com.sun.net.httpserver.HttpServer;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import net.cotani.metrics.config.MetricsConfig;
 import org.jspecify.annotations.Nullable;
 
@@ -23,6 +27,7 @@ public final class PrometheusServer implements AutoCloseable {
     private final String host;
     private final int port;
     private final String path;
+    private final Semaphore scrapePermits = new Semaphore(4);
     private @Nullable HttpServer server;
     private @Nullable ExecutorService executor;
 
@@ -42,13 +47,9 @@ public final class PrometheusServer implements AutoCloseable {
             return;
         }
 
-        if (isPublicBind(host)) {
-            throw new IllegalStateException(
-                    "Prometheus scrape server refuses non-loopback bind '" + host + "'; use 127.0.0.1");
-        }
-
         try {
-            HttpServer http = HttpServer.create(new InetSocketAddress(host, port), 0);
+            var bindAddress = requireLoopbackAddress(host);
+            HttpServer http = HttpServer.create(new InetSocketAddress(bindAddress, port), 0);
             ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor();
             http.setExecutor(exec);
             http.createContext(path, this::handleScrape);
@@ -71,23 +72,37 @@ public final class PrometheusServer implements AutoCloseable {
                 return;
             }
 
-            byte[] response = registry.scrape().getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
-            exchange.sendResponseHeaders(200, response.length);
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(response);
+            if (!scrapePermits.tryAcquire()) {
+                exchange.sendResponseHeaders(429, -1);
+                return;
+            }
+
+            try {
+                byte[] response = registry.scrape().getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+                exchange.sendResponseHeaders(200, response.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response);
+                }
+            } finally {
+                scrapePermits.release();
             }
         } finally {
             exchange.close();
         }
     }
 
-    private static boolean isPublicBind(String bindHost) {
-        var normalized = bindHost.strip();
-        return "0.0.0.0".equals(normalized)
-                || "::".equals(normalized)
-                || "*".equals(normalized)
-                || "0:0:0:0:0:0:0:0".equals(normalized);
+    private static InetAddress requireLoopbackAddress(String configuredHost) {
+        try {
+            var addresses = InetAddress.getAllByName(configuredHost.strip());
+            if (addresses.length == 0 || Arrays.stream(addresses).anyMatch(address -> !address.isLoopbackAddress())) {
+                throw new IllegalStateException(
+                        "Prometheus scrape server refuses non-loopback bind '" + configuredHost + "'; use 127.0.0.1");
+            }
+            return addresses[0];
+        } catch (UnknownHostException exception) {
+            throw new IllegalStateException("Invalid Prometheus bind host '" + configuredHost + "'", exception);
+        }
     }
 
     public synchronized boolean isRunning() {

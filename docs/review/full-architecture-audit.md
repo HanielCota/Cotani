@@ -1,5 +1,9 @@
 # Auditoria completa de arquitetura do Cotani
 
+> Relatório histórico: os números de versão e o baseline de dependências abaixo descrevem o ambiente no momento da
+> auditoria. Para o estado atual do projeto, consulte o [README](../../README.md), o catálogo Gradle e a
+> [documentação de arquitetura](../architecture.md).
+
 Data: 28 de julho de 2026  
 Escopo: todos os 14 módulos, build, workflows, documentação, APIs públicas, testes e lifecycle.  
 Método: leitura estática, execução de baseline, testes determinísticos com futures/latches, integração SQLite, correções pequenas e nova validação global.

@@ -18,6 +18,6 @@ public final class Locations {
     }
 
     public static Location immutableCopy(Location location) {
-        return location.clone();
+        return Objects.requireNonNull(location, "location").clone();
     }
 }

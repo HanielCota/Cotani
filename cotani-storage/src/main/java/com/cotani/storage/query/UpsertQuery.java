@@ -28,7 +28,7 @@ public final class UpsertQuery {
         this.dialect = dialect;
     }
 
-    public UpsertQuery value(String column, Object value) {
+    public UpsertQuery value(String column, @Nullable Object value) {
         values.put(Identifiers.requireValid(column, "Value column"), value);
         cachedSql = null;
         return this;

@@ -40,8 +40,9 @@ public final class CotaniConfigsBuilder {
     }
 
     public CotaniConfigsBuilder file(String name) {
+        Objects.requireNonNull(name, "name");
         if (name.isBlank()) {
-            throw new IllegalArgumentException("file name must not be null or blank");
+            throw new IllegalArgumentException("file name must not be blank");
         }
         if (files.contains(name)) {
             throw new IllegalArgumentException("Duplicate file name: " + name);

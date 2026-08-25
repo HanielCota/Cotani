@@ -80,6 +80,15 @@ class PrometheusServerBehaviorTest {
     }
 
     @Test
+    void shouldRejectHostsThatResolveOutsideLoopback() {
+        PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        PrometheusServer server = new PrometheusServer(registry, "192.0.2.1", 0, ENDPOINT_PATH);
+
+        assertThrows(IllegalStateException.class, server::start);
+        server.close();
+    }
+
+    @Test
     void shouldReturnConfiguredPortBeforeStart() {
         PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         PrometheusServer server = new PrometheusServer(registry, 9090, ENDPOINT_PATH);

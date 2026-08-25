@@ -67,12 +67,12 @@ public final class DefaultHudBossBar implements HudBossBar {
                     var elapsed = System.currentTimeMillis() - startTime;
                     var remaining = totalMillis - elapsed;
                     if (remaining <= 0) {
-                        bar.progress(0.0f);
+                        dispatchBarUpdate(current -> current.progress(0.0f));
                         close();
                         return;
                     }
                     var progress = Math.clamp((float) remaining / (float) totalMillis, 0.0f, 1.0f);
-                    bar.progress(progress);
+                    dispatchBarUpdate(current -> current.progress(progress));
                 },
                 Duration.ZERO,
                 Duration.ofMillis(50));
@@ -96,7 +96,7 @@ public final class DefaultHudBossBar implements HudBossBar {
                 titleSubscription = null;
             }
         }
-        bar.name(title);
+        dispatchBarUpdate(current -> current.name(title));
         return this;
     }
 
@@ -116,21 +116,22 @@ public final class DefaultHudBossBar implements HudBossBar {
                 progressSubscription = null;
             }
         }
-        bar.progress(Math.clamp(progress, 0.0f, 1.0f));
+        float clampedProgress = Math.clamp(progress, 0.0f, 1.0f);
+        dispatchBarUpdate(current -> current.progress(clampedProgress));
         return this;
     }
 
     @Override
     public HudBossBar color(BossBar.Color color) {
         Objects.requireNonNull(color, "Parameter 'color' must not be null");
-        bar.color(color);
+        dispatchBarUpdate(current -> current.color(color));
         return this;
     }
 
     @Override
     public HudBossBar overlay(BossBar.Overlay overlay) {
         Objects.requireNonNull(overlay, "Parameter 'overlay' must not be null");
-        bar.overlay(overlay);
+        dispatchBarUpdate(current -> current.overlay(overlay));
         return this;
     }
 
@@ -141,10 +142,12 @@ public final class DefaultHudBossBar implements HudBossBar {
             return this;
         }
 
-        viewerIds.add(player.getUniqueId());
-        scheduler.entity(player, () -> {
-            if (player.isOnline()) {
-                player.showBossBar(bar);
+        UUID viewerId = player.getUniqueId();
+        viewerIds.add(viewerId);
+        scheduler.entity(viewerId, () -> {
+            var current = Bukkit.getPlayer(viewerId);
+            if (current != null && current.isOnline()) {
+                current.showBossBar(bar);
             }
         });
 
@@ -154,11 +157,13 @@ public final class DefaultHudBossBar implements HudBossBar {
     @Override
     public HudBossBar hide(Player player) {
         Objects.requireNonNull(player, PLAYER_NULL_MSG);
-        viewerIds.remove(player.getUniqueId());
+        UUID viewerId = player.getUniqueId();
+        viewerIds.remove(viewerId);
 
-        scheduler.entity(player, () -> {
-            if (player.isOnline()) {
-                player.hideBossBar(bar);
+        scheduler.entity(viewerId, () -> {
+            var current = Bukkit.getPlayer(viewerId);
+            if (current != null && current.isOnline()) {
+                current.hideBossBar(bar);
             }
         });
 
@@ -200,11 +205,14 @@ public final class DefaultHudBossBar implements HudBossBar {
                 }
             }
 
-            bar.progress(Math.clamp(property.get(), 0.0f, 1.0f));
+            Float initialVal = property.get();
+            float initialProgress = initialVal == null ? 0.0f : Math.clamp(initialVal, 0.0f, 1.0f);
+            dispatchBarUpdate(current -> current.progress(initialProgress));
 
             this.progressSubscription = property.observe(newVal -> {
                 if (!closed.get()) {
-                    bar.progress(Math.clamp(newVal, 0.0f, 1.0f));
+                    float nextProgress = newVal == null ? 0.0f : Math.clamp(newVal, 0.0f, 1.0f);
+                    dispatchBarUpdate(current -> current.progress(nextProgress));
                 }
             });
         }
@@ -226,11 +234,13 @@ public final class DefaultHudBossBar implements HudBossBar {
                 }
             }
 
-            bar.name(mapper.apply(property.get()));
+            Component initialTitle = mapper.apply(property.get());
+            dispatchBarUpdate(current -> current.name(initialTitle));
 
             this.titleSubscription = property.observe(newVal -> {
                 if (!closed.get()) {
-                    bar.name(mapper.apply(newVal));
+                    Component nextTitle = mapper.apply(newVal);
+                    dispatchBarUpdate(current -> current.name(nextTitle));
                 }
             });
         }
@@ -272,23 +282,30 @@ public final class DefaultHudBossBar implements HudBossBar {
             }
         }
 
-        var server = Bukkit.getServer();
-        if (server != null) {
-            for (var uuid : viewerIds) {
-                var p = server.getPlayer(uuid);
-                if (p != null) {
-                    scheduler.entity(p, () -> {
-                        if (p.isOnline()) {
-                            p.hideBossBar(bar);
-                        }
-                    });
+        for (var uuid : viewerIds) {
+            scheduler.entity(uuid, () -> {
+                var current = Bukkit.getPlayer(uuid);
+                if (current != null && current.isOnline()) {
+                    current.hideBossBar(bar);
                 }
-            }
+            });
         }
         viewerIds.clear();
 
         if (onDestroy != null) {
             onDestroy.accept(this);
         }
+    }
+
+    private void dispatchBarUpdate(Consumer<BossBar> update) {
+        Objects.requireNonNull(update, "Parameter 'update' must not be null");
+        if (closed.get()) {
+            return;
+        }
+        scheduler.global("hud-bossbar-update", () -> {
+            if (!closed.get()) {
+                update.accept(bar);
+            }
+        });
     }
 }

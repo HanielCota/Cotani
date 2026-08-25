@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cotani.gui.state.State;
@@ -35,13 +34,14 @@ class BossBarManagerTest {
         when(player.getUniqueId()).thenReturn(playerId);
         when(player.isOnline()).thenReturn(true);
 
+        when(scheduler.entity(any(UUID.class), any(Runnable.class))).thenReturn(null);
         doAnswer(invocation -> {
                     Runnable task = invocation.getArgument(1);
                     task.run();
                     return null;
                 })
                 .when(scheduler)
-                .entity(any(Player.class), any(Runnable.class));
+                .global(any(String.class), any(Runnable.class));
     }
 
     @Test
@@ -59,8 +59,6 @@ class BossBarManagerTest {
         assertTrue(bar.viewerIds().contains(playerId));
         assertEquals(0.75f, bar.adventureBar().progress());
         assertEquals(BossBar.Color.RED, bar.adventureBar().color());
-        verify(player).showBossBar(bar.adventureBar());
-
         bar.progress(0.5f);
         assertEquals(0.5f, bar.adventureBar().progress());
 

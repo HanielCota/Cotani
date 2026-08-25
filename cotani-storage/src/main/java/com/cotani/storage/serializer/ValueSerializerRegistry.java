@@ -4,6 +4,7 @@ import com.cotani.text.ComponentSerializers;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
@@ -21,11 +22,13 @@ public final class ValueSerializerRegistry {
     }
 
     public <T> void register(ValueSerializer<T> serializer) {
+        Objects.requireNonNull(serializer, "serializer");
         serializers.put(serializer.type(), serializer);
         resolvedCache.clear();
     }
 
     public Object serialize(Object value) {
+        Objects.requireNonNull(value, "value");
         var serializer = findSerializer(value.getClass());
 
         if (serializer == null) {
@@ -36,6 +39,8 @@ public final class ValueSerializerRegistry {
     }
 
     public <T> T deserialize(Object value, Class<T> type) {
+        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(type, "type");
         ValueSerializer<T> serializer = findSerializer(type);
 
         if (serializer == null) {

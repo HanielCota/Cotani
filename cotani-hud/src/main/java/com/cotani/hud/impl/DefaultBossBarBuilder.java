@@ -90,6 +90,7 @@ public final class DefaultBossBarBuilder implements BossBarBuilder {
 
     @Override
     public HudBossBar show(Player player) {
+        Objects.requireNonNull(player, "Parameter 'player' must not be null");
         var hudBar = build();
         hudBar.show(player);
         return hudBar;

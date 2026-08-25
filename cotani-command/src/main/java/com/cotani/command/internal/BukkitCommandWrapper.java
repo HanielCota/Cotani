@@ -35,13 +35,15 @@ public final class BukkitCommandWrapper extends Command {
 
     @Override
     public boolean execute(CommandSender sender, String commandLabel, String[] args) {
-        dispatcher.dispatch(node, sender, commandLabel, List.of(args));
+        var rawArgs = (args == null || args.length == 0) ? List.<String>of() : List.of(args);
+        dispatcher.dispatch(node, sender, commandLabel, rawArgs);
         return true;
     }
 
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args) throws IllegalArgumentException {
-        return dispatcher.complete(node, sender, alias, List.of(args));
+        var rawArgs = (args == null || args.length == 0) ? List.<String>of() : List.of(args);
+        return dispatcher.complete(node, sender, alias, rawArgs);
     }
 
     @Override

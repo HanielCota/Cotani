@@ -87,6 +87,9 @@ public final class RecordConfigBinder implements ConfigBinder {
 
     @Override
     public <T> T bind(ConfigSection section, Class<T> type) {
+        Objects.requireNonNull(section, "section");
+        Objects.requireNonNull(type, "type");
+
         if (type.isRecord()) {
             return bindRecord(section, type);
         }
@@ -99,6 +102,9 @@ public final class RecordConfigBinder implements ConfigBinder {
 
     @Override
     public <T> ValidationResult validate(ConfigSection section, Class<T> type) {
+        Objects.requireNonNull(section, "section");
+        Objects.requireNonNull(type, "type");
+
         var result = ValidationResult.valid();
 
         if (type.isSealed()) {

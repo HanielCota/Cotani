@@ -75,6 +75,7 @@ public final class ConfigSerializerRegistry {
     }
 
     public <T> void register(ConfigSerializer<T> serializer) {
+        Objects.requireNonNull(serializer, "serializer");
         synchronized (this) {
             var next = new LinkedHashMap<>(Objects.requireNonNull(serializers.get()));
             next.put(serializer.type(), serializer);
@@ -83,11 +84,14 @@ public final class ConfigSerializerRegistry {
     }
 
     public Optional<ConfigSerializer<?>> find(Class<?> type) {
+        Objects.requireNonNull(type, "type");
         return resolvedCache.get(wrap(type));
     }
 
     @SuppressWarnings({"unchecked"})
     public <T> T convert(ConfigValue value, Class<T> type) {
+        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(type, "type");
         Class<T> wrapped = wrap(type);
         Optional<ConfigSerializer<?>> serializer = find(wrapped);
 

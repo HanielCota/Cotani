@@ -29,35 +29,37 @@ public final class TableSchema {
 
     public TableSchema id(String column, ColumnType type) {
         var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
-        columns.add(new ColumnDefinition(validatedName, type, 255, true, false, true));
+        columns.add(new ColumnDefinition(validatedName, Objects.requireNonNull(type, "type"), 255, true, false, true));
         cachedSql = null;
         return this;
     }
 
     public TableSchema column(String column, ColumnType type) {
         var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
-        columns.add(new ColumnDefinition(validatedName, type, 255, false, true, false));
+        columns.add(new ColumnDefinition(validatedName, Objects.requireNonNull(type, "type"), 255, false, true, false));
         cachedSql = null;
         return this;
     }
 
     public TableSchema column(String column, ColumnType type, int length) {
         var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
-        columns.add(new ColumnDefinition(validatedName, type, length, false, true, false));
+        columns.add(
+                new ColumnDefinition(validatedName, Objects.requireNonNull(type, "type"), length, false, true, false));
         cachedSql = null;
         return this;
     }
 
     public TableSchema required(String column, ColumnType type) {
         var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
-        columns.add(new ColumnDefinition(validatedName, type, 255, false, false, false));
+        columns.add(
+                new ColumnDefinition(validatedName, Objects.requireNonNull(type, "type"), 255, false, false, false));
         cachedSql = null;
         return this;
     }
 
     public TableSchema unique(String column, ColumnType type) {
         var validatedName = Identifiers.requireValid(column, COLUMN_NAME_LABEL);
-        columns.add(new ColumnDefinition(validatedName, type, 255, false, false, true));
+        columns.add(new ColumnDefinition(validatedName, Objects.requireNonNull(type, "type"), 255, false, false, true));
         cachedSql = null;
         return this;
     }

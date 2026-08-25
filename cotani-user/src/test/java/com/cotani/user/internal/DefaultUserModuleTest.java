@@ -12,7 +12,6 @@ import com.cotani.user.internal.listener.UserListener;
 import com.cotani.user.internal.service.SimpleUserService;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
@@ -84,8 +83,11 @@ class DefaultUserModuleTest {
         DefaultUserModule module =
                 DefaultUserModule.createWithService(plugin, scheduler, UserModuleOptions.defaults(), service);
 
-        CotaniCloseException exception = assertThrows(CotaniCloseException.class, module::close);
-        assertSame(saveFailure, exception.getCause());
+        var exception = assertThrows(
+                java.util.concurrent.CompletionException.class,
+                () -> module.closeAsync().toCompletableFuture().join());
+        var closeFailure = assertInstanceOf(CotaniCloseException.class, exception.getCause());
+        assertSame(saveFailure, closeFailure.getCause());
 
         verify(service).saveAll();
         verify(service, never()).clearCache();
@@ -99,12 +101,12 @@ class DefaultUserModuleTest {
         DefaultUserModule module =
                 DefaultUserModule.createWithService(plugin, scheduler, UserModuleOptions.defaults(), service);
 
-        CompletableFuture<Void> closeFuture = CompletableFuture.runAsync(module::close);
+        var closeFuture = module.closeAsync().toCompletableFuture();
         assertFalse(closeFuture.isDone());
 
         saveFuture.complete(null);
 
-        assertDoesNotThrow(() -> closeFuture.get(1, TimeUnit.SECONDS));
+        assertDoesNotThrow(() -> closeFuture.join());
         verify(service).clearCache();
     }
 

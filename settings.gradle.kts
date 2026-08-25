@@ -10,6 +10,7 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     }
 }
 
@@ -17,6 +18,8 @@ rootProject.name = "cotani"
 
 include(
     "bom",
+    "audit",
+    "audit-storage",
     "cache",
     "config",
     "core",
@@ -39,10 +42,25 @@ include(
     "npc",
     "region",
     "redis",
+    "placeholder",
+    "permission",
+    "inventory",
+    "locale",
+    "party",
+    "friend",
+    "queue",
+    "trade",
+    "punishment",
+    "location",
+    "mail",
+    "reward",
+    "reward-integration",
     "examples"
 )
 
 project(":bom").projectDir = file("cotani-bom")
+project(":audit").projectDir = file("cotani-audit")
+project(":audit-storage").projectDir = file("cotani-audit-storage")
 project(":cache").projectDir = file("cotani-cache")
 project(":config").projectDir = file("cotani-config")
 project(":core").projectDir = file("cotani-core")
@@ -65,6 +83,19 @@ project(":nametag").projectDir = file("cotani-nametag")
 project(":npc").projectDir = file("cotani-npc")
 project(":region").projectDir = file("cotani-region")
 project(":redis").projectDir = file("cotani-redis")
+project(":placeholder").projectDir = file("cotani-placeholder")
+project(":permission").projectDir = file("cotani-permission")
+project(":inventory").projectDir = file("cotani-inventory")
+project(":locale").projectDir = file("cotani-locale")
+project(":party").projectDir = file("cotani-party")
+project(":friend").projectDir = file("cotani-friend")
+project(":queue").projectDir = file("cotani-queue")
+project(":trade").projectDir = file("cotani-trade")
+project(":punishment").projectDir = file("cotani-punishment")
+project(":location").projectDir = file("cotani-location")
+project(":mail").projectDir = file("cotani-mail")
+project(":reward").projectDir = file("cotani-reward")
+project(":reward-integration").projectDir = file("cotani-reward-integration")
 project(":examples").projectDir = file("docs-examples")
 
 

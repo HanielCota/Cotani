@@ -56,6 +56,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public V get(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return delegate.get(uniqueId);
     }
 
@@ -68,31 +69,39 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public Optional<V> find(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return delegate.find(uniqueId);
     }
 
     @Override
     public CompletionStage<V> getOrLoadAsync(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return delegate.getOrLoad(uniqueId);
     }
 
     @Override
     public CompletionStage<V> loadAsync(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return delegate.load(uniqueId);
     }
 
     @Override
     public CompletionStage<V> updateAsync(UUID uniqueId, UnaryOperator<V> updater) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(updater, "updater");
         return delegate.update(uniqueId, updater);
     }
 
     @Override
     public CompletionStage<V> mutateAsync(UUID uniqueId, Consumer<V> mutator) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
+        Objects.requireNonNull(mutator, "mutator");
         return delegate.mutate(uniqueId, mutator);
     }
 
     @Override
     public CompletionStage<Void> saveAsync(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return delegate.save(uniqueId);
     }
 
@@ -115,6 +124,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public void unload(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         delegate.unload(uniqueId);
     }
 
@@ -127,6 +137,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public boolean contains(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         return delegate.contains(uniqueId);
     }
 
@@ -139,6 +150,7 @@ public final class CaffeinePlayerDataCache<V> implements PlayerDataCache<V> {
 
     @Override
     public void markDirty(UUID uniqueId) {
+        Objects.requireNonNull(uniqueId, "uniqueId");
         delegate.markDirty(uniqueId);
     }
 

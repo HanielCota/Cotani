@@ -33,6 +33,23 @@ Before submitting any code changes, run the full validation suite locally:
 ./gradlew check
 ```
 
+For documentation-only changes, also verify the generated API reference and the compile-checked examples:
+
+```bash
+./gradlew aggregateJavadoc
+./gradlew :examples:compileJava
+```
+
+Keep module READMEs aligned with the public `api` packages. Examples must use `CompletionStage` composition, explicit
+thread transitions and immutable identifiers; do not document `join()`, `get()`, `Thread.sleep(...)` or live Bukkit
+objects captured in async callbacks. Cross-cutting references are indexed in [`docs/README.md`](docs/README.md).
+
+Database-backed documentation and examples should be exercised with:
+
+```bash
+./gradlew integrationTest
+```
+
 ## Submitting Pull Requests
 
 1. Fork the repository and create a feature branch (`git checkout -b feature/my-feature`).

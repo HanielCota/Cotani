@@ -119,6 +119,7 @@ public final class DataCacheBuilder<K, V> {
     }
 
     public DataCache<K, V> build(PaperTaskScheduler scheduler) {
+        Objects.requireNonNull(scheduler, "scheduler");
         validate();
 
         var resolvedRepository = resolveRepository();

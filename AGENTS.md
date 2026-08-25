@@ -225,6 +225,16 @@ Common commands:
 ./gradlew build
 ```
 
+Documentation changes should also verify the generated API reference and compile-checked examples:
+
+```bash
+./gradlew aggregateJavadoc
+./gradlew :examples:compileJava
+```
+
+Keep module READMEs aligned with the public `api` packages and use [`docs/README.md`](docs/README.md) as the index for
+cross-cutting references. Do not document blocking calls or live Bukkit objects captured across async boundaries.
+
 If a command is unavailable, fails because of environment setup, or is too broad for the change, explain what was run
 and what could not be verified.
 
@@ -389,6 +399,106 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 - Use `isFlagAllowed(location, flag, defaultVal)` for fast hierarchical priority evaluation.
 - Handle `RegionEnterEvent` and `RegionLeaveEvent` safely across Paper main thread and Folia region threads.
 
+### cotani-placeholder
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniPlaceholders.create(plugin, scheduler))`.
+- Register sync, async (`CompletionStage`), and relational (`%rel_...%`) custom expansions.
+- Use `parseAsync` when placeholders perform heavy or non-local calculations (e.g. database, redis).
+- Bridge automatically with PlaceholderAPI when installed without compile/runtime coupling.
+
+### cotani-inventory
+
+- Register the module once in `onEnable` via `Cotani.forPlugin(plugin).with(CotaniInventories.create(plugin, scheduler, storage))`.
+- Use `captureAsync` and `applyAsync` for Folia entity-thread-safe snapshot capture and restoration.
+- Use `InventorySnapshot.builder(playerId)` for constructing immutable inventory representations.
+- Use `beginTransferAsync` and `completeTransferAsync` for atomic cross-server transfer dupe protection.
+
+### cotani-locale
+
+- Keep locale preferences keyed by `UUID`; never retain live `Player` objects.
+- Build trusted templates with `MessageBundle` and render through `LocaleService`.
+- Use `MessageArguments` for dynamic text, components, numbers, dates and plural/choice values.
+- Use `setPlayerLocaleAsync`/`removePlayerLocaleAsync` for repository-backed preference changes; compose the returned stage.
+- Register the service in `Cotani.forPlugin(plugin).withAsync(localeService::closeAsync)` when the plugin owns its
+  lifecycle.
+
+### cotani-audit
+
+- Create the service with `CotaniAudits.inMemory()` for tests or `CotaniAuditStorages.create(storage)` from `cotani-audit-storage` for SQL persistence.
+- Register `CotaniAuditStorages.migrations()` before starting `CotaniStorage` when using the storage adapter.
+- Record immutable `AuditEntry` values with `recordAsync`; never retain live Bukkit objects in audit details.
+- Use bounded `AuditQuery` filters and `AuditCursor` pagination for history screens and administrative searches.
+- Close the service with `closeAsync()` after pending writes have been composed into the plugin shutdown flow.
+
+### cotani-reward
+
+- Keep reward definitions, claim receipts and grants immutable; settlement belongs to a host-owned adapter.
+- Use a stable `RewardClaimId` when the claim may be retried, and settle grants idempotently using that same id.
+- Register `StorageRewardRepository.migrations()` before starting `CotaniStorage`; never evaluate cooldowns outside the repository transaction.
+- Recover unfinished deliveries with `pendingClaimsAsync(limit)` and acknowledge them through `markSettledAsync(...)` only after the host settlement is durable.
+- Keep reward services Bukkit-free; pass UUIDs and plain grant values through async flows, then return to the owning entity thread for delivery.
+- Configure claim retention deliberately: purging a receipt removes the guarantee that a late retry remains idempotent.
+- Close the service with `closeAsync()` after pending claims have been composed into plugin shutdown.
+
+### cotani-reward-integration
+
+- Use `CotaniRewards.settlement(...)` with `RewardEconomyGrantHandler` and
+  `RewardInventoryGrantHandler` instead of delivering grants directly in commands.
+- Use `claimOrRecoverAsync(...)` for player-facing daily commands so a pending claim is settled before
+  a new claim is attempted.
+- Currency delivery derives a deterministic `EconomyOperationId` from the claim and grant index.
+- Item delivery runs through `InventorySyncService.mutateAsync(...)` on the player's entity thread;
+  custom item resolvers must not touch Bukkit objects from async continuations.
+- The standard item adapter marks delivered stacks. If marked items can be consumed or moved before
+  crash recovery, provide a custom durable idempotency ledger/handler.
+
+### cotani-punishment
+
+- Use `PunishmentRequest` with a stable `PunishmentId` when an operation may be retried.
+- Keep target and actor data as immutable identifiers; never store `Player` or other live Paper objects.
+- Use `queryAsync(...activeAt(...))` or `activeAsync(...)` for effective state; expiration is evaluated from the supplied instant.
+- Persist with `CotaniPunishments.storageAsync(storage)` and register `CotaniPunishments.migrations()` before storage startup.
+- Compose `applyAsync` and `revokeAsync`; do not block commands or listeners with `join()`/`get()`.
+- Pass an `AuditService` when moderation actions must be recorded, and close both services asynchronously during shutdown.
+
+### cotani-party
+
+- Keep party members and actors as immutable `UUID` values; never retain live `Player` objects in the service.
+- Use `PartyOptions` for bounded party size and explicit `Duration` values for invitation lifetimes.
+- Use `PartyRepository` only through `CompletionStage`; mutation calls use expected revisions and are subject to `PartyServiceOptions.repositoryTimeout()`.
+- Use `acceptInviteAsync`, `leaveAsync`, `kickAsync` and `transferLeadershipAsync` for party mutations; do not mutate `Party` collections directly.
+- Publish immutable `PartyEvent` values through `EventBus` when integrations need local notifications; delivery is best effort and bounded by `PartyServiceOptions.eventTimeout()`. Redis distribution belongs in a separate adapter.
+- Close the service with `closeAsync()` and compose its completion into plugin shutdown.
+
+### cotani-friend
+
+- Keep friend actors as immutable `UUID` values; never retain live `Player` objects in the service.
+- Use `FriendRepository.saveAsync(snapshot, expectedRevision)` for optimistic persistence.
+- Persist the next `FriendSnapshot` before replacing visible service state.
+- Treat blocks as directional and reject friendship/request operations when either direction is blocked.
+- Publish immutable friend events through `EventBus`; delivery is best effort and bounded by `FriendServiceOptions.eventTimeout()`.
+- Close the service with `closeAsync()` and compose its completion into plugin shutdown.
+
+### cotani-queue
+
+- Keep queue players as immutable `UUID` values; never retain live `Player` objects in the service.
+- Use `QueueRepository.saveAsync(snapshot, expectedRevision)` for optimistic persistence.
+- Persist before replacing visible queue state; matching must remove tickets atomically.
+- Use priority descending and sequence ascending for deterministic FIFO tie-breaking.
+- Treat expired tickets as inactive; remove them during the next mutation.
+- Publish immutable queue events through `EventBus`; delivery is best effort and bounded by `QueueServiceOptions.eventTimeout()`.
+- Close the service with `closeAsync()` and compose its completion into plugin shutdown.
+
+### cotani-trade
+
+- Keep trade participants as immutable `UUID` values; never retain live `Player`, `Inventory` or `ItemStack` objects.
+- Use immutable `TradeAsset` values and replace offers through `offerAsync`; every offer change clears both confirmations.
+- Settle only after both participants confirm and persist `SETTLEMENT_PENDING` before invoking the settlement adapter.
+- Implement `TradeSettlementService` as an atomic, idempotent operation keyed by `TradeId`; never transfer only one side.
+- Treat expired, cancelled, completed and failed trades as inactive for participant conflict checks.
+- Publish immutable trade events through `EventBus`; delivery is best effort and bounded by `TradeServiceOptions.eventTimeout()`.
+- Close the service with `closeAsync()` and compose its completion into plugin shutdown.
+
 ## Anti-patterns by module
 
 | Module | Do not | Do instead |
@@ -414,6 +524,12 @@ When generating or modifying code that consumes Cotani APIs, follow these module
 | cooldown | query database synchronously on command | use `cooldownService` / `checkAndStartAsync` |
 | event | block the thread in an event listener | use `publishAsync` or async composition |
 | dialog | block waiting for chat response | use `promptChat(...).thenAccept(...)` |
+| placeholder | block on `parseAsync` with `.join()` | compose with `thenAccept` / `thenCompose` |
+| inventory | touch player inventory on async thread | use `syncService.applyAsync` or `scheduler.entity(...)` |
+| audit | store live Bukkit objects or query unbounded history | store immutable actor/target identifiers and use bounded `AuditQuery` |
+| reward | deliver grants before the claim is durably accepted or retry with a new claim id | persist the claim first and settle its immutable grants idempotently with the same `RewardClaimId` |
+| party | store `Player` references or mutate party state from listeners | use UUIDs, `PartyService` async methods and immutable `Party` snapshots |
+| trade | mutate Bukkit inventories from async settlement code | use immutable offers and an atomic `TradeSettlementService` adapter |
 
 ## Agent Cookbook
 

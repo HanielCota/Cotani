@@ -27,7 +27,7 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
 
     public CotaniMetricsRegistry(MeterRegistry meterRegistry, String prefix) {
         this.meterRegistry = Objects.requireNonNull(meterRegistry, "meterRegistry");
-        this.prefix = prefix.trim();
+        this.prefix = Objects.requireNonNull(prefix, "prefix").trim();
     }
 
     @Override
@@ -101,7 +101,7 @@ public final class CotaniMetricsRegistry implements MetricsRegistry {
     }
 
     private Tags toTags(String[] tags) {
-        if (tags.length == 0) {
+        if (tags == null || tags.length == 0) {
             return Tags.empty();
         }
         if (tags.length % 2 != 0) {

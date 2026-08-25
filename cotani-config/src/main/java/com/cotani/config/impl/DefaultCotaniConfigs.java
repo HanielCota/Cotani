@@ -89,6 +89,7 @@ public final class DefaultCotaniConfigs implements CotaniConfigs {
 
     @Override
     public CotaniConfig file(String name) {
+        Objects.requireNonNull(name, "name");
         var config = files.get(name);
 
         if (config != null) {

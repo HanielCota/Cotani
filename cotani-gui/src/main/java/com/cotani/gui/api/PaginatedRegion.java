@@ -17,10 +17,10 @@ final class PaginatedRegion<T> {
     private final Function<T, Button> renderer;
 
     PaginatedRegion(List<Integer> slots, Property<Integer> page, List<T> items, Function<T, Button> renderer) {
-        this.slots = slots;
-        this.page = page;
-        this.items = items;
-        this.renderer = renderer;
+        this.slots = List.copyOf(Objects.requireNonNull(slots, "slots"));
+        this.page = Objects.requireNonNull(page, "page");
+        this.items = List.copyOf(Objects.requireNonNull(items, "items"));
+        this.renderer = Objects.requireNonNull(renderer, "renderer");
     }
 
     Property<Integer> page() {
@@ -48,7 +48,9 @@ final class PaginatedRegion<T> {
             int slot = slots.get(index);
 
             if (index < slice.size()) {
-                panel.setDynamicSlot(slot, renderer.apply(slice.get(index)));
+                var button = Objects.requireNonNull(
+                        renderer.apply(slice.get(index)), "The paginated item renderer must not return null");
+                panel.setDynamicSlot(slot, button);
                 continue;
             }
 

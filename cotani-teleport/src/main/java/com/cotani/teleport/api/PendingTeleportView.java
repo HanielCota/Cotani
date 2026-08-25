@@ -13,6 +13,14 @@ public record PendingTeleportView(
         Duration delay,
         PendingTeleportState state,
         @Nullable TeleportCancelReason cancelReasonNullable) {
+    public PendingTeleportView {
+        java.util.Objects.requireNonNull(id, "id");
+        java.util.Objects.requireNonNull(playerId, "playerId");
+        java.util.Objects.requireNonNull(target, "target");
+        java.util.Objects.requireNonNull(delay, "delay");
+        java.util.Objects.requireNonNull(state, "state");
+    }
+
     public Optional<TeleportCancelReason> cancelReason() {
         return Optional.ofNullable(cancelReasonNullable);
     }

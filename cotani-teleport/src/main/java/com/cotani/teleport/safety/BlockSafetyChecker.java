@@ -11,6 +11,8 @@ public final class BlockSafetyChecker {
     private BlockSafetyChecker() {}
 
     public static boolean isSafe(Location location, SafeLocationOptions options) {
+        Objects.requireNonNull(location, "location");
+        Objects.requireNonNull(options, "options");
         World world = location.getWorld();
 
         if (world == null) {
@@ -88,6 +90,7 @@ public final class BlockSafetyChecker {
     }
 
     public static Location center(Location location) {
+        Objects.requireNonNull(location, "location");
         return new Location(
                 Objects.requireNonNull(location.getWorld(), "world"),
                 location.getBlockX() + 0.5,

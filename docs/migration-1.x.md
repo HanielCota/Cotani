@@ -1,8 +1,13 @@
 # Cotani 1.x migration notes
 
+These notes describe the compatibility additions and behavior changes carried into the `1.1.0` release. The `1.0.0`
+line remains available for consumers that still target its original module set; new integrations should use the current
+stable APIs below.
+
 ## Explicit async names
 
-Cotani 1.0.1 adds source-compatible `*Async` aliases to APIs whose original names returned a `CompletionStage` without saying so in the method name:
+Cotani 1.1.0 retains source-compatible `*Async` aliases for APIs whose original names returned a `CompletionStage`
+without saying so in the method name:
 
 - `DataCache`: `getOrLoadAsync`, `loadAsync`, `updateAsync`, `mutateAsync`, `saveAsync`, `saveDirtyAsync`, `saveAllAsync`;
 - `PlayerDataCache`: `saveDirtyAsync`, `saveAllAsync`;

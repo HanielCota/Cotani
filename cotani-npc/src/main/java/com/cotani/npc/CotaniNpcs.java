@@ -21,9 +21,15 @@ public final class CotaniNpcs {
      * @return the created NpcModule
      */
     public static NpcModule create(Plugin plugin, PaperTaskScheduler scheduler) {
+        return create(plugin, scheduler, com.cotani.npc.api.NpcPacketAdapter.noop());
+    }
+
+    public static NpcModule create(
+            Plugin plugin, PaperTaskScheduler scheduler, com.cotani.npc.api.NpcPacketAdapter packetAdapter) {
         Objects.requireNonNull(plugin, "Parameter 'plugin' must not be null");
         Objects.requireNonNull(scheduler, "Parameter 'scheduler' must not be null");
+        Objects.requireNonNull(packetAdapter, "Parameter 'packetAdapter' must not be null");
 
-        return new DefaultNpcModule(plugin, scheduler);
+        return new DefaultNpcModule(plugin, scheduler, packetAdapter);
     }
 }

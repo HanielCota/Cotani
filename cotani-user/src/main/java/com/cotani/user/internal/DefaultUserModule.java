@@ -140,10 +140,10 @@ public final class DefaultUserModule implements UserModule {
     }
 
     /**
-     * Closes the module and propagates any shutdown failure as {@link com.cotani.CotaniCloseException}.
+     * Begins closing the module without blocking.
      *
-     * <p>Errors from the final save-and-clear step are logged and swallowed; cache is only cleared when
-     * the save succeeds.
+     * <p>Use {@link #closeAsync()} to observe completion and failures. Errors from the final
+     * save-and-clear step are logged and the cache is only cleared when the save succeeds.
      */
     @Override
     public void close() {

@@ -98,7 +98,7 @@ public final class DefaultRedisRateLimiter implements RedisRateLimiter {
                     if (res == null || res.size() < 4) {
                         return new RateLimitResult(false, maxRequests, maxRequests, window);
                     }
-                    boolean allowed = res.get(0) != null && res.get(0) == 1L;
+                    boolean allowed = res.getFirst() != null && res.getFirst() == 1L;
                     long currentCount = res.get(1) != null ? res.get(1) : 0L;
                     long max = res.get(2) != null ? res.get(2) : maxRequests;
                     long resetMillis = res.get(3) != null ? res.get(3) : windowMillis;

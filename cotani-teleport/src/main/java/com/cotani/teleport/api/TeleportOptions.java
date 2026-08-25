@@ -124,27 +124,27 @@ public record TeleportOptions(
         private Duration timeout = Duration.ofSeconds(10);
 
         public Builder execution(ExecutionSettings execution) {
-            this.execution = execution;
+            this.execution = Objects.requireNonNull(execution, "execution");
             return this;
         }
 
         public Builder safety(SafetySettings safety) {
-            this.safety = safety;
+            this.safety = Objects.requireNonNull(safety, "safety");
             return this;
         }
 
         public Builder policies(PolicySettings policies) {
-            this.policies = policies;
+            this.policies = Objects.requireNonNull(policies, "policies");
             return this;
         }
 
         public Builder player(PlayerSettings player) {
-            this.player = player;
+            this.player = Objects.requireNonNull(player, "player");
             return this;
         }
 
         public Builder feedback(FeedbackSettings feedback) {
-            this.feedback = feedback;
+            this.feedback = Objects.requireNonNull(feedback, "feedback");
             return this;
         }
 
@@ -162,6 +162,7 @@ public record TeleportOptions(
         }
 
         public Builder safeLocationOptions(SafeLocationOptions safeLocationOptions) {
+            Objects.requireNonNull(safeLocationOptions, "safeLocationOptions");
             this.safety = SafetySettings.builder(this.safety)
                     .safeLocationOptions(safeLocationOptions)
                     .build();
@@ -183,6 +184,7 @@ public record TeleportOptions(
         }
 
         public Builder cooldownDuration(Duration cooldownDuration) {
+            Objects.requireNonNull(cooldownDuration, "cooldownDuration");
             this.policies = PolicySettings.builder(this.policies)
                     .cooldownDuration(cooldownDuration)
                     .build();
@@ -237,7 +239,7 @@ public record TeleportOptions(
         }
 
         public Builder timeout(Duration timeout) {
-            this.timeout = timeout;
+            this.timeout = Objects.requireNonNull(timeout, "timeout");
             return this;
         }
 

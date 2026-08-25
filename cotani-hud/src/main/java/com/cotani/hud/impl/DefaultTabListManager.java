@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
@@ -78,10 +79,12 @@ public final class DefaultTabListManager implements TabListManager {
         state.header.set(mapper.apply(property.get()));
         render(player, state);
 
+        var playerId = player.getUniqueId();
         var sub = property.observe(newVal -> {
-            if (player.isOnline()) {
+            var p = Bukkit.getServer() != null ? Bukkit.getPlayer(playerId) : player;
+            if (p != null && p.isOnline()) {
                 state.header.set(mapper.apply(newVal));
-                render(player, state);
+                render(p, state);
             }
         });
 
@@ -106,10 +109,12 @@ public final class DefaultTabListManager implements TabListManager {
         state.footer.set(initial);
         render(player, state);
 
+        var playerId = player.getUniqueId();
         var sub = property.observe(newVal -> {
-            if (player.isOnline()) {
+            var p = Bukkit.getServer() != null ? Bukkit.getPlayer(playerId) : player;
+            if (p != null && p.isOnline()) {
                 state.footer.set(mapper.apply(newVal));
-                render(player, state);
+                render(p, state);
             }
         });
 
@@ -119,6 +124,13 @@ public final class DefaultTabListManager implements TabListManager {
             sub.close();
             state.removeFooterSubscription(sub);
         };
+    }
+
+    public void close() {
+        for (var state : states.values()) {
+            state.closeSubscriptions();
+        }
+        states.clear();
     }
 
     @Override

@@ -1,6 +1,8 @@
 package com.cotani.storage.query;
 
-record Condition(String column, Object value) {
+import org.jspecify.annotations.Nullable;
+
+record Condition(String column, @Nullable Object value) {
     boolean isNullValue() {
         return value == null;
     }

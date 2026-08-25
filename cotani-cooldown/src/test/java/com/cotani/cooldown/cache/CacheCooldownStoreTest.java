@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -196,12 +197,18 @@ class CacheCooldownStoreTest {
         var userId = UUID.randomUUID();
         var playerCooldowns = new PlayerCooldowns(userId);
         when(playerCache.find(userId)).thenReturn(Optional.of(playerCooldowns));
+        doAnswer(invocation -> {
+                    var mutator = invocation.<java.util.function.Consumer<PlayerCooldowns>>getArgument(1);
+                    mutator.accept(playerCooldowns);
+                    return java.util.concurrent.CompletableFuture.completedFuture(playerCooldowns);
+                })
+                .when(playerCache)
+                .mutateAsync(eq(userId), any());
         var store = new CacheCooldownStore(playerCache);
         var key = new CooldownKey(new UserCooldownTarget(userId), CooldownAction.of("use"));
 
         store.save(new CooldownEntry(key, NOW, NOW.plusSeconds(5)));
 
-        verify(playerCache).markDirty(userId);
         verify(playerCache).mutateAsync(eq(userId), any());
         assertTrue(playerCooldowns.find("use").isPresent());
     }

@@ -45,11 +45,17 @@ public final class DefaultNpcModule implements NpcModule {
     private final AtomicBoolean closed = new AtomicBoolean();
 
     public DefaultNpcModule(Plugin plugin, PaperTaskScheduler scheduler) {
+        this(plugin, scheduler, com.cotani.npc.api.NpcPacketAdapter.noop());
+    }
+
+    public DefaultNpcModule(
+            Plugin plugin, PaperTaskScheduler scheduler, com.cotani.npc.api.NpcPacketAdapter packetAdapter) {
         Objects.requireNonNull(plugin, "Parameter 'plugin' must not be null");
         this.scheduler = Objects.requireNonNull(scheduler, "Parameter 'scheduler' must not be null");
+        Objects.requireNonNull(packetAdapter, "Parameter 'packetAdapter' must not be null");
         this.registry = new NpcRegistry();
         this.spatialIndex = new NpcSpatialIndex();
-        this.renderer = new NpcRenderer();
+        this.renderer = new NpcRenderer(packetAdapter);
         this.tracker = new NpcTracker(renderer);
         this.skinFetcher = new DefaultNpcSkinFetcher();
 
@@ -362,6 +368,11 @@ public final class DefaultNpcModule implements NpcModule {
 
     @Override
     public void close() {
-        closeAsync();
+        closeAsync().whenComplete((_, error) -> {
+            if (error != null) {
+                java.util.logging.Logger.getLogger(DefaultNpcModule.class.getName())
+                        .log(java.util.logging.Level.SEVERE, "Failed to close NPC module", error);
+            }
+        });
     }
 }

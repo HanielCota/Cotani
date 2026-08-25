@@ -36,7 +36,7 @@ public final class SelectQuery {
         return this;
     }
 
-    public SelectQuery where(String column, Object value) {
+    public SelectQuery where(String column, @Nullable Object value) {
         conditions.add(new Condition(Identifiers.requireValid(column, "Where column"), value));
         cachedSql = null;
         return this;

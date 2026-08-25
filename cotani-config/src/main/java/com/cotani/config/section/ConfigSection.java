@@ -52,14 +52,17 @@ public final class ConfigSection {
     }
 
     public ConfigSection section(String childPath) {
+        Objects.requireNonNull(childPath, "childPath");
         return ConfigSection.create(file, join(childPath), source, serializers, binder);
     }
 
     public <T> T bind(Class<T> type) {
+        Objects.requireNonNull(type, "type");
         return binder.bind(this, type);
     }
 
     private String join(String childPath) {
+        Objects.requireNonNull(childPath, "childPath");
         if (path.isBlank()) {
             return childPath;
         }

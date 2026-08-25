@@ -13,7 +13,7 @@ body:
     attributes:
       label: Environment & Versions
       description: What server software, Java version, and Cotani version are you using?
-      placeholder: e.g. Paper 26.2, Java 25, Cotani 1.0.0
+      placeholder: e.g. Paper 26.2, Java 25, Cotani 1.1.0
     validations:
       required: true
 
@@ -35,6 +35,30 @@ body:
         - cotani-event
         - cotani-item
         - cotani-text
+        - cotani-audit
+        - cotani-audit-storage
+        - cotani-command
+        - cotani-dialog
+        - cotani-display
+        - cotani-gui
+        - cotani-hud
+        - cotani-inventory
+        - cotani-locale
+        - cotani-location
+        - cotani-mail
+        - cotani-metrics
+        - cotani-nametag
+        - cotani-npc
+        - cotani-party
+        - cotani-permission
+        - cotani-placeholder
+        - cotani-punishment
+        - cotani-queue
+        - cotani-redis
+        - cotani-region
+        - cotani-reward
+        - cotani-reward-integration
+        - cotani-trade
         - Multiple / Unknown
     validations:
       required: true

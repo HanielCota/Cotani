@@ -78,6 +78,20 @@ final class DefaultEventBusTest {
     }
 
     @Test
+    void shouldNotShutdownExternalExecutorOnClose() throws Exception {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            var bus = DefaultEventBus.create(exception -> {}, executor);
+
+            bus.close();
+
+            assertDoesNotThrow(() -> executor.submit(() -> {}).get(5, TimeUnit.SECONDS));
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void shouldUseNormalAsDefaultPriorityWhenSubscribingWithoutPriority() {
         EventBus bus = directBus(exception -> {});
 

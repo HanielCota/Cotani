@@ -52,7 +52,9 @@ public final class DefaultConversationWizard implements ConversationWizard {
         var context = new WizardContext(player, Collections.unmodifiableMap(answers));
 
         try {
-            var promptBuilder = stepDef.promptSupplier().apply(context);
+            var promptBuilder = Objects.requireNonNull(
+                    stepDef.promptSupplier().apply(context),
+                    () -> "promptSupplier returned null for step: " + stepDef.key());
             var prompt = promptBuilder.build(dialogService);
 
             prompt.start(player).whenComplete((result, error) -> {
@@ -60,17 +62,19 @@ public final class DefaultConversationWizard implements ConversationWizard {
                     future.complete(PromptResult.error(error));
                     return;
                 }
-                if (result.isCancelled()) {
-                    future.complete(PromptResult.cancelled(((PromptResult.Cancelled<?>) result).reason()));
-                    return;
-                }
-                if (result.isError()) {
-                    future.complete(PromptResult.error(((PromptResult.Failure<?>) result).cause()));
+                if (result == null) {
+                    future.complete(PromptResult.error(new NullPointerException("Prompt result was null")));
                     return;
                 }
 
-                answers.put(stepDef.key(), result.valueOrThrow());
-                runStep(player, stepIndex + 1, answers, future);
+                switch (result) {
+                    case PromptResult.Cancelled<?>(var reason) -> future.complete(PromptResult.cancelled(reason));
+                    case PromptResult.Failure<?>(var cause) -> future.complete(PromptResult.error(cause));
+                    case PromptResult.Success<?>(var value) -> {
+                        answers.put(stepDef.key(), value);
+                        runStep(player, stepIndex + 1, answers, future);
+                    }
+                }
             });
         } catch (Throwable t) {
             future.complete(PromptResult.error(t));

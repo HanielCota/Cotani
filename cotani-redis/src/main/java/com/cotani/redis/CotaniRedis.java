@@ -121,7 +121,9 @@ public interface CotaniRedis extends AutoCloseable, AsyncCloseable {
     CompletionStage<Void> closeAsync();
 
     /**
-     * Synchronously closes this instance. Must not be called from the server main thread.
+     * Begins closing this instance without blocking.
+     *
+     * <p>Use {@link #closeAsync()} to observe completion and failures.
      */
     @Override
     void close();

@@ -50,6 +50,11 @@ public interface DistributedLock extends AutoCloseable, AsyncCloseable {
         return releaseAsync();
     }
 
+    /**
+     * Begins releasing this lock without blocking.
+     *
+     * <p>Use {@link #releaseAsync()} to observe completion and failures.
+     */
     @Override
     void close();
 }

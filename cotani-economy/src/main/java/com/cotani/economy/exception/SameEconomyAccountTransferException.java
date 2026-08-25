@@ -8,6 +8,7 @@ public final class SameEconomyAccountTransferException extends EconomyException 
     private static final long serialVersionUID = 1L;
 
     public SameEconomyAccountTransferException(UUID userId) {
-        super("User " + userId + " cannot transfer money to the same economy account.");
+        super("User " + java.util.Objects.requireNonNull(userId, "userId")
+                + " cannot transfer money to the same economy account.");
     }
 }

@@ -305,14 +305,14 @@ class CaffeineDataCacheTest {
     }
 
     @Test
-    void closeIsSynchronous() {
+    void closeAsyncPersistsDirtyEntries() {
         when(repository.save(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
 
         DataCache<String, String> cache = createCache(CacheSettings.highActivity());
         cache.put("key", "value");
         cache.markDirty("key");
 
-        cache.close();
+        cache.closeAsync().toCompletableFuture().join();
 
         assertEquals(0, cache.size());
         verify(repository).save("key", "value");

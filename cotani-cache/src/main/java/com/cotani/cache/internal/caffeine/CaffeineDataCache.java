@@ -26,16 +26,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import org.bukkit.Bukkit;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -127,6 +123,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public V get(K key) {
+        Objects.requireNonNull(key, "key");
         ensureOpen();
 
         return find(key)
@@ -136,6 +133,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public Optional<V> find(K key) {
+        Objects.requireNonNull(key, "key");
         ensureOpen();
 
         return Optional.ofNullable(cache.synchronous().getIfPresent(key)).map(CacheEntry::value);
@@ -143,6 +141,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public CompletionStage<V> getOrLoad(K key) {
+        Objects.requireNonNull(key, "key");
         ensureOpen();
 
         return cache.get(key).thenApply(CacheEntry::value);
@@ -150,6 +149,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public CompletionStage<V> load(K key) {
+        Objects.requireNonNull(key, "key");
         ensureOpen();
 
         cache.synchronous().invalidate(key);
@@ -159,6 +159,8 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public CompletionStage<V> update(K key, UnaryOperator<V> updater) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(updater, "updater");
         ensureOpen();
 
         var entry = getRequiredEntry(key);
@@ -172,6 +174,8 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public CompletionStage<V> mutate(K key, Consumer<V> mutator) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(mutator, "mutator");
         ensureOpen();
 
         var entry = getRequiredEntry(key);
@@ -210,6 +214,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public CompletionStage<Void> save(K key) {
+        Objects.requireNonNull(key, "key");
         ensureOpen();
 
         return saveEntry(key);
@@ -260,6 +265,7 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public void unload(K key) {
+        Objects.requireNonNull(key, "key");
         ensureOpen();
 
         cache.synchronous().invalidate(key);
@@ -267,11 +273,13 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public boolean contains(K key) {
+        Objects.requireNonNull(key, "key");
         return cache.synchronous().getIfPresent(key) != null;
     }
 
     @Override
     public void markDirty(K key) {
+        Objects.requireNonNull(key, "key");
         ensureOpen();
 
         CacheEntry<V> entry = getRequiredEntry(key);
@@ -356,28 +364,11 @@ public final class CaffeineDataCache<K, V> implements DataCache<K, V> {
 
     @Override
     public void close() {
-        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
-            throw new IllegalStateException("DataCache.close() blocks; use closeAsync() on the server thread.");
-        }
-
-        try {
-            closeAsync().toCompletableFuture().get(30, TimeUnit.SECONDS);
-        } catch (TimeoutException timeout) {
-            LOGGER.log(
-                    Level.SEVERE,
-                    "Cache close timed out after 30s; some dirty entries may not have been persisted: "
-                            + entryTracker.dirtyCount() + " dirty entries remain");
-            throw new CacheException(
-                    "DataCache.close() timed out with " + entryTracker.dirtyCount() + " dirty entries", timeout);
-        } catch (ExecutionException error) {
-            LOGGER.log(Level.SEVERE, "Cache close failed", error.getCause());
-            Throwable cause = error.getCause() == null ? error : error.getCause();
-            throw new CacheException("DataCache.close() failed", cause);
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-            LOGGER.log(Level.SEVERE, "Cache close was interrupted; dirty entries may not have been persisted");
-            throw new CacheException("DataCache.close() was interrupted", interrupted);
-        }
+        closeAsync().whenComplete((_, failure) -> {
+            if (failure != null) {
+                LOGGER.log(Level.SEVERE, "DataCache close failed; dirty entries may remain", failure);
+            }
+        });
     }
 
     private AsyncLoadingCache<K, CacheEntry<V>> createCache(CacheSettings settings) {

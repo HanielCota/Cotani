@@ -7,11 +7,11 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.logging.Level;
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -143,57 +143,48 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
             closeables.clear();
         }
 
-        executeAsyncCloseables(asyncSnapshot).whenComplete((firstFailure, asyncErr) -> {
-            var combinedFailure = firstFailure;
+        var asyncTeardown = executeAsyncCloseables(asyncSnapshot).toCompletableFuture();
+        var _ = asyncTeardown
+                .orTimeout(asyncCloseTimeout.toMillis(), TimeUnit.MILLISECONDS)
+                .whenComplete((firstFailure, asyncErr) -> {
+                    var combinedFailure = firstFailure;
 
-            if (asyncErr != null && combinedFailure == null) {
-                combinedFailure = new CotaniCloseException("Failed to execute async closeables", asyncErr);
-            }
+                    if (asyncErr != null && combinedFailure == null) {
+                        var cause = asyncErr instanceof java.util.concurrent.CompletionException completion
+                                        && completion.getCause() != null
+                                ? completion.getCause()
+                                : asyncErr;
+                        var message = cause instanceof TimeoutException
+                                ? "Failed to close resource within timeout"
+                                : "Failed to execute async closeables";
+                        combinedFailure = new CotaniCloseException(message, cause);
+                    }
 
-            combinedFailure = executeSyncCloseables(syncSnapshot, combinedFailure);
+                    combinedFailure = executeSyncCloseables(syncSnapshot, combinedFailure);
 
-            if (combinedFailure != null) {
-                result.completeExceptionally(combinedFailure);
-                return;
-            }
+                    if (combinedFailure != null) {
+                        result.completeExceptionally(combinedFailure);
+                        return;
+                    }
 
-            result.complete(null);
-        });
+                    result.complete(null);
+                });
 
         return result;
     }
 
     /**
-     * Closes all registered resources, blocking the calling thread.
+     * Begins closing all registered resources without blocking the calling thread.
      *
-     * <p>Never call this method on the server main thread; it blocks for up to 10 seconds
-     * and will stall the game loop. Prefer {@link #closeAsync()} for main-thread usage
-     * (e.g., from {@code onDisable}) by composing the completion stage.
-     *
-     * @throws CotaniCloseException if any resource fails to close, teardown times out, or the thread is interrupted
+     * <p>Use {@link #closeAsync()} when the caller needs to observe completion or failure.
      */
     @Override
     public void close() {
-        var server = Bukkit.getServer();
-
-        if (server != null && server.isPrimaryThread()) {
-            throw new IllegalStateException("Cotani.close() blocks; use closeAsync() on the server thread.");
-        }
-
-        try {
-            closeAsync().toCompletableFuture().get(asyncCloseTimeout.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-            throw new CotaniCloseException("Interrupted while closing resources", interrupted);
-        } catch (Exception failure) {
-            Throwable cause = failure.getCause() != null ? failure.getCause() : failure;
-
-            if (cause instanceof CotaniCloseException closeEx) {
-                throw closeEx;
+        closeAsync().whenComplete((_, failure) -> {
+            if (failure != null) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to close Cotani resources", failure);
             }
-
-            throw new CotaniCloseException("Failed to close resource within timeout", cause);
-        }
+        });
     }
 
     private CompletionStage<@Nullable CotaniCloseException> executeAsyncCloseables(
@@ -207,7 +198,8 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
         for (var supplier : suppliers.reversed()) {
             try {
-                stages.add(supplier.get());
+                var stage = Objects.requireNonNull(supplier.get(), "Async closeable supplier returned null");
+                stages.add(stage);
             } catch (Exception failure) {
                 plugin.getLogger().log(Level.SEVERE, "Async closeable supplier failed", failure);
                 initialFailure = mergeFailure(initialFailure, failure);

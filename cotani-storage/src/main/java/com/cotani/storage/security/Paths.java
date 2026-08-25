@@ -3,11 +3,14 @@ package com.cotani.storage.security;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 public final class Paths {
     private Paths() {}
 
     public static Path requireContained(Path path, Path root) {
+        Objects.requireNonNull(path, "path");
+        Objects.requireNonNull(root, "root");
         var normalized = path.toAbsolutePath().normalize();
         var normalizedRoot = root.toAbsolutePath().normalize();
 
@@ -21,6 +24,7 @@ public final class Paths {
     }
 
     public static Path requireNoSymbolicLinks(Path path) {
+        Objects.requireNonNull(path, "path");
         var normalized = path.toAbsolutePath().normalize();
         var current = normalized;
 

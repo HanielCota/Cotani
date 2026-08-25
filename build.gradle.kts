@@ -101,17 +101,20 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
                 }
             }
 
-        val dependencies = moduleNames.associateWith { module ->
-            val buildFile = root.resolve("cotani-$module/build.gradle.kts")
+        fun dependenciesOf(buildFile: java.io.File): Set<String> {
             if (!buildFile.exists()) {
-                emptySet()
-            } else {
-                Regex("""project\(":([^"]+)"\)""")
-                    .findAll(buildFile.readText())
-                    .map { match -> match.groupValues[1] }
-                    .filter { dependency -> dependency in moduleSet }
-                    .toSet()
+                return emptySet()
             }
+
+            return Regex("""project\(":([^"]+)"\)""")
+                .findAll(buildFile.readText())
+                .map { match -> match.groupValues[1] }
+                .filter { dependency -> dependency in moduleSet }
+                .toSet()
+        }
+
+        val dependencies = moduleNames.associateWith { module ->
+            dependenciesOf(root.resolve("cotani-$module/build.gradle.kts"))
         }
 
         val cycles = mutableSetOf<String>()
@@ -129,7 +132,11 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
         cycles.forEach { cycle -> violations += "Gradle module dependency cycle: $cycle" }
 
         val bomFile = root.resolve("cotani-bom/build.gradle.kts")
-        if (bomFile.exists()) {
+        val bomFileExists = bomFile.exists()
+        if (!bomFileExists) {
+            violations += "cotani-bom/build.gradle.kts does not exist"
+        }
+        if (bomFileExists) {
             val bomContent = bomFile.readText()
             val bomConstraints = Regex("""api\(project\(":([^"]+)"\)\)""")
                 .findAll(bomContent)
@@ -145,8 +152,6 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
             if (unexpectedInBom.isNotEmpty()) {
                 violations += "cotani-bom contains constraints for non-published or unknown modules: ${unexpectedInBom.sorted().joinToString(", ")}"
             }
-        } else {
-            violations += "cotani-bom/build.gradle.kts does not exist"
         }
 
         if (violations.isNotEmpty()) {
@@ -214,7 +219,12 @@ subprojects {
     val isPlatform = name == "bom"
     val isExample = name == "examples"
 
-    apply(plugin = if (isPlatform) "java-platform" else "java-library")
+    if (isPlatform) {
+        apply(plugin = "java-platform")
+    }
+    if (!isPlatform) {
+        apply(plugin = "java-library")
+    }
     if (!isExample) {
         apply(plugin = "maven-publish")
     }
@@ -237,7 +247,11 @@ subprojects {
         configure<PublishingExtension> {
             publications {
                 create<MavenPublication>("mavenJava") {
-                    from(components[if (isPlatform) "javaPlatform" else "java"])
+                    val componentName = when (isPlatform) {
+                        true -> "javaPlatform"
+                        false -> "java"
+                    }
+                    from(components[componentName])
                     artifactId = "cotani-${project.name}"
                     pom {
                         name.set("cotani-${project.name}")
@@ -319,7 +333,7 @@ val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("val
     group = "verification"
     description = "Validates Cotani module boundaries and Gradle dependency cycles."
     rootDirectory.set(layout.projectDirectory)
-    modules.set(listOf("core", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display", "command", "hud", "nametag", "npc", "region", "redis", "dialog"))
+    modules.set(listOf("core", "audit", "audit-storage", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display", "command", "hud", "nametag", "npc", "region", "redis", "dialog", "placeholder", "permission", "inventory", "locale", "party", "friend", "queue", "trade", "punishment", "location", "mail", "reward", "reward-integration"))
 }
 
 val validateDocumentation = tasks.register<ValidateDocumentation>("validateDocumentation") {
@@ -363,6 +377,8 @@ abstract class GenerateJavadocIndex : DefaultTask() {
 
         val metadata = mapOf(
             "core" to Pair("🧱", "Foundation"),
+            "audit" to Pair("🧾", "Operations"),
+            "audit-storage" to Pair("🗄️", "Operations"),
             "task" to Pair("🧵", "Foundation"),
             "text" to Pair("✍️", "Foundation"),
             "item" to Pair("🗡️", "Foundation"),
@@ -381,11 +397,23 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "hud" to Pair("🖥️", "Gameplay"),
             "nametag" to Pair("🏷️", "Gameplay"),
             "dialog" to Pair("💬", "Gameplay"),
-            "metrics" to Pair("📊", "Operations")
+            "inventory" to Pair("🎒", "Gameplay"),
+            "metrics" to Pair("📊", "Operations"),
+            "locale" to Pair("🌍", "Foundation"),
+            "friend" to Pair("🤝", "Gameplay"),
+            "queue" to Pair("🎯", "Gameplay"),
+            "trade" to Pair("🤝", "Gameplay"),
+            "punishment" to Pair("⚖️", "Gameplay"),
+            "location" to Pair("📍", "Gameplay"),
+            "mail" to Pair("✉️", "Gameplay"),
+            "reward" to Pair("🎁", "Gameplay"),
+            "reward-integration" to Pair("🔗", "Gameplay")
         )
 
         val defaultDescriptions = mapOf(
             "core" to "Centralized plugin lifecycle ownership and reverse-order resource disposal.",
+            "audit" to "Immutable append-only audit events with bounded queries and async persistence.",
+            "audit-storage" to "Idempotent SQL persistence adapter with indexed queries and migrations for audit events.",
             "task" to "Async, global, region, and entity scheduling with fluent TaskChain thread transitions.",
             "text" to "MiniMessage text formatting, audience messaging, and placeholder resolution.",
             "item" to "Fluent Paper 1.21+ data-component item, armor, and player skull builders.",
@@ -404,7 +432,18 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "hud" to "Reactive zero-flicker scoreboards, dynamic tablist, bossbars, and actionbars.",
             "nametag" to "Scoreboard team-driven nametag formatting, tablist sorting priority, and collision rules.",
             "dialog" to "Non-blocking reactive chat, sign, and anvil prompt dialogs with cancellation and timeouts.",
-            "metrics" to "Micrometer metrics instrumentation with optional Prometheus HTTP exporter endpoint."
+            "placeholder" to "High-performance placeholder parsing and resolution with optional PlaceholderAPI bridge.",
+            "inventory" to "Loss-less binary inventory synchronization, snapshots, rollbacks, and dupe-proof cross-server transfers.",
+            "metrics" to "Micrometer metrics instrumentation with optional Prometheus HTTP exporter endpoint.",
+            "locale" to "Player locale preferences, deterministic message fallback, and safe MiniMessage rendering.",
+            "friend" to "Immutable asynchronous friendships, requests, blocks, optimistic revisions, and domain events.",
+            "queue" to "Asynchronous priority queues, expiring tickets, and atomic matchmaking groups.",
+            "trade" to "Confirmation-based player trading with immutable offers and idempotent settlement.",
+            "punishment" to "Immutable asynchronous bans, mutes, warnings, expiration, revocation, and audit integration.",
+            "location" to "Immutable asynchronous homes and warps with safe Paper and Folia teleport integration.",
+            "mail" to "Persistent asynchronous player mail with TTL, idempotent sends, inbox pagination, and SQL storage.",
+            "reward" to "Persistent idempotent player rewards with cooldowns, streaks, immutable grants, and SQL storage.",
+            "reward-integration" to "Idempotent economy and entity-thread-safe inventory settlement adapters for rewards."
         )
 
         val cards = moduleDescriptions.get().keys.sorted().joinToString("\n") { name ->

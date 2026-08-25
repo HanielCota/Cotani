@@ -203,6 +203,7 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
 
     @Override
     public TaskChain<T> onError(Consumer<Throwable> consumer) {
+        Objects.requireNonNull(consumer, "consumer");
         return new DefaultTaskChain<>(ChainLifecycleCallbacks.onError(state, consumer), executionContext);
     }
 
@@ -217,10 +218,14 @@ public final class DefaultTaskChain<T> implements TaskChain<T> {
     }
 
     private <U> TaskChain<U> thenTarget(ExecutionTarget target, String name, Function<T, U> function) {
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(function, "function");
         return new DefaultTaskChain<>(targetComposer.thenTarget(state, target, name, function), executionContext);
     }
 
     private TaskChain<T> consumeTarget(ExecutionTarget target, String name, Consumer<T> consumer) {
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(consumer, "consumer");
         return new DefaultTaskChain<>(targetComposer.consumeTarget(state, target, name, consumer), executionContext);
     }
 

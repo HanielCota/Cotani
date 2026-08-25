@@ -117,6 +117,8 @@ public final class DefaultSafeLocationResolver implements SafeLocationResolver {
 
     @Override
     public CompletionStage<Optional<Location>> resolve(Location target, SafeLocationOptions options) {
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(options, "options");
         Location cloned = target.clone();
         World world = cloned.getWorld();
 

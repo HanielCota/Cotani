@@ -154,6 +154,8 @@ public final class Row {
     /** @deprecated use {@link #getEnumOptional(String, Class)} */
     @Deprecated(forRemoval = false)
     public <E extends Enum<E>> @Nullable E getEnum(String column, Class<E> enumType) throws SQLException {
+        Objects.requireNonNull(column, "column");
+        Objects.requireNonNull(enumType, "enumType");
         var raw = resultSet.getString(column);
 
         if (raw == null) {
@@ -186,6 +188,8 @@ public final class Row {
     /** @deprecated use {@link #getOptional(String, Class)} */
     @Deprecated(forRemoval = false)
     public <T> @Nullable T get(String column, Class<T> type) throws SQLException {
+        Objects.requireNonNull(column, "column");
+        Objects.requireNonNull(type, "type");
         var raw = resultSet.getObject(column);
 
         if (raw == null) {

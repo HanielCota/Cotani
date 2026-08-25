@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
@@ -373,21 +372,10 @@ public final class DefaultCotaniRedis implements CotaniRedis {
 
     @Override
     public void close() {
-        if (Bukkit.isPrimaryThread()) {
-            throw new IllegalStateException(
-                    "CotaniRedis.close() must not be called from the server main thread. Use closeAsync() instead.");
-        }
-        try {
-            closeAsync().toCompletableFuture().get(10, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while closing CotaniRedis", e);
-        } catch (Exception e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            if (cause instanceof RuntimeException re) {
-                throw re;
+        closeAsync().whenComplete((_, failure) -> {
+            if (failure != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to close Cotani Redis", failure);
             }
-            throw new IllegalStateException("Failed to close CotaniRedis", cause);
-        }
+        });
     }
 }

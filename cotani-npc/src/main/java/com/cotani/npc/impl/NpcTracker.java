@@ -79,6 +79,8 @@ public final class NpcTracker {
      * @return float array with [yaw, pitch]
      */
     public static float[] calculateLookAt(Location source, Location target) {
+        Objects.requireNonNull(source, "Parameter 'source' must not be null");
+        Objects.requireNonNull(target, "Parameter 'target' must not be null");
         var dx = target.getX() - source.getX();
         var dy = target.getY() - (source.getY() + 1.62);
         var dz = target.getZ() - source.getZ();

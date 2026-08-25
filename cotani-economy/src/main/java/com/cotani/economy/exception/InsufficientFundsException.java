@@ -9,6 +9,8 @@ public final class InsufficientFundsException extends EconomyException {
     private static final long serialVersionUID = 1L;
 
     public InsufficientFundsException(UUID userId, BigDecimal balance, BigDecimal required) {
-        super("User " + userId + " has " + balance + ", required " + required + ".");
+        super("User " + java.util.Objects.requireNonNull(userId, "userId") + " has "
+                + java.util.Objects.requireNonNull(balance, "balance") + ", required "
+                + java.util.Objects.requireNonNull(required, "required") + ".");
     }
 }

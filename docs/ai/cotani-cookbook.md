@@ -580,6 +580,95 @@ regionModule.registerRegion(spawnRegion);
 
 ---
 
+---
+
+## 22. Locale preferences and trusted messages
+
+Keep catalogs immutable and bind dynamic values as arguments. The template is trusted configuration; player-provided
+values are not parsed as MiniMessage tags.
+
+```java
+var catalog = LocaleCatalog.builder(LocaleId.of("en-US"))
+    .bundle(MessageBundle.of(LocaleId.of("en-US"), Map.of(
+        "welcome", "<green>Hello <name>")))
+    .bundle(MessageBundle.of(LocaleId.of("pt-BR"), Map.of(
+        "welcome", "<green>Olá <name>")))
+    .build();
+
+LocaleService locales = CotaniLocales.inMemory(catalog);
+UUID playerId = player.getUniqueId();
+locales.setPlayerLocaleAsync(playerId, LocaleId.of("pt-BR"))
+    .thenAccept(ignored -> scheduler.entity(playerId, () -> {
+        Player current = Bukkit.getPlayer(playerId);
+        if (current != null) {
+            current.sendMessage(locales.render(
+                playerId,
+                MessageKey.of("welcome"),
+                MessageArguments.builder().text("name", current.getName()).build()));
+        }
+    }));
+```
+
+## 23. Permission decisions
+
+Permission services operate on UUIDs and immutable group definitions. Resolve the decision asynchronously, then return
+to the owner thread only if the result needs to affect a Bukkit object.
+
+```java
+var permissions = CotaniPermissions.inMemory(
+    PermissionGroup.builder("moderator")
+        .priority(100)
+        .allow("server.moderate")
+        .build());
+
+UUID playerId = player.getUniqueId();
+permissions.assignGroupAsync(playerId, "moderator")
+    .thenCompose(ignored -> permissions.checkAsync(playerId, "server.moderate"))
+    .thenAccept(decision -> logger.info("Allowed: " + decision.allowed()));
+```
+
+## 24. Inventory snapshots and reward settlement
+
+Capture and apply inventory state through `InventorySyncService`; the implementation schedules entity-thread work. Use
+the same reward claim ID during recovery so currency and item grants remain idempotent.
+
+```java
+InventorySyncService inventories = inventoryModule.service();
+inventories.saveAsync(player)
+    .thenCompose(snapshot -> inventories.loadLatestAsync(snapshot.playerId()))
+    .thenAccept(snapshot -> logger.info("Snapshot present: " + snapshot.isPresent()));
+
+var settlement = CotaniRewards.settlement(rewards, List.of(
+    CotaniRewardIntegrations.economy(economy),
+    CotaniRewardIntegrations.vanillaInventory(plugin, inventories)));
+settlement.claimOrRecoverAsync(playerId, RewardId.of("daily"));
+```
+
+## 25. Persistent domain services
+
+Friendships, parties, queues, mail and trades all keep player identity as `UUID`. Persist before publishing the next
+visible snapshot, handle domain failures explicitly and compose each service's `closeAsync()` into plugin shutdown.
+
+```java
+FriendService friends = CotaniFriends.inMemory(eventBus);
+friends.sendRequestAsync(requesterId, targetId)
+    .thenCompose(request -> friends.acceptRequestAsync(
+        request.targetId(), request.requesterId()));
+
+PartyService parties = CotaniParties.inMemory(eventBus);
+parties.createAsync(leaderId, PartyOptions.defaults())
+    .thenCompose(party -> parties.inviteAsync(
+        party.id(), leaderId, targetId, Duration.ofMinutes(2)));
+
+QueueService queues = CotaniQueues.inMemory(eventBus);
+queues.enqueueAsync(QueueId.of("duel"), playerId, QueueEntryOptions.defaults())
+    .thenCompose(ticket -> queues.matchAsync(ticket.queueId(), 2));
+```
+
+Trades are different from the other domain services: confirmation can leave a session in
+`SETTLEMENT_PENDING`. Reconcile that existing `TradeId` through the settlement adapter instead of creating a second
+trade for the same participants.
+
 ## Checklist for every recipe
 
 - [ ] No `join()`, `get()` or `Thread.sleep(...)` in application code.

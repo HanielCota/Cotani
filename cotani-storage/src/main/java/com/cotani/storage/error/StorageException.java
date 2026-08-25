@@ -9,7 +9,7 @@ public final class StorageException extends RuntimeException {
     private final transient StorageError error;
 
     public StorageException(StorageError error) {
-        super(error.message(), error.cause());
+        super(java.util.Objects.requireNonNull(error, "error").message(), error.cause());
         this.error = error;
     }
 
