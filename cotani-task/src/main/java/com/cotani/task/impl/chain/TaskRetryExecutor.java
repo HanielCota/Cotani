@@ -89,7 +89,7 @@ final class TaskRetryExecutor<T> {
             if (delay.isNegative()) {
                 throw new IllegalArgumentException("retry delay must not be negative");
             }
-        } catch (Throwable policyFailure) {
+        } catch (Exception policyFailure) {
             addSuppressedIfDistinct(policyFailure, failure);
             result.completeExceptionally(policyFailure);
             return;
@@ -108,7 +108,7 @@ final class TaskRetryExecutor<T> {
                             },
                             delay),
                     "retry scheduler returned null");
-        } catch (Throwable schedulingFailure) {
+        } catch (Exception schedulingFailure) {
             addSuppressedIfDistinct(schedulingFailure, failure);
             result.completeExceptionally(schedulingFailure);
             return;
@@ -129,7 +129,7 @@ final class TaskRetryExecutor<T> {
         }
         try {
             observe(Objects.requireNonNull(attemptFactory.get(), "retry factory returned null"), nextRetryAttempt);
-        } catch (Throwable factoryFailure) {
+        } catch (RuntimeException | Error factoryFailure) {
             scheduleRetry(CompletionFailure.unwrap(factoryFailure), nextRetryAttempt);
         }
     }

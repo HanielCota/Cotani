@@ -48,7 +48,7 @@ final class ChainLifecycleCallbacks {
             if (throwable != null) {
                 try {
                     consumer.accept(CompletionFailure.unwrap(throwable));
-                } catch (Throwable callbackFailure) {
+                } catch (Exception callbackFailure) {
                     LOGGER.log(Level.SEVERE, "Task chain error callback failed", callbackFailure);
                 }
             }
@@ -69,7 +69,7 @@ final class ChainLifecycleCallbacks {
     private static void runCallback(Runnable action) {
         try {
             action.run();
-        } catch (Throwable callbackFailure) {
+        } catch (Exception callbackFailure) {
             LOGGER.log(Level.SEVERE, "Task chain lifecycle callback failed", callbackFailure);
         }
     }

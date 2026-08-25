@@ -80,12 +80,14 @@ public final class DefaultRedisChannel<T> implements RedisChannel<T> {
                 executor.execute(() -> {
                     try {
                         listener.accept(decoded);
-                    } catch (Exception _) {
-                        // Suppress listener exception to prevent crashing the executor thread
+                    } catch (Exception exception) {
+                        java.util.logging.Logger.getLogger(DefaultRedisChannel.class.getName())
+                                .log(java.util.logging.Level.WARNING, "Redis channel listener failed", exception);
                     }
                 });
-            } catch (Exception _) {
-                // Drop malformed frame without breaking active subscription
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DefaultRedisChannel.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not decode Redis channel frame", exception);
             }
         };
 

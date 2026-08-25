@@ -31,9 +31,9 @@ class TaskThrottlerTest {
             try {
                 Object result = supplier.get();
                 return DefaultTaskChain.create(CompletableFuture.completedFuture(result), scheduler);
-            } catch (Throwable t) {
+            } catch (RuntimeException | Error error) {
                 CompletableFuture<Object> future = new CompletableFuture<>();
-                future.completeExceptionally(t);
+                future.completeExceptionally(error);
 
                 return DefaultTaskChain.create(future, scheduler);
             }

@@ -34,7 +34,7 @@ final class DebounceCoordinator {
             debounce.attach(scheduled);
 
             return debounce;
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             pending.remove(name, debounce);
             debounce.cancel();
             throw failure;

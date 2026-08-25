@@ -90,8 +90,9 @@ public final class NpcPlayerListener implements Listener {
             var interactEvent = new NpcInteractEvent(player, targetNpc, hand, clickAction);
             try {
                 targetNpc.interactionHandler().accept(interactEvent);
-            } catch (Exception _) {
-                // Suppress callback exception to avoid crashing listener pipeline
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(NpcPlayerListener.class.getName())
+                        .log(java.util.logging.Level.WARNING, "NPC interaction callback failed", exception);
             }
         }
     }

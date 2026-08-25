@@ -58,8 +58,9 @@ public final class DefaultBossBarManager implements BossBarManager {
         for (var bar : activeBars) {
             try {
                 bar.close();
-            } catch (Exception _) {
-                // Suppress
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DefaultBossBarManager.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not close boss bar", exception);
             }
         }
         activeBars.clear();

@@ -84,8 +84,9 @@ public final class DefaultSidebar implements Sidebar {
             if (titleSubscription != null) {
                 try {
                     titleSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultSidebar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close sidebar subscription", exception);
                 }
                 titleSubscription = null;
             }
@@ -102,8 +103,9 @@ public final class DefaultSidebar implements Sidebar {
         if (oldSub != null) {
             try {
                 oldSub.close();
-            } catch (Exception _) {
-                // Suppress
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DefaultSidebar.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not close sidebar subscription", exception);
             }
         }
         lineSuppliers.put(score, () -> content);
@@ -117,8 +119,9 @@ public final class DefaultSidebar implements Sidebar {
         if (oldSub != null) {
             try {
                 oldSub.close();
-            } catch (Exception _) {
-                // Suppress
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DefaultSidebar.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not close sidebar subscription", exception);
             }
         }
         lineSuppliers.remove(score);
@@ -135,8 +138,9 @@ public final class DefaultSidebar implements Sidebar {
         if (oldSub != null) {
             try {
                 oldSub.close();
-            } catch (Exception _) {
-                // Suppress
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DefaultSidebar.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not close sidebar subscription", exception);
             }
         }
 
@@ -164,8 +168,9 @@ public final class DefaultSidebar implements Sidebar {
             if (titleSubscription != null) {
                 try {
                     titleSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultSidebar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close sidebar subscription", exception);
                 }
             }
 
@@ -212,8 +217,9 @@ public final class DefaultSidebar implements Sidebar {
             if (titleSubscription != null) {
                 try {
                     titleSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultSidebar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close sidebar subscription", exception);
                 }
                 titleSubscription = null;
             }
@@ -222,8 +228,9 @@ public final class DefaultSidebar implements Sidebar {
         for (var sub : lineSubscriptions.values()) {
             try {
                 sub.close();
-            } catch (Exception _) {
-                // Suppress
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DefaultSidebar.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not close sidebar subscription", exception);
             }
         }
         lineSubscriptions.clear();

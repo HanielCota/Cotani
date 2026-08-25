@@ -90,8 +90,9 @@ public final class DefaultHudBossBar implements HudBossBar {
             if (titleSubscription != null) {
                 try {
                     titleSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultHudBossBar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close boss bar subscription", exception);
                 }
                 titleSubscription = null;
             }
@@ -110,8 +111,9 @@ public final class DefaultHudBossBar implements HudBossBar {
             if (progressSubscription != null) {
                 try {
                     progressSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultHudBossBar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close boss bar subscription", exception);
                 }
                 progressSubscription = null;
             }
@@ -200,8 +202,9 @@ public final class DefaultHudBossBar implements HudBossBar {
             if (progressSubscription != null) {
                 try {
                     progressSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultHudBossBar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close boss bar subscription", exception);
                 }
             }
 
@@ -229,8 +232,9 @@ public final class DefaultHudBossBar implements HudBossBar {
             if (titleSubscription != null) {
                 try {
                     titleSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultHudBossBar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close boss bar subscription", exception);
                 }
             }
 
@@ -267,16 +271,18 @@ public final class DefaultHudBossBar implements HudBossBar {
             if (progressSubscription != null) {
                 try {
                     progressSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultHudBossBar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close boss bar subscription", exception);
                 }
                 progressSubscription = null;
             }
             if (titleSubscription != null) {
                 try {
                     titleSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultHudBossBar.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close boss bar subscription", exception);
                 }
                 titleSubscription = null;
             }

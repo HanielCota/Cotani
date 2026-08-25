@@ -158,8 +158,9 @@ public final class DefaultActionBarManager implements ActionBarManager {
             if (subscription != null) {
                 try {
                     subscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultActionBarManager.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close action bar subscription", exception);
                 }
                 subscription = null;
             }

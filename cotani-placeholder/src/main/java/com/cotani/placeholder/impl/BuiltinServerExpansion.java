@@ -55,7 +55,9 @@ public final class BuiltinServerExpansion implements PlaceholderExpansion {
                 }
                 default -> null;
             };
-        } catch (Throwable ignored) {
+        } catch (Exception exception) {
+            java.util.logging.Logger.getLogger(BuiltinServerExpansion.class.getName())
+                    .log(java.util.logging.Level.FINE, "Could not resolve server placeholder", exception);
             return null;
         }
     }

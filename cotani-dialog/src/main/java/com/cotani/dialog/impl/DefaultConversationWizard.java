@@ -76,7 +76,7 @@ public final class DefaultConversationWizard implements ConversationWizard {
                     }
                 }
             });
-        } catch (Throwable t) {
+        } catch (Exception t) {
             future.complete(PromptResult.error(t));
         }
     }

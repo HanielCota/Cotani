@@ -2,6 +2,7 @@ package com.cotani.economy;
 
 import com.cotani.economy.currency.EconomyCurrency;
 import com.cotani.economy.event.EconomyEventPublisher;
+import com.cotani.economy.exception.EconomyException;
 import com.cotani.economy.internal.event.NoopEconomyEventPublisher;
 import com.cotani.economy.internal.protection.DefaultEconomyGuard;
 import com.cotani.economy.internal.repository.InMemoryEconomyStore;
@@ -61,7 +62,7 @@ public final class EconomyBootstrap implements AutoCloseable {
             try {
                 closeable.close();
             } catch (Exception exception) {
-                throw new RuntimeException("Failed to close economy service", exception);
+                throw new EconomyException("Failed to close economy service", exception);
             }
         }
     }

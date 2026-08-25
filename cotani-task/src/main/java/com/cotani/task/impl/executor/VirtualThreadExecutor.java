@@ -149,7 +149,7 @@ public final class VirtualThreadExecutor implements AutoCloseable {
             try {
                 shutdownExecutors();
                 promise.complete(null);
-            } catch (Throwable failure) {
+            } catch (Exception failure) {
                 promise.completeExceptionally(failure);
             }
         });

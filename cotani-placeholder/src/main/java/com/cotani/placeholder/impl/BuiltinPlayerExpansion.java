@@ -40,7 +40,12 @@ public final class BuiltinPlayerExpansion implements PlaceholderExpansion {
                     return offline.getName() != null
                             ? offline.getName()
                             : context.viewerId().toString();
-                } catch (Throwable ignored) {
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(BuiltinPlayerExpansion.class.getName())
+                            .log(
+                                    java.util.logging.Level.FINE,
+                                    "Could not resolve offline player placeholder",
+                                    exception);
                     return context.viewerId().toString();
                 }
             }

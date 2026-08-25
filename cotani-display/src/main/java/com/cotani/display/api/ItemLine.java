@@ -26,8 +26,9 @@ public record ItemLine(
         ItemStack cloned = null;
         try {
             cloned = item.clone();
-        } catch (Exception _) {
-            // Mocked item instances in unit tests might not implement clone
+        } catch (Exception exception) {
+            java.util.logging.Logger.getLogger(ItemLine.class.getName())
+                    .log(java.util.logging.Level.FINE, "Could not clone item display stack", exception);
         }
         item = cloned != null ? cloned : item;
     }

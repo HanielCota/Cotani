@@ -113,8 +113,9 @@ public final class RedisDistributedEventBus implements EventBus {
                     var _ = localBus.publishAsync(event);
                 }
             }
-        } catch (Exception _) {
-            // Ignore corrupted network frame
+        } catch (Exception exception) {
+            java.util.logging.Logger.getLogger(RedisDistributedEventBus.class.getName())
+                    .log(java.util.logging.Level.FINE, "Could not decode remote Redis event", exception);
         }
     }
 

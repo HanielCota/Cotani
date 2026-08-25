@@ -87,7 +87,9 @@ public final class RedisDistributedCooldownService implements DistributedCooldow
                 Instant expiresAt = Instant.ofEpochMilli(expiresAtMillis);
                 Instant startedAt = Instant.ofEpochMilli(Math.min(now, expiresAtMillis - 1));
                 return Optional.of(new CooldownEntry(key, startedAt, expiresAt));
-            } catch (Exception _) {
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(RedisDistributedCooldownService.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not decode remote Redis cooldown", exception);
                 return Optional.empty();
             }
         });

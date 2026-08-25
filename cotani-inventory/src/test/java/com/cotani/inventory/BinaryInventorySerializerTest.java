@@ -23,7 +23,7 @@ class BinaryInventorySerializerTest {
         try {
             ItemStack.empty();
             return true;
-        } catch (Throwable _) {
+        } catch (RuntimeException | LinkageError exception) {
             return false;
         }
     }

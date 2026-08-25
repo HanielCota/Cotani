@@ -271,7 +271,7 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
                 scheduler.asyncExecutor().execute(() -> {
                     try {
                         var _ = closeResourcesAsync().whenComplete((_, failure) -> completeClose(failure));
-                    } catch (Throwable failure) {
+                    } catch (Exception failure) {
                         completeClose(failure);
                     }
                 });

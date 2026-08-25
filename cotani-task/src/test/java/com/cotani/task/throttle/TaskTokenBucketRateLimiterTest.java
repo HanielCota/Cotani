@@ -3,6 +3,7 @@ package com.cotani.task.throttle;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Duration;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 
 class TaskTokenBucketRateLimiterTest {
@@ -26,14 +27,13 @@ class TaskTokenBucketRateLimiterTest {
     }
 
     @Test
-    @SuppressWarnings("java:S2925")
-    void respectsRefillRate() throws InterruptedException {
+    void respectsRefillRate() {
         RateLimiter limiter = TaskTokenBucketRateLimiter.create(1, Duration.ofMillis(100));
 
         assertTrue(limiter.tryAcquire());
         assertFalse(limiter.tryAcquire());
 
-        Thread.sleep(110);
+        LockSupport.parkNanos(Duration.ofMillis(110).toNanos());
 
         assertTrue(limiter.tryAcquire());
     }

@@ -48,7 +48,7 @@ final class SchedulerLifecycleCoordinator {
         final CompletionStage<Void> platformClose;
         try {
             platformClose = Objects.requireNonNull(startPlatformCloseAsync(), "platform close returned null");
-        } catch (Throwable startupFailure) {
+        } catch (Exception startupFailure) {
             promise.completeExceptionally(
                     Objects.requireNonNull(mergeFailures(cancellationFailure, startupFailure), "close failure"));
 
@@ -84,7 +84,7 @@ final class SchedulerLifecycleCoordinator {
         if (platformScheduler instanceof AutoCloseable closeable) {
             try {
                 closeable.close();
-            } catch (Throwable closeFailure) {
+            } catch (Exception closeFailure) {
                 failure = mergeFailures(failure, closeFailure);
             }
         }
@@ -105,13 +105,13 @@ final class SchedulerLifecycleCoordinator {
 
         try {
             Objects.requireNonNull(cancelInternalTasks, "cancelInternalTasks").run();
-        } catch (Throwable cancellationFailure) {
+        } catch (Exception cancellationFailure) {
             failure = cancellationFailure;
         }
         if (cancelOwnedTasks) {
             try {
                 platformScheduler.cancelOwnedTasks();
-            } catch (Throwable cancellationFailure) {
+            } catch (Exception cancellationFailure) {
                 failure = mergeFailures(failure, cancellationFailure);
             }
         }
@@ -158,7 +158,7 @@ final class SchedulerLifecycleCoordinator {
             try {
                 closeable.close();
                 promise.complete(null);
-            } catch (Throwable failure) {
+            } catch (Exception failure) {
                 promise.completeExceptionally(failure);
             }
         });

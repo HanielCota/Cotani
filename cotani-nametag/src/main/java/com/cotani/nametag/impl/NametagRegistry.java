@@ -109,8 +109,9 @@ public final class NametagRegistry {
                     if (customTag != null && customTag.isPresent()) {
                         return customTag.get();
                     }
-                } catch (Exception _) {
-                    // Suppress provider error to maintain nametag pipeline resilience
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(NametagRegistry.class.getName())
+                            .log(java.util.logging.Level.WARNING, "Nametag provider failed", exception);
                 }
             }
         }

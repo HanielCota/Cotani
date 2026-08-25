@@ -318,7 +318,7 @@ public final class PaperTeleportService implements TeleportService {
             try {
                 boolean success = player.teleport(eventTarget);
                 return completeTeleport(context, eventTarget, velocity, success, startedAt);
-            } catch (Throwable error) {
+            } catch (Exception error) {
                 return deps.resultMapper().mapException(context, error);
             }
         }));

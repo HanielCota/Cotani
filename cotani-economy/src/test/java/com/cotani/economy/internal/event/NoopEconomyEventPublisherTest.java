@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.event.EconomyTransactionEvent;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -19,14 +21,13 @@ class NoopEconomyEventPublisherTest {
     void shouldAcceptAnyEventWithoutSideEffects() {
         var publisher = new NoopEconomyEventPublisher();
         var transaction = EconomyTransaction.deposit(
-                EconomyOperationId.random(),
-                UUID.randomUUID(),
-                CurrencyId.of("coins"),
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                EconomyReason.system("test"),
-                Instant.now());
+                new EconomyTransactionDetails(
+                        EconomyOperationId.random(),
+                        CurrencyId.of("coins"),
+                        BigDecimal.TEN,
+                        EconomyReason.system("test"),
+                        Instant.now()),
+                new EconomyBalanceChange(UUID.randomUUID(), BigDecimal.ZERO, BigDecimal.TEN));
 
         assertDoesNotThrow(() -> publisher.publish(new EconomyTransactionEvent(transaction)));
     }

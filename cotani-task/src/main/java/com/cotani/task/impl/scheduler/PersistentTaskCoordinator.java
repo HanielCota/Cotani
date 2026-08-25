@@ -42,7 +42,7 @@ final class PersistentTaskCoordinator {
             final SchedulerTask executionTask;
             try {
                 store.save(task);
-            } catch (Throwable failure) {
+            } catch (Exception failure) {
                 lazyTask.failSetup(failure);
                 return;
             }

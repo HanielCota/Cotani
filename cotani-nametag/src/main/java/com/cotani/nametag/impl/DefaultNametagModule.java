@@ -486,7 +486,7 @@ public final class DefaultNametagModule implements NametagModule {
                         NametagTeamRenderer.clearAllTeams(player);
                     }
                     cleanupFuture.complete(null);
-                } catch (Throwable t) {
+                } catch (Exception t) {
                     cleanupFuture.completeExceptionally(t);
                 }
             });

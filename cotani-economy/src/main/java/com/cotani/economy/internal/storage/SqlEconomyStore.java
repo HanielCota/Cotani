@@ -10,9 +10,11 @@ import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.internal.EconomyOperationFingerprint;
 import com.cotani.economy.internal.repository.EconomyAccountRepository;
 import com.cotani.economy.internal.repository.EconomyTransferRepository;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.query.ParameterBinder;
 import com.cotani.storage.query.Row;
@@ -99,7 +101,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                     EconomyAccount updated = account.deposit(amount, now);
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.deposit(
-                            operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
+                            new EconomyTransactionDetails(operationId, currencyId, amount, reason, now),
+                            new EconomyBalanceChange(userId, account.balance(), updated.balance()));
 
                     return insertAccount(tx, updated)
                             .thenCompose(_ -> insertTransaction(tx, transaction))
@@ -128,7 +131,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                 tx -> getOrCreateLocked(tx, userId, currencyId).thenCompose(account -> {
                     EconomyAccount updated = account.withdraw(amount, now);
                     EconomyTransaction transaction = EconomyTransaction.withdraw(
-                            operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
+                            new EconomyTransactionDetails(operationId, currencyId, amount, reason, now),
+                            new EconomyBalanceChange(userId, account.balance(), updated.balance()));
 
                     return upsertAccount(tx, updated)
                             .thenCompose(_ -> insertTransaction(tx, transaction))
@@ -158,7 +162,8 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                     EconomyAccount updated = account.setBalance(amount, now);
                     ensureMaximumBalance(updated);
                     EconomyTransaction transaction = EconomyTransaction.set(
-                            operationId, userId, currencyId, amount, account.balance(), updated.balance(), reason, now);
+                            new EconomyTransactionDetails(operationId, currencyId, amount, reason, now),
+                            new EconomyBalanceChange(userId, account.balance(), updated.balance()));
 
                     return upsertAccount(tx, updated)
                             .thenCompose(_ -> insertTransaction(tx, transaction))
@@ -192,17 +197,9 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                             throw new InsufficientFundsException(sourceUserId, account.balance(), amount);
                         }
                         EconomyTransaction transaction = EconomyTransaction.transfer(
-                                operationId,
-                                sourceUserId,
-                                targetUserId,
-                                currencyId,
-                                amount,
-                                account.balance(),
-                                account.balance(),
-                                account.balance(),
-                                account.balance(),
-                                reason,
-                                now);
+                                new EconomyTransactionDetails(operationId, currencyId, amount, reason, now),
+                                new EconomyBalanceChange(sourceUserId, account.balance(), account.balance()),
+                                new EconomyBalanceChange(targetUserId, account.balance(), account.balance()));
                         return insertTransaction(tx, transaction).thenApply(_ -> transaction);
                     }));
         }
@@ -224,17 +221,11 @@ public final class SqlEconomyStore implements EconomyAccountRepository, EconomyT
                                     ensureMaximumBalance(updatedTarget);
 
                                     EconomyTransaction transaction = EconomyTransaction.transfer(
-                                            operationId,
-                                            sourceUserId,
-                                            targetUserId,
-                                            currencyId,
-                                            amount,
-                                            source.balance(),
-                                            updatedSource.balance(),
-                                            target.balance(),
-                                            updatedTarget.balance(),
-                                            reason,
-                                            now);
+                                            new EconomyTransactionDetails(operationId, currencyId, amount, reason, now),
+                                            new EconomyBalanceChange(
+                                                    sourceUserId, source.balance(), updatedSource.balance()),
+                                            new EconomyBalanceChange(
+                                                    targetUserId, target.balance(), updatedTarget.balance()));
 
                                     return upsertAccount(tx, updatedSource)
                                             .thenCompose(_ -> upsertAccount(tx, updatedTarget))

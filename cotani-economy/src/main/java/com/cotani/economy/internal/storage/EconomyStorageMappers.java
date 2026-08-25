@@ -3,9 +3,11 @@ package com.cotani.economy.internal.storage;
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import com.cotani.economy.transaction.EconomyTransactionId;
 import com.cotani.economy.transaction.EconomyTransactionType;
 import com.cotani.storage.error.StorageException;
@@ -59,50 +61,39 @@ final class EconomyStorageMappers {
             case DEPOSIT ->
                 new EconomyTransaction.Deposit(
                         id,
-                        operationId,
-                        requireUuid(row, TARGET_USER_ID),
-                        currencyId,
-                        amount,
-                        requireBigDecimal(row, TARGET_BALANCE_BEFORE),
-                        requireBigDecimal(row, TARGET_BALANCE_AFTER),
-                        reason,
-                        createdAt);
+                        new EconomyTransactionDetails(operationId, currencyId, amount, reason, createdAt),
+                        new EconomyBalanceChange(
+                                requireUuid(row, TARGET_USER_ID),
+                                requireBigDecimal(row, TARGET_BALANCE_BEFORE),
+                                requireBigDecimal(row, TARGET_BALANCE_AFTER)));
             case WITHDRAW ->
                 new EconomyTransaction.Withdraw(
                         id,
-                        operationId,
-                        requireUuid(row, SOURCE_USER_ID),
-                        currencyId,
-                        amount,
-                        requireBigDecimal(row, SOURCE_BALANCE_BEFORE),
-                        requireBigDecimal(row, SOURCE_BALANCE_AFTER),
-                        reason,
-                        createdAt);
+                        new EconomyTransactionDetails(operationId, currencyId, amount, reason, createdAt),
+                        new EconomyBalanceChange(
+                                requireUuid(row, SOURCE_USER_ID),
+                                requireBigDecimal(row, SOURCE_BALANCE_BEFORE),
+                                requireBigDecimal(row, SOURCE_BALANCE_AFTER)));
             case SET ->
                 new EconomyTransaction.Set(
                         id,
-                        operationId,
-                        requireUuid(row, TARGET_USER_ID),
-                        currencyId,
-                        amount,
-                        requireBigDecimal(row, TARGET_BALANCE_BEFORE),
-                        requireBigDecimal(row, TARGET_BALANCE_AFTER),
-                        reason,
-                        createdAt);
+                        new EconomyTransactionDetails(operationId, currencyId, amount, reason, createdAt),
+                        new EconomyBalanceChange(
+                                requireUuid(row, TARGET_USER_ID),
+                                requireBigDecimal(row, TARGET_BALANCE_BEFORE),
+                                requireBigDecimal(row, TARGET_BALANCE_AFTER)));
             case TRANSFER ->
                 new EconomyTransaction.Transfer(
                         id,
-                        operationId,
-                        requireUuid(row, SOURCE_USER_ID),
-                        requireUuid(row, TARGET_USER_ID),
-                        currencyId,
-                        amount,
-                        requireBigDecimal(row, SOURCE_BALANCE_BEFORE),
-                        requireBigDecimal(row, SOURCE_BALANCE_AFTER),
-                        requireBigDecimal(row, TARGET_BALANCE_BEFORE),
-                        requireBigDecimal(row, TARGET_BALANCE_AFTER),
-                        reason,
-                        createdAt);
+                        new EconomyTransactionDetails(operationId, currencyId, amount, reason, createdAt),
+                        new EconomyBalanceChange(
+                                requireUuid(row, SOURCE_USER_ID),
+                                requireBigDecimal(row, SOURCE_BALANCE_BEFORE),
+                                requireBigDecimal(row, SOURCE_BALANCE_AFTER)),
+                        new EconomyBalanceChange(
+                                requireUuid(row, TARGET_USER_ID),
+                                requireBigDecimal(row, TARGET_BALANCE_BEFORE),
+                                requireBigDecimal(row, TARGET_BALANCE_AFTER)));
         };
     }
 

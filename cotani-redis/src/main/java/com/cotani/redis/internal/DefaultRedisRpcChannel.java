@@ -169,8 +169,8 @@ public final class DefaultRedisRpcChannel<Q, R> implements RedisRpcChannel<Q, R>
             var replyChan = ChannelId.of(replyChannelName);
             var replyChannel = redis.channel(replyChan, ByteArrayRedisCodec.INSTANCE);
             var _ = replyChannel.publishAsync(responseEnvelope);
-        } catch (Exception _) {
-            // Drop reply if target channel is invalid
+        } catch (Exception exception) {
+            LOGGER.log(Level.FINE, "Could not publish Redis RPC reply", exception);
         }
     }
 
@@ -231,7 +231,8 @@ public final class DefaultRedisRpcChannel<Q, R> implements RedisRpcChannel<Q, R>
             byte[] payload = new byte[payloadLen];
             dis.readFully(payload);
             return new RpcEnvelope(corrId, replyChan, payload, error);
-        } catch (Exception _) {
+        } catch (Exception exception) {
+            LOGGER.log(Level.FINE, "Could not decode Redis RPC envelope", exception);
             return null;
         }
     }

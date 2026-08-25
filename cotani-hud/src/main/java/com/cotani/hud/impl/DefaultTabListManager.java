@@ -172,8 +172,9 @@ public final class DefaultTabListManager implements TabListManager {
             if (headerSubscription != null) {
                 try {
                     headerSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultTabListManager.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close tab list subscription", exception);
                 }
                 headerSubscription = null;
             }
@@ -193,8 +194,9 @@ public final class DefaultTabListManager implements TabListManager {
             if (footerSubscription != null) {
                 try {
                     footerSubscription.close();
-                } catch (Exception _) {
-                    // Suppress
+                } catch (Exception exception) {
+                    java.util.logging.Logger.getLogger(DefaultTabListManager.class.getName())
+                            .log(java.util.logging.Level.FINE, "Could not close tab list subscription", exception);
                 }
                 footerSubscription = null;
             }

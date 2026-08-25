@@ -7,6 +7,7 @@ import com.cotani.economy.EconomyService;
 import com.cotani.economy.EconomySettings;
 import com.cotani.economy.api.EconomyModule;
 import com.cotani.economy.event.EconomyEventPublisher;
+import com.cotani.economy.exception.EconomyException;
 import com.cotani.economy.internal.config.EconomyConfiguration;
 import com.cotani.economy.internal.event.BukkitEconomyEventPublisher;
 import com.cotani.economy.internal.event.MainThreadEconomyEventPublisher;
@@ -81,7 +82,7 @@ public final class DefaultEconomyModule implements EconomyModule {
                 closeable.close();
             } catch (Exception exception) {
                 return CompletableFuture.failedFuture(
-                        new RuntimeException("Failed to close economy service", exception));
+                        new EconomyException("Failed to close economy service", exception));
             }
         }
         return ownsCotani ? cotani.closeAsync() : CompletableFuture.completedFuture(null);
@@ -93,7 +94,7 @@ public final class DefaultEconomyModule implements EconomyModule {
             try {
                 closeable.close();
             } catch (Exception exception) {
-                throw new RuntimeException("Failed to close economy service", exception);
+                throw new EconomyException("Failed to close economy service", exception);
             }
         }
         if (ownsCotani) {

@@ -68,7 +68,7 @@ public final class TransactionManager {
                                 }
                                 result.complete(opResult);
                             });
-                        } catch (Throwable failure) {
+                        } catch (Exception failure) {
                             result.completeExceptionally(failure);
                         }
                     });
@@ -83,7 +83,7 @@ public final class TransactionManager {
         final CompletionStage<T> stage;
         try {
             stage = Objects.requireNonNull(operation.apply(state.context), "transaction operation returned null");
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             finishTransaction(state, failure);
             return CompletableFuture.failedFuture(failure);
         }
@@ -109,7 +109,7 @@ public final class TransactionManager {
                     QueryExecutor.create(provider, Runnable::run, serializers, queryTimeoutSeconds, connection);
 
             return new TransactionState(connection, previousAutoCommit, new TransactionContext(transactional));
-        } catch (Throwable exception) {
+        } catch (SQLException exception) {
             if (connection != null) {
                 try {
                     connection.close();
@@ -117,14 +117,17 @@ public final class TransactionManager {
                     exception.addSuppressed(closeFailure);
                 }
             }
-            if (exception instanceof SQLException sqlEx) {
-                throw new StorageException(
-                        new TransactionError("Could not acquire connection for transaction.", sqlEx));
+            throw new StorageException(
+                    new TransactionError("Could not acquire connection for transaction.", exception));
+        } catch (RuntimeException failure) {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException closeFailure) {
+                    failure.addSuppressed(closeFailure);
+                }
             }
-            if (exception instanceof RuntimeException re) {
-                throw re;
-            }
-            throw new RuntimeException(exception);
+            throw failure;
         }
     }
 

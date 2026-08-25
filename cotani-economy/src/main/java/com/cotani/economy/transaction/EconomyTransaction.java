@@ -14,88 +14,49 @@ public sealed interface EconomyTransaction
                 EconomyTransaction.Withdraw,
                 EconomyTransaction.Set,
                 EconomyTransaction.Transfer {
-    @SuppressWarnings("java:S107")
-    static Deposit deposit(
-            EconomyOperationId opId,
-            UUID targetId,
-            CurrencyId currId,
-            BigDecimal amount,
-            BigDecimal balBefore,
-            BigDecimal balAfter,
-            EconomyReason reason,
-            Instant now) {
-        return new Deposit(
-                EconomyTransactionId.random(), opId, targetId, currId, amount, balBefore, balAfter, reason, now);
+
+    static Deposit deposit(EconomyTransactionDetails details, EconomyBalanceChange targetChange) {
+        return new Deposit(EconomyTransactionId.random(), details, targetChange);
     }
 
-    @SuppressWarnings("java:S107")
-    static Withdraw withdraw(
-            EconomyOperationId opId,
-            UUID sourceId,
-            CurrencyId currId,
-            BigDecimal amount,
-            BigDecimal balBefore,
-            BigDecimal balAfter,
-            EconomyReason reason,
-            Instant now) {
-        return new Withdraw(
-                EconomyTransactionId.random(), opId, sourceId, currId, amount, balBefore, balAfter, reason, now);
+    static Withdraw withdraw(EconomyTransactionDetails details, EconomyBalanceChange sourceChange) {
+        return new Withdraw(EconomyTransactionId.random(), details, sourceChange);
     }
 
-    @SuppressWarnings("java:S107")
-    static Set set(
-            EconomyOperationId opId,
-            UUID targetId,
-            CurrencyId currId,
-            BigDecimal amount,
-            BigDecimal balBefore,
-            BigDecimal balAfter,
-            EconomyReason reason,
-            Instant now) {
-        return new Set(EconomyTransactionId.random(), opId, targetId, currId, amount, balBefore, balAfter, reason, now);
+    static Set set(EconomyTransactionDetails details, EconomyBalanceChange targetChange) {
+        return new Set(EconomyTransactionId.random(), details, targetChange);
     }
 
-    @SuppressWarnings("java:S107")
     static Transfer transfer(
-            EconomyOperationId opId,
-            UUID sourceId,
-            UUID targetId,
-            CurrencyId currId,
-            BigDecimal amount,
-            BigDecimal srcBalBefore,
-            BigDecimal srcBalAfter,
-            BigDecimal tgtBalBefore,
-            BigDecimal tgtBalAfter,
-            EconomyReason reason,
-            Instant now) {
-        return new Transfer(
-                EconomyTransactionId.random(),
-                opId,
-                sourceId,
-                targetId,
-                currId,
-                amount,
-                srcBalBefore,
-                srcBalAfter,
-                tgtBalBefore,
-                tgtBalAfter,
-                reason,
-                now);
+            EconomyTransactionDetails details, EconomyBalanceChange sourceChange, EconomyBalanceChange targetChange) {
+        return new Transfer(EconomyTransactionId.random(), details, sourceChange, targetChange);
     }
 
     EconomyTransactionId id();
 
-    EconomyOperationId operationId();
+    EconomyTransactionDetails details();
+
+    default EconomyOperationId operationId() {
+        return details().operationId();
+    }
 
     EconomyTransactionType type();
 
-    CurrencyId currencyId();
+    default CurrencyId currencyId() {
+        return details().currencyId();
+    }
 
-    BigDecimal amount();
+    default BigDecimal amount() {
+        return details().amount();
+    }
 
-    EconomyReason reason();
+    default EconomyReason reason() {
+        return details().reason();
+    }
 
-    Instant createdAt();
+    default Instant createdAt() {
+        return details().createdAt();
+    }
 
     default Optional<UUID> source() {
         return Optional.ofNullable(sourceUserId());
@@ -145,32 +106,19 @@ public sealed interface EconomyTransaction
         return Optional.ofNullable(targetBalanceAfter());
     }
 
-    @SuppressWarnings("java:S107")
-    record Deposit(
-            EconomyTransactionId id,
-            EconomyOperationId operationId,
-            UUID targetUserId,
-            CurrencyId currencyId,
-            BigDecimal amount,
-            BigDecimal targetBalanceBefore,
-            BigDecimal targetBalanceAfter,
-            EconomyReason reason,
-            Instant createdAt)
+    private static void requirePositiveAmount(EconomyTransactionDetails details) {
+        if (details.amount().signum() <= 0) {
+            throw new IllegalArgumentException("Transaction amount must be positive.");
+        }
+    }
+
+    record Deposit(EconomyTransactionId id, EconomyTransactionDetails details, EconomyBalanceChange targetChange)
             implements EconomyTransaction {
         public Deposit {
-            Objects.requireNonNull(id);
-            Objects.requireNonNull(operationId);
-            Objects.requireNonNull(targetUserId);
-            Objects.requireNonNull(currencyId);
-            Objects.requireNonNull(amount);
-            Objects.requireNonNull(targetBalanceBefore);
-            Objects.requireNonNull(targetBalanceAfter);
-            Objects.requireNonNull(reason);
-            Objects.requireNonNull(createdAt);
-
-            if (amount.signum() <= 0) {
-                throw new IllegalArgumentException("Transaction amount must be positive.");
-            }
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(details, "details");
+            Objects.requireNonNull(targetChange, "targetChange");
+            requirePositiveAmount(details);
         }
 
         @Override
@@ -185,46 +133,27 @@ public sealed interface EconomyTransaction
 
         @Override
         public @NonNull UUID targetUserId() {
-            return targetUserId;
+            return targetChange.userId();
         }
 
         @Override
         public @NonNull BigDecimal targetBalanceBefore() {
-            return targetBalanceBefore;
+            return targetChange.before();
         }
 
         @Override
         public @NonNull BigDecimal targetBalanceAfter() {
-            return targetBalanceAfter;
+            return targetChange.after();
         }
     }
 
-    @SuppressWarnings("java:S107")
-    record Withdraw(
-            EconomyTransactionId id,
-            EconomyOperationId operationId,
-            UUID sourceUserId,
-            CurrencyId currencyId,
-            BigDecimal amount,
-            BigDecimal sourceBalanceBefore,
-            BigDecimal sourceBalanceAfter,
-            EconomyReason reason,
-            Instant createdAt)
+    record Withdraw(EconomyTransactionId id, EconomyTransactionDetails details, EconomyBalanceChange sourceChange)
             implements EconomyTransaction {
         public Withdraw {
-            Objects.requireNonNull(id);
-            Objects.requireNonNull(operationId);
-            Objects.requireNonNull(sourceUserId);
-            Objects.requireNonNull(currencyId);
-            Objects.requireNonNull(amount);
-            Objects.requireNonNull(sourceBalanceBefore);
-            Objects.requireNonNull(sourceBalanceAfter);
-            Objects.requireNonNull(reason);
-            Objects.requireNonNull(createdAt);
-
-            if (amount.signum() <= 0) {
-                throw new IllegalArgumentException("Transaction amount must be positive.");
-            }
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(details, "details");
+            Objects.requireNonNull(sourceChange, "sourceChange");
+            requirePositiveAmount(details);
         }
 
         @Override
@@ -239,44 +168,28 @@ public sealed interface EconomyTransaction
 
         @Override
         public @NonNull UUID sourceUserId() {
-            return sourceUserId;
+            return sourceChange.userId();
         }
 
         @Override
         public @NonNull BigDecimal sourceBalanceBefore() {
-            return sourceBalanceBefore;
+            return sourceChange.before();
         }
 
         @Override
         public @NonNull BigDecimal sourceBalanceAfter() {
-            return sourceBalanceAfter;
+            return sourceChange.after();
         }
     }
 
-    @SuppressWarnings("java:S107")
-    record Set(
-            EconomyTransactionId id,
-            EconomyOperationId operationId,
-            UUID targetUserId,
-            CurrencyId currencyId,
-            BigDecimal amount,
-            BigDecimal targetBalanceBefore,
-            BigDecimal targetBalanceAfter,
-            EconomyReason reason,
-            Instant createdAt)
+    record Set(EconomyTransactionId id, EconomyTransactionDetails details, EconomyBalanceChange targetChange)
             implements EconomyTransaction {
         public Set {
-            Objects.requireNonNull(id);
-            Objects.requireNonNull(operationId);
-            Objects.requireNonNull(targetUserId);
-            Objects.requireNonNull(currencyId);
-            Objects.requireNonNull(amount);
-            Objects.requireNonNull(targetBalanceBefore);
-            Objects.requireNonNull(targetBalanceAfter);
-            Objects.requireNonNull(reason);
-            Objects.requireNonNull(createdAt);
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(details, "details");
+            Objects.requireNonNull(targetChange, "targetChange");
 
-            if (amount.signum() < 0) {
+            if (details.amount().signum() < 0) {
                 throw new IllegalArgumentException("Set balance amount cannot be negative.");
             }
         }
@@ -293,52 +206,32 @@ public sealed interface EconomyTransaction
 
         @Override
         public @NonNull UUID targetUserId() {
-            return targetUserId;
+            return targetChange.userId();
         }
 
         @Override
         public @NonNull BigDecimal targetBalanceBefore() {
-            return targetBalanceBefore;
+            return targetChange.before();
         }
 
         @Override
         public @NonNull BigDecimal targetBalanceAfter() {
-            return targetBalanceAfter;
+            return targetChange.after();
         }
     }
 
-    @SuppressWarnings("java:S107")
     record Transfer(
             EconomyTransactionId id,
-            EconomyOperationId operationId,
-            UUID sourceUserId,
-            UUID targetUserId,
-            CurrencyId currencyId,
-            BigDecimal amount,
-            BigDecimal sourceBalanceBefore,
-            BigDecimal sourceBalanceAfter,
-            BigDecimal targetBalanceBefore,
-            BigDecimal targetBalanceAfter,
-            EconomyReason reason,
-            Instant createdAt)
+            EconomyTransactionDetails details,
+            EconomyBalanceChange sourceChange,
+            EconomyBalanceChange targetChange)
             implements EconomyTransaction {
         public Transfer {
-            Objects.requireNonNull(id);
-            Objects.requireNonNull(operationId);
-            Objects.requireNonNull(sourceUserId);
-            Objects.requireNonNull(targetUserId);
-            Objects.requireNonNull(currencyId);
-            Objects.requireNonNull(amount);
-            Objects.requireNonNull(sourceBalanceBefore);
-            Objects.requireNonNull(sourceBalanceAfter);
-            Objects.requireNonNull(targetBalanceBefore);
-            Objects.requireNonNull(targetBalanceAfter);
-            Objects.requireNonNull(reason);
-            Objects.requireNonNull(createdAt);
-
-            if (amount.signum() <= 0) {
-                throw new IllegalArgumentException("Transaction amount must be positive.");
-            }
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(details, "details");
+            Objects.requireNonNull(sourceChange, "sourceChange");
+            Objects.requireNonNull(targetChange, "targetChange");
+            requirePositiveAmount(details);
         }
 
         @Override
@@ -348,32 +241,32 @@ public sealed interface EconomyTransaction
 
         @Override
         public @NonNull UUID sourceUserId() {
-            return sourceUserId;
+            return sourceChange.userId();
         }
 
         @Override
         public @NonNull UUID targetUserId() {
-            return targetUserId;
+            return targetChange.userId();
         }
 
         @Override
         public @NonNull BigDecimal sourceBalanceBefore() {
-            return sourceBalanceBefore;
+            return sourceChange.before();
         }
 
         @Override
         public @NonNull BigDecimal sourceBalanceAfter() {
-            return sourceBalanceAfter;
+            return sourceChange.after();
         }
 
         @Override
         public @NonNull BigDecimal targetBalanceBefore() {
-            return targetBalanceBefore;
+            return targetChange.before();
         }
 
         @Override
         public @NonNull BigDecimal targetBalanceAfter() {
-            return targetBalanceAfter;
+            return targetChange.after();
         }
     }
 }

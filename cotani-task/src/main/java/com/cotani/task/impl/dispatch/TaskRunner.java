@@ -5,6 +5,7 @@ import com.cotani.task.api.TaskContext;
 import com.cotani.task.api.TaskContextHolder;
 import com.cotani.task.api.TaskExceptionHandler;
 import com.cotani.task.api.TaskMetadata;
+import com.cotani.task.exception.TaskExecutionException;
 import com.cotani.task.metrics.TaskMetrics;
 import java.time.Duration;
 import java.util.Objects;
@@ -40,18 +41,14 @@ public final class TaskRunner {
                 try {
                     runnable.run();
                     metrics.record(metadata, true, elapsed(context));
-                } catch (Throwable throwable) {
+                } catch (Exception exception) {
                     metrics.record(metadata, false, elapsed(context));
-                    exceptionHandler.handle(context, throwable);
+                    exceptionHandler.handle(context, exception);
 
-                    if (throwable instanceof RuntimeException runtime) {
+                    if (exception instanceof RuntimeException runtime) {
                         throw runtime;
                     }
-                    if (throwable instanceof Error error) {
-                        throw error;
-                    }
-
-                    throw new RuntimeException(throwable);
+                    throw new TaskExecutionException(exception);
                 }
             });
         };
@@ -71,10 +68,10 @@ public final class TaskRunner {
         try {
             future.complete(supplier.get());
             metrics.record(context.metadata(), true, elapsed(context));
-        } catch (Throwable throwable) {
+        } catch (Exception exception) {
             metrics.record(context.metadata(), false, elapsed(context));
-            exceptionHandler.handle(context, throwable);
-            future.completeExceptionally(throwable);
+            exceptionHandler.handle(context, exception);
+            future.completeExceptionally(exception);
         }
     }
 }

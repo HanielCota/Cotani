@@ -8,9 +8,11 @@ import com.cotani.economy.exception.DuplicateEconomyOperationException;
 import com.cotani.economy.exception.InsufficientFundsException;
 import com.cotani.economy.exception.MaximumBalanceExceededException;
 import com.cotani.economy.internal.EconomyOperationFingerprint;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -83,14 +85,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                     accounts.put(key, updatedAccount);
 
                     var transaction = EconomyTransaction.deposit(
-                            operationId,
-                            key.userId(),
-                            key.currencyId(),
-                            amount,
-                            account.balance(),
-                            updatedAccount.balance(),
-                            reason,
-                            now);
+                            new EconomyTransactionDetails(operationId, key.currencyId(), amount, reason, now),
+                            new EconomyBalanceChange(key.userId(), account.balance(), updatedAccount.balance()));
 
                     return saveTransactionLocked(transaction);
                 }));
@@ -115,14 +111,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                     accounts.put(key, updatedAccount);
 
                     var transaction = EconomyTransaction.withdraw(
-                            operationId,
-                            key.userId(),
-                            key.currencyId(),
-                            amount,
-                            account.balance(),
-                            updatedAccount.balance(),
-                            reason,
-                            now);
+                            new EconomyTransactionDetails(operationId, key.currencyId(), amount, reason, now),
+                            new EconomyBalanceChange(key.userId(), account.balance(), updatedAccount.balance()));
 
                     return saveTransactionLocked(transaction);
                 }));
@@ -148,14 +138,8 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                     accounts.put(key, updatedAccount);
 
                     var transaction = EconomyTransaction.set(
-                            operationId,
-                            key.userId(),
-                            key.currencyId(),
-                            amount,
-                            account.balance(),
-                            updatedAccount.balance(),
-                            reason,
-                            now);
+                            new EconomyTransactionDetails(operationId, key.currencyId(), amount, reason, now),
+                            new EconomyBalanceChange(key.userId(), account.balance(), updatedAccount.balance()));
 
                     return saveTransactionLocked(transaction);
                 }));
@@ -183,17 +167,11 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                             throw new InsufficientFundsException(sourceUserId, sourceAccount.balance(), amount);
                         }
                         var transaction = EconomyTransaction.transfer(
-                                operationId,
-                                sourceUserId,
-                                targetUserId,
-                                currencyId,
-                                amount,
-                                sourceAccount.balance(),
-                                sourceAccount.balance(),
-                                sourceAccount.balance(),
-                                sourceAccount.balance(),
-                                reason,
-                                now);
+                                new EconomyTransactionDetails(operationId, currencyId, amount, reason, now),
+                                new EconomyBalanceChange(
+                                        sourceUserId, sourceAccount.balance(), sourceAccount.balance()),
+                                new EconomyBalanceChange(
+                                        targetUserId, sourceAccount.balance(), sourceAccount.balance()));
                         return saveTransactionLocked(transaction);
                     }
 
@@ -206,17 +184,9 @@ public final class InMemoryEconomyStore implements EconomyAccountRepository, Eco
                     accounts.put(targetKey, updatedTarget);
 
                     var transaction = EconomyTransaction.transfer(
-                            operationId,
-                            sourceUserId,
-                            targetUserId,
-                            currencyId,
-                            amount,
-                            sourceAccount.balance(),
-                            updatedSource.balance(),
-                            targetAccount.balance(),
-                            updatedTarget.balance(),
-                            reason,
-                            now);
+                            new EconomyTransactionDetails(operationId, currencyId, amount, reason, now),
+                            new EconomyBalanceChange(sourceUserId, sourceAccount.balance(), updatedSource.balance()),
+                            new EconomyBalanceChange(targetUserId, targetAccount.balance(), updatedTarget.balance()));
 
                     return saveTransactionLocked(transaction);
                 }));

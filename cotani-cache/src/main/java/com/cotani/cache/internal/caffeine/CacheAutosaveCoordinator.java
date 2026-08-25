@@ -56,7 +56,7 @@ final class CacheAutosaveCoordinator {
         final CompletionStage<Void> operation;
         try {
             operation = Objects.requireNonNull(autosaveOperation.get(), "autosave operation returned null");
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             finish(cycleIdle);
             LOGGER.log(Level.SEVERE, "Could not start cache autosave", failure);
             return;

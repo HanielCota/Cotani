@@ -22,8 +22,8 @@ class EconomyTransactionTest {
 
     @Test
     void shouldCreateDepositWithAllFields() {
-        var transaction = EconomyTransaction.deposit(
-                OPERATION_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, REASON, NOW);
+        var transaction =
+                EconomyTransaction.deposit(details(BigDecimal.TEN), change(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
 
         assertEquals(EconomyTransactionType.DEPOSIT, transaction.type());
         assertNotNull(transaction.id());
@@ -33,7 +33,6 @@ class EconomyTransactionTest {
         assertEquals(REASON, transaction.reason());
         assertEquals(NOW, transaction.createdAt());
         assertTrue(transaction.source().isEmpty());
-        assertTrue(transaction.target().isPresent());
         assertEquals(USER_ID, transaction.target().orElseThrow());
         assertEquals(0, transaction.targetBalanceBefore().compareTo(BigDecimal.ZERO));
         assertEquals(0, transaction.targetBalanceAfter().compareTo(BigDecimal.TEN));
@@ -43,12 +42,11 @@ class EconomyTransactionTest {
 
     @Test
     void shouldCreateWithdrawWithAllFields() {
-        var transaction = EconomyTransaction.withdraw(
-                OPERATION_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, REASON, NOW);
+        var transaction =
+                EconomyTransaction.withdraw(details(BigDecimal.TEN), change(USER_ID, BigDecimal.TEN, BigDecimal.ZERO));
 
         assertEquals(EconomyTransactionType.WITHDRAW, transaction.type());
         assertTrue(transaction.target().isEmpty());
-        assertTrue(transaction.source().isPresent());
         assertEquals(USER_ID, transaction.source().orElseThrow());
         assertEquals(0, transaction.sourceBalanceBefore().compareTo(BigDecimal.TEN));
         assertEquals(0, transaction.sourceBalanceAfter().compareTo(BigDecimal.ZERO));
@@ -58,8 +56,8 @@ class EconomyTransactionTest {
 
     @Test
     void shouldCreateSetTransactionWithAllFields() {
-        var transaction = EconomyTransaction.set(
-                OPERATION_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, REASON, NOW);
+        var transaction =
+                EconomyTransaction.set(details(BigDecimal.TEN), change(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
 
         assertEquals(EconomyTransactionType.SET, transaction.type());
         assertTrue(transaction.source().isEmpty());
@@ -70,17 +68,9 @@ class EconomyTransactionTest {
     @Test
     void shouldCreateTransferWithAllFields() {
         var transaction = EconomyTransaction.transfer(
-                OPERATION_ID,
-                USER_ID,
-                OTHER_USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.valueOf(20),
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                REASON,
-                NOW);
+                details(BigDecimal.TEN),
+                change(USER_ID, BigDecimal.valueOf(20), BigDecimal.TEN),
+                change(OTHER_USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
 
         assertEquals(EconomyTransactionType.TRANSFER, transaction.type());
         assertEquals(USER_ID, transaction.source().orElseThrow());
@@ -95,10 +85,10 @@ class EconomyTransactionTest {
 
     @Test
     void shouldGenerateUniqueTransactionIdsPerFactoryCall() {
-        var first = EconomyTransaction.deposit(
-                OPERATION_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, REASON, NOW);
-        var second = EconomyTransaction.deposit(
-                OPERATION_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, REASON, NOW);
+        var first =
+                EconomyTransaction.deposit(details(BigDecimal.TEN), change(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
+        var second =
+                EconomyTransaction.deposit(details(BigDecimal.TEN), change(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
 
         assertNotEquals(first.id(), second.id());
     }
@@ -108,226 +98,85 @@ class EconomyTransactionTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> EconomyTransaction.deposit(
-                        OPERATION_ID,
-                        USER_ID,
-                        CURRENCY,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> EconomyTransaction.deposit(
-                        OPERATION_ID,
-                        USER_ID,
-                        CURRENCY,
-                        BigDecimal.valueOf(-1),
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
+                        details(BigDecimal.ZERO), change(USER_ID, BigDecimal.ZERO, BigDecimal.TEN)));
         assertThrows(
                 IllegalArgumentException.class,
                 () -> EconomyTransaction.withdraw(
-                        OPERATION_ID, USER_ID, CURRENCY, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN, REASON, NOW));
+                        details(BigDecimal.ZERO), change(USER_ID, BigDecimal.TEN, BigDecimal.TEN)));
         assertThrows(
                 IllegalArgumentException.class,
                 () -> EconomyTransaction.transfer(
-                        OPERATION_ID,
-                        USER_ID,
-                        OTHER_USER_ID,
-                        CURRENCY,
-                        BigDecimal.valueOf(-5),
-                        BigDecimal.TEN,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        REASON,
-                        NOW));
+                        details(BigDecimal.valueOf(-5)),
+                        change(USER_ID, BigDecimal.TEN, BigDecimal.TEN),
+                        change(OTHER_USER_ID, BigDecimal.ZERO, BigDecimal.ZERO)));
     }
 
     @Test
     void shouldAllowZeroAmountForSetButRejectNegative() {
-        var zero = EconomyTransaction.set(
-                OPERATION_ID, USER_ID, CURRENCY, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN, REASON, NOW);
+        var zero = EconomyTransaction.set(details(BigDecimal.ZERO), change(USER_ID, BigDecimal.TEN, BigDecimal.TEN));
 
         assertEquals(0, zero.amount().compareTo(BigDecimal.ZERO));
-
         assertThrows(
                 IllegalArgumentException.class,
                 () -> EconomyTransaction.set(
-                        OPERATION_ID,
-                        USER_ID,
-                        CURRENCY,
-                        BigDecimal.valueOf(-1),
-                        BigDecimal.TEN,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
+                        details(BigDecimal.valueOf(-1)), change(USER_ID, BigDecimal.TEN, BigDecimal.TEN)));
     }
 
     @Test
     @SuppressWarnings("NullAway")
     void shouldRejectNullFieldsOnDeposit() {
+        var details = details(BigDecimal.TEN);
+        var target = change(USER_ID, BigDecimal.ZERO, BigDecimal.TEN);
+
+        assertThrows(NullPointerException.class, () -> new EconomyTransaction.Deposit(null, details, target));
         assertThrows(
                 NullPointerException.class,
-                () -> new EconomyTransaction.Deposit(
-                        null,
-                        OPERATION_ID,
-                        USER_ID,
-                        CURRENCY,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
+                () -> new EconomyTransaction.Deposit(EconomyTransactionId.random(), null, target));
         assertThrows(
                 NullPointerException.class,
-                () -> new EconomyTransaction.Deposit(
-                        EconomyTransactionId.random(),
-                        null,
-                        USER_ID,
-                        CURRENCY,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
-        assertThrows(
-                NullPointerException.class,
-                () -> new EconomyTransaction.Deposit(
-                        EconomyTransactionId.random(),
-                        OPERATION_ID,
-                        null,
-                        CURRENCY,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
-        assertThrows(
-                NullPointerException.class,
-                () -> new EconomyTransaction.Deposit(
-                        EconomyTransactionId.random(),
-                        OPERATION_ID,
-                        USER_ID,
-                        null,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
-        assertThrows(
-                NullPointerException.class,
-                () -> new EconomyTransaction.Deposit(
-                        EconomyTransactionId.random(),
-                        OPERATION_ID,
-                        USER_ID,
-                        CURRENCY,
-                        null,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
-        assertThrows(
-                NullPointerException.class,
-                () -> new EconomyTransaction.Deposit(
-                        EconomyTransactionId.random(),
-                        OPERATION_ID,
-                        USER_ID,
-                        CURRENCY,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        null,
-                        NOW));
-        assertThrows(
-                NullPointerException.class,
-                () -> new EconomyTransaction.Deposit(
-                        EconomyTransactionId.random(),
-                        OPERATION_ID,
-                        USER_ID,
-                        CURRENCY,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        null));
+                () -> new EconomyTransaction.Deposit(EconomyTransactionId.random(), details, null));
     }
 
     @Test
     @SuppressWarnings("NullAway")
     void shouldRejectNullFieldsOnTransfer() {
+        var details = details(BigDecimal.TEN);
+        var source = change(USER_ID, BigDecimal.TEN, BigDecimal.ZERO);
+        var target = change(OTHER_USER_ID, BigDecimal.ZERO, BigDecimal.TEN);
+
+        assertThrows(NullPointerException.class, () -> new EconomyTransaction.Transfer(null, details, source, target));
         assertThrows(
                 NullPointerException.class,
-                () -> new EconomyTransaction.Transfer(
-                        null,
-                        OPERATION_ID,
-                        USER_ID,
-                        OTHER_USER_ID,
-                        CURRENCY,
-                        BigDecimal.TEN,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
+                () -> new EconomyTransaction.Transfer(EconomyTransactionId.random(), null, source, target));
         assertThrows(
                 NullPointerException.class,
-                () -> new EconomyTransaction.Transfer(
-                        EconomyTransactionId.random(),
-                        OPERATION_ID,
-                        USER_ID,
-                        null,
-                        CURRENCY,
-                        BigDecimal.TEN,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        REASON,
-                        NOW));
+                () -> new EconomyTransaction.Transfer(EconomyTransactionId.random(), details, null, target));
+        assertThrows(
+                NullPointerException.class,
+                () -> new EconomyTransaction.Transfer(EconomyTransactionId.random(), details, source, null));
     }
 
     @Test
     void shouldImplementValueEquality() {
         var transactionId = EconomyTransactionId.random();
-        var first = new EconomyTransaction.Deposit(
-                transactionId,
-                OPERATION_ID,
-                USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                REASON,
-                NOW);
-        var second = new EconomyTransaction.Deposit(
-                transactionId,
-                OPERATION_ID,
-                USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                REASON,
-                NOW);
+        var details = details(BigDecimal.TEN);
+        var target = change(USER_ID, BigDecimal.ZERO, BigDecimal.TEN);
+        var first = new EconomyTransaction.Deposit(transactionId, details, target);
+        var second = new EconomyTransaction.Deposit(transactionId, details, target);
         var differentAmount = new EconomyTransaction.Deposit(
-                transactionId,
-                OPERATION_ID,
-                USER_ID,
-                CURRENCY,
-                BigDecimal.ONE,
-                BigDecimal.ZERO,
-                BigDecimal.ONE,
-                REASON,
-                NOW);
+                transactionId, details(BigDecimal.ONE), change(USER_ID, BigDecimal.ZERO, BigDecimal.ONE));
 
         assertEquals(first, second);
         assertEquals(first.hashCode(), second.hashCode());
         assertNotEquals(first, differentAmount);
         assertNotEquals(null, first);
+    }
+
+    private static EconomyTransactionDetails details(BigDecimal amount) {
+        return new EconomyTransactionDetails(OPERATION_ID, CURRENCY, amount, REASON, NOW);
+    }
+
+    private static EconomyBalanceChange change(UUID userId, BigDecimal before, BigDecimal after) {
+        return new EconomyBalanceChange(userId, before, after);
     }
 }

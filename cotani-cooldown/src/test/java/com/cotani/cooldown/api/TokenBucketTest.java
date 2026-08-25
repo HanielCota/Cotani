@@ -2,6 +2,8 @@ package com.cotani.cooldown.api;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Duration;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 
 class TokenBucketTest {
@@ -19,12 +21,12 @@ class TokenBucketTest {
     }
 
     @Test
-    void shouldRefillOverTime() throws InterruptedException {
+    void shouldRefillOverTime() {
         TokenBucket bucket = TokenBucket.of(5, 10.0); // 10 tokens per second
         assertTrue(bucket.tryConsume(5));
         assertEquals(0, bucket.availableTokens());
 
-        Thread.sleep(250); // ~2.5 tokens
+        LockSupport.parkNanos(Duration.ofMillis(250).toNanos()); // ~2.5 tokens
         assertTrue(bucket.availableTokens() >= 2);
         assertTrue(bucket.tryConsume(2));
     }

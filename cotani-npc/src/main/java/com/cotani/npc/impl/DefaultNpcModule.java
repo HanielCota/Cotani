@@ -357,7 +357,7 @@ public final class DefaultNpcModule implements NpcModule {
                         renderer.clearAllForViewer(player, npcs);
                     }
                     cleanupFuture.complete(null);
-                } catch (Throwable t) {
+                } catch (Exception t) {
                     cleanupFuture.completeExceptionally(t);
                 }
             });

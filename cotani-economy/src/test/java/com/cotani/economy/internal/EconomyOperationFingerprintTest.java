@@ -10,9 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import com.cotani.economy.transaction.EconomyTransactionId;
 import com.cotani.economy.transaction.EconomyTransactionType;
 import java.math.BigDecimal;
@@ -100,14 +102,8 @@ class EconomyOperationFingerprintTest {
         var fingerprint = EconomyOperationFingerprint.deposit(USER_ID, CURRENCY, BigDecimal.TEN, REASON);
         var transaction = new EconomyTransaction.Deposit(
                 EconomyTransactionId.random(),
-                operationId,
-                USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                REASON,
-                Instant.now());
+                new EconomyTransactionDetails(operationId, CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
 
         assertSame(transaction, fingerprint.requireMatch(operationId, transaction));
     }
@@ -118,14 +114,8 @@ class EconomyOperationFingerprintTest {
         var fingerprint = EconomyOperationFingerprint.deposit(USER_ID, CURRENCY, BigDecimal.TEN, REASON);
         var conflicting = new EconomyTransaction.Deposit(
                 EconomyTransactionId.random(),
-                operationId,
-                USER_ID,
-                CURRENCY,
-                BigDecimal.ONE,
-                BigDecimal.ZERO,
-                BigDecimal.ONE,
-                REASON,
-                Instant.now());
+                new EconomyTransactionDetails(operationId, CURRENCY, BigDecimal.ONE, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.ONE));
 
         assertThrows(
                 DuplicateEconomyOperationException.class, () -> fingerprint.requireMatch(operationId, conflicting));
@@ -163,14 +153,9 @@ class EconomyOperationFingerprintTest {
                         null,
                         new EconomyTransaction.Deposit(
                                 EconomyTransactionId.random(),
-                                EconomyOperationId.random(),
-                                USER_ID,
-                                CURRENCY,
-                                BigDecimal.TEN,
-                                BigDecimal.ZERO,
-                                BigDecimal.TEN,
-                                REASON,
-                                Instant.now())));
+                                new EconomyTransactionDetails(
+                                        EconomyOperationId.random(), CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.TEN))));
         assertThrows(NullPointerException.class, () -> fingerprint.requireMatch(EconomyOperationId.random(), null));
     }
 

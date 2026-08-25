@@ -14,9 +14,11 @@ import com.cotani.economy.exception.SameEconomyAccountTransferException;
 import com.cotani.economy.internal.protection.DefaultEconomyGuard;
 import com.cotani.economy.internal.repository.EconomyAccountRepository;
 import com.cotani.economy.internal.repository.EconomyTransferRepository;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -47,7 +49,8 @@ class DefaultEconomyServiceTest {
 
     private static EconomyTransaction sampleDeposit() {
         return EconomyTransaction.deposit(
-                OP_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, REASON, Instant.now());
+                new EconomyTransactionDetails(OP_ID, CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
     }
 
     private static <T extends Throwable> T assertCause(Class<T> type, CompletableFuture<?> future) {
@@ -159,7 +162,8 @@ class DefaultEconomyServiceTest {
     void withdrawValidatesInputAndReturnsTransaction() {
         var service = newService();
         var transaction = EconomyTransaction.withdraw(
-                OP_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, REASON, Instant.now());
+                new EconomyTransactionDetails(OP_ID, CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.TEN, BigDecimal.ZERO));
         when(accountRepository.withdraw(USER_ID, CURRENCY, NORMALIZED_TEN, REASON, OP_ID))
                 .thenReturn(CompletableFuture.completedFuture(transaction));
 
@@ -175,7 +179,8 @@ class DefaultEconomyServiceTest {
     void setValidatesInputAndReturnsTransaction() {
         var service = newService();
         var transaction = EconomyTransaction.set(
-                OP_ID, USER_ID, CURRENCY, BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, REASON, Instant.now());
+                new EconomyTransactionDetails(OP_ID, CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
         when(accountRepository.set(USER_ID, CURRENCY, NORMALIZED_TEN, REASON, OP_ID))
                 .thenReturn(CompletableFuture.completedFuture(transaction));
 
@@ -193,17 +198,9 @@ class DefaultEconomyServiceTest {
         var source = UUID.randomUUID();
         var target = UUID.randomUUID();
         var transaction = EconomyTransaction.transfer(
-                OP_ID,
-                source,
-                target,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.valueOf(20),
-                BigDecimal.valueOf(10),
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                REASON,
-                Instant.now());
+                new EconomyTransactionDetails(OP_ID, CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(source, BigDecimal.valueOf(20), BigDecimal.valueOf(10)),
+                new EconomyBalanceChange(target, BigDecimal.ZERO, BigDecimal.TEN));
         when(transferRepository.transfer(source, target, CURRENCY, NORMALIZED_TEN, REASON, OP_ID))
                 .thenReturn(CompletableFuture.completedFuture(transaction));
 

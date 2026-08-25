@@ -151,7 +151,7 @@ public final class QueryExecutor {
                                 }
                                 result.complete(opResult);
                             });
-                        } catch (Throwable failure) {
+                        } catch (Exception failure) {
                             result.completeExceptionally(failure);
                         }
                     });
@@ -356,7 +356,7 @@ public final class QueryExecutor {
             connection.setAutoCommit(false);
 
             return new TransactionState(connection, previousAutoCommit);
-        } catch (Throwable exception) {
+        } catch (SQLException exception) {
             if (connection != null) {
                 try {
                     connection.close();
@@ -364,13 +364,16 @@ public final class QueryExecutor {
                     exception.addSuppressed(closeFailure);
                 }
             }
-            if (exception instanceof SQLException sqlEx) {
-                throw new StorageException(new QueryError("Could not acquire connection for transaction.", sqlEx));
+            throw new StorageException(new QueryError("Could not acquire connection for transaction.", exception));
+        } catch (RuntimeException failure) {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException closeFailure) {
+                    failure.addSuppressed(closeFailure);
+                }
             }
-            if (exception instanceof RuntimeException re) {
-                throw re;
-            }
-            throw new RuntimeException(exception);
+            throw failure;
         }
     }
 

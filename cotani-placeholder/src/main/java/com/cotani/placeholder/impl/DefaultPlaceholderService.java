@@ -413,7 +413,7 @@ public final class DefaultPlaceholderService implements PlaceholderService {
         Runnable task = () -> {
             try {
                 result.complete(invocation.get());
-            } catch (Throwable failure) {
+            } catch (Exception failure) {
                 result.completeExceptionally(failure);
             }
         };

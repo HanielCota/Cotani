@@ -33,7 +33,9 @@ public final class PlaceholderApiBridge {
         try {
             Class.forName("me.clip.placeholderapi.PlaceholderAPI");
             return Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI");
-        } catch (Throwable ignored) {
+        } catch (Exception exception) {
+            java.util.logging.Logger.getLogger(PlaceholderApiBridge.class.getName())
+                    .log(java.util.logging.Level.FINE, "PlaceholderAPI is not available", exception);
             return false;
         }
     }
@@ -51,7 +53,7 @@ public final class PlaceholderApiBridge {
             var expansion = new PapiExpansionImpl(plugin, placeholderService);
             expansion.register();
             this.registeredPapiExpansion = expansion;
-        } catch (Throwable throwable) {
+        } catch (Exception throwable) {
             plugin.getLogger().warning("Failed to hook into PlaceholderAPI: " + throwable.getMessage());
         }
     }
@@ -60,8 +62,9 @@ public final class PlaceholderApiBridge {
         if (registeredPapiExpansion instanceof me.clip.placeholderapi.expansion.PlaceholderExpansion expansion) {
             try {
                 expansion.unregister();
-            } catch (Throwable ignored) {
-                // Ignore unregistration failure when server is shutting down
+            } catch (Exception exception) {
+                plugin.getLogger()
+                        .log(java.util.logging.Level.FINE, "Could not unregister PlaceholderAPI expansion", exception);
             }
             this.registeredPapiExpansion = null;
         }
@@ -79,7 +82,8 @@ public final class PlaceholderApiBridge {
                 return null;
             }
             return result;
-        } catch (Throwable ignored) {
+        } catch (Exception exception) {
+            plugin.getLogger().log(java.util.logging.Level.FINE, "Could not resolve external placeholder", exception);
             return null;
         }
     }
@@ -96,7 +100,9 @@ public final class PlaceholderApiBridge {
                 return null;
             }
             return result;
-        } catch (Throwable ignored) {
+        } catch (Exception exception) {
+            plugin.getLogger()
+                    .log(java.util.logging.Level.FINE, "Could not resolve relational external placeholder", exception);
             return null;
         }
     }

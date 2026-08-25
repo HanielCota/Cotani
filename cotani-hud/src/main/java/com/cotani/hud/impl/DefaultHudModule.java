@@ -108,8 +108,9 @@ public final class DefaultHudModule implements HudModule {
         for (var sidebar : sidebars.values()) {
             try {
                 sidebar.close();
-            } catch (Exception _) {
-                // Suppress
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DefaultHudModule.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not close sidebar", exception);
             }
         }
         sidebars.clear();

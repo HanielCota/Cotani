@@ -425,7 +425,7 @@ class CotaniTest {
         var closeThread = new Thread(() -> {
             try {
                 cotani.close();
-            } catch (Throwable failure) {
+            } catch (RuntimeException | Error failure) {
                 closeError.set(failure);
             }
         });

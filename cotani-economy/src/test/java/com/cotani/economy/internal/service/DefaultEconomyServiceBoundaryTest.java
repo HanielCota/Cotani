@@ -21,9 +21,11 @@ import com.cotani.economy.exception.SameEconomyAccountTransferException;
 import com.cotani.economy.internal.protection.DefaultEconomyGuard;
 import com.cotani.economy.internal.repository.EconomyAccountRepository;
 import com.cotani.economy.internal.repository.EconomyTransferRepository;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -102,14 +104,9 @@ class DefaultEconomyServiceBoundaryTest {
     void shouldSetBalanceForCurrencyOverload() {
         var service = newService();
         var transaction = EconomyTransaction.set(
-                EconomyOperationId.random(),
-                USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                REASON,
-                Instant.now());
+                new EconomyTransactionDetails(
+                        EconomyOperationId.random(), CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
         var normalized = BigDecimal.TEN.setScale(2);
         when(accountRepository.set(eq(USER_ID), eq(CURRENCY), eq(normalized), eq(REASON), any()))
                 .thenReturn(CompletableFuture.completedFuture(transaction));
@@ -125,17 +122,10 @@ class DefaultEconomyServiceBoundaryTest {
     void shouldTransferForCurrencyOverload() {
         var service = newService();
         var transaction = EconomyTransaction.transfer(
-                EconomyOperationId.random(),
-                USER_ID,
-                OTHER_USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                REASON,
-                Instant.now());
+                new EconomyTransactionDetails(
+                        EconomyOperationId.random(), CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.TEN, BigDecimal.ZERO),
+                new EconomyBalanceChange(OTHER_USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
         var normalized = BigDecimal.TEN.setScale(2);
         when(transferRepository.transfer(
                         eq(USER_ID), eq(OTHER_USER_ID), eq(CURRENCY), eq(normalized), eq(REASON), any()))
@@ -153,14 +143,9 @@ class DefaultEconomyServiceBoundaryTest {
     void shouldWithdrawForDefaultCurrencyOverload() {
         var service = newService();
         var transaction = EconomyTransaction.withdraw(
-                EconomyOperationId.random(),
-                USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                REASON,
-                Instant.now());
+                new EconomyTransactionDetails(
+                        EconomyOperationId.random(), CURRENCY, BigDecimal.TEN, REASON, Instant.now()),
+                new EconomyBalanceChange(USER_ID, BigDecimal.TEN, BigDecimal.ZERO));
         var normalized = BigDecimal.TEN.setScale(2);
         when(accountRepository.withdraw(eq(USER_ID), eq(CURRENCY), eq(normalized), eq(REASON), any()))
                 .thenReturn(CompletableFuture.completedFuture(transaction));

@@ -7,9 +7,11 @@ import static org.mockito.Mockito.verify;
 
 import com.cotani.economy.account.EconomyAccount;
 import com.cotani.economy.currency.CurrencyId;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import com.cotani.economy.transaction.EconomyTransactionId;
 import com.cotani.storage.query.ParameterBinder;
 import java.math.BigDecimal;
@@ -43,14 +45,13 @@ class SqlEconomyBindingTest {
         var binder = mock(ParameterBinder.class);
         var transaction = new EconomyTransaction.Deposit(
                 EconomyTransactionId.random(),
-                EconomyOperationId.random(),
-                UUID.randomUUID(),
-                CURRENCY_ID,
-                BigDecimal.ONE,
-                BigDecimal.ZERO,
-                BigDecimal.ONE,
-                EconomyReason.system("test"),
-                CREATED_AT);
+                new EconomyTransactionDetails(
+                        EconomyOperationId.random(),
+                        CURRENCY_ID,
+                        BigDecimal.ONE,
+                        EconomyReason.system("test"),
+                        CREATED_AT),
+                new EconomyBalanceChange(UUID.randomUUID(), BigDecimal.ZERO, BigDecimal.ONE));
 
         EconomyStorageMappers.bindTransaction(binder, transaction);
 

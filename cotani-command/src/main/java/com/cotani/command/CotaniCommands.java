@@ -238,8 +238,9 @@ public final class CotaniCommands implements AutoCloseable, AsyncCloseable {
             var server = plugin.getServer();
             var syncMethod = server.getClass().getMethod("syncCommands");
             syncMethod.invoke(server);
-        } catch (Exception _) {
-            // Ignored on platforms or mock test environments without syncCommands
+        } catch (Exception exception) {
+            java.util.logging.Logger.getLogger(CotaniCommands.class.getName())
+                    .log(java.util.logging.Level.FINE, "Could not synchronize commands on this platform", exception);
         }
     }
 }

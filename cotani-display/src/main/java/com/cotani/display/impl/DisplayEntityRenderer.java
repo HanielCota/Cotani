@@ -130,8 +130,9 @@ public final class DisplayEntityRenderer {
         Entity entity = null;
         try {
             entity = Bukkit.getEntity(entityId);
-        } catch (Exception _) {
-            // Uninitialized server or invalid lookup
+        } catch (Exception exception) {
+            java.util.logging.Logger.getLogger(DisplayEntityRenderer.class.getName())
+                    .log(java.util.logging.Level.FINE, "Could not resolve display entity", exception);
         }
 
         if (entity != null && entity.isValid() && isEntityCompatible(entity, line)) {
@@ -163,8 +164,9 @@ public final class DisplayEntityRenderer {
                 if (entity != null && entity.isValid()) {
                     entity.remove();
                 }
-            } catch (Exception _) {
-                // Uninitialized server or entity already removed
+            } catch (Exception exception) {
+                java.util.logging.Logger.getLogger(DisplayEntityRenderer.class.getName())
+                        .log(java.util.logging.Level.FINE, "Could not despawn display entity", exception);
             }
         }
     }

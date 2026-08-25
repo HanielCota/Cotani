@@ -95,7 +95,9 @@ public final class RedisCacheInvalidationBus<K> implements CacheInvalidationBus<
                 return null;
             }
             return new CacheInvalidation<>(sourceId, key);
-        } catch (Exception _) {
+        } catch (Exception exception) {
+            java.util.logging.Logger.getLogger(RedisCacheInvalidationBus.class.getName())
+                    .log(java.util.logging.Level.FINE, "Could not decode Redis cache invalidation", exception);
             return null;
         }
     }

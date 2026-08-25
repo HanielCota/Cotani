@@ -47,7 +47,7 @@ public final class CotaniMetricsModule implements AutoCloseable {
             try {
                 pServer.start();
                 server = pServer;
-            } catch (Throwable t) {
+            } catch (Exception t) {
                 pServer.close();
                 cotaniRegistry.close();
                 throw t;

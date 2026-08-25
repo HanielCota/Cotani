@@ -46,7 +46,7 @@ class InventorySyncServiceTest {
         try {
             org.bukkit.inventory.ItemStack.empty();
             return true;
-        } catch (Throwable _) {
+        } catch (RuntimeException | LinkageError exception) {
             return false;
         }
     }
@@ -84,7 +84,7 @@ class InventorySyncServiceTest {
                     Supplier<?> supplier = invocation.getArgument(2);
                     try {
                         return CompletableFuture.completedFuture(supplier.get());
-                    } catch (Throwable error) {
+                    } catch (RuntimeException | Error error) {
                         return CompletableFuture.failedFuture(error);
                     }
                 })

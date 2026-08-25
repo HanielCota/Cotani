@@ -12,9 +12,11 @@ import static org.mockito.Mockito.when;
 
 import com.cotani.economy.currency.CurrencyId;
 import com.cotani.economy.exception.DuplicateEconomyOperationException;
+import com.cotani.economy.transaction.EconomyBalanceChange;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
+import com.cotani.economy.transaction.EconomyTransactionDetails;
 import com.cotani.economy.transaction.EconomyTransactionType;
 import com.cotani.storage.error.QueryError;
 import com.cotani.storage.error.StorageException;
@@ -178,14 +180,9 @@ class EconomyStorageMappersTest {
     @Test
     void shouldConvertUniqueViolationIntoDuplicateOperationException() throws Exception {
         var transaction = EconomyTransaction.deposit(
-                EconomyOperationId.random(),
-                USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                EconomyReason.system("test"),
-                NOW);
+                new EconomyTransactionDetails(
+                        EconomyOperationId.random(), CURRENCY, BigDecimal.TEN, EconomyReason.system("test"), NOW),
+                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
         var tx = mock(TransactionContext.class);
         var uniqueViolation = new SQLException("UNIQUE constraint failed", "23505");
         when(tx.update(anyString(), any())).thenReturn(CompletableFuture.failedFuture(uniqueViolation));
@@ -199,14 +196,9 @@ class EconomyStorageMappersTest {
     @Test
     void shouldPropagateNonUniqueFailuresAsIs() throws Exception {
         var transaction = EconomyTransaction.deposit(
-                EconomyOperationId.random(),
-                USER_ID,
-                CURRENCY,
-                BigDecimal.TEN,
-                BigDecimal.ZERO,
-                BigDecimal.TEN,
-                EconomyReason.system("test"),
-                NOW);
+                new EconomyTransactionDetails(
+                        EconomyOperationId.random(), CURRENCY, BigDecimal.TEN, EconomyReason.system("test"), NOW),
+                new EconomyBalanceChange(USER_ID, BigDecimal.ZERO, BigDecimal.TEN));
         var tx = mock(TransactionContext.class);
         var storageFailure = new IllegalStateException("database down");
         when(tx.update(anyString(), any())).thenReturn(CompletableFuture.failedFuture(storageFailure));
