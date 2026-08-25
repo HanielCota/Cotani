@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="logo.png" alt="Logo do Cotani" width="320">
+
 # Cotani
 
 **Infraestrutura componível e de alta performance para plugins Paper e Folia seguros e não bloqueantes.**
@@ -346,6 +348,5 @@ O comando `check` executa testes unitários, validação de formatação de cód
 ```
 
 Consulte o [Guia de Contribuição](CONTRIBUTING.md), a [Política de Segurança](SECURITY.md) e as [Regras de Engenharia](AGENTS.md) antes de enviar contribuições.
-
 
 

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="logo.png" alt="Cotani logo" width="320">
+
 # Cotani
 
 **Composable, high-performance infrastructure for safe, non-blocking Paper and Folia plugins.**
@@ -348,5 +350,4 @@ cd Cotani
 ```
 
 Review our [Contributing Guide](CONTRIBUTING.md), [Security Policy](SECURITY.md), and [Engineering Rules](AGENTS.md) before submitting contributions.
-
 

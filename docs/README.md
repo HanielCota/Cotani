@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # Cotani documentation
+
+</div>
 
 This directory contains the maintained project references. The module READMEs are the first stop for installation and
 API-oriented examples; this index groups the cross-cutting guides.
