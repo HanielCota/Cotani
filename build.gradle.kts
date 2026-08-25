@@ -754,7 +754,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             <body>
                 <div class="container">
                     <header>
-                        <div class="hero-tag">Cotani Framework v1.1.0 · Java 25 · Paper 26.2</div>
+                        <div class="hero-tag">Cotani Framework v1.1.1 · Java 25 · Paper 26.2</div>
                         <h1>Cotani API Documentation</h1>
                         <p class="subtitle">Official API javadocs for modular Paper & Folia plugin architecture with non-blocking execution and clear contracts.</p>
                         <div class="nav-links">
@@ -834,3 +834,5 @@ val generateJavadocIndex = tasks.register<GenerateJavadocIndex>("generateJavadoc
 aggregateJavadoc.configure {
     finalizedBy(generateJavadocIndex)
 }
+
+

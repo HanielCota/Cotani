@@ -1,12 +1,12 @@
 # Cotani 1.x migration notes
 
-These notes describe the compatibility additions and behavior changes carried into the `1.1.0` release. The `1.0.0`
+These notes describe the compatibility additions and behavior changes carried into the `1.1.1` release. The `1.0.0`
 line remains available for consumers that still target its original module set; new integrations should use the current
 stable APIs below.
 
 ## Explicit async names
 
-Cotani 1.1.0 retains source-compatible `*Async` aliases for APIs whose original names returned a `CompletionStage`
+Cotani 1.1.1 retains source-compatible `*Async` aliases for APIs whose original names returned a `CompletionStage`
 without saying so in the method name:
 
 - `DataCache`: `getOrLoadAsync`, `loadAsync`, `updateAsync`, `mutateAsync`, `saveAsync`, `saveDirtyAsync`, `saveAllAsync`;
@@ -27,3 +27,5 @@ var teleports = CotaniTeleports.create(plugin, combatAdapter, regionAdapter, sch
 ## Metrics namespace
 
 Use `com.cotani.metrics.CotaniMetrics` as the new stable factory. Returned metrics types retain their `net.cotani.metrics` namespace for binary compatibility. A complete package move is reserved for 2.0 because Java cannot provide transparent aliases for every final class and record.
+
+
