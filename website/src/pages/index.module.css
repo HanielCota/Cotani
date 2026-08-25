@@ -1,0 +1,68 @@
+.hero {
+  padding: 5rem 0 4rem;
+  text-align: center;
+  background: linear-gradient(135deg, #edf4ff 0%, #ffffff 62%);
+}
+
+[data-theme='dark'] .hero {
+  background: linear-gradient(135deg, #142747 0%, #1b1b1d 62%);
+}
+
+.logo {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  margin-bottom: 1.5rem;
+}
+
+.subtitle {
+  max-width: 680px;
+  margin: 0 auto 1.75rem;
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+.buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: block;
+  height: 100%;
+  padding: 1.5rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  color: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.card:hover {
+  color: inherit;
+  border-color: var(--ifm-color-primary);
+  box-shadow: var(--ifm-global-shadow-md);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.card h2 {
+  font-size: 1.25rem;
+}
+
+.card p {
+  margin-bottom: 0;
+}
+
+@media (max-width: 996px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}

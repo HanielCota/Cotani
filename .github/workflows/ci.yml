@@ -41,6 +41,17 @@ jobs:
       - name: Build & Check (Spotless, ErrorProne, Tests, Architecture)
         run: ./gradlew check integrationTest
 
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Build Documentation Site
+        working-directory: website
+        run: npm ci && npm run build
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4

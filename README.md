@@ -11,7 +11,7 @@ Build scalable Minecraft plugins with explicit execution boundaries, zero-reflec
 [![Build](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/ci.yml?branch=master&style=flat-square&logo=github&label=build)](https://github.com/HanielCota/Cotani/actions/workflows/ci.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk)](https://adoptium.net/)
 [![Paper 26.2](https://img.shields.io/badge/Paper-26.2-3f48cc?style=flat-square)](https://papermc.io/)
-[![Javadoc](https://img.shields.io/badge/docs-javadoc-0969da?style=flat-square&logo=gitbook)](https://hanielcota.github.io/Cotani/)
+[![Javadoc](https://img.shields.io/badge/docs-javadoc-0969da?style=flat-square&logo=gitbook)](https://hanielcota.github.io/Cotani/api/)
 [![JitPack](https://jitpack.io/v/HanielCota/Cotani.svg)](https://jitpack.io/#HanielCota/Cotani)
 [![MIT](https://img.shields.io/github/license/HanielCota/Cotani?style=flat-square)](LICENSE)
 
@@ -322,9 +322,10 @@ scheduler.chain(messageStage)
 
 ## Documentation & Resources
 
+- 🌐 **[Cotani Wiki](https://hanielcota.github.io/Cotani/)** — Official guides, concepts, module map, and contribution standards
 - 📖 **[Cotani Cookbook](docs/ai/cotani-cookbook.md)** — Copy-paste recipes for common Paper plugin patterns
 - 🗂️ **[Documentation Index](docs/README.md)** — Maintained guides, validation commands, and documentation policy
-- 🌐 **[API Documentation (Javadoc)](https://hanielcota.github.io/Cotani/)** — Aggregated Javadoc reference for all modules
+- 🧩 **[API Documentation (Javadoc)](https://hanielcota.github.io/Cotani/api/)** — Aggregated Javadoc reference for all modules
 - 💡 **[Showcase Plugin Examples](docs-examples/src/main/java/com/cotani/examples/showcase/ShowcasePlugin.java)** — Full compile-checked reference plugin implementation
 - 🏗️ **[Architecture Reference](docs/architecture.md)** — Gradle dependency graphs and execution boundaries
 - 📜 **[Asynchronous API Contracts](docs/async-contracts.md)** — Non-blocking guarantees and error propagation rules
@@ -350,4 +351,3 @@ cd Cotani
 ```
 
 Review our [Contributing Guide](CONTRIBUTING.md), [Security Policy](SECURITY.md), and [Engineering Rules](AGENTS.md) before submitting contributions.
-

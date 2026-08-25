@@ -169,7 +169,7 @@ abstract class ValidateDocumentation : DefaultTask() {
     fun validate() {
         val root = rootDirectory.asFile.get()
         val markdownFiles = root.walkTopDown()
-            .onEnter { directory -> directory.name !in setOf(".git", ".gradle", "build") }
+            .onEnter { directory -> directory.name !in setOf(".git", ".gradle", "build", "node_modules", ".docusaurus") }
             .filter { file -> file.isFile && file.extension == "md" }
             .toList()
         val linkPattern = Regex("""\[[^]]+]\(([^)]+)\)""")
@@ -834,5 +834,4 @@ val generateJavadocIndex = tasks.register<GenerateJavadocIndex>("generateJavadoc
 aggregateJavadoc.configure {
     finalizedBy(generateJavadocIndex)
 }
-
 

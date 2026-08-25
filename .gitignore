@@ -9,6 +9,11 @@ bin/
 out/
 **/out/
 
+# Documentation site
+website/node_modules/
+website/.docusaurus/
+website/build/
+
 # IDE / Editor Files
 .idea/
 *.iml

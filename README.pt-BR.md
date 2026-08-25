@@ -11,7 +11,7 @@ Construa plugins Minecraft escaláveis com limites de execução explícitos, ev
 [![Build](https://img.shields.io/github/actions/workflow/status/HanielCota/Cotani/ci.yml?branch=master&style=flat-square&logo=github&label=build)](https://github.com/HanielCota/Cotani/actions/workflows/ci.yml)
 [![Java 25](https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk)](https://adoptium.net/)
 [![Paper 26.2](https://img.shields.io/badge/Paper-26.2-3f48cc?style=flat-square)](https://papermc.io/)
-[![Javadoc](https://img.shields.io/badge/docs-javadoc-0969da?style=flat-square&logo=gitbook)](https://hanielcota.github.io/Cotani/)
+[![Javadoc](https://img.shields.io/badge/docs-javadoc-0969da?style=flat-square&logo=gitbook)](https://hanielcota.github.io/Cotani/api/)
 [![JitPack](https://jitpack.io/v/HanielCota/Cotani.svg)](https://jitpack.io/#HanielCota/Cotani)
 [![MIT](https://img.shields.io/github/license/HanielCota/Cotani?style=flat-square)](LICENSE)
 
@@ -320,9 +320,10 @@ scheduler.chain(messageStage)
 
 ## Documentação & Recursos
 
+- 🌐 **[Wiki do Cotani](https://hanielcota.github.io/Cotani/)** — Guias oficiais, conceitos, mapa de módulos e padrões de contribuição
 - 📖 **[Cookbook do Cotani](docs/ai/cotani-cookbook.md)** — Receitas práticas para padrões comuns em plugins Paper
 - 🗂️ **[Índice da documentação](docs/README.md)** — Guias mantidos, comandos de validação e política de documentação
-- 🌐 **[Documentação da API (Javadoc)](https://hanielcota.github.io/Cotani/)** — Referência agregada de Javadocs de todos os módulos
+- 🧩 **[Documentação da API (Javadoc)](https://hanielcota.github.io/Cotani/api/)** — Referência agregada de Javadocs de todos os módulos
 - 💡 **[Exemplos de Plugin Showcase](docs-examples/src/main/java/com/cotani/examples/showcase/ShowcasePlugin.java)** — Implementação de referência completa e verificada por compilação
 - 🏗️ **[Referência de Arquitetura](docs/architecture.md)** — Grafos de dependências do Gradle e limites de execução
 - 📜 **[Contratos de APIs Assíncronas](docs/async-contracts.md)** — Garantias de execução não bloqueante e tratamento de erros
@@ -348,5 +349,3 @@ O comando `check` executa testes unitários, validação de formatação de cód
 ```
 
 Consulte o [Guia de Contribuição](CONTRIBUTING.md), a [Política de Segurança](SECURITY.md) e as [Regras de Engenharia](AGENTS.md) antes de enviar contribuições.
-
-
