@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-npc
+
+</div>
 
 High-performance virtual player NPC management, tracking, look-at targeting, and click interactions for Paper and Folia.
 

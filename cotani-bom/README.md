@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # Cotani BOM
+
+</div>
 
 Bill of Materials (BOM) for dependency alignment across all Cotani modules.
 
@@ -31,5 +37,4 @@ dependencies {
     </dependencies>
 </dependencyManagement>
 ```
-
 

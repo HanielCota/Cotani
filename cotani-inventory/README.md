@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-inventory
+
+</div>
 
 Loss-less binary inventory synchronization, historical snapshots, rollbacks, and dupe-proof cross-server transfers.
 
@@ -55,10 +61,16 @@ syncService.loadAndApplyAsync(player)
 ### 3. Rolling Back to a Previous Snapshot
 
 ```java
+UUID playerId = player.getUniqueId();
 syncService.rollbackAsync(player, snapshotTimestamp)
     .thenAccept(restored -> {
         if (restored) {
-            player.sendMessage("Inventory rolled back to historical snapshot.");
+            scheduler.entity(playerId, () -> {
+                Player current = Bukkit.getPlayer(playerId);
+                if (current != null) {
+                    current.sendMessage("Inventory rolled back to historical snapshot.");
+                }
+            });
         }
     });
 ```
@@ -66,16 +78,43 @@ syncService.rollbackAsync(player, snapshotTimestamp)
 ### 4. Cross-Server Transfer with Dupe Lock
 
 ```java
+UUID playerId = player.getUniqueId();
+
 // Acquire lock before server transition
-syncService.beginTransferAsync(player.getUniqueId(), Duration.ofSeconds(15))
+syncService.beginTransferAsync(playerId, Duration.ofSeconds(15))
     .thenCompose(maybeLease -> {
         if (maybeLease.isEmpty()) {
-            player.sendMessage("Transfer already in progress!");
+            scheduler.entity(playerId, () -> {
+                Player current = Bukkit.getPlayer(playerId);
+                if (current != null) {
+                    current.sendMessage("Transfer already in progress!");
+                }
+            });
             return CompletableFuture.completedFuture(null);
         }
         var lease = maybeLease.orElseThrow();
-        return syncService.saveAsync(player)
-            .thenAccept(_ -> sendPlayerToTargetServer(player, "survival-2"))
+        var saveStage = new CompletableFuture<Void>();
+        scheduler.entity(playerId, () -> {
+            Player current = Bukkit.getPlayer(playerId);
+            if (current == null) {
+                saveStage.completeExceptionally(new IllegalStateException("Player is no longer online"));
+                return;
+            }
+            syncService.saveAsync(current).whenComplete((_, error) -> {
+                if (error != null) {
+                    saveStage.completeExceptionally(error);
+                } else {
+                    saveStage.complete(null);
+                }
+            });
+        });
+        return saveStage
+            .thenAccept(_ -> scheduler.entity(playerId, () -> {
+                Player current = Bukkit.getPlayer(playerId);
+                if (current != null) {
+                    sendPlayerToTargetServer(current, "survival-2");
+                }
+            }))
             .thenCompose(_ -> syncService.completeTransferAsync(lease));
     });
 ```

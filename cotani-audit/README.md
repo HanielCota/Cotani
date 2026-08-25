@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-audit
+
+</div>
 
 Append-only audit records with immutable values, bounded queries and ordered asynchronous persistence.
 
@@ -19,4 +25,3 @@ values only; it never retains `Player`, `World` or other Bukkit objects. Writes 
 queries wait for earlier successful writes, and new work is rejected after `closeAsync()` begins.
 
 For SQL persistence, use the separate [`cotani-audit-storage`](../cotani-audit-storage/README.md) adapter.
-

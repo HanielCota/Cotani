@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-friend
+
+</div>
 
 Asynchronous friendships, requests and directional player blocks for Paper and Folia plugins.
 
@@ -17,4 +23,3 @@ friends.sendRequestAsync(requesterId, targetId)
 
 Use `CotaniFriends.fromRepositoryAsync(repository, eventBus, options)` to restore a `FriendSnapshot`. Close the
 service with `closeAsync()`; accepted operations finish before shutdown completes.
-

@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-party
+
+</div>
 
 Asynchronous party groups with immutable members, expiring invitations, roles, leadership transfer and persistence.
 
@@ -17,4 +23,3 @@ parties.createAsync(leaderId, PartyOptions.defaults())
 
 Use `CotaniParties.fromRepositoryAsync(repository, eventBus, options)` for persistence. Repository and event
 timeouts only bound the caller-facing stage; accepted underlying work remains serialized. Close with `closeAsync()`.
-

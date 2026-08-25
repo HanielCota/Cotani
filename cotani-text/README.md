@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-text
+
+</div>
 
 Text utilities based on Adventure: MiniMessage parsing, placeholders and audience messaging.
 

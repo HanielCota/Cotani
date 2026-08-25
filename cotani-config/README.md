@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-config
+
+</div>
 
 YAML configuration mapping framework. Binds files to immutable Java `record`s with built-in validation, custom type serializers, and asynchronous reloads.
 
@@ -42,7 +48,7 @@ public record PluginSettings(
 Initialize the configurations builder and bind files:
 
 ```java
-CotaniConfigs.create(plugin, scheduler)
+CotaniConfigs.builder(plugin, scheduler)
     .file("config.yml")
     .loadAsync()
     .thenAccept(loaded -> {

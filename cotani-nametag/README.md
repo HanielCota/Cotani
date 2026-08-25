@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-nametag
+
+</div>
 
 Scoreboard-backed player nametag formatting, tablist sorting priority, and team options module for Paper and Folia.
 

@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-core
+
+</div>
 
 Core bootstrapping, lifecycle management, and shared exceptions for the Cotani framework.
 
@@ -51,7 +57,7 @@ public final class MyPlugin extends JavaPlugin {
 1. **Mandatory Lifecycle Mapping**: Create `Cotani` in `onEnable` and start `closeAsync()` in `onDisable`.
 2. **Register All Closeables**: Every `AutoCloseable` resource created at plugin startup (like schedulers, database drivers, caches) must be registered with `Cotani.forPlugin(plugin).with(resource).build()` to guarantee safe disposal.
 3. **No Service Locator Abuse**: Do not use `Cotani` as a global service locator or singleton. Its sole responsibility is closeable lifecycle management. Use constructor injection instead.
-4. **No Main-Thread Blocking**: `Cotani.close()` is only for non-server threads. On Paper's primary thread, use `closeAsync()` and observe its failed stage.
+4. **No Main-Thread Blocking**: `Cotani.close()` is only for non-server threads. On Paper's primary thread, use `closeAsync()` and compose or observe the returned stage.
 
 ## Anti-Patterns
 

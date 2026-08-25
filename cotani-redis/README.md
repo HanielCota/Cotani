@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-redis
+
+</div>
 
 Non-blocking Redis client, typed pub/sub messaging, and distributed locks for Paper and Folia plugin networks.
 

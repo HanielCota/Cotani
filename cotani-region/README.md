@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-region
+
+</div>
 
 High-performance 3D spatial region management, chunk grid containment queries, and protection flags for Paper and Folia.
 
@@ -6,7 +12,7 @@ High-performance 3D spatial region management, chunk grid containment queries, a
 
 `cotani-region` provides lightweight, sub-millisecond 3D area management:
 
-- **🌐 Chunk Grid Indexing:** $O(1)$ spatial queries across thousands of regions without FPS drops.
+- **🌐 Chunk Grid Indexing:** Fast chunk-local candidate lookup across thousands of regions without scanning the full registry.
 - **🛡️ Protection Flags:** Out-of-the-box support for `PVP`, `BLOCK_BREAK`, `BLOCK_PLACE`, `USE_DOORS`, `USE_CONTAINERS`, `ITEM_DROP`, `ITEM_PICKUP`, and `ENTRY`.
 - **✨ Transition Titles & Messages:** Built-in Adventure MiniMessage greeting and farewell messages.
 - **⚡ Priority Overrides:** Hierarchical region priority resolution for nested sub-zones (e.g. VIP shop inside spawn).

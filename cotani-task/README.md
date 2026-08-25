@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-task
+
+</div>
 
 Scheduler and async execution framework for Paper and Folia. Manages global, region, entity, and async tasks safely, and provides `TaskChain` for chaining execution between threads.
 

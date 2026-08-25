@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-locale
+
+</div>
 
 Locale preferences and localized message rendering for Cotani plugins.
 

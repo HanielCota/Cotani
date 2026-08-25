@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-display
+
+</div>
 
 Modern, high-performance, non-blocking Display Entity and Hologram engine for Paper and Folia plugins.
 
@@ -97,8 +103,10 @@ displays.holograms().builder("loot_crate_display")
 ### 3. Dynamic Line Updates
 
 ```java
-displays.holograms().find("welcome_hologram").ifPresent(hologram -> {
-    hologram.updateLineAsync(1, Component.text("Online players: " + Bukkit.getOnlinePlayers().size()));
+scheduler.global(() -> {
+    int onlinePlayers = Bukkit.getOnlinePlayers().size();
+    displays.holograms().find("welcome_hologram").ifPresent(hologram ->
+        hologram.updateLineAsync(1, Component.text("Online players: " + onlinePlayers)));
 });
 ```
 

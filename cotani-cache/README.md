@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-cache
+
+</div>
 
 Caffeine-backed asynchronous caching. Provides generic `DataCache` and player-focused `PlayerDataCache` featuring automatic dirty tracking, presets, and background saves.
 
@@ -75,7 +81,7 @@ DataCache<UUID, Instant> cooldowns = CotaniCache.temporary(
 ## Hard Rules & Best Practices
 
 1. **Isolation of Repositories**: Implementations of `CacheRepository` must not access Bukkit/Paper APIs directly. All persistence calls must run on async executors.
-2. **Default Value Factory**: Always declare a `defaultValue` provider. This ensures a fallback exists when data is missing or query failures occur during initialization.
+2. **Default Value Factory**: Always declare a `defaultValue` provider. This supplies the value used when a repository has no entry for the requested key; repository failures still complete the load exceptionally and must be handled by the caller.
 3. **Shutdown Flushing**: Register the cache in the Cotani lifecycle or compose `cache.closeAsync()`. The synchronous adapter must not be called on the Paper main thread.
 4. **Consistency Model**: Choose the correct mutation pattern: use `updateAsync` for immutable structures and `mutateAsync` for mutable data. Avoid mixing the two patterns arbitrarily on the same cache.
 

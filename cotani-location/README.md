@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-location
+
+</div>
 
 Asynchronous homes and warps for Paper and Folia plugins.
 
@@ -16,14 +22,15 @@ locations.setWarpAsync(LocationName.of("spawn"), position);
 ```
 
 For persistence, implement `LocationRepository` and restore with `CotaniLocations.fromRepositoryAsync(...)`. The
-repository is updated before the in-memory state is replaced. Mutations are incremental (`saveHomeAsync`,
-`deleteHomeAsync`, `saveWarpAsync`, and `deleteWarpAsync`), so unrelated rows are not rewritten on every change.
+repository is updated before the in-memory state is replaced. Mutations are incremental (`setHomeAsync`,
+`deleteHomeAsync`, `setWarpAsync`, and `deleteWarpAsync`), so unrelated rows are not rewritten on every change.
 
 The built-in `StorageLocationRepository` uses `StorageLocationRepository.migrations()` and per-location upserts;
 register those migrations before starting `CotaniStorage`.
 
-For teleport integration, create `LocationTeleportService` with a `TeleportService` and `PaperTaskScheduler`. It
-accepts only immutable player identifiers and saved positions; it never carries live Bukkit objects into async work.
+For teleport integration, create `LocationTeleportService` with
+`CotaniLocations.teleports(locations, teleportService, scheduler)`. It accepts only immutable player identifiers and
+saved positions; it never carries live Bukkit objects into async work.
 
 ## Design guarantees
 

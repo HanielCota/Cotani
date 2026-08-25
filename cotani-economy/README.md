@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-economy
+
+</div>
 
 Economy API with `BigDecimal` values, atomic transactions, idempotency and events.
 

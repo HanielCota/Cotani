@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-gui
+
+</div>
 
 Declarative, reactive and anti-dupe-safe GUI engine for Paper and Folia.
 

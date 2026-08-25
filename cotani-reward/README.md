@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-reward
+
+</div>
 
 Persistent, idempotent reward claims for Paper and Folia plugins.
 
@@ -20,4 +26,3 @@ settlement.claimOrRecoverAsync(playerId, RewardId.of("daily"))
 For SQL, create a `StorageRewardRepository` over started storage. Keep the same `RewardClaimId` across retries;
 recover unfinished deliveries with `pendingClaimsAsync(limit)` and acknowledge them through `markSettledAsync(...)`.
 Compose `closeAsync()` into plugin shutdown.
-

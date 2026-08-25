@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-event
+
+</div>
 
 A lightweight, reflection-free Java Event Bus for asynchronous and synchronous event dispatching, prioritizations, and priority listeners.
 

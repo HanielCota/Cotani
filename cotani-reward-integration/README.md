@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-reward-integration
+
+</div>
 
 Settlement adapters connecting `cotani-reward` to `cotani-economy` and `cotani-inventory`.
 
@@ -13,4 +19,3 @@ settlement.claimAndSettleAsync(playerId, RewardId.of("daily"));
 Currency operations derive deterministic `EconomyOperationId` values from the claim and grant index. Inventory grants
 are applied on the player's entity thread and receive persistent delivery markers. If marked items can be consumed or
 moved before recovery, provide a custom durable item resolver/handler for stronger crash guarantees.
-

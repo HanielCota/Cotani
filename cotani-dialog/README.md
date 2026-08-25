@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-dialog
+
+</div>
 
 Non-blocking reactive dialog and player input prompt module for Paper and Folia plugins providing Chat prompts, Anvil GUIs, and multi-step conversational Wizards.
 
@@ -59,9 +65,14 @@ public final class MyPlugin extends JavaPlugin {
 
 ## Usage Examples
 
+Prompt completion may run on an asynchronous executor. Capture the player's UUID and schedule any
+Paper API interaction back to the player's entity thread.
+
 ### 1. Typed Chat Prompt with Validation
 
 ```java
+UUID playerId = player.getUniqueId();
+
 dialogs.chat()
     .message("<yellow>Enter the deposit amount (or 'cancel'):</yellow>")
     .timeout(Duration.ofSeconds(30))
@@ -79,14 +90,21 @@ dialogs.chat()
     .build(dialogs)
     .start(player)
     .thenAccept(result -> {
-        result.ifSuccess(amount -> player.sendMessage(Component.text("Depositing " + amount + " coins...")));
-        result.ifCancelled(reason -> player.sendMessage(Component.text("Cancelled: " + reason)));
+        scheduler.entity(playerId, () -> {
+            Player current = Bukkit.getPlayer(playerId);
+            if (current != null) {
+                result.ifSuccess(amount -> current.sendMessage(Component.text("Depositing " + amount + " coins...")));
+                result.ifCancelled(reason -> current.sendMessage(Component.text("Cancelled: " + reason)));
+            }
+        });
     });
 ```
 
 ### 2. Anvil GUI Prompt
 
 ```java
+UUID playerId = player.getUniqueId();
+
 dialogs.anvil()
     .title(Component.text("Rename Clan"))
     .initialText("Knights")
@@ -94,14 +112,21 @@ dialogs.anvil()
     .build(dialogs)
     .open(player)
     .thenAccept(result -> {
-        result.ifSuccess(name -> player.sendMessage(Component.text("New clan name: " + name)));
-        result.ifCancelled(reason -> player.sendMessage(Component.text("Anvil input cancelled.")));
+        scheduler.entity(playerId, () -> {
+            Player current = Bukkit.getPlayer(playerId);
+            if (current != null) {
+                result.ifSuccess(name -> current.sendMessage(Component.text("New clan name: " + name)));
+                result.ifCancelled(reason -> current.sendMessage(Component.text("Anvil input cancelled.")));
+            }
+        });
     });
 ```
 
 ### 3. Multi-Step Conversational Wizard
 
 ```java
+UUID playerId = player.getUniqueId();
+
 var wizard = dialogs.wizard()
     .step("name", dialogs.chat().message("<aqua>Step 1: Enter Clan Name</aqua>").parser(Optional::of))
     .step("tag", dialogs.chat().message("<aqua>Step 2: Enter 3-letter Clan Tag</aqua>")
@@ -112,7 +137,12 @@ wizard.start(player).thenAccept(result -> {
     result.ifSuccess(answers -> {
         String name = (String) answers.get("name");
         String tag = (String) answers.get("tag");
-        player.sendMessage(Component.text("Clan [" + tag + "] " + name + " successfully created!"));
+        scheduler.entity(playerId, () -> {
+            Player current = Bukkit.getPlayer(playerId);
+            if (current != null) {
+                current.sendMessage(Component.text("Clan [" + tag + "] " + name + " successfully created!"));
+            }
+        });
     });
 });
 ```

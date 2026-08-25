@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-metrics
+
+</div>
 
 Micrometer-backed metrics for Cotani modules with an optional Prometheus HTTP endpoint.
 

@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-teleport
+
+</div>
 
 Asynchronous teleport service for Paper. Supports teleport requests with delays, safety checks, cooldown managers, and customizable verification policies (combat, protection, etc.).
 

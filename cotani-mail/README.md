@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-mail
+
+</div>
 
 Correio persistente e assíncrono entre jogadores para Paper e Folia.
 

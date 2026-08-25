@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-queue
+
+</div>
 
 Asynchronous priority queues and atomic matchmaking for Paper and Folia plugins.
 
@@ -16,4 +22,3 @@ queues.enqueueAsync(QueueId.of("duel"), playerId, QueueEntryOptions.defaults())
 
 Use `CotaniQueues.fromRepositoryAsync(repository, eventBus, options)` for recovery. Operations accepted before
 `closeAsync()` are serialized; event publication is best effort and does not undo committed queue state.
-

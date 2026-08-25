@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-cooldown
+
+</div>
 
 Thread-safe, non-blocking cooldown manager. Tracks actions, remaining duration, and persistent cooldown states.
 

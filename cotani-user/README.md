@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-user
+
+</div>
 
 User lifecycle: async loading, online cache and persistence.
 
@@ -52,7 +58,7 @@ usersModule.userService().findAsync(userId)
 1. **Service Resolutions**: Resolve profile data queries through the `UserService` (`findAsync`, `getOrThrowAsync`). Do not call blocking operations like `Bukkit.getOfflinePlayer(...)` inside async pipelines.
 2. **Entity Isolation**: Never store live `Player` references in services, database repositories, or async tasks. Retain the user's `UUID` instead and resolve the player reference on the main thread only when touching Paper/Spigot APIs.
 3. **Database Pre-requisites**: Always bind user migrations to `CotaniStorage` before starting the database engine.
-4. **Clean Disabling**: Ensure you invoke `UserModule.close()` inside the plugin's `onDisable` lifecycle to flush cached data and execute final database updates.
+4. **Clean Disabling**: Register the module with `Cotani.forPlugin(plugin).with(usersModule).build()` and let the lifecycle own shutdown. On a Paper primary thread, compose `usersModule.closeAsync()` instead of calling the blocking `close()` adapter.
 
 ## Anti-Patterns
 

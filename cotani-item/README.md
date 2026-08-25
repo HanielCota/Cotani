@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-item
+
+</div>
 
 Fluent builders for `ItemStack` using Paper 1.21+ data components.
 

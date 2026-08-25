@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-permission
+
+</div>
 
 Asynchronous permission evaluation and persistence for Paper and Folia plugins.
 

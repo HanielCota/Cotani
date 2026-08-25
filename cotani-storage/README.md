@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-storage
+
+</div>
 
 SQL persistence (SQLite/MySQL/MariaDB) with migrations, query builder, transactions and repositories.
 

@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # Cotani Wiki
+
+</div>
 
 Este diretório contém o site da documentação do Cotani, gerado com Docusaurus.
 

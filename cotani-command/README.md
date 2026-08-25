@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-command
+
+</div>
 
 Declarative, async-first, and Folia-safe command framework for Paper.
 
@@ -71,25 +77,26 @@ commands.register("warp", root -> {
 });
 ```
 
-### 3. Asynchronous Pipeline with Typed Economy Arguments
+### 3. Async Economy Operation with an Entity-Thread Reply
 
 ```java
 CommandNode payCommand = CommandBuilder.of("pay")
     .description("Transfer money to another player")
     .argument(Arguments.player("target"))
     .argument(Arguments.bigDecimal("amount", BigDecimal.ONE, new BigDecimal("1000000")))
-    .executesAsync(ctx -> {
-        Player sender = ctx.requirePlayer();
-        Player target = ctx.getPlayer("target");
+    .executesEntity((ctx, sender) -> {
+        UUID senderId = sender.getUniqueId();
+        UUID targetId = ctx.getPlayer("target").getUniqueId();
         BigDecimal amount = ctx.getBigDecimal("amount");
 
-        return economyService.transferAsync(
-            sender.getUniqueId(),
-            target.getUniqueId(),
+        economyService.transferAsync(
+            senderId,
+            targetId,
             amount,
             EconomyReason.custom("PLAYER_PAY")
         ).thenAccept(result -> {
-            ctx.reply("<green>Successfully transferred <gold>$" + amount + "</gold> to <yellow>" + target.getName() + "</yellow>!</green>");
+            ctx.scheduler().entity(senderId, () ->
+                ctx.reply("<green>Transfer completed successfully.</green>"));
         });
     })
     .build();

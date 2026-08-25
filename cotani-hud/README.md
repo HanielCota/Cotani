@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-hud
+
+</div>
 
 Reactive, zero-flicker HUD module for Paper and Folia plugins providing dynamic Sidebars, TabList headers/footers, BossBars, and ActionBars.
 

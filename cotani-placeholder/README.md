@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="../logo.png" alt="Cotani logo" width="220">
+
 # cotani-placeholder
+
+</div>
 
 High-performance placeholder parsing engine, custom expansion registry, and bidirectional bridge for Paper and Folia plugins.
 
@@ -71,7 +77,9 @@ placeholders.register("coins", (ctx, params) -> {
 // Asynchronous non-blocking placeholder
 placeholders.registerAsync("rank", (ctx, params) -> {
     UUID uuid = ctx.viewerId();
-    return permissionService.getPrimaryGroupAsync(uuid);
+    return uuid == null
+        ? CompletableFuture.completedFuture("default")
+        : permissionService.getPrimaryGroupAsync(uuid);
 });
 
 // Relational placeholder comparing two players
@@ -87,8 +95,14 @@ placeholders.registerRelational("clan", (viewer, target, params) -> {
 String message = placeholders.parse(player, "Hello {player_name}, you have {coins} coins!");
 
 // Asynchronous non-blocking resolution
-placeholders.parseAsync(player, "Welcome {player_name}! Rank: {rank}").thenAccept(result -> {
-    player.sendMessage(Component.text(result));
+UUID playerId = player.getUniqueId();
+placeholders.parseAsync(playerId, "Welcome {player_name}! Rank: {rank}").thenAccept(result -> {
+    scheduler.entity(playerId, () -> {
+        Player current = Bukkit.getPlayer(playerId);
+        if (current != null) {
+            current.sendMessage(Component.text(result));
+        }
+    });
 });
 
 // Relational resolution
