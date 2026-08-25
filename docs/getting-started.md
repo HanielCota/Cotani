@@ -29,8 +29,8 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("com.cotani:cotani-bom:1.1.1"))
-    implementation("com.cotani:cotani-task")
+    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:v1.1.1"))
+    implementation("com.github.HanielCota.Cotani:cotani-task")
 }
 ```
 

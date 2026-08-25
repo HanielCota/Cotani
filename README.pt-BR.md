@@ -61,7 +61,7 @@ repositories {
 }
 
 dependencies {
-    val cotaniVersion = "1.1.1"
+    val cotaniVersion = "v1.1.1"
 
     implementation("com.github.HanielCota.Cotani:cotani-task:$cotaniVersion")
     implementation("com.github.HanielCota.Cotani:cotani-storage:$cotaniVersion")
@@ -72,28 +72,26 @@ O Gradle resolve automaticamente as dependências internas do Cotani de forma tr
 
 ### Alinhamento de versões com BOM
 
-Para alinhar as versões de todos os módulos Cotani usando o Bill of Materials (BOM), use a versão publicada:
-
-```bash
-./gradlew publishToMavenLocal
-```
-
-Depois consuma o BOM alinhado no seu plugin:
+Para alinhar as versões de todos os módulos Cotani, consuma o Bill of Materials (BOM) publicado:
 
 ```kotlin
 repositories {
-    mavenLocal()
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
-    implementation(platform("com.cotani:cotani-bom:1.1.1"))
-    implementation("com.cotani:cotani-task")
-    implementation("com.cotani:cotani-storage")
-    implementation("com.cotani:cotani-gui")
+    val cotaniVersion = "v1.1.1"
+    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:$cotaniVersion"))
+    implementation("com.github.HanielCota.Cotani:cotani-task")
+    implementation("com.github.HanielCota.Cotani:cotani-storage")
+    implementation("com.github.HanielCota.Cotani:cotani-gui")
 }
 ```
+
+Ao consumir um checkout local, execute `./gradlew publishToMavenLocal`, adicione `mavenLocal()` e use as coordenadas
+`com.cotani` documentadas em [`cotani-bom/README.md`](cotani-bom/README.md).
 
 > [!IMPORTANT]
 > Os módulos Cotani são bibliotecas, não plugins de servidor independentes. Faça o shadow e relocation de `com.cotani` (e `net.cotani` caso use métricas) para o namespace privado do seu plugin usando o Gradle Shadow.
@@ -112,23 +110,7 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | [`cotani-task`](cotani-task/README.md) | Agendamento async, global, region e entity com o fluente `TaskChain` | `1.1.1` |
 | [`cotani-job`](cotani-job/README.md) | Jobs nomeados persistentes com retries, recorrência, cancelamento e recuperação após reinício | `1.1.1` |
 | [`cotani-text`](cotani-text/README.md) | Parsing de MiniMessage, envio para audiências e resolução de placeholders | `1.1.1` |
-| [`cotani-locale`](cotani-locale/README.md) | Preferências de idioma por jogador, fallback de catálogos e renderização segura de MiniMessage | `1.1.1` |
-| [`cotani-punishment`](cotani-punishment/README.md) | Banimentos, silenciamentos e advertências imutáveis com expiração, revogação e auditoria assíncrona | `1.1.1` |
-| [`cotani-location`](cotani-location/README.md) | Homes e warps imutáveis com persistência assíncrona e integração segura com teleporte | `1.1.1` |
-| [`cotani-mail`](cotani-mail/README.md) | Correio persistente entre jogadores com TTL, envios idempotentes, paginação e persistência SQL | `1.1.1` |
-| [`cotani-reward`](cotani-reward/README.md) | Recompensas persistentes com cooldowns, sequências, claims idempotentes, grants imutáveis e persistência SQL | `1.1.1` |
-| [`cotani-reward-integration`](cotani-reward-integration/README.md) | Adaptadores de liquidação de moeda e inventário seguro por thread para recompensas | `1.1.1` |
-| [`cotani-quest`](cotani-quest/README.md) | Quests orientadas a objetivos com progresso otimista, claims idempotentes, eventos e persistência SQL | `1.1.1` |
-| [`cotani-statistics`](cotani-statistics/README.md) | Estatísticas assíncronas atômicas de jogadores com rankings limitados, eventos e persistência SQL | `1.1.1` |
-| [`cotani-ranking`](cotani-ranking/README.md) | Rankings nomeados e limitados apoiados por `cotani-statistics` | `1.1.1` |
-| [`cotani-achievement`](cotani-achievement/README.md) | Conquistas assíncronas com critérios de estatística, desbloqueios idempotentes, recompensas, eventos e progresso SQL | `1.1.1` |
-| [`cotani-season`](cotani-season/README.md) | Temporadas com XP idempotente, níveis cumulativos, claims de recompensas, eventos e persistência SQL | `1.1.1` |
-| [`cotani-cleanup`](cotani-cleanup/README.md) | Limpeza segura de entidades do mundo com preview, políticas explícitas, lotes e segurança de threads Paper/Folia | `1.1.1` |
-| [`cotani-market`](cotani-market/README.md) | Marketplace persistente de jogadores com anúncios limitados, compras idempotentes, settlement recuperável e persistência SQL | `1.1.1` |
-| [`cotani-party`](cotani-party/README.md) | Parties assíncronas com convites expiráveis, cargos, transferência de liderança e SPI de persistência | `1.1.1` |
-| [`cotani-friend`](cotani-friend/README.md) | Amizades, solicitações, bloqueios, persistência otimista e eventos assíncronos | `1.1.1` |
-| [`cotani-queue`](cotani-queue/README.md) | Filas prioritárias, tickets expiráveis, limite de capacidade e matchmaking atômico | `1.1.1` |
-| [`cotani-trade`](cotani-trade/README.md) | Trocas entre jogadores com confirmação, ofertas imutáveis e liquidação idempotente | `1.1.1` |
+| [`cotani-event`](cotani-event/README.md) | Event Bus de alta performance e livre de reflexão com despacho por prioridades | `1.1.1` |
 | [`cotani-item`](cotani-item/README.md) | Builders fluentes de itens, armaduras e cabeças com data components do Paper 1.21+ | `1.1.1` |
 
 ### ⚙️ Infraestrutura & Persistência
@@ -139,34 +121,70 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | [`cotani-storage`](cotani-storage/README.md) | Consultas SQLite, MySQL e MariaDB, migrações de schema e transações | `1.1.1` |
 | [`cotani-cache`](cotani-cache/README.md) | Caches baseados em Caffeine com dirty-tracking automático e persistência | `1.1.1` |
 | [`cotani-redis`](cotani-redis/README.md) | Cliente Redis não-bloqueante, mensageria pub/sub, locks distribuídos e sync | `1.1.1` |
-| [`cotani-permission`](cotani-permission/README.md) | Nós de permissão, grupos, decisões de herança e persistência SQL assíncronos | `1.1.1` |
-| [`cotani-inventory`](cotani-inventory/README.md) | Snapshots binários de inventário, rollback e locks de transferência entre servidores | `1.1.1` |
+| [`cotani-metrics`](cotani-metrics/README.md) | Coletor de métricas Micrometer com exportação opcional via HTTP Prometheus | `1.1.1` |
 
-### 🎮 Sistemas de Gameplay & Domínio
+### 👤 Jogador & Conta
 
 | Módulo | Capacidade | Disponibilidade |
 | :--- | :--- | :---: |
 | [`cotani-user`](cotani-user/README.md) | Carregamento assíncrono de perfis, cache online e gerenciamento de sessões | `1.1.1` |
+| [`cotani-permission`](cotani-permission/README.md) | Nós de permissão, grupos, decisões de herança e persistência SQL assíncronos | `1.1.1` |
 | [`cotani-economy`](cotani-economy/README.md) | Economia exata com `BigDecimal`, transações atômicas e garantias de idempotência | `1.1.1` |
 | [`cotani-cooldown`](cotani-cooldown/README.md) | Limites de cooldown locais e distribuídos em SQL com limpeza automática | `1.1.1` |
-| [`cotani-teleport`](cotani-teleport/README.md) | Pipelines de teleporte orientados a políticas com checagem de perigos, tags de combate e delays | `1.1.1` |
-| [`cotani-event`](cotani-event/README.md) | Event Bus de alta performance e livre de reflexão com despacho por prioridades | `1.1.1` |
-| [`cotani-gui`](cotani-gui/README.md) | Interfaces declarativas de inventário com estado reativo, paginação e proteção contra exploits | `1.1.1` |
-| [`cotani-display`](cotani-display/README.md) | Motor moderno de Display Entities para hologramas de texto, itens e blocos | `1.1.1` |
-| [`cotani-command`](cotani-command/README.md) | Framework declarativo de comandos com argumentos assíncronos, cooldowns e segurança para Folia | `1.1.1` |
-| [`cotani-hud`](cotani-hud/README.md) | Scoreboards reativas zero-flicker, tablist dinâmico, bossbars e actionbars | `1.1.1` |
-| [`cotani-nametag`](cotani-nametag/README.md) | Formatação de nametags via Scoreboard Teams, prioridade de ordenação no tablist e regras de colisão | `1.1.1` |
-| [`cotani-npc`](cotani-npc/README.md) | NPCs virtuais por pacote com look-at dinâmico, skins, equipamentos e raycasting de cliques | `1.1.1` |
-| [`cotani-region`](cotani-region/README.md) | Regiões espaciais 3D, indexador por chunks, flags de proteção e eventos de transição | `1.1.1` |
-| [`cotani-dialog`](cotani-dialog/README.md) | Diálogos reativos não-bloqueantes de chat, placa e bigorna com wizards | `1.1.1` |
-| [`cotani-placeholder`](cotani-placeholder/README.md) | Expansão assíncrona de placeholders, integração MiniMessage e ponte para PlaceholderAPI | `1.1.1` |
+| [`cotani-inventory`](cotani-inventory/README.md) | Snapshots binários de inventário, rollback e locks de transferência entre servidores | `1.1.1` |
+| [`cotani-locale`](cotani-locale/README.md) | Preferências de idioma por jogador, fallback de catálogos e renderização segura de MiniMessage | `1.1.1` |
 
-### 📊 Operações & Ferramentas
+### 🌍 Mundo, UI & Plataforma
 
 | Módulo | Capacidade | Disponibilidade |
 | :--- | :--- | :---: |
-| [`cotani-metrics`](cotani-metrics/README.md) | Coletor de métricas Micrometer com exportação opcional via HTTP Prometheus | `1.1.1` |
+| [`cotani-teleport`](cotani-teleport/README.md) | Pipelines de teleporte orientados a políticas com checagem de perigos, tags de combate e delays | `1.1.1` |
+| [`cotani-location`](cotani-location/README.md) | Homes e warps imutáveis com persistência assíncrona e integração segura com teleporte | `1.1.1` |
+| [`cotani-region`](cotani-region/README.md) | Regiões espaciais 3D, indexador por chunks, flags de proteção e eventos de transição | `1.1.1` |
+| [`cotani-npc`](cotani-npc/README.md) | NPCs virtuais por pacote com look-at dinâmico, skins, equipamentos e raycasting de cliques | `1.1.1` |
+| [`cotani-display`](cotani-display/README.md) | Motor moderno de Display Entities para hologramas de texto, itens e blocos | `1.1.1` |
+| [`cotani-hud`](cotani-hud/README.md) | Scoreboards reativas zero-flicker, tablist dinâmico, bossbars e actionbars | `1.1.1` |
+| [`cotani-nametag`](cotani-nametag/README.md) | Formatação de nametags via Scoreboard Teams, prioridade de ordenação no tablist e regras de colisão | `1.1.1` |
+| [`cotani-gui`](cotani-gui/README.md) | Interfaces declarativas de inventário com estado reativo, paginação e proteção contra exploits | `1.1.1` |
+| [`cotani-command`](cotani-command/README.md) | Framework declarativo de comandos com argumentos assíncronos, cooldowns e segurança para Folia | `1.1.1` |
+| [`cotani-dialog`](cotani-dialog/README.md) | Diálogos reativos não-bloqueantes de chat, placa e bigorna com wizards | `1.1.1` |
+| [`cotani-placeholder`](cotani-placeholder/README.md) | Expansão assíncrona de placeholders, integração MiniMessage e ponte para PlaceholderAPI | `1.1.1` |
+
+### 🤝 Social & Multiplayer
+
+| Módulo | Capacidade | Disponibilidade |
+| :--- | :--- | :---: |
+| [`cotani-party`](cotani-party/README.md) | Parties assíncronas com convites expiráveis, cargos, transferência de liderança e SPI de persistência | `1.1.1` |
+| [`cotani-friend`](cotani-friend/README.md) | Amizades, solicitações, bloqueios, persistência otimista e eventos assíncronos | `1.1.1` |
+| [`cotani-queue`](cotani-queue/README.md) | Filas prioritárias, tickets expiráveis, limite de capacidade e matchmaking atômico | `1.1.1` |
+| [`cotani-trade`](cotani-trade/README.md) | Trocas entre jogadores com confirmação, ofertas imutáveis e liquidação idempotente | `1.1.1` |
+| [`cotani-mail`](cotani-mail/README.md) | Correio persistente entre jogadores com TTL, envios idempotentes, paginação e persistência SQL | `1.1.1` |
+
+### 🎮 Gameplay & Domínio
+
+| Módulo | Capacidade | Disponibilidade |
+| :--- | :--- | :---: |
+| [`cotani-punishment`](cotani-punishment/README.md) | Banimentos, silenciamentos e advertências imutáveis com expiração, revogação e auditoria assíncrona | `1.1.1` |
+| [`cotani-reward`](cotani-reward/README.md) | Recompensas persistentes com cooldowns, sequências, claims idempotentes, grants imutáveis e persistência SQL | `1.1.1` |
+| [`cotani-reward-integration`](cotani-reward-integration/README.md) | Adaptadores de liquidação de moeda e inventário seguro por thread para recompensas | `1.1.1` |
+| [`cotani-quest`](cotani-quest/README.md) | Quests orientadas a objetivos com progresso otimista, claims idempotentes, eventos e persistência SQL | `1.1.1` |
+| [`cotani-statistics`](cotani-statistics/README.md) | Estatísticas assíncronas atômicas de jogadores com rankings limitados, eventos e persistência SQL | `1.1.1` |
+| [`cotani-ranking`](cotani-ranking/README.md) | Rankings nomeados e limitados apoiados por `cotani-statistics` | `1.1.1` |
+| [`cotani-achievement`](cotani-achievement/README.md) | Conquistas assíncronas com critérios de estatística, desbloqueios idempotentes, recompensas, eventos e progresso SQL | `1.1.1` |
+| [`cotani-season`](cotani-season/README.md) | Temporadas com XP idempotente, níveis cumulativos, claims de recompensas, eventos e persistência SQL | `1.1.1` |
+| [`cotani-market`](cotani-market/README.md) | Marketplace persistente de jogadores com anúncios limitados, compras idempotentes, settlement recuperável e persistência SQL | `1.1.1` |
+
+### 🧹 Operações & Ferramentas
+
+| Módulo | Capacidade | Disponibilidade |
+| :--- | :--- | :---: |
+| [`cotani-cleanup`](cotani-cleanup/README.md) | Limpeza segura de entidades do mundo com preview, políticas explícitas, lotes e segurança de threads Paper/Folia | `1.1.1` |
+| [`cotani-audit`](cotani-audit/README.md) | Trilha de auditoria imutável, append-only e com consultas assíncronas limitadas | `1.1.1` |
+| [`cotani-audit-storage`](cotani-audit-storage/README.md) | Adaptador SQL indexado e idempotente para eventos de auditoria | `1.1.1` |
 | [`cotani-bom`](cotani-bom/README.md) | Bill of Materials para alinhamento de versões de todos os módulos | `1.1.1` |
+
+Os grupos descrevem como os consumidores usam os módulos; eles não representam o grafo de dependências. Consulte o
+[índice de módulos](docs/module-index.md) para dependências e orientação de escolha.
 
 ---
 
@@ -177,9 +195,9 @@ O Cotani é organizado em camadas arquiteturais limpas. Módulos de funcionalida
 ```mermaid
 flowchart TB
     Plugin["Seu Plugin Paper / Folia"]
-    Features["Gameplay & Domínio<br/>user · economy · teleport · cooldown · event · gui · punishment · metrics"]
-    Infrastructure["Infraestrutura<br/>config · storage · cache · job"]
-    Foundation["Fundação<br/>core · task · text · item · locale"]
+    Features["Jogador · Mundo · Social · Gameplay<br/>user · economy · teleport · gui · quest · market"]
+    Infrastructure["Infraestrutura<br/>config · storage · cache · redis · audit · metrics"]
+    Foundation["Fundação<br/>core · task · job · text · event · item"]
     Runtime["Runtime Paper / Folia"]
 
     Plugin --> Features
@@ -224,7 +242,7 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.112-stable")
-    implementation("com.github.HanielCota.Cotani:cotani-task:e2f91df")
+    implementation("com.github.HanielCota.Cotani:cotani-task:v1.1.1")
 }
 
 tasks.shadowJar {
@@ -317,7 +335,7 @@ scheduler.chain(messageStage)
 
 | Sintoma | Causa Provável | Solução |
 | :--- | :--- | :--- |
-| JitPack não resolve `1.1.1` | Os metadados ou a tag não estão disponíveis para o resolvedor | Verifique o repositório do JitPack, tente `v1.1.1` ou publique localmente com `publishToMavenLocal` |
+| JitPack não resolve `v1.1.1` | Os metadados ou a tag não estão disponíveis para o resolvedor | Verifique o repositório do JitPack e confirme que a tag `v1.1.1` está disponível, ou publique localmente com `publishToMavenLocal` |
 | `NoClassDefFoundError: com/cotani/...` | JAR sem shadow instalado no servidor | Compile e instale a saída do `shadowJar` com relocation configurado |
 | Exceção de async-catcher ou thread incorreta | API Bukkit acessada dentro de lambda assíncrono | Capture `UUID`s e retorne via `scheduler.chain(...).consumeEntity(...)` |
 | Servidor congela durante comandos | Chamada bloqueante (`join()`, `get()`, I/O) na main thread | Componha com `CompletionStage`; elimine chamadas síncronas de banco de dados ou arquivos |

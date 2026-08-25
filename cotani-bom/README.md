@@ -12,15 +12,18 @@ Bill of Materials (BOM) for dependency alignment across all Cotani modules.
 
 ```kotlin
 dependencies {
-    implementation(platform("com.cotani:cotani-bom:1.1.1"))
+    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:v1.1.1"))
 
-    implementation("com.cotani:cotani-core")
-    implementation("com.cotani:cotani-task")
-    implementation("com.cotani:cotani-gui")
-    implementation("com.cotani:cotani-user")
-    implementation("com.cotani:cotani-economy")
+    implementation("com.github.HanielCota.Cotani:cotani-core")
+    implementation("com.github.HanielCota.Cotani:cotani-task")
+    implementation("com.github.HanielCota.Cotani:cotani-gui")
+    implementation("com.github.HanielCota.Cotani:cotani-user")
+    implementation("com.github.HanielCota.Cotani:cotani-economy")
 }
 ```
+
+For a local checkout, run `./gradlew publishToMavenLocal` and replace the `com.github.HanielCota.Cotani` group with
+`com.cotani`.
 
 ## Maven
 
@@ -28,13 +31,12 @@ dependencies {
 <dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>com.cotani</groupId>
+            <groupId>com.github.HanielCota.Cotani</groupId>
             <artifactId>cotani-bom</artifactId>
-            <version>1.1.1</version>
+            <version>v1.1.1</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
     </dependencies>
 </dependencyManagement>
 ```
-
