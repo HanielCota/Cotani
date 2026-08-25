@@ -6,7 +6,6 @@ import com.cotani.task.api.PaperTaskScheduler;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
-import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +14,7 @@ import org.mockito.Mockito;
 
 class TeleportEventBusTest {
     private TeleportEventBus eventBus;
-    private Entity entity;
+    private UUID entityId;
 
     private static Event createEvent() {
         return new Event() {
@@ -34,21 +33,20 @@ class TeleportEventBusTest {
         Mockito.when(scheduler.supply(Mockito.any(), Mockito.anyString(), Mockito.<Supplier<Void>>any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
         eventBus = new TeleportEventBus(scheduler);
-        entity = Mockito.mock(Entity.class);
-        Mockito.when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
+        entityId = UUID.randomUUID();
     }
 
     @Test
     void callAsyncWithEntityCompletes() {
         var event = createEvent();
-        var future = eventBus.callAsync(event, entity);
+        var future = eventBus.callOnEntityAsync(entityId, () -> event);
         assertDoesNotThrow(() -> future.toCompletableFuture().join());
     }
 
     @Test
     void callAsyncWithoutEntityCompletes() {
         var event = createEvent();
-        var future = eventBus.callAsync(event);
+        var future = eventBus.callOnGlobalAsync(() -> event);
         assertDoesNotThrow(() -> future.toCompletableFuture().join());
     }
 }

@@ -1,15 +1,15 @@
 package com.cotani.storage.repository;
 
-import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.dialect.SqlDialect;
 import com.cotani.storage.query.TableQuery;
 import com.cotani.storage.schema.Schema;
+import com.cotani.storage.spi.StorageContext;
 import com.cotani.storage.transaction.TransactionManager;
 
 public abstract class CotaniRepository {
-    private final CotaniStorage storage;
+    private final StorageContext storage;
 
-    protected CotaniRepository(CotaniStorage storage) {
+    protected CotaniRepository(StorageContext storage) {
         this.storage = java.util.Objects.requireNonNull(storage, "storage");
     }
 

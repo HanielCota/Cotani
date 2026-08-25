@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.cotani.nametag.api.Nametag;
 import com.cotani.nametag.api.NametagModule;
-import com.cotani.nametag.impl.DefaultNametagModule;
+import com.cotani.nametag.internal.DefaultNametagModule;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.List;
 import java.util.Map;

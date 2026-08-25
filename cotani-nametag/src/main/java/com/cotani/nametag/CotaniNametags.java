@@ -1,7 +1,7 @@
 package com.cotani.nametag;
 
 import com.cotani.nametag.api.NametagModule;
-import com.cotani.nametag.impl.DefaultNametagModule;
+import com.cotani.nametag.internal.DefaultNametagModule;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;

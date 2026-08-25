@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 import com.cotani.nametag.api.CollisionRule;
 import com.cotani.nametag.api.Nametag;
 import com.cotani.nametag.api.NametagVisibility;
-import com.cotani.nametag.impl.NametagTeamRenderer;
+import com.cotani.nametag.internal.NametagTeamRenderer;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;

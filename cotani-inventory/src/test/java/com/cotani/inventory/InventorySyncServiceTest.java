@@ -113,7 +113,7 @@ class InventorySyncServiceTest {
         when(player.getFoodLevel()).thenReturn(20);
         when(player.getSaturation()).thenReturn(5.0f);
 
-        var snapshot = service.captureAsync(player).toCompletableFuture().join();
+        var snapshot = service.captureAsync(playerId).toCompletableFuture().join();
 
         assertNotNull(snapshot);
         assertEquals(playerId, snapshot.playerId());
@@ -134,7 +134,7 @@ class InventorySyncServiceTest {
                 .flight(true, true)
                 .build();
 
-        service.applyAsync(player, snapshot, InventorySyncOptions.all())
+        service.applyAsync(playerId, snapshot, InventorySyncOptions.all())
                 .toCompletableFuture()
                 .join();
 
@@ -160,7 +160,7 @@ class InventorySyncServiceTest {
         when(inventory.getItemInOffHand()).thenReturn(ItemStack.empty());
         when(enderChest.getContents()).thenReturn(new ItemStack[0]);
 
-        var saved = service.saveAsync(player).toCompletableFuture().join();
+        var saved = service.saveAsync(playerId).toCompletableFuture().join();
         assertNotNull(saved);
         verify(repository).saveSnapshotAsync(any(InventorySnapshot.class));
 
@@ -178,7 +178,7 @@ class InventorySyncServiceTest {
                 .thenReturn(CompletableFuture.completedFuture(Optional.of(snapshot)));
 
         boolean restored =
-                service.rollbackAsync(player, timestamp).toCompletableFuture().join();
+                service.rollbackAsync(playerId, timestamp).toCompletableFuture().join();
         assertTrue(restored);
     }
 

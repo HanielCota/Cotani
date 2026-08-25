@@ -2,7 +2,7 @@ package com.cotani.placeholder;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.cotani.placeholder.impl.FastPlaceholderParser;
+import com.cotani.placeholder.internal.FastPlaceholderParser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

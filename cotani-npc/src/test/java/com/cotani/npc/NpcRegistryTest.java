@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.cotani.npc.api.Npc;
-import com.cotani.npc.impl.NpcRegistry;
+import com.cotani.npc.internal.NpcRegistry;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.World;

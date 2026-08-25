@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.cotani.placeholder.api.PlaceholderContext;
-import com.cotani.placeholder.impl.DefaultPlaceholderService;
+import com.cotani.placeholder.internal.DefaultPlaceholderService;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import java.util.UUID;

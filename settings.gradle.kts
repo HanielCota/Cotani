@@ -28,6 +28,7 @@ include(
     "text",
     "item",
     "task",
+    "job",
     "teleport",
     "storage",
     "user",
@@ -55,6 +56,13 @@ include(
     "mail",
     "reward",
     "reward-integration",
+    "quest",
+    "statistics",
+    "ranking",
+    "achievement",
+    "season",
+    "cleanup",
+    "market",
     "examples"
 )
 
@@ -69,6 +77,7 @@ project(":economy").projectDir = file("cotani-economy")
 project(":text").projectDir = file("cotani-text")
 project(":item").projectDir = file("cotani-item")
 project(":task").projectDir = file("cotani-task")
+project(":job").projectDir = file("cotani-job")
 project(":teleport").projectDir = file("cotani-teleport")
 project(":storage").projectDir = file("cotani-storage")
 project(":user").projectDir = file("cotani-user")
@@ -96,6 +105,13 @@ project(":location").projectDir = file("cotani-location")
 project(":mail").projectDir = file("cotani-mail")
 project(":reward").projectDir = file("cotani-reward")
 project(":reward-integration").projectDir = file("cotani-reward-integration")
+project(":quest").projectDir = file("cotani-quest")
+project(":statistics").projectDir = file("cotani-statistics")
+project(":ranking").projectDir = file("cotani-ranking")
+project(":achievement").projectDir = file("cotani-achievement")
+project(":season").projectDir = file("cotani-season")
+project(":cleanup").projectDir = file("cotani-cleanup")
+project(":market").projectDir = file("cotani-market")
 project(":examples").projectDir = file("docs-examples")
 
 

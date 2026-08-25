@@ -5,7 +5,7 @@ import com.cotani.teleport.adapter.CombatAdapter;
 import com.cotani.teleport.adapter.RegionProtectionAdapter;
 import com.cotani.teleport.api.TeleportMessages;
 import com.cotani.teleport.api.TeleportModule;
-import com.cotani.teleport.impl.DefaultTeleportModule;
+import com.cotani.teleport.internal.DefaultTeleportModule;
 import org.bukkit.plugin.Plugin;
 
 public final class CotaniTeleports {

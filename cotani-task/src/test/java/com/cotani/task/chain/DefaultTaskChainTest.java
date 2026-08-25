@@ -10,7 +10,7 @@ import com.cotani.task.api.RetryPolicy;
 import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskChain;
 import com.cotani.task.exception.TaskTimeoutException;
-import com.cotani.task.impl.chain.DefaultTaskChain;
+import com.cotani.task.internal.chain.DefaultTaskChain;
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;

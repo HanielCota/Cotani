@@ -1,7 +1,7 @@
 package com.cotani.npc;
 
 import com.cotani.npc.api.NpcModule;
-import com.cotani.npc.impl.DefaultNpcModule;
+import com.cotani.npc.internal.DefaultNpcModule;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;

@@ -137,13 +137,17 @@ public interface PlaceholderService extends AutoCloseable, AsyncCloseable {
     /**
      * Parses placeholders in the given text asynchronously for the specified player.
      *
-     * <p>The player UUID is captured immediately. The overload must be called while the player
-     * object is valid; asynchronous expansions receive only the immutable UUID-based context.
+     * <p>This compatibility overload must be called at the platform boundary while the caller
+     * owns the player thread. The player UUID is captured immediately; asynchronous expansions
+     * receive only the immutable UUID-based context. Prefer the UUID or context overload in
+     * asynchronous code.
      *
      * @param player player instance, or {@code null}
      * @param text input string
      * @return stage completing with parsed string
+     * @deprecated capture the UUID at the platform boundary and call {@link #parseAsync(UUID, String)}
      */
+    @Deprecated
     CompletionStage<String> parseAsync(@Nullable Player player, String text);
 
     /**
@@ -167,11 +171,16 @@ public interface PlaceholderService extends AutoCloseable, AsyncCloseable {
     /**
      * Parses relational placeholders asynchronously between two players.
      *
+     * <p>This compatibility overload must be called at the platform boundary while the caller
+     * owns both player threads. Prefer the UUID overload in asynchronous code.
+     *
      * @param viewer viewer player
      * @param target target player
      * @param text input string
      * @return stage completing with parsed string
+     * @deprecated capture both UUIDs at the platform boundary and call the UUID overload
      */
+    @Deprecated
     CompletionStage<String> parseRelationalAsync(Player viewer, Player target, String text);
 
     /**

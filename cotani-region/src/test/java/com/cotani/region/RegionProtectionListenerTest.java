@@ -7,8 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.cotani.region.api.Region3D;
 import com.cotani.region.api.RegionFlag;
-import com.cotani.region.impl.DefaultRegionModule;
-import com.cotani.region.impl.RegionProtectionListener;
+import com.cotani.region.internal.DefaultRegionModule;
+import com.cotani.region.internal.RegionProtectionListener;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.ArrayList;
 import java.util.UUID;

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import com.cotani.display.impl.DefaultHologramService;
+import com.cotani.display.internal.DefaultHologramService;
 import com.cotani.task.api.PaperTaskScheduler;
 import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;

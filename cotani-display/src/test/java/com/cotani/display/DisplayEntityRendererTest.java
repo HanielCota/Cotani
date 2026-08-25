@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.cotani.display.api.TextLine;
-import com.cotani.display.impl.DisplayEntityRenderer;
+import com.cotani.display.internal.DisplayEntityRenderer;
 import java.util.List;
 import org.bukkit.Location;
 import org.junit.jupiter.api.Test;

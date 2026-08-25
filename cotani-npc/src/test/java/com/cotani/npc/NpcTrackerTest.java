@@ -6,8 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cotani.npc.api.Npc;
-import com.cotani.npc.impl.NpcRenderer;
-import com.cotani.npc.impl.NpcTracker;
+import com.cotani.npc.internal.NpcRenderer;
+import com.cotani.npc.internal.NpcTracker;
 import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.World;

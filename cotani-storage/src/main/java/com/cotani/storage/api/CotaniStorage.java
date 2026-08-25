@@ -18,7 +18,10 @@ import com.cotani.storage.query.TableQuery;
 import com.cotani.storage.repository.CotaniRepository;
 import com.cotani.storage.schema.Schema;
 import com.cotani.storage.serializer.ValueSerializerRegistry;
+import com.cotani.storage.spi.StorageContext;
 import com.cotani.storage.transaction.TransactionManager;
+import com.cotani.task.api.AsyncTaskExecutor;
+import com.cotani.task.api.DelayedTaskScheduler;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.util.CompletionStages;
 import java.time.Duration;
@@ -43,7 +46,7 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 @NullMarked
-public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
+public final class CotaniStorage implements AutoCloseable, AsyncCloseable, StorageContext {
     private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(5);
 
     private final Plugin plugin;
@@ -55,6 +58,8 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
     private final StorageProvider provider;
     private final ExecutorService storageExecutor;
     private final PaperTaskScheduler scheduler;
+    private final AsyncTaskExecutor asyncExecutor;
+    private final DelayedTaskScheduler delayedScheduler;
     private final QueryExecutor executor;
     private final SqlDialect dialect;
     private final Schema schema;
@@ -91,6 +96,8 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
         this.storageExecutor = createStorageExecutor(
                 isSQLite, useVirtualThreads, concurrencyLimit, admissionQueueCapacity, platformFactory);
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this.asyncExecutor = scheduler;
+        this.delayedScheduler = scheduler;
         this.queryTimeoutSeconds = queryTimeoutSeconds;
         this.dialect = new DialectFactory().create(backend);
         Executor guardedExecutor = this::executeStorageOperation;
@@ -196,18 +203,38 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
         return backend;
     }
 
+    /**
+     * Returns the complete scheduler facade for compatibility.
+     * Prefer {@link #asyncExecutor()} when storage only needs asynchronous cleanup.
+     *
+     * @return complete scheduler facade
+     * @deprecated depend on the narrow scheduler capability required by the consumer
+     */
+    @Deprecated
     public PaperTaskScheduler scheduler() {
         return scheduler;
     }
 
+    /**
+     * Returns the narrow scheduler capability used by storage lifecycle cleanup.
+     *
+     * @return async task executor
+     */
+    public AsyncTaskExecutor asyncExecutor() {
+        return asyncExecutor;
+    }
+
+    @Override
     public SqlDialect dialect() {
         return dialect;
     }
 
+    @Override
     public Schema schema() {
         return schema;
     }
 
+    @Override
     public TransactionManager transactions() {
         return transactions;
     }
@@ -230,6 +257,7 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
         return serializers;
     }
 
+    @Override
     public TableQuery table(String table) {
         Objects.requireNonNull(table, "table");
         return new TableQuery(table, executor, dialect);
@@ -268,7 +296,7 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
 
         var _ = predecessor.whenComplete((_, _) -> {
             try {
-                scheduler.asyncExecutor().execute(() -> {
+                asyncExecutor.asyncExecutor().execute(() -> {
                     try {
                         var _ = closeResourcesAsync().whenComplete((_, failure) -> completeClose(failure));
                     } catch (Exception failure) {
@@ -322,7 +350,7 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
             return CompletableFuture.completedFuture(null);
         }
 
-        return scheduler
+        return delayedScheduler
                 .delayAsync(Duration.ofMillis(25))
                 .thenCompose(_ -> awaitExecutorTerminationAsync(deadlineNanos));
     }
@@ -356,7 +384,7 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
             startupPromise.completeExceptionally(unwrapCompletionFailure(failure));
         };
         try {
-            scheduler.asyncExecutor().execute(cleanup);
+            asyncExecutor.asyncExecutor().execute(cleanup);
         } catch (RejectedExecutionException rejected) {
             failure.addSuppressed(rejected);
             cleanup.run();

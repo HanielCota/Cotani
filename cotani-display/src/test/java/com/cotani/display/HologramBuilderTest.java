@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 
 import com.cotani.display.api.DisplayBillboard;
 import com.cotani.display.api.TextLine;
-import com.cotani.display.impl.DefaultHologramService;
+import com.cotani.display.internal.DefaultHologramService;
 import com.cotani.task.api.PaperTaskScheduler;
 import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;

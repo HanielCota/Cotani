@@ -110,6 +110,7 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | :--- | :--- | :---: |
 | [`cotani-core`](cotani-core/README.md) | Lifecycle centralizado do plugin e descarte seguro de recursos | `1.1.1` |
 | [`cotani-task`](cotani-task/README.md) | Agendamento async, global, region e entity com o fluente `TaskChain` | `1.1.1` |
+| [`cotani-job`](cotani-job/README.md) | Jobs nomeados persistentes com retries, recorrência, cancelamento e recuperação após reinício | `1.1.1` |
 | [`cotani-text`](cotani-text/README.md) | Parsing de MiniMessage, envio para audiências e resolução de placeholders | `1.1.1` |
 | [`cotani-locale`](cotani-locale/README.md) | Preferências de idioma por jogador, fallback de catálogos e renderização segura de MiniMessage | `1.1.1` |
 | [`cotani-punishment`](cotani-punishment/README.md) | Banimentos, silenciamentos e advertências imutáveis com expiração, revogação e auditoria assíncrona | `1.1.1` |
@@ -117,6 +118,13 @@ Declare apenas os módulos necessários para o seu conjunto de funcionalidades; 
 | [`cotani-mail`](cotani-mail/README.md) | Correio persistente entre jogadores com TTL, envios idempotentes, paginação e persistência SQL | `1.1.1` |
 | [`cotani-reward`](cotani-reward/README.md) | Recompensas persistentes com cooldowns, sequências, claims idempotentes, grants imutáveis e persistência SQL | `1.1.1` |
 | [`cotani-reward-integration`](cotani-reward-integration/README.md) | Adaptadores de liquidação de moeda e inventário seguro por thread para recompensas | `1.1.1` |
+| [`cotani-quest`](cotani-quest/README.md) | Quests orientadas a objetivos com progresso otimista, claims idempotentes, eventos e persistência SQL | `1.1.1` |
+| [`cotani-statistics`](cotani-statistics/README.md) | Estatísticas assíncronas atômicas de jogadores com rankings limitados, eventos e persistência SQL | `1.1.1` |
+| [`cotani-ranking`](cotani-ranking/README.md) | Rankings nomeados e limitados apoiados por `cotani-statistics` | `1.1.1` |
+| [`cotani-achievement`](cotani-achievement/README.md) | Conquistas assíncronas com critérios de estatística, desbloqueios idempotentes, recompensas, eventos e progresso SQL | `1.1.1` |
+| [`cotani-season`](cotani-season/README.md) | Temporadas com XP idempotente, níveis cumulativos, claims de recompensas, eventos e persistência SQL | `1.1.1` |
+| [`cotani-cleanup`](cotani-cleanup/README.md) | Limpeza segura de entidades do mundo com preview, políticas explícitas, lotes e segurança de threads Paper/Folia | `1.1.1` |
+| [`cotani-market`](cotani-market/README.md) | Marketplace persistente de jogadores com anúncios limitados, compras idempotentes, settlement recuperável e persistência SQL | `1.1.1` |
 | [`cotani-party`](cotani-party/README.md) | Parties assíncronas com convites expiráveis, cargos, transferência de liderança e SPI de persistência | `1.1.1` |
 | [`cotani-friend`](cotani-friend/README.md) | Amizades, solicitações, bloqueios, persistência otimista e eventos assíncronos | `1.1.1` |
 | [`cotani-queue`](cotani-queue/README.md) | Filas prioritárias, tickets expiráveis, limite de capacidade e matchmaking atômico | `1.1.1` |
@@ -170,7 +178,7 @@ O Cotani é organizado em camadas arquiteturais limpas. Módulos de funcionalida
 flowchart TB
     Plugin["Seu Plugin Paper / Folia"]
     Features["Gameplay & Domínio<br/>user · economy · teleport · cooldown · event · gui · punishment · metrics"]
-    Infrastructure["Infraestrutura<br/>config · storage · cache"]
+    Infrastructure["Infraestrutura<br/>config · storage · cache · job"]
     Foundation["Fundação<br/>core · task · text · item · locale"]
     Runtime["Runtime Paper / Folia"]
 

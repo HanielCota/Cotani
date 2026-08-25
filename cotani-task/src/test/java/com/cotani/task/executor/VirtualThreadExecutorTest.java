@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.task.api.ExecutionTarget;
 import com.cotani.task.api.TaskMetadata;
-import com.cotani.task.impl.executor.VirtualThreadExecutor;
+import com.cotani.task.internal.executor.VirtualThreadExecutor;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;

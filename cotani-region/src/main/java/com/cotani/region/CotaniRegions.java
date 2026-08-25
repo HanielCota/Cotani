@@ -1,7 +1,7 @@
 package com.cotani.region;
 
 import com.cotani.region.api.RegionModule;
-import com.cotani.region.impl.DefaultRegionModule;
+import com.cotani.region.internal.DefaultRegionModule;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;

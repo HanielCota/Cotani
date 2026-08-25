@@ -1,7 +1,7 @@
 package com.cotani.display;
 
 import com.cotani.display.api.DisplayModule;
-import com.cotani.display.impl.DefaultDisplayModule;
+import com.cotani.display.internal.DefaultDisplayModule;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;

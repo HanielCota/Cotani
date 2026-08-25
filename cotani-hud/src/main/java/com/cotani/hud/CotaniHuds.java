@@ -1,7 +1,7 @@
 package com.cotani.hud;
 
 import com.cotani.hud.api.HudModule;
-import com.cotani.hud.impl.DefaultHudModule;
+import com.cotani.hud.internal.DefaultHudModule;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
 import org.bukkit.plugin.Plugin;

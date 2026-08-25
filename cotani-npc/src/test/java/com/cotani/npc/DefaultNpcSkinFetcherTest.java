@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.cotani.npc.impl.DefaultNpcSkinFetcher;
+import com.cotani.npc.internal.DefaultNpcSkinFetcher;
 import org.junit.jupiter.api.Test;
 
 class DefaultNpcSkinFetcherTest {

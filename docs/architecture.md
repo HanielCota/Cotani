@@ -2,6 +2,8 @@
 
 Cotani separates lifecycle, execution, infrastructure and gameplay concerns into independently consumable modules. A plugin declares only its top-level modules; Gradle resolves their transitive Cotani dependencies.
 
+The internal package convention for each module is documented in [package architecture](package-architecture.md).
+
 ## Module dependency graph
 
 An arrow from `A` to `B` means that module `A` directly depends on module `B`. The BOM is not shown because it aligns versions and adds no runtime dependency.
@@ -12,6 +14,7 @@ flowchart LR
     audit["audit"]
     auditStorage["audit-storage"]
     task["task"]
+    job["job"]
     text["text"]
     locale["locale"]
     item["item"]
@@ -41,11 +44,16 @@ flowchart LR
     placeholder["placeholder"]
     reward["reward"]
     rewardIntegration["reward-integration"]
+    quest["quest"]
+    statistics["statistics"]
+    ranking["ranking"]
+    achievement["achievement"]
     friend["friend"]
     queue["queue"]
     trade["trade"]
 
     task --> core
+    job --> task
     audit --> core
     auditStorage --> audit
     auditStorage --> storage
@@ -130,6 +138,20 @@ flowchart LR
     rewardIntegration --> economy
     rewardIntegration --> inventory
     rewardIntegration --> task
+    quest --> core
+    quest --> event
+    quest --> reward
+    quest --> storage
+    statistics --> core
+    statistics --> event
+    statistics --> storage
+    ranking --> core
+    ranking --> statistics
+    achievement --> core
+    achievement --> event
+    achievement --> reward
+    achievement --> statistics
+    achievement --> storage
     inventory --> core
     inventory --> task
     inventory --> storage
@@ -153,8 +175,8 @@ flowchart LR
 | --- | --- | --- |
 | Lifecycle | `core` | Own and close resources without acting as a service locator |
 | Execution and presentation | `task`, `text`, `item`, `locale` | Thread transitions, messages, localized catalogs and item construction |
-| Infrastructure | `config`, `storage`, `cache`, `redis` | Configuration, persistence, caching, distributed synchronization, and admission-controlled external I/O |
-| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display`, `command`, `hud`, `nametag`, `npc`, `region`, `dialog`, `permission`, `placeholder`, `inventory`, `friend`, `queue`, `trade`, `punishment`, `location`, `mail`, `reward` | Reusable player and gameplay use cases, permission decisions, placeholder expansion, inventory synchronization, friendships, matchmaking queues, confirmation-based trading, moderation punishments, saved homes and warps, persistent player mail, idempotent rewards, NPCs, 3D regions, HUD, nametags, and reactive interfaces |
+| Infrastructure | `config`, `storage`, `cache`, `redis`, `job` | Configuration, persistence, caching, distributed synchronization, durable jobs, and admission-controlled external I/O |
+| Domain features | `user`, `economy`, `cooldown`, `teleport`, `event`, `gui`, `display`, `command`, `hud`, `nametag`, `npc`, `region`, `dialog`, `permission`, `placeholder`, `inventory`, `friend`, `queue`, `trade`, `punishment`, `location`, `mail`, `reward`, `quest`, `statistics`, `ranking`, `achievement` | Reusable player and gameplay use cases, permission decisions, placeholder expansion, inventory synchronization, friendships, matchmaking queues, confirmation-based trading, moderation punishments, saved homes and warps, persistent player mail, objective quests, atomic player statistics, named rankings, player achievements, idempotent rewards, NPCs, 3D regions, HUD, nametags, and reactive interfaces |
 | Integration | `reward-integration` | Standard settlement adapters that deliver reward currency and items |
 | Operations | `audit`, `audit-storage`, `metrics` | Immutable audit history, SQL audit persistence, runtime measurements, and optional Prometheus export |
 

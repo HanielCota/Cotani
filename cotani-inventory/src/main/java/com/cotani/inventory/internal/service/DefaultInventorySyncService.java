@@ -8,8 +8,8 @@ import com.cotani.inventory.api.InventorySyncOptions;
 import com.cotani.inventory.api.InventorySyncService;
 import com.cotani.inventory.api.PotionEffectSnapshot;
 import com.cotani.inventory.api.TransferLease;
+import com.cotani.task.api.AsyncTaskExecutor;
 import com.cotani.task.api.ExecutionTarget;
-import com.cotani.task.api.PaperTaskScheduler;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,32 +32,33 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public final class DefaultInventorySyncService implements InventorySyncService {
 
-    private final PaperTaskScheduler scheduler;
+    private final AsyncTaskExecutor scheduler;
     private final InventoryRepository repository;
     private final CrossServerTransferLock transferLock;
 
     public DefaultInventorySyncService(
-            PaperTaskScheduler scheduler, InventoryRepository repository, CrossServerTransferLock transferLock) {
+            AsyncTaskExecutor scheduler, InventoryRepository repository, CrossServerTransferLock transferLock) {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.repository = Objects.requireNonNull(repository, "repository");
         this.transferLock = Objects.requireNonNull(transferLock, "transferLock");
     }
 
     @Override
-    public CompletionStage<InventorySnapshot> captureAsync(Player player) {
-        Objects.requireNonNull(player, "player");
-        var playerId = player.getUniqueId();
+    public CompletionStage<InventorySnapshot> captureAsync(UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
         return scheduler.supply(
                 ExecutionTarget.entity(playerId), "inventory-capture", () -> captureOnEntityThread(playerId));
     }
 
     @Override
-    public CompletionStage<Void> applyAsync(Player player, InventorySnapshot snapshot, InventorySyncOptions options) {
-        Objects.requireNonNull(player, "player");
+    public CompletionStage<Void> applyAsync(UUID playerId, InventorySnapshot snapshot, InventorySyncOptions options) {
+        Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(options, "options");
-        var playerId = player.getUniqueId();
-        return applyAsync(playerId, snapshot, options);
+        return scheduler.supply(ExecutionTarget.entity(playerId), "inventory-apply", () -> {
+            applyOnEntityThread(playerId, snapshot, options);
+            return null;
+        });
     }
 
     @Override
@@ -78,9 +79,9 @@ public final class DefaultInventorySyncService implements InventorySyncService {
     }
 
     @Override
-    public CompletionStage<InventorySnapshot> saveAsync(Player player) {
-        Objects.requireNonNull(player, "player");
-        return captureAsync(player)
+    public CompletionStage<InventorySnapshot> saveAsync(UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
+        return captureAsync(playerId)
                 .thenCompose(snapshot -> repository.saveSnapshotAsync(snapshot).thenApply(_ -> snapshot));
     }
 
@@ -91,10 +92,9 @@ public final class DefaultInventorySyncService implements InventorySyncService {
     }
 
     @Override
-    public CompletionStage<Optional<InventorySnapshot>> loadAndApplyAsync(Player player, InventorySyncOptions options) {
-        Objects.requireNonNull(player, "player");
+    public CompletionStage<Optional<InventorySnapshot>> loadAndApplyAsync(UUID playerId, InventorySyncOptions options) {
+        Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(options, "options");
-        var playerId = player.getUniqueId();
 
         return loadLatestAsync(playerId).thenCompose(optionalSnapshot -> {
             if (optionalSnapshot.isEmpty()) {
@@ -114,10 +114,9 @@ public final class DefaultInventorySyncService implements InventorySyncService {
     }
 
     @Override
-    public CompletionStage<Boolean> rollbackAsync(Player player, long snapshotTimestamp, InventorySyncOptions options) {
-        Objects.requireNonNull(player, "player");
+    public CompletionStage<Boolean> rollbackAsync(UUID playerId, long snapshotTimestamp, InventorySyncOptions options) {
+        Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(options, "options");
-        var playerId = player.getUniqueId();
 
         return repository.findByIdAsync(playerId, snapshotTimestamp).thenCompose(optionalSnapshot -> {
             if (optionalSnapshot.isEmpty()) {
@@ -177,13 +176,6 @@ public final class DefaultInventorySyncService implements InventorySyncService {
                 .gameMode(player.getGameMode())
                 .flight(player.getAllowFlight(), player.isFlying())
                 .build();
-    }
-
-    private CompletionStage<Void> applyAsync(UUID playerId, InventorySnapshot snapshot, InventorySyncOptions options) {
-        return scheduler.supply(ExecutionTarget.entity(playerId), "inventory-apply", () -> {
-            applyOnEntityThread(playerId, snapshot, options);
-            return null;
-        });
     }
 
     private static void applyOnEntityThread(UUID playerId, InventorySnapshot snapshot, InventorySyncOptions options) {

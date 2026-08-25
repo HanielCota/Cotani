@@ -56,8 +56,7 @@ public final class DefaultTradeService implements TradeService {
 
     private final Object stateLock = new Object();
     private final Map<TradeId, TradeSession> trades = new LinkedHashMap<>();
-    private final @Nullable TradeRepository repository;
-    private final @Nullable EventBus eventBus;
+    private final TradePersistenceCoordinator persistence;
     private final TradeSettlementService settlementService;
     private final TradeServiceOptions options;
     private final TradeTimeoutScheduler timeoutScheduler;
@@ -78,8 +77,7 @@ public final class DefaultTradeService implements TradeService {
             Clock clock) {
         Objects.requireNonNull(initialTrades, "initialTrades");
         Objects.requireNonNull(settlementService, "settlementService");
-        this.repository = repository;
-        this.eventBus = eventBus;
+        this.persistence = new TradePersistenceCoordinator(repository, eventBus, options, timeoutScheduler);
         this.settlementService = settlementService;
         this.options = Objects.requireNonNull(options, "options");
         this.timeoutScheduler = Objects.requireNonNull(timeoutScheduler, "timeoutScheduler");
@@ -397,58 +395,18 @@ public final class DefaultTradeService implements TradeService {
     }
 
     private CompletionStage<Void> persistCreate(TradeSession trade) {
-        if (repository == null) {
-            return completedVoid();
-        }
-        return timeoutScheduler.withTimeout(
-                Objects.requireNonNull(repository.createAsync(trade), "repository create stage"),
-                options.repositoryTimeout(),
-                "repository create");
+        return persistence.createAsync(trade);
     }
 
     private CompletionStage<Void> update(TradeSession current, TradeSession updated) {
         if (!current.id().equals(updated.id()) || updated.revision() != current.revision() + 1) {
             return failed(new IllegalArgumentException("trade update must advance exactly one revision"));
         }
-        CompletionStage<Void> persisted = completedVoid();
-        if (repository != null) {
-            persisted = timeoutScheduler.withTimeout(
-                    Objects.requireNonNull(
-                            repository.updateAsync(updated.id(), current.revision(), updated),
-                            "repository update stage"),
-                    options.repositoryTimeout(),
-                    "repository update");
-        }
-        return persisted.thenRun(() -> store(updated));
+        return persistence.updateAsync(current, updated).thenRun(() -> store(updated));
     }
 
     private CompletionStage<Void> publish(TradeEvent event) {
-        if (eventBus == null) {
-            return completedVoid();
-        }
-        try {
-            return timeoutScheduler
-                    .withTimeout(
-                            Objects.requireNonNull(eventBus.publishAsync(event), "event stage"),
-                            options.eventTimeout(),
-                            "event")
-                    .handle((ignored, failure) -> {
-                        if (failure != null) {
-                            LOGGER.log(
-                                    Level.WARNING,
-                                    "Trade event publication failed: "
-                                            + event.getClass().getName(),
-                                    failure);
-                        }
-                        return null;
-                    });
-        } catch (RuntimeException failure) {
-            LOGGER.log(
-                    Level.WARNING,
-                    "Trade event publication failed: " + event.getClass().getName(),
-                    failure);
-            return completedVoid();
-        }
+        return persistence.publishAsync(event);
     }
 
     private TradeSession requireTrade(TradeId tradeId) {

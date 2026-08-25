@@ -1,7 +1,7 @@
 package com.cotani.placeholder;
 
 import com.cotani.placeholder.api.PlaceholderService;
-import com.cotani.placeholder.impl.DefaultPlaceholderService;
+import com.cotani.placeholder.internal.DefaultPlaceholderService;
 import com.cotani.task.CotaniTasks;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;

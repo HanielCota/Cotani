@@ -4,8 +4,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.cotani.nametag.impl.DefaultNametagModule;
-import com.cotani.nametag.impl.NametagPlayerListener;
+import com.cotani.nametag.internal.DefaultNametagModule;
+import com.cotani.nametag.internal.NametagPlayerListener;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;

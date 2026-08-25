@@ -1,6 +1,6 @@
 package com.cotani.config;
 
-import com.cotani.config.impl.DefaultCotaniConfigs;
+import com.cotani.config.internal.DefaultCotaniConfigs;
 import com.cotani.config.serializer.ConfigSerializerRegistry;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.nio.file.Path;

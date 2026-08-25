@@ -5,7 +5,7 @@ import static org.mockito.Mockito.*;
 
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.TaskChain;
-import com.cotani.task.impl.chain.DefaultTaskChain;
+import com.cotani.task.internal.chain.DefaultTaskChain;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;

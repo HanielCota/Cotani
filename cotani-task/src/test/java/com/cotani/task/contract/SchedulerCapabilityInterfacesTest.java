@@ -18,7 +18,7 @@ import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.api.TaskChainFactory;
 import com.cotani.task.api.TaskExceptionHandler;
 import com.cotani.task.api.TaskMetadata;
-import com.cotani.task.impl.scheduler.ModernPaperTaskScheduler;
+import com.cotani.task.internal.scheduler.ModernPaperTaskScheduler;
 import com.cotani.task.metrics.TaskMetrics;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;

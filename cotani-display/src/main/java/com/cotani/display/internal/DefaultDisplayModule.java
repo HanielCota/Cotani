@@ -1,0 +1,72 @@
+package com.cotani.display.internal;
+
+import com.cotani.api.InternalApi;
+import com.cotani.display.api.DisplayModule;
+import com.cotani.display.api.HologramService;
+import com.cotani.task.api.PaperTaskScheduler;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import org.bukkit.event.HandlerList;
+import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
+
+@InternalApi
+public final class DefaultDisplayModule implements DisplayModule {
+
+    private final DefaultHologramService hologramService;
+    private final DisplayInteractionListener listener;
+    private final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicReference<@Nullable CompletableFuture<Void>> closeFuture = new AtomicReference<>();
+
+    public DefaultDisplayModule(Plugin plugin, PaperTaskScheduler scheduler) {
+        Objects.requireNonNull(plugin, "plugin cannot be null");
+        Objects.requireNonNull(scheduler, "scheduler cannot be null");
+        this.hologramService = new DefaultHologramService(scheduler);
+        this.listener = new DisplayInteractionListener(hologramService);
+
+        plugin.getServer().getPluginManager().registerEvents(listener, plugin);
+    }
+
+    @Override
+    public HologramService holograms() {
+        return hologramService;
+    }
+
+    @Override
+    public CompletionStage<Void> closeAsync() {
+        var existing = closeFuture.get();
+        if (existing != null) {
+            return existing;
+        }
+
+        var promise = new CompletableFuture<Void>();
+        if (!closeFuture.compareAndSet(null, promise)) {
+            return Objects.requireNonNull(closeFuture.get());
+        }
+
+        closed.set(true);
+        HandlerList.unregisterAll(listener);
+        listener.clear();
+        hologramService.clearAsync().whenComplete((_, error) -> {
+            if (error != null) {
+                promise.completeExceptionally(error);
+                return;
+            }
+            promise.complete(null);
+        });
+        return promise;
+    }
+
+    @Override
+    public void close() {
+        closeAsync().whenComplete((_, error) -> {
+            if (error != null) {
+                java.util.logging.Logger.getLogger(DefaultDisplayModule.class.getName())
+                        .log(java.util.logging.Level.SEVERE, "Failed to close display module", error);
+            }
+        });
+    }
+}

@@ -40,6 +40,19 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
             .filter { file ->
                 file.isFile &&
                         file.extension == "java" &&
+                        (file.invariantSeparatorsPath.contains("/src/main/java/") ||
+                                file.invariantSeparatorsPath.contains("/src/test/java/")) &&
+                        file.invariantSeparatorsPath.contains("/impl/")
+            }
+            .forEach { file ->
+                violations +=
+                        "${file.relativeTo(root)} uses the legacy impl package; move it below internal"
+            }
+
+        root.walkTopDown()
+            .filter { file ->
+                file.isFile &&
+                        file.extension == "java" &&
                         file.invariantSeparatorsPath.contains("/src/main/java/") &&
                         (file.invariantSeparatorsPath.contains("/internal/") ||
                                 file.invariantSeparatorsPath.contains("/impl/"))
@@ -92,9 +105,19 @@ abstract class ValidateModuleArchitecture : DefaultTask() {
             .forEach { file ->
                 runCatching {
                     file.useLines { lines ->
+                        var deprecatedUntil = -1
+                        val liveObjectAsyncSignature =
+                            Regex("""\\b(?:default\\s+)?(?:CompletionStage|CompletableFuture)<.*>\\s+\\w+Async\\s*\\([^)]*\\b(?:Player|Entity|World|Inventory|Block)\\b""")
                         lines.forEachIndexed { index, line ->
+                            if (line.contains("@Deprecated")) {
+                                deprecatedUntil = index + 8
+                            }
                             if (apiImportPattern.containsMatchIn(line)) {
                                 violations += "${file.relativeTo(root)}:${index + 1} API imports implementation: ${line.trim()}"
+                            }
+                            if (index > deprecatedUntil && liveObjectAsyncSignature.containsMatchIn(line)) {
+                                violations +=
+                                    "${file.relativeTo(root)}:${index + 1} async API accepts a live platform object; use an immutable identifier or mark the compatibility bridge @Deprecated"
                             }
                         }
                     }
@@ -390,6 +413,7 @@ val publishedModuleNames = listOf(
     "audit",
     "audit-storage",
     "task",
+    "job",
     "text",
     "item",
     "config",
@@ -423,6 +447,13 @@ val publishedModuleNames = listOf(
     "mail",
     "reward",
     "reward-integration",
+    "quest",
+    "statistics",
+    "ranking",
+    "achievement",
+    "season",
+    "cleanup",
+    "market",
 )
 
 val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("validateModuleArchitecture") {
@@ -484,6 +515,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "audit" to Pair("🧾", "Operations"),
             "audit-storage" to Pair("🗄️", "Operations"),
             "task" to Pair("🧵", "Foundation"),
+            "job" to Pair("🗓️", "Infrastructure"),
             "text" to Pair("✍️", "Foundation"),
             "item" to Pair("🗡️", "Foundation"),
             "config" to Pair("⚙️", "Infrastructure"),
@@ -511,7 +543,14 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "location" to Pair("📍", "Gameplay"),
             "mail" to Pair("✉️", "Gameplay"),
             "reward" to Pair("🎁", "Gameplay"),
-            "reward-integration" to Pair("🔗", "Gameplay")
+            "reward-integration" to Pair("🔗", "Gameplay"),
+            "quest" to Pair("🧭", "Gameplay"),
+            "statistics" to Pair("📈", "Gameplay"),
+            "ranking" to Pair("🏆", "Gameplay"),
+            "achievement" to Pair("🎖️", "Gameplay"),
+            "season" to Pair("🗓️", "Gameplay"),
+            "cleanup" to Pair("🧹", "Operations"),
+            "market" to Pair("🛒", "Gameplay")
         )
 
         val defaultDescriptions = mapOf(
@@ -519,6 +558,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "audit" to "Immutable append-only audit events with bounded queries and async persistence.",
             "audit-storage" to "Idempotent SQL persistence adapter with indexed queries and migrations for audit events.",
             "task" to "Async, global, region, and entity scheduling with fluent TaskChain thread transitions.",
+            "job" to "Persistent named jobs with retries, recurring schedules, cancellation, and crash recovery.",
             "text" to "MiniMessage text formatting, audience messaging, and placeholder resolution.",
             "item" to "Fluent Paper 1.21+ data-component item, armor, and player skull builders.",
             "config" to "YAML binding to immutable records with constraint validation and async reloads.",
@@ -547,7 +587,14 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             "location" to "Immutable asynchronous homes and warps with safe Paper and Folia teleport integration.",
             "mail" to "Persistent asynchronous player mail with TTL, idempotent sends, inbox pagination, and SQL storage.",
             "reward" to "Persistent idempotent player rewards with cooldowns, streaks, immutable grants, and SQL storage.",
-            "reward-integration" to "Idempotent economy and entity-thread-safe inventory settlement adapters for rewards."
+            "reward-integration" to "Idempotent economy and entity-thread-safe inventory settlement adapters for rewards.",
+            "quest" to "Objective-based player quests with optimistic progress, idempotent claims, events, and SQL storage.",
+            "statistics" to "Atomic asynchronous player statistics with bounded rankings, domain events, and SQL persistence.",
+            "ranking" to "Named, bounded player rankings backed by cotani-statistics.",
+            "achievement" to "Asynchronous player achievements with statistic criteria, idempotent unlocks, rewards, events, and SQL progress.",
+            "season" to "Seasonal player progression with idempotent experience grants, cumulative levels, reward claims, events, and SQL storage.",
+            "cleanup" to "Safe asynchronous cleanup of loaded world entities with preview mode, allow-list policies, batching, and region-thread removal.",
+            "market" to "Persistent player marketplace with bounded listings, idempotent purchases, recovery-safe settlement, and SQL storage."
         )
 
         val cards = moduleDescriptions.get().keys.sorted().joinToString("\n") { name ->

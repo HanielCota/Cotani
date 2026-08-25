@@ -10,7 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cotani.gui.state.State;
-import com.cotani.hud.impl.DefaultSidebarBuilder;
+import com.cotani.hud.internal.DefaultSidebarBuilder;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;

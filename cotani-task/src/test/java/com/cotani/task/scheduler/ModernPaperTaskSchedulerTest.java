@@ -9,7 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.cotani.task.api.*;
-import com.cotani.task.impl.scheduler.ModernPaperTaskScheduler;
+import com.cotani.task.internal.scheduler.ModernPaperTaskScheduler;
 import com.cotani.task.metrics.TaskMetrics;
 import com.cotani.task.persistence.PersistentTask;
 import com.cotani.task.persistence.PersistentTaskStore;

@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.cotani.dialog.api.CancelReason;
-import com.cotani.dialog.impl.DefaultChatPrompt;
-import com.cotani.dialog.impl.DefaultDialogService;
+import com.cotani.dialog.internal.DefaultChatPrompt;
+import com.cotani.dialog.internal.DefaultDialogService;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.time.Duration;
 import java.util.Optional;

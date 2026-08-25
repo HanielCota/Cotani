@@ -6,7 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cotani.npc.api.Npc;
-import com.cotani.npc.impl.NpcSpatialIndex;
+import com.cotani.npc.internal.NpcSpatialIndex;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.World;

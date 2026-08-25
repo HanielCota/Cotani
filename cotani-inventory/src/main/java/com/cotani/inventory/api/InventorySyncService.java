@@ -20,25 +20,53 @@ public interface InventorySyncService {
 
     /**
      * Captures an immutable snapshot of the player's current inventory, stats, and effects.
-     * Safely executes on the player's entity thread.
+     * The player is resolved only on its owning entity thread.
+     *
+     * @param playerId player UUID to capture
+     * @return completion stage yielding the captured snapshot
+     */
+    CompletionStage<InventorySnapshot> captureAsync(UUID playerId);
+
+    /**
+     * Compatibility bridge for callers that already run on the player's owning thread.
+     * Prefer {@link #captureAsync(UUID)} in asynchronous code.
      *
      * @param player player to capture
      * @return completion stage yielding the captured snapshot
+     * @deprecated capture the UUID at the platform boundary and call {@link #captureAsync(UUID)}
      */
-    CompletionStage<InventorySnapshot> captureAsync(Player player);
+    @Deprecated
+    default CompletionStage<InventorySnapshot> captureAsync(Player player) {
+        Objects.requireNonNull(player, "player");
+        return captureAsync(player.getUniqueId());
+    }
 
     /**
      * Applies an inventory snapshot onto the player with specific sync options.
-     * Safely executes on the player's entity thread. The player UUID is captured before the
-     * asynchronous stage is created; callers must not retain or use the player from an async
-     * continuation.
+     * Safely executes on the player's entity thread after resolving the UUID at execution time.
+     *
+     * @param playerId target player UUID
+     * @param snapshot snapshot to apply
+     * @param options synchronization options controlling which sections are updated
+     * @return completion stage completed when applied
+     */
+    CompletionStage<Void> applyAsync(UUID playerId, InventorySnapshot snapshot, InventorySyncOptions options);
+
+    /**
+     * Compatibility bridge for callers that already hold the live player at the platform boundary.
+     * Prefer {@link #applyAsync(UUID, InventorySnapshot, InventorySyncOptions)} in asynchronous code.
      *
      * @param player target player
      * @param snapshot snapshot to apply
      * @param options synchronization options controlling which sections are updated
      * @return completion stage completed when applied
+     * @deprecated capture the UUID at the platform boundary and call the UUID overload
      */
-    CompletionStage<Void> applyAsync(Player player, InventorySnapshot snapshot, InventorySyncOptions options);
+    @Deprecated
+    default CompletionStage<Void> applyAsync(Player player, InventorySnapshot snapshot, InventorySyncOptions options) {
+        Objects.requireNonNull(player, "player");
+        return applyAsync(player.getUniqueId(), snapshot, options);
+    }
 
     /**
      * Captures, mutates and applies a snapshot on the player's entity thread.
@@ -68,17 +96,32 @@ public interface InventorySyncService {
      * @param snapshot snapshot to apply
      * @return completion stage completed when applied
      */
+    @Deprecated
     default CompletionStage<Void> applyAsync(Player player, InventorySnapshot snapshot) {
         return applyAsync(player, snapshot, InventorySyncOptions.all());
     }
 
     /**
-     * Captures the player's current state and saves it asynchronously into the storage repository.
+     * Captures the player's current state on its entity thread and saves it asynchronously into
+     * the storage repository.
+     *
+     * @param playerId target player UUID
+     * @return completion stage yielding the saved snapshot
+     */
+    CompletionStage<InventorySnapshot> saveAsync(UUID playerId);
+
+    /**
+     * Compatibility bridge for callers at the platform boundary.
      *
      * @param player target player
      * @return completion stage yielding the saved snapshot
+     * @deprecated capture the UUID at the platform boundary and call {@link #saveAsync(UUID)}
      */
-    CompletionStage<InventorySnapshot> saveAsync(Player player);
+    @Deprecated
+    default CompletionStage<InventorySnapshot> saveAsync(Player player) {
+        Objects.requireNonNull(player, "player");
+        return saveAsync(player.getUniqueId());
+    }
 
     /**
      * Loads the latest saved snapshot for a player from the repository.
@@ -89,15 +132,30 @@ public interface InventorySyncService {
     CompletionStage<Optional<InventorySnapshot>> loadLatestAsync(UUID playerId);
 
     /**
-     * Loads the latest saved snapshot for the player and applies it to them.
+     * Loads the latest saved snapshot for the player UUID and applies it to the online player.
      * The repository lookup runs asynchronously and the application returns to the player's
      * entity thread before touching Bukkit state.
+     *
+     * @param playerId target player UUID
+     * @param options synchronization options
+     * @return completion stage yielding the applied snapshot if found
+     */
+    CompletionStage<Optional<InventorySnapshot>> loadAndApplyAsync(UUID playerId, InventorySyncOptions options);
+
+    /**
+     * Compatibility bridge for callers at the platform boundary.
      *
      * @param player target player
      * @param options synchronization options
      * @return completion stage yielding the applied snapshot if found
+     * @deprecated capture the UUID at the platform boundary and call the UUID overload
      */
-    CompletionStage<Optional<InventorySnapshot>> loadAndApplyAsync(Player player, InventorySyncOptions options);
+    @Deprecated
+    default CompletionStage<Optional<InventorySnapshot>> loadAndApplyAsync(
+            Player player, InventorySyncOptions options) {
+        Objects.requireNonNull(player, "player");
+        return loadAndApplyAsync(player.getUniqueId(), options);
+    }
 
     /**
      * Loads the latest saved snapshot for the player and applies it with all options enabled.
@@ -105,6 +163,7 @@ public interface InventorySyncService {
      * @param player target player
      * @return completion stage yielding the applied snapshot if found
      */
+    @Deprecated
     default CompletionStage<Optional<InventorySnapshot>> loadAndApplyAsync(Player player) {
         return loadAndApplyAsync(player, InventorySyncOptions.all());
     }
@@ -119,16 +178,43 @@ public interface InventorySyncService {
     CompletionStage<List<InventorySnapshot>> historyAsync(UUID playerId, int limit);
 
     /**
-     * Restores a specific historical snapshot onto a target player.
+     * Restores a specific historical snapshot onto the online player identified by the UUID.
      * The repository lookup runs asynchronously and the restoration returns to the player's
      * entity thread before touching Bukkit state.
+     *
+     * @param playerId target player UUID
+     * @param snapshotTimestamp timestamp of the historical snapshot
+     * @param options synchronization options
+     * @return completion stage yielding true if found and restored, false otherwise
+     */
+    CompletionStage<Boolean> rollbackAsync(UUID playerId, long snapshotTimestamp, InventorySyncOptions options);
+
+    /**
+     * Compatibility bridge for callers at the platform boundary.
      *
      * @param player target player
      * @param snapshotTimestamp timestamp of the historical snapshot
      * @param options synchronization options
      * @return completion stage yielding true if found and restored, false otherwise
+     * @deprecated capture the UUID at the platform boundary and call the UUID overload
      */
-    CompletionStage<Boolean> rollbackAsync(Player player, long snapshotTimestamp, InventorySyncOptions options);
+    @Deprecated
+    default CompletionStage<Boolean> rollbackAsync(
+            Player player, long snapshotTimestamp, InventorySyncOptions options) {
+        Objects.requireNonNull(player, "player");
+        return rollbackAsync(player.getUniqueId(), snapshotTimestamp, options);
+    }
+
+    /**
+     * Restores a historical snapshot with all synchronization options enabled.
+     *
+     * @param playerId target player UUID
+     * @param snapshotTimestamp timestamp of the historical snapshot
+     * @return completion stage yielding true if found and restored, false otherwise
+     */
+    default CompletionStage<Boolean> rollbackAsync(UUID playerId, long snapshotTimestamp) {
+        return rollbackAsync(playerId, snapshotTimestamp, InventorySyncOptions.all());
+    }
 
     /**
      * Restores a specific historical snapshot onto a target player with all options enabled.
@@ -137,6 +223,7 @@ public interface InventorySyncService {
      * @param snapshotTimestamp timestamp of the historical snapshot
      * @return completion stage yielding true if found and restored, false otherwise
      */
+    @Deprecated
     default CompletionStage<Boolean> rollbackAsync(Player player, long snapshotTimestamp) {
         return rollbackAsync(player, snapshotTimestamp, InventorySyncOptions.all());
     }

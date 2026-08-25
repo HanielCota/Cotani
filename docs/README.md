@@ -21,6 +21,7 @@ instalação e das APIs específicas; esta página organiza os conceitos compart
 - [Começando](getting-started.md): instalação, dependências e pré-requisitos.
 - [Quickstart](quickstart.md): um plugin mínimo com bootstrap e transição para a entity thread.
 - [Arquitetura](architecture.md): limites dos módulos, lifecycle e transições Paper/Folia.
+- [Arquitetura de pacotes](package-architecture.md): convenções para organizar classes e responsabilidades dentro de cada módulo.
 - [Contratos assíncronos](async-contracts.md): conclusão, timeout, cancelamento e shutdown.
 - [Índice de módulos](module-index.md): escolha do módulo adequado para cada caso de uso.
 - [Cookbook](ai/cotani-cookbook.md): padrões prontos para integração.

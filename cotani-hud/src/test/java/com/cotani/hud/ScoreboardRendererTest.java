@@ -8,7 +8,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.cotani.hud.impl.ScoreboardRenderer;
+import com.cotani.hud.internal.ScoreboardRenderer;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;

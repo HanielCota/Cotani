@@ -7,7 +7,7 @@ import com.cotani.dialog.api.ChatPrompt;
 import com.cotani.dialog.api.ConversationWizard;
 import com.cotani.dialog.api.DialogService;
 import com.cotani.dialog.api.PromptResult;
-import com.cotani.dialog.impl.DefaultConversationWizard;
+import com.cotani.dialog.internal.DefaultConversationWizard;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;

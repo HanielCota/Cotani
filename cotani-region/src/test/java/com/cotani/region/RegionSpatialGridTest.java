@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cotani.region.api.Region3D;
-import com.cotani.region.impl.RegionSpatialGrid;
+import com.cotani.region.internal.RegionSpatialGrid;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.World;

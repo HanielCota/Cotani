@@ -7,8 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.cotani.npc.api.Npc;
 import com.cotani.npc.api.NpcInteractEvent;
-import com.cotani.npc.impl.DefaultNpcModule;
-import com.cotani.npc.impl.NpcPlayerListener;
+import com.cotani.npc.internal.DefaultNpcModule;
+import com.cotani.npc.internal.NpcPlayerListener;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import java.time.Duration;

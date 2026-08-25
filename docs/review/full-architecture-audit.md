@@ -50,7 +50,7 @@ Java 25, Paper API `26.2.build.85-stable`, Gradle 9.6.1 e Palantir Java Format 2
 
 ## Inventário arquitetural
 
-Não há ciclo no grafo Gradle. A tarefa `validateModuleArchitecture` também rejeita import de `impl`/`internal` entre módulos.
+Não há ciclo no grafo Gradle. A tarefa `validateModuleArchitecture` rejeita imports de implementação (`internal`) entre módulos e não permite novos pacotes `impl`.
 
 ```text
 core
@@ -92,7 +92,7 @@ evento/comando no contexto do jogador
   -> persistência/auditoria assíncrona
 ```
 
-O grafo real corresponde ao README depois da inclusão explícita de `metrics` e `gui`. As APIs são interfaces/records nos pacotes de domínio; declarações públicas necessárias em `impl`/`internal` são marcadas com `@InternalApi`, e a validação arquitetural impede novas exposições não marcadas.
+O grafo real corresponde ao README depois da inclusão explícita de `metrics` e `gui`. As APIs são interfaces/records nos pacotes de domínio; declarações públicas necessárias em `internal` são marcadas com `@InternalApi`, e a validação arquitetural impede novas exposições não marcadas.
 
 ## Mapa de lifecycle e propriedade
 
@@ -975,7 +975,7 @@ Construtores antigos de teleporte foram preservados com reconciliação padrão 
 Getters nullable de `Row`, implementações públicas não demarcadas e resolver estático de skull aumentavam NPE, acoplamento e estado global entre plugins/testes.
 
 ### Correção implementada
-`Row.getString` é non-null fail-fast; getters `Optional` são a única API para valores potencialmente ausentes. `SkullBuilder.create(resolver)` permite injeção e `create()` usa resolver uncached sem singleton estático. Declarações públicas em `impl/internal` são marcadas `@InternalApi`; `validateModuleArchitecture` falha para novas exposições não marcadas ou importadas entre módulos.
+`Row.getString` é non-null fail-fast; getters `Optional` são a única API para valores potencialmente ausentes. `SkullBuilder.create(resolver)` permite injeção e `create()` usa resolver uncached sem singleton estático. Declarações públicas em `internal` são marcadas `@InternalApi`; `validateModuleArchitecture` falha para novas exposições não marcadas ou importadas entre módulos.
 
 ### Testes
 `RowTest`, `SkullBuilderTest`/`SkullTextureResolverTest` e a validação arquitetural do build.

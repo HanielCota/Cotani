@@ -6,7 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cotani.nametag.api.Nametag;
-import com.cotani.nametag.impl.NametagRegistry;
+import com.cotani.nametag.internal.NametagRegistry;
 import java.util.Optional;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;

@@ -4,7 +4,7 @@ import com.cotani.dialog.api.AnvilPromptBuilder;
 import com.cotani.dialog.api.ChatPromptBuilder;
 import com.cotani.dialog.api.ConversationWizardBuilder;
 import com.cotani.dialog.api.DialogService;
-import com.cotani.dialog.impl.DefaultDialogService;
+import com.cotani.dialog.internal.DefaultDialogService;
 import com.cotani.task.CotaniTasks;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Objects;
