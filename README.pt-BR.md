@@ -320,7 +320,7 @@ scheduler.chain(messageStage)
 
 ## Documentação & Recursos
 
-- 🌐 **[Wiki do Cotani](https://hanielcota.github.io/Cotani/)** — Guias oficiais, conceitos, mapa de módulos e padrões de contribuição
+- 🌐 **[Wiki do Cotani](https://github.com/HanielCota/Cotani/wiki)** — Guias oficiais, conceitos, mapa de módulos e padrões de contribuição
 - 📖 **[Cookbook do Cotani](docs/ai/cotani-cookbook.md)** — Receitas práticas para padrões comuns em plugins Paper
 - 🗂️ **[Índice da documentação](docs/README.md)** — Guias mantidos, comandos de validação e política de documentação
 - 🧩 **[Documentação da API (Javadoc)](https://hanielcota.github.io/Cotani/api/)** — Referência agregada de Javadocs de todos os módulos
