@@ -6,27 +6,22 @@ import com.cotani.config.annotation.Default;
 import com.cotani.config.exception.ConfigException;
 import com.cotani.config.section.ConfigSection;
 import com.cotani.config.serializer.ConfigSerializerRegistry;
-import com.cotani.config.source.ConfigSource;
 import com.cotani.config.validation.ConfigValidator;
 import com.cotani.config.validation.ValidationResult;
 import com.cotani.config.value.ConfigValue;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.jspecify.annotations.Nullable;
 
 public final class RecordConfigBinder implements ConfigBinder {
     private final ConfigSerializerRegistry serializers;
@@ -325,144 +320,5 @@ public final class RecordConfigBinder implements ConfigBinder {
         }
 
         throw new ConfigException("Unknown config type " + requested + " for " + type.getName());
-    }
-
-    private record InMemoryConfigSource(Path path, String rootPath, Map<String, Object> values)
-            implements ConfigSource {
-        private InMemoryConfigSource(String file, String rootPath, Map<String, Object> values) {
-            this(Path.of(file), rootPath, Collections.unmodifiableMap(new LinkedHashMap<>(values)));
-        }
-
-        @Override
-        public Path path() {
-            return path;
-        }
-
-        @Override
-        public void load() {
-            // In-memory config source does not load from disk.
-        }
-
-        @Override
-        public void save() {
-            // In-memory config source does not persist to disk.
-        }
-
-        @Override
-        public boolean contains(String path) {
-            return resolve(path).exists();
-        }
-
-        @Override
-        public @Nullable Object get(String path) {
-            return resolve(path).raw();
-        }
-
-        @Override
-        public Entry entry(String path) {
-            var resolved = resolve(path);
-            return new Entry(resolved.raw(), resolved.exists());
-        }
-
-        @Override
-        public void set(String path, @Nullable Object value) {
-            throw new UnsupportedOperationException("In-memory config sections are read-only");
-        }
-
-        @Override
-        public boolean setIfMissing(String path, @Nullable Object value) {
-            throw new UnsupportedOperationException("In-memory config sections are read-only");
-        }
-
-        @Override
-        public Set<String> keys(String path) {
-            Object value = resolve(path).raw();
-
-            if (!(value instanceof Map<?, ?> map)) {
-                return Set.of();
-            }
-
-            return map.keySet().stream().map(String::valueOf).collect(Collectors.toUnmodifiableSet());
-        }
-
-        @Override
-        public Map<String, Object> section(String path) {
-            Object value = resolve(path).raw();
-
-            if (!(value instanceof Map<?, ?> map)) {
-                return Map.of();
-            }
-
-            Map<String, Object> sectionValues = new LinkedHashMap<>();
-            map.forEach((key, sectionValue) -> sectionValues.put(String.valueOf(key), sectionValue));
-
-            return Collections.unmodifiableMap(sectionValues);
-        }
-
-        @Override
-        public List<Object> list(String path) {
-            Object value = resolve(path).raw();
-
-            if (value instanceof List<?> list) {
-                return List.copyOf(list);
-            }
-
-            return List.of();
-        }
-
-        private Entry resolve(String requestedPath) {
-            var relativePath = relativePath(requestedPath);
-
-            if (relativePath.isBlank()) {
-                return new Entry(values, true);
-            }
-
-            Object current = values;
-
-            for (var part : parts(relativePath)) {
-                if (!(current instanceof Map<?, ?> map)) {
-                    return new Entry(null, false);
-                }
-                if (!map.containsKey(part)) {
-                    return new Entry(null, false);
-                }
-
-                current = map.get(part);
-            }
-
-            return new Entry(current, true);
-        }
-
-        private String relativePath(String requestedPath) {
-            if (requestedPath.isBlank()) {
-                return "";
-            }
-            if (requestedPath.equals(rootPath)) {
-                return "";
-            }
-
-            var prefix = rootPath + ".";
-
-            if (requestedPath.startsWith(prefix)) {
-                return requestedPath.substring(prefix.length());
-            }
-
-            return requestedPath;
-        }
-
-        private List<String> parts(String path) {
-            List<String> parts = new ArrayList<>();
-            var start = 0;
-
-            for (var index = 0; index < path.length(); index++) {
-                if (path.charAt(index) == '.') {
-                    parts.add(path.substring(start, index));
-                    start = index + 1;
-                }
-            }
-            parts.add(path.substring(start));
-
-            return parts;
-        }
     }
 }

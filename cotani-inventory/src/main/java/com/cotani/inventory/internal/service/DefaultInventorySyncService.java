@@ -57,10 +57,7 @@ public final class DefaultInventorySyncService implements InventorySyncService {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(options, "options");
         var playerId = player.getUniqueId();
-        return scheduler.supply(ExecutionTarget.entity(playerId), "inventory-apply", () -> {
-            applyOnEntityThread(playerId, snapshot, options);
-            return null;
-        });
+        return applyAsync(playerId, snapshot, options);
     }
 
     @Override
@@ -97,12 +94,13 @@ public final class DefaultInventorySyncService implements InventorySyncService {
     public CompletionStage<Optional<InventorySnapshot>> loadAndApplyAsync(Player player, InventorySyncOptions options) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(options, "options");
+        var playerId = player.getUniqueId();
 
-        return loadLatestAsync(player.getUniqueId()).thenCompose(optionalSnapshot -> {
+        return loadLatestAsync(playerId).thenCompose(optionalSnapshot -> {
             if (optionalSnapshot.isEmpty()) {
                 return CompletableFuture.completedFuture(Optional.empty());
             }
-            return applyAsync(player, optionalSnapshot.get(), options).thenApply(_ -> optionalSnapshot);
+            return applyAsync(playerId, optionalSnapshot.get(), options).thenApply(_ -> optionalSnapshot);
         });
     }
 
@@ -119,12 +117,13 @@ public final class DefaultInventorySyncService implements InventorySyncService {
     public CompletionStage<Boolean> rollbackAsync(Player player, long snapshotTimestamp, InventorySyncOptions options) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(options, "options");
+        var playerId = player.getUniqueId();
 
-        return repository.findByIdAsync(player.getUniqueId(), snapshotTimestamp).thenCompose(optionalSnapshot -> {
+        return repository.findByIdAsync(playerId, snapshotTimestamp).thenCompose(optionalSnapshot -> {
             if (optionalSnapshot.isEmpty()) {
                 return CompletableFuture.completedFuture(false);
             }
-            return applyAsync(player, optionalSnapshot.get(), options).thenApply(_ -> true);
+            return applyAsync(playerId, optionalSnapshot.get(), options).thenApply(_ -> true);
         });
     }
 
@@ -178,6 +177,13 @@ public final class DefaultInventorySyncService implements InventorySyncService {
                 .gameMode(player.getGameMode())
                 .flight(player.getAllowFlight(), player.isFlying())
                 .build();
+    }
+
+    private CompletionStage<Void> applyAsync(UUID playerId, InventorySnapshot snapshot, InventorySyncOptions options) {
+        return scheduler.supply(ExecutionTarget.entity(playerId), "inventory-apply", () -> {
+            applyOnEntityThread(playerId, snapshot, options);
+            return null;
+        });
     }
 
     private static void applyOnEntityThread(UUID playerId, InventorySnapshot snapshot, InventorySyncOptions options) {

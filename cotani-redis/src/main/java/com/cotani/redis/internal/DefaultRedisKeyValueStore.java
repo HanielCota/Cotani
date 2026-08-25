@@ -63,14 +63,14 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
     @Override
     public CompletionStage<Optional<String>> getAsync(RedisKey key) {
         Objects.requireNonNull(key, KEY_PARAM);
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.get(key.value()).thenApply(Optional::ofNullable);
     }
 
     @Override
     public CompletionStage<Optional<byte[]>> getBinaryAsync(RedisKey key) {
         Objects.requireNonNull(key, KEY_PARAM);
-        var commands = binaryConnectionSupplier.get().async();
+        var commands = requireBinaryCommands();
         byte[] keyBytes = key.value().getBytes(StandardCharsets.UTF_8);
         return commands.get(keyBytes).thenApply(Optional::ofNullable);
     }
@@ -89,7 +89,7 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
     public CompletionStage<Void> setAsync(RedisKey key, String value) {
         Objects.requireNonNull(key, KEY_PARAM);
         Objects.requireNonNull(value, VALUE_PARAM);
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.set(key.value(), value).thenApply(_ -> (Void) null);
     }
 
@@ -102,7 +102,7 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
             throw new IllegalArgumentException("ttl must be positive");
         }
 
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         var setArgs = SetArgs.Builder.px(ttl.toMillis());
         return commands.set(key.value(), value, setArgs).thenApply(_ -> (Void) null);
     }
@@ -116,7 +116,7 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
             throw new IllegalArgumentException("ttl must be positive");
         }
 
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         var setArgs = SetArgs.Builder.nx().px(ttl.toMillis());
         return commands.set(key.value(), value, setArgs).thenApply("OK"::equalsIgnoreCase);
     }
@@ -130,7 +130,7 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
         byte[] keyBytes = key.value().getBytes(StandardCharsets.UTF_8);
         byte[] valueBytes = Objects.requireNonNull(codec.encode(value), "encoded value bytes");
 
-        var commands = binaryConnectionSupplier.get().async();
+        var commands = requireBinaryCommands();
         return commands.set(keyBytes, valueBytes).thenApply(_ -> (Void) null);
     }
 
@@ -147,7 +147,7 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
         byte[] keyBytes = key.value().getBytes(StandardCharsets.UTF_8);
         byte[] valueBytes = Objects.requireNonNull(codec.encode(value), "encoded value bytes");
 
-        var commands = binaryConnectionSupplier.get().async();
+        var commands = requireBinaryCommands();
         var setArgs = SetArgs.Builder.px(ttl.toMillis());
         return commands.set(keyBytes, valueBytes, setArgs).thenApply(_ -> (Void) null);
     }
@@ -155,14 +155,14 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
     @Override
     public CompletionStage<Boolean> deleteAsync(RedisKey key) {
         Objects.requireNonNull(key, KEY_PARAM);
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.del(key.value()).thenApply(count -> count != null && count > 0);
     }
 
     @Override
     public CompletionStage<Boolean> existsAsync(RedisKey key) {
         Objects.requireNonNull(key, KEY_PARAM);
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.exists(key.value()).thenApply(count -> count != null && count > 0);
     }
 
@@ -170,28 +170,28 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
     public CompletionStage<Boolean> expireAsync(RedisKey key, Duration ttl) {
         Objects.requireNonNull(key, KEY_PARAM);
         Objects.requireNonNull(ttl, TTL_PARAM);
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.pexpire(key.value(), ttl.toMillis()).thenApply(success -> Boolean.TRUE.equals(success));
     }
 
     @Override
     public CompletionStage<Long> incrementAndGetAsync(RedisKey key, long delta) {
         Objects.requireNonNull(key, KEY_PARAM);
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.incrby(key.value(), delta);
     }
 
     @Override
     public CompletionStage<Long> decrementAndGetAsync(RedisKey key, long delta) {
         Objects.requireNonNull(key, KEY_PARAM);
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.decrby(key.value(), delta);
     }
 
     @Override
     public CompletionStage<Set<RedisKey>> keysAsync(String pattern) {
         Objects.requireNonNull(pattern, "pattern");
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         return commands.keys(pattern).thenApply(keys -> {
             if (keys == null || keys.isEmpty()) {
                 return Set.of();
@@ -203,7 +203,7 @@ public final class DefaultRedisKeyValueStore implements RedisKeyValueStore {
     @Override
     public CompletionStage<Set<RedisKey>> scanKeysAsync(String pattern) {
         Objects.requireNonNull(pattern, "pattern");
-        var commands = stringConnectionSupplier.get().async();
+        var commands = requireCommands();
         var scanArgs = ScanArgs.Builder.matches(pattern).limit(100);
         Set<RedisKey> accumulated = ConcurrentHashMap.newKeySet();
         return iterateScan(commands, ScanCursor.INITIAL, scanArgs, accumulated);

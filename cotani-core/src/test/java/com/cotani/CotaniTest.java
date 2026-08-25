@@ -303,6 +303,30 @@ class CotaniTest {
     }
 
     @Test
+    void deregisterRemovesRegisteredAsyncCloseable() {
+        var plugin = pluginWithLogger();
+        var closed = new AtomicBoolean();
+        class AsyncResource implements AutoCloseable, AsyncCloseable {
+            @Override
+            public CompletionStage<Void> closeAsync() {
+                closed.set(true);
+                return CompletableFuture.completedFuture(null);
+            }
+
+            @Override
+            public void close() {}
+        }
+        AutoCloseable resource = new AsyncResource();
+        var cotani = Cotani.forPlugin(plugin).build();
+        cotani.register(resource);
+
+        cotani.deregister(resource);
+        cotani.close();
+
+        assertFalse(closed.get());
+    }
+
+    @Test
     void closeAsyncExecutesAsyncCloseables() {
         var plugin = pluginWithLogger();
         var asyncExecuted = new AtomicBoolean();

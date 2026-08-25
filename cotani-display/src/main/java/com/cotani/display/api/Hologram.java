@@ -75,6 +75,7 @@ public interface Hologram {
 
     /**
      * Spawns this hologram at the specified location safely on the region thread.
+     * The location is cloned as an immutable input snapshot before asynchronous work begins.
      *
      * @param location the spawn location
      * @return a completion stage with this hologram instance
@@ -83,6 +84,7 @@ public interface Hologram {
 
     /**
      * Teleports this hologram to a new location.
+     * The location is cloned as an immutable input snapshot before asynchronous work begins.
      *
      * @param location the new location
      * @return a completion stage for when teleport is finished

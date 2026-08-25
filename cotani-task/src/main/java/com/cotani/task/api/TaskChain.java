@@ -46,7 +46,7 @@ public interface TaskChain<T> {
     }
 
     @SafeVarargs
-    @SuppressWarnings({"varargs", "unchecked"})
+    @SuppressWarnings("varargs")
     static <T> TaskChain<T> anyOf(PaperTaskScheduler scheduler, TaskChain<T>... chains) {
         Objects.requireNonNull(scheduler, "scheduler");
         Objects.requireNonNull(chains, "chains");
@@ -55,11 +55,19 @@ public interface TaskChain<T> {
             throw new IllegalArgumentException("chains must not be empty");
         }
 
-        CompletableFuture<Object> any = CompletableFuture.anyOf(Arrays.stream(chains)
-                .map(chain -> chain.toCompletionStage().toCompletableFuture())
-                .toArray(CompletableFuture[]::new));
-
-        CompletableFuture<T> typed = any.thenApplyAsync(value -> (T) value, scheduler.asyncExecutor());
+        CompletableFuture<T> typed = new CompletableFuture<>();
+        for (var chain : chains) {
+            var _ = chain.toCompletionStage()
+                    .whenCompleteAsync(
+                            (value, failure) -> {
+                                if (failure != null) {
+                                    typed.completeExceptionally(failure);
+                                    return;
+                                }
+                                typed.complete(value);
+                            },
+                            scheduler.asyncExecutor());
+        }
 
         return scheduler.chain(typed);
     }

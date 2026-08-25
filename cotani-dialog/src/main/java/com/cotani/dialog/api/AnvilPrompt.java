@@ -33,6 +33,8 @@ public interface AnvilPrompt {
 
     /**
      * Opens the Anvil prompt for the target player.
+     * The target UUID is captured immediately. Inventory operations are dispatched to the
+     * player's owning entity thread, and the returned stage never requires the caller to block.
      *
      * @param player player to prompt
      * @return stage completing with the typed string or cancellation

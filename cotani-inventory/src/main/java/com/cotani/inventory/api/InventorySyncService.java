@@ -29,7 +29,9 @@ public interface InventorySyncService {
 
     /**
      * Applies an inventory snapshot onto the player with specific sync options.
-     * Safely executes on the player's entity thread.
+     * Safely executes on the player's entity thread. The player UUID is captured before the
+     * asynchronous stage is created; callers must not retain or use the player from an async
+     * continuation.
      *
      * @param player target player
      * @param snapshot snapshot to apply
@@ -88,6 +90,8 @@ public interface InventorySyncService {
 
     /**
      * Loads the latest saved snapshot for the player and applies it to them.
+     * The repository lookup runs asynchronously and the application returns to the player's
+     * entity thread before touching Bukkit state.
      *
      * @param player target player
      * @param options synchronization options
@@ -116,6 +120,8 @@ public interface InventorySyncService {
 
     /**
      * Restores a specific historical snapshot onto a target player.
+     * The repository lookup runs asynchronously and the restoration returns to the player's
+     * entity thread before touching Bukkit state.
      *
      * @param player target player
      * @param snapshotTimestamp timestamp of the historical snapshot

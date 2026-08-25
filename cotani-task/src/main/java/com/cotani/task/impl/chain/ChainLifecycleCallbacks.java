@@ -6,8 +6,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 final class ChainLifecycleCallbacks {
+    private static final Logger LOGGER = Logger.getLogger(ChainLifecycleCallbacks.class.getName());
+
     private ChainLifecycleCallbacks() {}
 
     static <T> ChainState<T> onStart(ChainState<T> state, Runnable action, Executor executor) {
@@ -24,7 +28,7 @@ final class ChainLifecycleCallbacks {
     static <T> void onComplete(CompletableFuture<T> future, Runnable action) {
         Objects.requireNonNull(action, "action");
 
-        var _ = future.whenComplete((_, _) -> action.run());
+        var _ = future.whenComplete((_, _) -> runCallback(action));
     }
 
     static <T> void onCancel(CompletableFuture<T> future, Runnable action) {
@@ -32,7 +36,7 @@ final class ChainLifecycleCallbacks {
 
         var _ = future.whenComplete((_, _) -> {
             if (future.isCancelled()) {
-                action.run();
+                runCallback(action);
             }
         });
     }
@@ -42,7 +46,11 @@ final class ChainLifecycleCallbacks {
 
         CompletableFuture<T> handled = state.future().whenComplete((_, throwable) -> {
             if (throwable != null) {
-                consumer.accept(CompletionFailure.unwrap(throwable));
+                try {
+                    consumer.accept(CompletionFailure.unwrap(throwable));
+                } catch (Throwable callbackFailure) {
+                    LOGGER.log(Level.SEVERE, "Task chain error callback failed", callbackFailure);
+                }
             }
         });
 
@@ -56,5 +64,13 @@ final class ChainLifecycleCallbacks {
                     return VoidResult.nullValue();
                 },
                 executor);
+    }
+
+    private static void runCallback(Runnable action) {
+        try {
+            action.run();
+        } catch (Throwable callbackFailure) {
+            LOGGER.log(Level.SEVERE, "Task chain lifecycle callback failed", callbackFailure);
+        }
     }
 }

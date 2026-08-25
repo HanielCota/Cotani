@@ -36,7 +36,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,15 +48,11 @@ public final class DefaultPartyService implements PartyService {
     private final Map<PartyId, Party> parties = new LinkedHashMap<>();
     private final Map<UUID, PartyId> membership = new LinkedHashMap<>();
     private final Map<UUID, Map<PartyId, PartyInvite>> invites = new LinkedHashMap<>();
+    private final PartyMutationSequencer mutations = new PartyMutationSequencer(stateLock);
     private final @Nullable PartyRepository repository;
     private final @Nullable EventBus eventBus;
     private final PartyServiceOptions options;
     private final Clock clock;
-    private final AtomicBoolean closed = new AtomicBoolean();
-
-    private CompletionStage<Void> sequencingTail = completedVoid();
-    private CompletionStage<Void> lastOperation = completedVoid();
-    private @Nullable CompletionStage<Void> closeStage;
 
     public DefaultPartyService(
             List<Party> initialParties,
@@ -99,7 +94,7 @@ public final class DefaultPartyService implements PartyService {
     public CompletionStage<Optional<Party>> findAsync(PartyId partyId) {
         Objects.requireNonNull(partyId, "partyId");
         synchronized (stateLock) {
-            if (closed.get()) {
+            if (mutations.isClosed()) {
                 return failed(closedFailure());
             }
             return completed(Optional.ofNullable(parties.get(partyId)));
@@ -110,7 +105,7 @@ public final class DefaultPartyService implements PartyService {
     public CompletionStage<Optional<Party>> findByMemberAsync(UUID playerId) {
         Objects.requireNonNull(playerId, "playerId");
         synchronized (stateLock) {
-            if (closed.get()) {
+            if (mutations.isClosed()) {
                 return failed(closedFailure());
             }
             var partyId = membership.get(playerId);
@@ -200,7 +195,7 @@ public final class DefaultPartyService implements PartyService {
     public CompletionStage<List<PartyInvite>> invitesAsync(UUID inviteeId) {
         Objects.requireNonNull(inviteeId, "inviteeId");
         synchronized (stateLock) {
-            if (closed.get()) {
+            if (mutations.isClosed()) {
                 return failed(closedFailure());
             }
             cleanupInvitesLocked(inviteeId, clock.instant());
@@ -353,38 +348,17 @@ public final class DefaultPartyService implements PartyService {
 
     @Override
     public CompletionStage<Void> closeAsync() {
-        synchronized (stateLock) {
-            if (closeStage != null) {
-                return closeStage;
+        return mutations.close(() -> {
+            synchronized (stateLock) {
+                parties.clear();
+                membership.clear();
+                invites.clear();
             }
-            closed.set(true);
-            closeStage = lastOperation.whenComplete((ignored, failure) -> {
-                synchronized (stateLock) {
-                    parties.clear();
-                    membership.clear();
-                    invites.clear();
-                }
-            });
-            return closeStage;
-        }
+        });
     }
 
     private <T> CompletionStage<T> enqueue(Supplier<CompletionStage<T>> operation) {
-        synchronized (stateLock) {
-            if (closed.get()) {
-                return failed(closedFailure());
-            }
-            var submitted = sequencingTail.handle((ignored, failure) -> null).thenCompose(ignored -> {
-                try {
-                    return Objects.requireNonNull(operation.get(), "operation stage");
-                } catch (RuntimeException failure) {
-                    return failed(failure);
-                }
-            });
-            sequencingTail = submitted.handle((ignored, failure) -> null);
-            lastOperation = submitted.thenApply(ignored -> null);
-            return submitted;
-        }
+        return mutations.submit(operation, DefaultPartyService::closedFailure);
     }
 
     private CompletionStage<Void> persistNew(Party party) {

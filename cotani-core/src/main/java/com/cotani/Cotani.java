@@ -24,7 +24,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
     private final Plugin plugin;
     private final List<AutoCloseable> closeables;
-    private final List<Supplier<CompletionStage<Void>>> asyncCloseables;
+    private final List<AsyncCloseRegistration> asyncCloseables;
     private final Duration asyncCloseTimeout;
     private final AtomicBoolean closed;
     private final AtomicReference<@Nullable CompletableFuture<Void>> closeFuture;
@@ -33,7 +33,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
     private Cotani(
             Plugin plugin,
             List<AutoCloseable> closeables,
-            List<Supplier<CompletionStage<Void>>> asyncCloseables,
+            List<AsyncCloseRegistration> asyncCloseables,
             Duration asyncCloseTimeout) {
         this.plugin = plugin;
         this.closeables = new ArrayList<>(closeables);
@@ -70,7 +70,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
             ensureNotClosed();
 
             if (closeable instanceof AsyncCloseable asyncCloseable) {
-                asyncCloseables.add(asyncCloseable::closeAsync);
+                asyncCloseables.add(new AsyncCloseRegistration(closeable, asyncCloseable::closeAsync));
                 return this;
             }
             closeables.add(closeable);
@@ -84,6 +84,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
         synchronized (lock) {
             closeables.remove(closeable);
+            asyncCloseables.removeIf(registration -> Objects.equals(registration.source(), closeable));
         }
 
         return this;
@@ -95,7 +96,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
         synchronized (lock) {
             ensureNotClosed();
 
-            asyncCloseables.add(asyncCloseable);
+            asyncCloseables.add(new AsyncCloseRegistration(null, asyncCloseable));
         }
 
         return this;
@@ -105,7 +106,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
         Objects.requireNonNull(asyncCloseable, ASYNC_CLOSEABLE_NULL_MSG);
 
         synchronized (lock) {
-            asyncCloseables.remove(asyncCloseable);
+            asyncCloseables.removeIf(registration -> registration.action().equals(asyncCloseable));
         }
 
         return this;
@@ -133,7 +134,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
             return Objects.requireNonNull(closeFuture.get(), "closeFuture");
         }
 
-        List<Supplier<CompletionStage<Void>>> asyncSnapshot;
+        List<AsyncCloseRegistration> asyncSnapshot;
         List<AutoCloseable> syncSnapshot;
         synchronized (lock) {
             closed.set(true);
@@ -188,17 +189,18 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
     }
 
     private CompletionStage<@Nullable CotaniCloseException> executeAsyncCloseables(
-            List<Supplier<CompletionStage<Void>>> suppliers) {
-        if (suppliers.isEmpty()) {
+            List<AsyncCloseRegistration> registrations) {
+        if (registrations.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
 
-        List<CompletionStage<Void>> stages = new ArrayList<>(suppliers.size());
+        List<CompletionStage<Void>> stages = new ArrayList<>(registrations.size());
         CotaniCloseException initialFailure = null;
 
-        for (var supplier : suppliers.reversed()) {
+        for (var registration : registrations.reversed()) {
             try {
-                var stage = Objects.requireNonNull(supplier.get(), "Async closeable supplier returned null");
+                var stage =
+                        Objects.requireNonNull(registration.action().get(), "Async closeable supplier returned null");
                 stages.add(stage);
             } catch (Exception failure) {
                 plugin.getLogger().log(Level.SEVERE, "Async closeable supplier failed", failure);
@@ -229,6 +231,12 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
                 });
     }
 
+    private record AsyncCloseRegistration(@Nullable AutoCloseable source, Supplier<CompletionStage<Void>> action) {
+        private AsyncCloseRegistration {
+            Objects.requireNonNull(action, "action");
+        }
+    }
+
     private @Nullable CotaniCloseException executeSyncCloseables(
             List<AutoCloseable> resources, @Nullable CotaniCloseException initialFailure) {
         CotaniCloseException currentFailure = initialFailure;
@@ -251,7 +259,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
     public static final class Builder {
         private final Plugin plugin;
         private final List<AutoCloseable> closeables = new ArrayList<>();
-        private final List<Supplier<CompletionStage<Void>>> asyncCloseables = new ArrayList<>();
+        private final List<AsyncCloseRegistration> asyncCloseables = new ArrayList<>();
         private Duration asyncCloseTimeout = DEFAULT_ASYNC_CLOSE_TIMEOUT;
         private boolean built;
 
@@ -270,7 +278,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
             ensureOpen();
 
             if (closeable instanceof AsyncCloseable asyncCloseable) {
-                asyncCloseables.add(asyncCloseable::closeAsync);
+                asyncCloseables.add(new AsyncCloseRegistration(closeable, asyncCloseable::closeAsync));
                 return this;
             }
             closeables.add(closeable);
@@ -288,7 +296,7 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
             ensureOpen();
 
-            asyncCloseables.add(asyncCloseable);
+            asyncCloseables.add(new AsyncCloseRegistration(null, asyncCloseable));
 
             return this;
         }

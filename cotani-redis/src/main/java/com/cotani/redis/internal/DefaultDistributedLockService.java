@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -36,12 +37,15 @@ public final class DefaultDistributedLockService implements DistributedLockServi
 
     private final Supplier<StatefulRedisConnection<String, String>> connectionSupplier;
     private final @Nullable PaperTaskScheduler scheduler;
+    private final ScheduledExecutorService delayExecutor;
 
     public DefaultDistributedLockService(
             Supplier<StatefulRedisConnection<String, String>> connectionSupplier,
-            @Nullable PaperTaskScheduler scheduler) {
+            @Nullable PaperTaskScheduler scheduler,
+            ScheduledExecutorService delayExecutor) {
         this.connectionSupplier = Objects.requireNonNull(connectionSupplier, "connectionSupplier");
         this.scheduler = scheduler;
+        this.delayExecutor = Objects.requireNonNull(delayExecutor, "delayExecutor");
     }
 
     @Override
@@ -112,8 +116,10 @@ public final class DefaultDistributedLockService implements DistributedLockServi
                 return;
             }
 
-            CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS)
-                    .execute(() -> attemptAcquisitionLoop(key, leaseTime, deadlineNanos, nextDelay, resultFuture));
+            var _ = delayExecutor.schedule(
+                    () -> attemptAcquisitionLoop(key, leaseTime, deadlineNanos, nextDelay, resultFuture),
+                    delayMillis,
+                    TimeUnit.MILLISECONDS);
         });
     }
 
@@ -242,8 +248,7 @@ public final class DefaultDistributedLockService implements DistributedLockServi
             var _ = scheduler.asyncLater(renewalAction, Duration.ofMillis(delayMillis));
             return;
         }
-        CompletableFuture.delayedExecutor(delayMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
-                .execute(renewalAction);
+        var _ = delayExecutor.schedule(renewalAction, delayMillis, TimeUnit.MILLISECONDS);
     }
 
     public CompletionStage<Boolean> renewLockAsync(LockKey key, LockToken token, Duration leaseTime) {

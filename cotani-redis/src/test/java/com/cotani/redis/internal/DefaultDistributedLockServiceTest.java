@@ -20,6 +20,7 @@ import io.lettuce.core.api.async.RedisAsyncCommands;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ class DefaultDistributedLockServiceTest {
 
     private StatefulRedisConnection<String, String> connection;
     private RedisAsyncCommands<String, String> commands;
+    private ScheduledExecutorService delayExecutor;
     private DefaultDistributedLockService lockService;
 
     @BeforeEach
@@ -36,7 +38,8 @@ class DefaultDistributedLockServiceTest {
         connection = mock(StatefulRedisConnection.class);
         commands = mock(RedisAsyncCommands.class);
         when(connection.async()).thenReturn(commands);
-        lockService = new DefaultDistributedLockService(() -> connection, null);
+        delayExecutor = mock(ScheduledExecutorService.class);
+        lockService = new DefaultDistributedLockService(() -> connection, null, delayExecutor);
     }
 
     @Test

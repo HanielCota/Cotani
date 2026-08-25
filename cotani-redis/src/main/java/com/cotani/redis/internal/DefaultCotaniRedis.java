@@ -113,7 +113,8 @@ public final class DefaultCotaniRedis implements CotaniRedis {
             return thread;
         });
 
-        this.lockService = new DefaultDistributedLockService(this::requireCommandsConnection, scheduler);
+        this.lockService =
+                new DefaultDistributedLockService(this::requireCommandsConnection, scheduler, rpcFallbackExecutor);
         this.keyValueStore =
                 new DefaultRedisKeyValueStore(this::requireCommandsConnection, this::requireBinaryConnection);
         this.sortedSetStore = new DefaultRedisSortedSetStore(this::requireCommandsConnection);

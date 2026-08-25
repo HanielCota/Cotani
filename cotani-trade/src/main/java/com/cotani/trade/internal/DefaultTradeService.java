@@ -74,23 +74,6 @@ public final class DefaultTradeService implements TradeService {
             @Nullable EventBus eventBus,
             TradeSettlementService settlementService,
             TradeServiceOptions options,
-            Clock clock) {
-        this(
-                initialTrades,
-                repository,
-                eventBus,
-                settlementService,
-                options,
-                new ExecutorTradeTimeoutScheduler(),
-                clock);
-    }
-
-    public DefaultTradeService(
-            List<TradeSession> initialTrades,
-            @Nullable TradeRepository repository,
-            @Nullable EventBus eventBus,
-            TradeSettlementService settlementService,
-            TradeServiceOptions options,
             TradeTimeoutScheduler timeoutScheduler,
             Clock clock) {
         Objects.requireNonNull(initialTrades, "initialTrades");

@@ -89,12 +89,12 @@ public final class DefaultAnvilPrompt implements AnvilPrompt, ActivePrompt {
 
         dialogService.registerActivePrompt(this);
 
-        initializeInventory(player);
+        initializeInventory(playerId, player);
 
         this.timeoutTask = scheduler.asyncLater(
                 () -> {
                     cancel(CancelReason.TIMEOUT);
-                    scheduler.entity(player, player::closeInventory);
+                    scheduler.entity(playerId, () -> closeInventory(playerId));
                 },
                 timeout);
 
@@ -104,13 +104,25 @@ public final class DefaultAnvilPrompt implements AnvilPrompt, ActivePrompt {
         });
     }
 
-    private void initializeInventory(Player player) {
+    private void initializeInventory(UUID playerId, Player player) {
         if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
-            scheduler.entity(player, () -> openInventory(player));
+            scheduler.entity(playerId, () -> {
+                var currentPlayer = Bukkit.getPlayer(playerId);
+                if (currentPlayer != null && currentPlayer.isOnline()) {
+                    openInventory(currentPlayer);
+                }
+            });
             return;
         }
 
         openInventory(player);
+    }
+
+    private static void closeInventory(UUID playerId) {
+        var player = Bukkit.getPlayer(playerId);
+        if (player != null && player.isOnline()) {
+            player.closeInventory();
+        }
     }
 
     private void openInventory(Player player) {

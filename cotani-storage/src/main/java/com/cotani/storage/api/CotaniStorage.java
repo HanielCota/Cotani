@@ -36,7 +36,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -271,8 +270,7 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
             try {
                 scheduler.asyncExecutor().execute(() -> {
                     try {
-                        closeResources();
-                        completeClose(null);
+                        var _ = closeResourcesAsync().whenComplete((_, failure) -> completeClose(failure));
                     } catch (Throwable failure) {
                         completeClose(failure);
                     }
@@ -314,16 +312,19 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
         return runner.run();
     }
 
-    private void shutdownExecutor() {
-        storageExecutor.shutdown();
-        try {
-            if (!storageExecutor.awaitTermination(SHUTDOWN_TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
-                storageExecutor.shutdownNow();
-            }
-        } catch (InterruptedException interrupted) {
-            storageExecutor.shutdownNow();
-            Thread.currentThread().interrupt();
+    private CompletionStage<Void> awaitExecutorTerminationAsync(long deadlineNanos) {
+        if (storageExecutor.isTerminated()) {
+            return CompletableFuture.completedFuture(null);
         }
+
+        if (System.nanoTime() >= deadlineNanos) {
+            storageExecutor.shutdownNow();
+            return CompletableFuture.completedFuture(null);
+        }
+
+        return scheduler
+                .delayAsync(Duration.ofMillis(25))
+                .thenCompose(_ -> awaitExecutorTerminationAsync(deadlineNanos));
     }
 
     private void executeStorageOperation(Runnable operation) {
@@ -362,15 +363,23 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable {
         }
     }
 
-    private void closeResources() {
+    private CompletionStage<Void> closeResourcesAsync() {
+        final long shutdownDeadlineNanos;
         synchronized (resourceCloseLock) {
             if (!resourcesClosed.compareAndSet(false, true)) {
-                return;
+                return CompletableFuture.completedFuture(null);
             }
-            shutdownExecutor();
-            provider.close();
-            repositories.clear();
+            storageExecutor.shutdown();
+            shutdownDeadlineNanos = System.nanoTime() + SHUTDOWN_TIMEOUT.toNanos();
         }
+
+        return awaitExecutorTerminationAsync(shutdownDeadlineNanos).thenRun(() -> {
+            try {
+                provider.close();
+            } finally {
+                repositories.clear();
+            }
+        });
     }
 
     private void completeClose(@Nullable Throwable failure) {

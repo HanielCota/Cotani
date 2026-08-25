@@ -211,6 +211,62 @@ abstract class ValidateDocumentation : DefaultTask() {
     }
 }
 
+abstract class ValidatePackageConventions : DefaultTask() {
+
+    @get:Internal
+    abstract val rootDirectory: DirectoryProperty
+
+    @get:Input
+    abstract val modules: ListProperty<String>
+
+    @TaskAction
+    fun validate() {
+        val root = rootDirectory.asFile.get()
+        val violations = mutableListOf<String>()
+        val packagePattern = Regex("""(?m)^package\s+([A-Za-z_][\w.]*)\s*;""")
+
+        modules.get().forEach { module ->
+            val javaRoot = root.resolve("cotani-$module/src/main/java")
+            if (!javaRoot.exists()) {
+                return@forEach
+            }
+
+            javaRoot.walkTopDown()
+                .filter { file -> file.isFile && file.extension == "java" }
+                .forEach { file ->
+                    val relative = file.relativeTo(javaRoot).invariantSeparatorsPath
+                    val expectedPackage = relative
+                        .removeSuffix(".java")
+                        .replace('/', '.')
+                        .substringBeforeLast('.')
+                    val declaredPackage = packagePattern.find(file.readText())?.groupValues?.get(1)
+                    if (declaredPackage != expectedPackage) {
+                        violations +=
+                            "${file.relativeTo(root)} declares '$declaredPackage' but its path requires '$expectedPackage'"
+                    }
+                }
+
+            javaRoot.walkTopDown()
+                .filter { directory ->
+                    directory.isDirectory &&
+                        directory.relativeTo(javaRoot).invariantSeparatorsPath.split('/').contains("api") &&
+                        directory.walkTopDown().any { it.isFile && it.extension == "java" }
+                }
+                .forEach { apiDirectory ->
+                    val packageInfo = apiDirectory.resolve("package-info.java")
+                    if (!packageInfo.exists() || !packageInfo.readText().contains("NullMarked")) {
+                        violations +=
+                            "${apiDirectory.relativeTo(root)} must declare @NullMarked in package-info.java"
+                    }
+                }
+        }
+
+        if (violations.isNotEmpty()) {
+            throw GradleException("Package convention validation failed:\n" + violations.joinToString("\n"))
+        }
+    }
+}
+
 group = "com.cotani"
 description = "Cotani — modular Paper library"
 
@@ -329,11 +385,58 @@ subprojects {
     }
 }
 
+val publishedModuleNames = listOf(
+    "core",
+    "audit",
+    "audit-storage",
+    "task",
+    "text",
+    "item",
+    "config",
+    "storage",
+    "cache",
+    "teleport",
+    "user",
+    "economy",
+    "cooldown",
+    "event",
+    "metrics",
+    "gui",
+    "display",
+    "command",
+    "hud",
+    "nametag",
+    "npc",
+    "region",
+    "redis",
+    "dialog",
+    "placeholder",
+    "permission",
+    "inventory",
+    "locale",
+    "party",
+    "friend",
+    "queue",
+    "trade",
+    "punishment",
+    "location",
+    "mail",
+    "reward",
+    "reward-integration",
+)
+
 val validateModuleArchitecture = tasks.register<ValidateModuleArchitecture>("validateModuleArchitecture") {
     group = "verification"
     description = "Validates Cotani module boundaries and Gradle dependency cycles."
     rootDirectory.set(layout.projectDirectory)
-    modules.set(listOf("core", "audit", "audit-storage", "task", "text", "item", "config", "storage", "cache", "teleport", "user", "economy", "cooldown", "event", "metrics", "gui", "display", "command", "hud", "nametag", "npc", "region", "redis", "dialog", "placeholder", "permission", "inventory", "locale", "party", "friend", "queue", "trade", "punishment", "location", "mail", "reward", "reward-integration"))
+    modules.set(publishedModuleNames)
+}
+
+val validatePackageConventions = tasks.register<ValidatePackageConventions>("validatePackageConventions") {
+    group = "verification"
+    description = "Validates Java package paths and null-marked public API packages."
+    rootDirectory.set(layout.projectDirectory)
+    modules.set(publishedModuleNames)
 }
 
 val validateDocumentation = tasks.register<ValidateDocumentation>("validateDocumentation") {
@@ -344,6 +447,7 @@ val validateDocumentation = tasks.register<ValidateDocumentation>("validateDocum
 
 tasks.named("check") {
     dependsOn(validateModuleArchitecture)
+    dependsOn(validatePackageConventions)
     dependsOn(validateDocumentation)
 }
 
@@ -834,4 +938,3 @@ val generateJavadocIndex = tasks.register<GenerateJavadocIndex>("generateJavadoc
 aggregateJavadoc.configure {
     finalizedBy(generateJavadocIndex)
 }
-
