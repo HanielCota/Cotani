@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
-@SuppressWarnings({"NullAway", "removal"})
+@SuppressWarnings("NullAway")
 class SkullTextureResolverBehaviorTest {
     private static final String TEXTURE_ID = "abc123";
     private static final String FULL_URL = "https://textures.minecraft.net/texture/abc123";

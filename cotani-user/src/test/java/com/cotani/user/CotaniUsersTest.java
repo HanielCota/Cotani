@@ -25,7 +25,7 @@ import org.bukkit.plugin.PluginManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({"NullAway", "removal"})
+@SuppressWarnings("NullAway")
 class CotaniUsersTest {
     private final Plugin plugin = mock(Plugin.class);
     private final Server server = mock(Server.class);

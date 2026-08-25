@@ -29,7 +29,7 @@ import org.bukkit.potion.PotionEffect;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-@SuppressWarnings({"NullAway", "removal", "try"})
+@SuppressWarnings({"NullAway", "try"})
 class ItemBuilderBehaviorTest {
     private static final Material MATERIAL = Material.DIAMOND;
 

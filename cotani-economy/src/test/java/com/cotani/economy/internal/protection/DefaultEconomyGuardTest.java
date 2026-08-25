@@ -158,7 +158,6 @@ class DefaultEconomyGuardTest {
                 new BigDecimal("1000000.00"),
                 new BigDecimal("1000.00"),
                 new BigDecimal("1.00"),
-                30,
                 60);
         var guard = new DefaultEconomyGuard(settings);
 

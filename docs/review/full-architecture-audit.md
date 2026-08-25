@@ -935,7 +935,7 @@ Caches locais não observavam outra instância e flush de muitas chaves criava f
 `CaffeineDataCacheCoordinationTest` cobre duas instâncias, proteção de dirty state e 10 mil saves com pico limitado. A suite economy de containers cobre duas instâncias sobre o mesmo banco.
 
 ### Compatibilidade
-`balanceCacheSeconds` foi preservado e marcado deprecated como opção legada sem efeito. Caches genéricos continuam locais/eventuais sem um bus compartilhado, agora de forma explícita no contrato.
+A configuração de cache de saldo foi removida por não ter efeito. Caches genéricos continuam locais/eventuais sem um bus compartilhado, agora de forma explícita no contrato.
 
 ## [P2] Cooldown atômico entre servidores e cleanup proprietário
 
@@ -975,13 +975,13 @@ Construtores antigos de teleporte foram preservados com reconciliação padrão 
 Getters nullable de `Row`, implementações públicas não demarcadas e resolver estático de skull aumentavam NPE, acoplamento e estado global entre plugins/testes.
 
 ### Correção implementada
-`Row.getString` é non-null fail-fast; getters `Optional` foram adicionados para todos os tipos e métodos nullable legados foram deprecados. `SkullBuilder.create(resolver)` permite injeção e `create()` usa resolver uncached sem singleton estático. Declarações públicas em `impl/internal` são marcadas `@InternalApi`; `validateModuleArchitecture` falha para novas exposições não marcadas ou importadas entre módulos.
+`Row.getString` é non-null fail-fast; getters `Optional` são a única API para valores potencialmente ausentes. `SkullBuilder.create(resolver)` permite injeção e `create()` usa resolver uncached sem singleton estático. Declarações públicas em `impl/internal` são marcadas `@InternalApi`; `validateModuleArchitecture` falha para novas exposições não marcadas ou importadas entre módulos.
 
 ### Testes
 `RowTest`, `SkullBuilderTest`/`SkullTextureResolverTest` e a validação arquitetural do build.
 
 ### Compatibilidade
-Métodos nullable permanecem disponíveis durante a migração; a remoção futura continua reservada a major release. A anotação torna o risco explícito sem quebra binária imediata.
+Consumidores de valores nullable devem usar os getters `Optional`; a mudança elimina a superfície que permitia `null` inesperado.
 
 ## Mudanças de API e plano de migração
 
@@ -992,7 +992,6 @@ Métodos nullable permanecem disponíveis durante a migração; a remoção futu
 | `MetricsConfig.host` | forma do record mudou; construtor antigo preservado | usar construtor de 5 args para bind público; revisar reflection/destructuring |
 | `CotaniMetricsModule.prometheusServer(): Optional` | source incompatible para quem esperava nullable | usar `ifPresent`, `orElseThrow` ou `isEmpty` |
 | `EconomySettings.currencyDefinitions` | forma/equals do record mudou; overload antigo preservado | declarar uma `CurrencyDefinition` por moeda; fallback legado só para migração |
-| `EconomySettings.balanceCacheSeconds` | opção deprecated e sem efeito | remover a configuração; o saldo passa a usar SQL como fonte forte |
 | retry de stage externo | mudança semântica | fornecer supplier repetível à origem da chain |
 | saturação do task executor | agora rejeita | tratar `RejectedExecutionException` e aplicar admission policy explícita |
 | `CotaniStorageBuilder.admissionQueueCapacity`/`executorStats` | adições; saturação SQL agora é observável | dimensionar fila pelo workload e tratar conclusão excepcional |
@@ -1001,7 +1000,6 @@ Métodos nullable permanecem disponíveis durante a migração; a remoção futu
 | `DistributedCooldownService` | nova API assíncrona | registrar `CotaniCooldowns.migrations()` e usar `CotaniCooldowns.distributed(...)` |
 | `ExecutionSettings.reconciliationTimeout` | forma do record mudou; construtor antigo preservado | configurar deadline e tratar `OUTCOME_INDETERMINATE`/quarentena |
 | `EventDispatchPolicy` e `EventBus.close()` | política/lifecycle aditivos | fechar o bus criado pela factory e dimensionar deadline de listener async |
-| getters `Row.*Optional` | adições; métodos nullable legados deprecated | migrar ausência esperada para `Optional`; usar `getString` apenas para coluna obrigatória |
 | `SkullBuilder.create(SkullTextureResolver)` | overload aditivo | injetar resolver compartilhado quando cache por plugin for desejado |
 | sync close/config I/O no servidor | agora rejeita | usar os métodos `*Async` e compor a conclusão |
 | runtime Java/Paper | baseline elevado/explicitado | atualizar runtime para Java 25/Paper 26.2 ou permanecer em release anterior |

@@ -18,7 +18,6 @@ class PendingTeleportListenerTest {
     private final PendingTeleportListener listener = new PendingTeleportListener(pendingService);
 
     @Test
-    @SuppressWarnings("deprecation")
     void cancelsWhenPlayerAttacksDirectly() {
         UUID playerId = UUID.randomUUID();
         Player attacker = mock(Player.class);
@@ -33,7 +32,6 @@ class PendingTeleportListenerTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     void cancelsWhenPlayerAttacksWithProjectile() {
         UUID playerId = UUID.randomUUID();
         Player shooter = mock(Player.class);

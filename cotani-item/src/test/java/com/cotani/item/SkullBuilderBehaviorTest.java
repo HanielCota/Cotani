@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-@SuppressWarnings({"NullAway", "removal", "try"})
+@SuppressWarnings({"NullAway", "try"})
 class SkullBuilderBehaviorTest {
     private static final String BASE64 = "aGVsbG8=";
 

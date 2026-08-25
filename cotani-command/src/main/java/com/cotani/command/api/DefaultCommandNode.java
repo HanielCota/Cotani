@@ -21,7 +21,7 @@ final class DefaultCommandNode implements CommandNode {
     private final SenderType senderType;
     private final PermissionRequirement permission;
     private final CooldownEvaluator cooldown;
-    private final ExecutionTarget executionTarget;
+    private final CommandExecutionMode executionMode;
     private final List<Argument<?>> arguments;
     private final Map<String, CommandNode> subcommands;
     private final @Nullable SyncCommandHandler syncHandler;
@@ -36,7 +36,7 @@ final class DefaultCommandNode implements CommandNode {
             SenderType senderType,
             PermissionRequirement permission,
             CooldownEvaluator cooldown,
-            ExecutionTarget executionTarget,
+            CommandExecutionMode executionMode,
             List<Argument<?>> arguments,
             Map<String, CommandNode> subcommands,
             @Nullable SyncCommandHandler syncHandler,
@@ -53,7 +53,7 @@ final class DefaultCommandNode implements CommandNode {
         this.senderType = Objects.requireNonNull(senderType, "senderType");
         this.permission = Objects.requireNonNull(permission, "permission");
         this.cooldown = Objects.requireNonNull(cooldown, "cooldown");
-        this.executionTarget = Objects.requireNonNull(executionTarget, "executionTarget");
+        this.executionMode = Objects.requireNonNull(executionMode, "executionMode");
         this.arguments = List.copyOf(Objects.requireNonNull(arguments, "arguments"));
 
         var subMap = new HashMap<String, CommandNode>();
@@ -102,8 +102,8 @@ final class DefaultCommandNode implements CommandNode {
     }
 
     @Override
-    public ExecutionTarget executionTarget() {
-        return executionTarget;
+    public CommandExecutionMode executionMode() {
+        return executionMode;
     }
 
     @Override

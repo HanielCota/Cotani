@@ -8,7 +8,6 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 @InternalApi
@@ -28,17 +27,6 @@ public final class DialogChatListener implements Listener {
             event.setCancelled(true);
             String rawText = PlainTextComponentSerializer.plainText().serialize(event.message());
             chatPrompt.handleInput(player, rawText);
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onBukkitChat(AsyncPlayerChatEvent event) {
-        var player = event.getPlayer();
-        var activePrompt = dialogService.getActivePrompt(player.getUniqueId());
-        if (activePrompt instanceof DefaultChatPrompt<?> chatPrompt) {
-            event.setCancelled(true);
-            chatPrompt.handleInput(player, event.getMessage());
         }
     }
 

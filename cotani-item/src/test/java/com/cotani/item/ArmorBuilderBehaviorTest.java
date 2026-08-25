@@ -15,7 +15,7 @@ import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-@SuppressWarnings({"NullAway", "removal", "try"})
+@SuppressWarnings({"NullAway", "try"})
 class ArmorBuilderBehaviorTest {
     private static void withArmorMaterials(CheckedBody body) {
         try (MockedStatic<ItemStack> items = mockStatic(ItemStack.class)) {

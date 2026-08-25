@@ -29,7 +29,7 @@ class CommandBuilderTest {
         assertTrue(node.usage().isPresent());
         assertEquals("/test <arg>", node.usage().get());
         assertEquals(SenderType.PLAYER, node.senderType());
-        assertEquals(ExecutionTarget.SYNC, node.executionTarget());
+        assertEquals(CommandExecutionMode.SYNC, node.executionMode());
         assertEquals(1, node.arguments().size());
         assertTrue(node.canExecute());
     }
@@ -52,11 +52,11 @@ class CommandBuilderTest {
     @Test
     void shouldSetAsyncAndEntityTargets() {
         var asyncNode = CommandBuilder.of("async").executesAsync(ctx -> null).build();
-        assertEquals(ExecutionTarget.ASYNC, asyncNode.executionTarget());
+        assertEquals(CommandExecutionMode.ASYNC, asyncNode.executionMode());
 
         var entityNode =
                 CommandBuilder.of("entity").executesEntity((ctx, player) -> {}).build();
-        assertEquals(ExecutionTarget.ENTITY_REGION, entityNode.executionTarget());
+        assertEquals(CommandExecutionMode.ENTITY_REGION, entityNode.executionMode());
         assertEquals(SenderType.PLAYER, entityNode.senderType());
     }
 

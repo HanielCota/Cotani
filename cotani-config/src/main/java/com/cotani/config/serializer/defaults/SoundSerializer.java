@@ -38,8 +38,7 @@ public final class SoundSerializer implements ConfigSerializer<Sound> {
     }
 
     @Override
-    @SuppressWarnings("removal")
     public Object write(Sound value) {
-        return value.key().toString();
+        return Registry.SOUNDS.getKeyOrThrow(value).toString();
     }
 }

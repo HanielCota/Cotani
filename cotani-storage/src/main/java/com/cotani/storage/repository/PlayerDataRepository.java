@@ -20,13 +20,6 @@ public abstract class PlayerDataRepository<T> extends CrudRepository<UUID, T> {
                         optional.map(CompletableFuture::completedStage).orElseGet(() -> createAsync(playerId, name)));
     }
 
-    /** @deprecated use {@link #findOrCreateAsync(UUID, String)} */
-    @Deprecated(forRemoval = false)
-    @SuppressWarnings("InlineMeSuggester")
-    public CompletionStage<T> findOrCreate(UUID playerId, String name) {
-        return findOrCreateAsync(playerId, name);
-    }
-
     protected CompletionStage<T> createAsync(UUID playerId, String name) {
         return create(playerId, name);
     }

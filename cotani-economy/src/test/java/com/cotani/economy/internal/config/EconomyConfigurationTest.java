@@ -23,7 +23,6 @@ class EconomyConfigurationTest {
     Path tempDir;
 
     @Test
-    @SuppressWarnings("deprecation")
     void shouldLoadDefaultSettingsWhenConfigFileIsMissing() {
         var configuration = EconomyConfiguration.load(newPlugin(), mock(PaperTaskScheduler.class));
 
@@ -36,7 +35,6 @@ class EconomyConfigurationTest {
             assertEquals(0, settings.maximumBalance().compareTo(new BigDecimal("1000000000000.00")));
             assertEquals(0, settings.maximumOperationAmount().compareTo(new BigDecimal("100000000.00")));
             assertEquals(0, settings.minimumPayAmount().compareTo(BigDecimal.ONE));
-            assertEquals(30, settings.balanceCacheSeconds());
             assertEquals(60, settings.topCacheSeconds());
         } finally {
             configuration.close();
@@ -44,7 +42,6 @@ class EconomyConfigurationTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     void shouldLoadCustomValuesFromConfigFile() throws Exception {
         Files.writeString(tempDir.resolve("economy.yml"), """
                 economy:
@@ -59,7 +56,6 @@ class EconomyConfigurationTest {
                     maximum-operation-amount: "250"
                     minimum-pay-amount: "1"
                   cache:
-                    balance-expire-after-seconds: 15
                     top-expire-after-seconds: 45
                 """, StandardCharsets.UTF_8);
 
@@ -76,7 +72,6 @@ class EconomyConfigurationTest {
             assertEquals(0, settings.maximumBalance().compareTo(new BigDecimal("5000")));
             assertEquals(0, settings.maximumOperationAmount().compareTo(new BigDecimal("250")));
             assertEquals(0, settings.minimumPayAmount().compareTo(BigDecimal.ONE));
-            assertEquals(15, settings.balanceCacheSeconds());
             assertEquals(45, settings.topCacheSeconds());
         } finally {
             configuration.close();

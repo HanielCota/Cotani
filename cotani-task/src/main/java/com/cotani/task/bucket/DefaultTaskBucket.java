@@ -6,7 +6,7 @@ import com.cotani.task.api.DelayedTaskScheduler;
 import com.cotani.task.api.PaperTaskScheduler;
 import com.cotani.task.api.SchedulerTask;
 import com.cotani.task.throttle.RateLimiter;
-import com.cotani.task.throttle.TokenBucketRateLimiter;
+import com.cotani.task.throttle.TaskTokenBucketRateLimiter;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -101,7 +101,7 @@ public final class DefaultTaskBucket implements TaskBucket {
         Objects.requireNonNull(bucketName, "bucketName");
 
         return limiters.computeIfAbsent(
-                bucketName, ignored -> TokenBucketRateLimiter.create(defaultCapacity, defaultRefillPeriod));
+                bucketName, ignored -> TaskTokenBucketRateLimiter.create(defaultCapacity, defaultRefillPeriod));
     }
 
     private SchedulerTask runThrottled(

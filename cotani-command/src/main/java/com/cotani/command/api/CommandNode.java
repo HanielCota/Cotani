@@ -61,11 +61,11 @@ public interface CommandNode {
     CooldownEvaluator cooldown();
 
     /**
-     * Execution target (Sync, Async, or Entity Region).
+     * Command execution mode (Sync, Async, or Entity Region).
      *
-     * @return execution target
+     * @return execution mode
      */
-    ExecutionTarget executionTarget();
+    CommandExecutionMode executionMode();
 
     /**
      * List of argument definitions expected by this command node.

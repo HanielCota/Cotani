@@ -19,7 +19,6 @@ public record EconomySettings(
         BigDecimal maximumBalance,
         BigDecimal maximumOperationAmount,
         BigDecimal minimumPayAmount,
-        int balanceCacheSeconds,
         int topCacheSeconds) {
     private static final String STARTING_BALANCE_SETTING = "startingBalance";
     private static final String MAXIMUM_BALANCE_SETTING = "maximumBalance";
@@ -37,7 +36,7 @@ public record EconomySettings(
 
         currencies = resolveCurrencies(defaultCurrency, currencies);
         validateGlobalLimits(startingBalance, maximumBalance, maximumOperationAmount, minimumPayAmount);
-        validateCacheDurations(balanceCacheSeconds, topCacheSeconds);
+        validateCacheDurations(topCacheSeconds);
         currencyDefinitions = resolveDefinitions(
                 currencies,
                 currencyDefinitions,
@@ -48,20 +47,7 @@ public record EconomySettings(
         requireEnabledDefaultCurrency(defaultCurrency, currencyDefinitions);
     }
 
-    /**
-     * Legacy local-cache setting retained for source compatibility.
-     *
-     * @deprecated balance reads are strongly consistent and no longer cached by the module
-     *     bootstrap
-     */
-    @Override
-    @Deprecated(forRemoval = false)
-    @SuppressWarnings("java:S1133") // Retained intentionally for source compatibility.
-    public int balanceCacheSeconds() {
-        return balanceCacheSeconds;
-    }
-
-    /** Backward-compatible constructor using global limits for every registered currency. */
+    /** Constructor using global limits for every registered currency. */
     public EconomySettings(
             EconomyCurrency defaultCurrency,
             Map<CurrencyId, EconomyCurrency> currencies,
@@ -69,7 +55,6 @@ public record EconomySettings(
             BigDecimal maximumBalance,
             BigDecimal maximumOperationAmount,
             BigDecimal minimumPayAmount,
-            int balanceCacheSeconds,
             int topCacheSeconds) {
         this(
                 defaultCurrency,
@@ -79,20 +64,16 @@ public record EconomySettings(
                 maximumBalance,
                 maximumOperationAmount,
                 minimumPayAmount,
-                balanceCacheSeconds,
                 topCacheSeconds);
     }
 
-    /**
-     * Backward-compatible constructor for a single default currency registry.
-     */
+    /** Constructor for a single default currency registry. */
     public EconomySettings(
             EconomyCurrency defaultCurrency,
             BigDecimal startingBalance,
             BigDecimal maximumBalance,
             BigDecimal maximumOperationAmount,
             BigDecimal minimumPayAmount,
-            int balanceCacheSeconds,
             int topCacheSeconds) {
         this(
                 defaultCurrency,
@@ -101,7 +82,6 @@ public record EconomySettings(
                 maximumBalance,
                 maximumOperationAmount,
                 minimumPayAmount,
-                balanceCacheSeconds,
                 topCacheSeconds);
     }
 
@@ -115,7 +95,6 @@ public record EconomySettings(
                 new BigDecimal("1000000000000").setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY),
                 new BigDecimal("100000000").setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY),
                 BigDecimal.ONE.setScale(currency.decimalPlaces(), RoundingMode.UNNECESSARY),
-                30,
                 60);
     }
 
@@ -135,7 +114,6 @@ public record EconomySettings(
                 new BigDecimal("1000000000000").setScale(defaultCurrency.decimalPlaces(), RoundingMode.UNNECESSARY),
                 new BigDecimal("100000000").setScale(defaultCurrency.decimalPlaces(), RoundingMode.UNNECESSARY),
                 BigDecimal.ONE.setScale(defaultCurrency.decimalPlaces(), RoundingMode.UNNECESSARY),
-                30,
                 60);
     }
 
@@ -223,10 +201,7 @@ public record EconomySettings(
                 minimumPayAmount, maximumOperationAmount, MINIMUM_PAY_AMOUNT_SETTING, MAXIMUM_OPERATION_AMOUNT_SETTING);
     }
 
-    private static void validateCacheDurations(int balanceCacheSeconds, int topCacheSeconds) {
-        if (balanceCacheSeconds < 0) {
-            throw new IllegalArgumentException("balanceCacheSeconds cannot be negative.");
-        }
+    private static void validateCacheDurations(int topCacheSeconds) {
         if (topCacheSeconds < 0) {
             throw new IllegalArgumentException("topCacheSeconds cannot be negative.");
         }

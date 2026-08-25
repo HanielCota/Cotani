@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
-@SuppressWarnings({"NullAway", "unchecked", "removal"})
+@SuppressWarnings({"NullAway", "unchecked"})
 class CotaniConfigsBuilderTest {
     @Test
     void loadAsyncReturnsStageThatCompletesAfterReload(@TempDir Path tempDir) {

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-@SuppressWarnings({"NullAway", "removal"})
+@SuppressWarnings("NullAway")
 class DefaultUserModuleTest {
     private final Plugin plugin = mock(Plugin.class);
     private final Server server = mock(Server.class);

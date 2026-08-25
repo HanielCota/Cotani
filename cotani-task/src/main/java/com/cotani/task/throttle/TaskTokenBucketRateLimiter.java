@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 @InternalApi
-public final class TokenBucketRateLimiter implements RateLimiter {
+public final class TaskTokenBucketRateLimiter implements RateLimiter {
     private static final long NANOTOKENS_PER_TOKEN = 1_000_000_000L;
 
     private final long capacityNanotokens;
@@ -14,11 +14,11 @@ public final class TokenBucketRateLimiter implements RateLimiter {
     private final long refillPeriodNanos;
     private final AtomicReference<State> state;
 
-    private TokenBucketRateLimiter(long capacity, Duration refillPeriod) {
+    private TaskTokenBucketRateLimiter(long capacity, Duration refillPeriod) {
         this(capacity, capacity, refillPeriod);
     }
 
-    private TokenBucketRateLimiter(long capacity, long refillTokens, Duration refillPeriod) {
+    private TaskTokenBucketRateLimiter(long capacity, long refillTokens, Duration refillPeriod) {
         if (capacity <= 0) {
             throw new IllegalArgumentException("capacity must be positive");
         }
@@ -39,12 +39,12 @@ public final class TokenBucketRateLimiter implements RateLimiter {
         this.state = new AtomicReference<>(new State(capacityNanotokens, System.nanoTime()));
     }
 
-    public static TokenBucketRateLimiter create(long capacity, Duration refillPeriod) {
-        return new TokenBucketRateLimiter(capacity, refillPeriod);
+    public static TaskTokenBucketRateLimiter create(long capacity, Duration refillPeriod) {
+        return new TaskTokenBucketRateLimiter(capacity, refillPeriod);
     }
 
-    public static TokenBucketRateLimiter create(long capacity, long refillTokens, Duration refillPeriod) {
-        return new TokenBucketRateLimiter(capacity, refillTokens, refillPeriod);
+    public static TaskTokenBucketRateLimiter create(long capacity, long refillTokens, Duration refillPeriod) {
+        return new TaskTokenBucketRateLimiter(capacity, refillTokens, refillPeriod);
     }
 
     @Override

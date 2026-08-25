@@ -31,7 +31,6 @@ class EconomySettingsTest {
             BigDecimal.ONE.setScale(COINS.decimalPlaces(), RoundingMode.UNNECESSARY);
 
     @Test
-    @SuppressWarnings("deprecation")
     void shouldCreateDefaultSettingsForSingleCurrency() {
         var settings = EconomySettings.defaultSettings(COINS);
 
@@ -42,7 +41,6 @@ class EconomySettingsTest {
         assertEquals(0, settings.maximumBalance().compareTo(SCALED_MAX));
         assertEquals(0, settings.maximumOperationAmount().compareTo(SCALED_MAX_OP));
         assertEquals(0, settings.minimumPayAmount().compareTo(SCALED_MIN_PAY));
-        assertEquals(30, settings.balanceCacheSeconds());
         assertEquals(60, settings.topCacheSeconds());
     }
 
@@ -65,13 +63,11 @@ class EconomySettingsTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    void shouldSupportBackwardCompatibleConstructors() {
+    void shouldSupportConvenienceConstructors() {
         var full = new EconomySettings(
-                COINS, Map.of(COINS.id(), COINS), SCALED_ZERO, SCALED_MAX, SCALED_MAX_OP, SCALED_MIN_PAY, 15, 45);
-        var single = new EconomySettings(COINS, SCALED_ZERO, SCALED_MAX, SCALED_MAX_OP, SCALED_MIN_PAY, 15, 45);
+                COINS, Map.of(COINS.id(), COINS), SCALED_ZERO, SCALED_MAX, SCALED_MAX_OP, SCALED_MIN_PAY, 45);
+        var single = new EconomySettings(COINS, SCALED_ZERO, SCALED_MAX, SCALED_MAX_OP, SCALED_MIN_PAY, 45);
 
-        assertEquals(15, full.balanceCacheSeconds());
         assertEquals(45, single.topCacheSeconds());
         assertEquals(COINS, single.requireCurrency(COINS.id()));
         assertEquals(
@@ -104,7 +100,6 @@ class EconomySettingsTest {
                 SCALED_MAX,
                 SCALED_MAX_OP,
                 SCALED_MIN_PAY,
-                30,
                 60);
 
         assertEquals(0, settings.startingBalance(GEMS.id()).compareTo(BigDecimal.TEN));
@@ -139,7 +134,6 @@ class EconomySettingsTest {
                         SCALED_MAX,
                         SCALED_MAX_OP,
                         SCALED_MIN_PAY,
-                        30,
                         60));
 
         assertTrue(failure.getMessage().contains("no registered currency"));
@@ -161,7 +155,6 @@ class EconomySettingsTest {
                         SCALED_MAX,
                         SCALED_MAX_OP,
                         SCALED_MIN_PAY,
-                        30,
                         60));
 
         assertTrue(failure.getMessage().contains("does not match registered currency"));
@@ -182,7 +175,6 @@ class EconomySettingsTest {
                         SCALED_MAX,
                         SCALED_MAX_OP,
                         SCALED_MIN_PAY,
-                        30,
                         60));
 
         assertTrue(failure.getMessage().contains("not representable by currency"));
@@ -203,7 +195,6 @@ class EconomySettingsTest {
                         SCALED_MAX,
                         SCALED_MAX_OP,
                         SCALED_MIN_PAY,
-                        30,
                         60));
 
         assertTrue(failure.getMessage().contains("default currency must be enabled"));
@@ -221,7 +212,6 @@ class EconomySettingsTest {
                 SCALED_MAX,
                 SCALED_MAX_OP,
                 SCALED_MIN_PAY,
-                30,
                 60);
 
         var failure = assertThrows(IllegalArgumentException.class, () -> settings.requireEnabledDefinition(GEMS.id()));
@@ -241,7 +231,6 @@ class EconomySettingsTest {
                 SCALED_MAX,
                 SCALED_MAX_OP,
                 SCALED_MIN_PAY,
-                30,
                 60);
 
         assertThrows(IllegalArgumentException.class, () -> settings.startingBalance(GEMS.id()));
@@ -270,7 +259,6 @@ class EconomySettingsTest {
                 maximumBalance,
                 maximumOperationAmount,
                 minimumPayAmount,
-                30,
                 60);
     }
 
@@ -312,7 +300,7 @@ class EconomySettingsTest {
     }
 
     @Test
-    void shouldRejectNegativeCacheDurations() {
+    void shouldRejectNegativeTopCacheDuration() {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new EconomySettings(
@@ -322,18 +310,6 @@ class EconomySettingsTest {
                         BigDecimal.TEN,
                         BigDecimal.TEN,
                         BigDecimal.ZERO,
-                        -1,
-                        60));
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> new EconomySettings(
-                        COINS,
-                        Map.of(COINS.id(), COINS),
-                        BigDecimal.ZERO,
-                        BigDecimal.TEN,
-                        BigDecimal.TEN,
-                        BigDecimal.ZERO,
-                        30,
                         -1));
     }
 
@@ -350,12 +326,11 @@ class EconomySettingsTest {
                         BigDecimal.TEN,
                         BigDecimal.TEN,
                         BigDecimal.ZERO,
-                        30,
                         60));
         assertThrows(
                 NullPointerException.class,
                 () -> new EconomySettings(
-                        COINS, null, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, 30, 60));
+                        COINS, null, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, 60));
         assertThrows(
                 NullPointerException.class, () -> settingsWith(null, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO));
         assertThrows(
@@ -373,7 +348,6 @@ class EconomySettingsTest {
                                 BigDecimal.TEN,
                                 BigDecimal.TEN,
                                 BigDecimal.ZERO,
-                                30,
                                 60)
                         .findCurrency(null));
         assertThrows(

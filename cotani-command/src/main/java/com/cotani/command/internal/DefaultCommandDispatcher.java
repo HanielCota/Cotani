@@ -3,8 +3,8 @@ package com.cotani.command.internal;
 import com.cotani.api.InternalApi;
 import com.cotani.command.api.CommandContext;
 import com.cotani.command.api.CommandExecutionException;
+import com.cotani.command.api.CommandExecutionMode;
 import com.cotani.command.api.CommandNode;
-import com.cotani.command.api.ExecutionTarget;
 import com.cotani.command.argument.Argument;
 import com.cotani.command.argument.ParseContext;
 import com.cotani.command.argument.ParseResult;
@@ -72,7 +72,7 @@ public final class DefaultCommandDispatcher {
         }
 
         var context = new DefaultCommandContext(sender, parsedValues, rawArgs, alias, scheduler);
-        executeNode(currentNode, currentNode.executionTarget(), context, sender);
+        executeNode(currentNode, currentNode.executionMode(), context, sender);
     }
 
     private TraversalResult traverseSubcommands(CommandNode rootNode, List<String> rawArgs, List<String> path) {
@@ -166,8 +166,9 @@ public final class DefaultCommandDispatcher {
 
     private record TraversalResult(CommandNode node, int argIndex) {}
 
-    private void executeNode(CommandNode node, ExecutionTarget target, CommandContext context, CommandSender sender) {
-        switch (target) {
+    private void executeNode(
+            CommandNode node, CommandExecutionMode mode, CommandContext context, CommandSender sender) {
+        switch (mode) {
             case SYNC -> {
                 try {
                     var handler = node.syncHandler();

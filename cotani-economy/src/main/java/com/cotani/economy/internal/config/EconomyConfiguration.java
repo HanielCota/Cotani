@@ -42,7 +42,6 @@ public final class EconomyConfiguration implements AutoCloseable {
                 getBigDecimal(
                         config, "economy.limits.maximum-operation-amount", new BigDecimal("100000000"), decimalPlaces),
                 getBigDecimal(config, "economy.limits.minimum-pay-amount", BigDecimal.ONE, decimalPlaces),
-                config.getInt("economy.cache.balance-expire-after-seconds", 30),
                 config.getInt("economy.cache.top-expire-after-seconds", 60));
     }
 

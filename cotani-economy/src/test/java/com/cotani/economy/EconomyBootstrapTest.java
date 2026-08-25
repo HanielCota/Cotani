@@ -118,7 +118,6 @@ class EconomyBootstrapTest {
                 new BigDecimal("100.00"),
                 new BigDecimal("100.00"),
                 BigDecimal.ONE,
-                30,
                 60);
         var executor = Executors.newVirtualThreadPerTaskExecutor();
         var bootstrap = EconomyBootstrap.create(settings, new RecordingPublisher(), executor);
@@ -281,7 +280,6 @@ class EconomyBootstrapTest {
                 new BigDecimal("1000000000000.00"),
                 new BigDecimal("100000000.00"),
                 BigDecimal.ONE,
-                30,
                 60);
         var executor = Executors.newVirtualThreadPerTaskExecutor();
         var bootstrap = EconomyBootstrap.create(settings, new RecordingPublisher(), executor);

@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
-@SuppressWarnings({"NullAway", "removal"})
+@SuppressWarnings("NullAway")
 class UserListenerFailureTest {
     private final Plugin plugin = mock(Plugin.class);
     private final Logger logger = mock(Logger.class);
@@ -104,7 +104,7 @@ class UserListenerFailureTest {
         RuntimeException failure = new RuntimeException("boom");
         when(userService.unload(uniqueId)).thenReturn(CompletableFuture.failedFuture(failure));
 
-        listener.onQuit(new PlayerQuitEvent(player, Component.empty()));
+        listener.onQuit(new PlayerQuitEvent(player, Component.empty(), PlayerQuitEvent.QuitReason.DISCONNECTED));
 
         verify(logger).log(eq(Level.SEVERE), any(Throwable.class), any());
     }

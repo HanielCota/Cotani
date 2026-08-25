@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
-class TokenBucketRateLimiterTest {
+class TaskTokenBucketRateLimiterTest {
     @Test
     void firstAcquireSucceeds() {
-        RateLimiter limiter = TokenBucketRateLimiter.create(2, Duration.ofSeconds(1));
+        RateLimiter limiter = TaskTokenBucketRateLimiter.create(2, Duration.ofSeconds(1));
 
         assertTrue(limiter.tryAcquire());
         assertTrue(limiter.tryAcquire());
@@ -17,18 +17,18 @@ class TokenBucketRateLimiterTest {
 
     @Test
     void rejectsZeroCapacity() {
-        assertThrows(IllegalArgumentException.class, () -> TokenBucketRateLimiter.create(0, Duration.ofSeconds(1)));
+        assertThrows(IllegalArgumentException.class, () -> TaskTokenBucketRateLimiter.create(0, Duration.ofSeconds(1)));
     }
 
     @Test
     void rejectsZeroRefillPeriod() {
-        assertThrows(IllegalArgumentException.class, () -> TokenBucketRateLimiter.create(1, Duration.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> TaskTokenBucketRateLimiter.create(1, Duration.ZERO));
     }
 
     @Test
     @SuppressWarnings("java:S2925")
     void respectsRefillRate() throws InterruptedException {
-        RateLimiter limiter = TokenBucketRateLimiter.create(1, Duration.ofMillis(100));
+        RateLimiter limiter = TaskTokenBucketRateLimiter.create(1, Duration.ofMillis(100));
 
         assertTrue(limiter.tryAcquire());
         assertFalse(limiter.tryAcquire());

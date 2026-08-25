@@ -18,32 +18,4 @@ public interface Repository<K, T> {
     CompletionStage<Void> saveAsync(T entity);
 
     CompletionStage<Void> deleteByIdAsync(K id);
-
-    /** @deprecated use {@link #findByIdAsync(Object)} */
-    @Deprecated(forRemoval = false)
-    @SuppressWarnings("InlineMeSuggester")
-    default CompletionStage<Optional<T>> findById(K id) {
-        return findByIdAsync(id);
-    }
-
-    /** @deprecated use {@link #existsAsync(Object)} */
-    @Deprecated(forRemoval = false)
-    @SuppressWarnings("InlineMeSuggester")
-    default CompletionStage<Boolean> exists(K id) {
-        return existsAsync(id);
-    }
-
-    /** @deprecated use {@link #saveAsync(Object)} */
-    @Deprecated(forRemoval = false)
-    @SuppressWarnings("InlineMeSuggester")
-    default CompletionStage<Void> save(T entity) {
-        return saveAsync(entity);
-    }
-
-    /** @deprecated use {@link #deleteByIdAsync(Object)} */
-    @Deprecated(forRemoval = false)
-    @SuppressWarnings("InlineMeSuggester")
-    default CompletionStage<Void> deleteById(K id) {
-        return deleteByIdAsync(id);
-    }
 }

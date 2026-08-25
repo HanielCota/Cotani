@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
-@SuppressWarnings({"NullAway", "removal"})
+@SuppressWarnings("NullAway")
 class UserListenerTest {
     private final Plugin plugin = mock(Plugin.class);
     private final InternalUserService userService = mock(InternalUserService.class);
@@ -92,7 +92,7 @@ class UserListenerTest {
         when(player.getUniqueId()).thenReturn(uniqueId);
         when(userService.unload(uniqueId)).thenReturn(CompletableFuture.completedFuture(null));
 
-        listener.onQuit(new PlayerQuitEvent(player, Component.empty()));
+        listener.onQuit(new PlayerQuitEvent(player, Component.empty(), PlayerQuitEvent.QuitReason.DISCONNECTED));
 
         verify(userService).unload(uniqueId);
     }

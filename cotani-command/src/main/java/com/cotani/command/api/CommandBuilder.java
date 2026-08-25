@@ -23,7 +23,7 @@ public final class CommandBuilder {
     private SenderType senderType = SenderType.ANY;
     private PermissionRequirement permission = PermissionRequirement.none();
     private CooldownEvaluator cooldown = CooldownEvaluator.none();
-    private ExecutionTarget executionTarget = ExecutionTarget.SYNC;
+    private CommandExecutionMode executionMode = CommandExecutionMode.SYNC;
     private final List<Argument<?>> arguments = new ArrayList<>();
     private final Map<String, CommandNode> subcommands = new HashMap<>();
     private @Nullable SyncCommandHandler syncHandler;
@@ -258,7 +258,7 @@ public final class CommandBuilder {
      */
     public CommandBuilder executes(SyncCommandHandler handler) {
         Objects.requireNonNull(handler, "handler");
-        this.executionTarget = ExecutionTarget.SYNC;
+        this.executionMode = CommandExecutionMode.SYNC;
         this.syncHandler = handler;
         this.asyncHandler = null;
         this.entityHandler = null;
@@ -273,7 +273,7 @@ public final class CommandBuilder {
      */
     public CommandBuilder executesAsync(AsyncCommandHandler handler) {
         Objects.requireNonNull(handler, "handler");
-        this.executionTarget = ExecutionTarget.ASYNC;
+        this.executionMode = CommandExecutionMode.ASYNC;
         this.asyncHandler = handler;
         this.syncHandler = null;
         this.entityHandler = null;
@@ -291,7 +291,7 @@ public final class CommandBuilder {
     public CommandBuilder executesEntity(EntityCommandHandler handler) {
         Objects.requireNonNull(handler, "handler");
         this.senderType = SenderType.PLAYER;
-        this.executionTarget = ExecutionTarget.ENTITY_REGION;
+        this.executionMode = CommandExecutionMode.ENTITY_REGION;
         this.entityHandler = handler;
         this.syncHandler = null;
         this.asyncHandler = null;
@@ -312,7 +312,7 @@ public final class CommandBuilder {
                 senderType,
                 permission,
                 cooldown,
-                executionTarget,
+                executionMode,
                 arguments,
                 subcommands,
                 syncHandler,
