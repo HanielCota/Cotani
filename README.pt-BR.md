@@ -17,7 +17,7 @@ Construa plugins Minecraft escaláveis com limites de execução explícitos, ev
 
 [English](README.md) · [Português](README.pt-BR.md)
 
-[Visão geral](#visão-geral) · [Compatibilidade](#compatibilidade) · [Instalação](#instalação) · [Módulos](#escolha-seus-módulos) · [Arquitetura](#arquitetura) · [Início rápido](#início-rápido-em-cinco-minutos) · [Solução de problemas](#solução-de-problemas) · [Documentação](#documentação)
+[Visão geral](#visão-geral) · [Compatibilidade](#compatibilidade) · [Instalação](#instalação) · [Módulos](#escolha-seus-módulos) · [Arquitetura](#arquitetura) · [Início rápido](#início-rápido-em-cinco-minutos) · [Solução de problemas](#solução-de-problemas) · [Documentação](#documentação--recursos)
 
 ---
 
@@ -215,7 +215,7 @@ Consulte a [referência completa de arquitetura](docs/architecture.md) para visu
 
 ## Início Rápido em Cinco Minutos
 
-Este guia configura um plugin Paper com shadow que lê dados do jogador de forma assíncrona e retorna de maneira segura para a entity thread do jogador antes de alterar o estado do jogo.
+Este guia configura um plugin Paper com shadow cujo comando `/cotanihello` captura o `UUID` do jogador, transita para a entity thread dele e só então acessa o estado do Bukkit/Paper.
 
 ### 1. Configure o Gradle
 
@@ -274,57 +274,82 @@ commands:
 
 ### 3. Adicione a Classe Principal do Plugin
 
-Utilize o [`CotaniQuickStartPlugin` verificado por compilação](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java). Ele demonstra controle fino de lifecycle, injeção por construtor e transições seguras para tarefas de entidade:
+Utilize o [`CotaniQuickStartPlugin` verificado por compilação](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java). Ele demonstra controle fino de lifecycle, injeção por construtor, registro de comandos e transições seguras para tarefas de entidade:
 
 ```java
 public final class CotaniQuickStartPlugin extends JavaPlugin {
 
     private Cotani cotani;
-    private PaperTaskScheduler scheduler;
 
     @Override
     public void onEnable() {
-        this.scheduler = SchedulerFactory.create(this);
+        var scheduler = SchedulerFactory.create(this);
         this.cotani = Cotani.forPlugin(this)
             .withAsync(scheduler::closeAsync)
             .build();
+
+        var command = getCommand("cotanihello");
+
+        if (command == null) {
+            throw new IllegalStateException("Comando 'cotanihello' ausente no plugin.yml");
+        }
+
+        command.setExecutor(new HelloCommand(new HelloService(scheduler)));
     }
 
     @Override
     public void onDisable() {
         if (cotani != null) {
-            cotani.closeAsync().exceptionally(error -> {
-                getLogger().log(Level.SEVERE, "Erro ao encerrar Cotani", error);
-                return null;
+            cotani.closeAsync().whenComplete((_, failure) -> {
+                if (failure != null) {
+                    getLogger().log(Level.SEVERE, "Erro ao encerrar Cotani", failure);
+                }
             });
         }
     }
 }
 ```
 
-### 4. Transição Async para a Entity Thread
+Os records `HelloCommand` e `HelloService` são mostrados no próximo passo.
 
-Quando uma consulta ou serviço assíncrono for concluído, retenha o `UUID` do jogador e transite de volta para a thread da entidade utilizando `TaskChain`:
+### 4. Capture IDs Imutáveis Antes de Acessar o Bukkit
+
+Comandos validam o remetente e delegam imediatamente. O `HelloCommand` verifica o tipo do remetente e repassa apenas o `UUID`; o `HelloService` agenda a resposta na entity thread do jogador, de modo que objetos Bukkit/Paper sejam acessados apenas onde é seguro:
 
 ```java
-UUID playerId = player.getUniqueId();
-CompletionStage<String> messageStage = messageService.loadAsync(playerId);
+record HelloCommand(HelloService helloService) implements CommandExecutor {
 
-scheduler.chain(messageStage)
-    .consumeEntity(playerId, message -> {
-        // Seguro para interagir com objetos Bukkit/Paper na thread do jogador
-        var onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null) {
-            onlinePlayer.sendMessage(Component.text(message));
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] arguments) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Este comando só pode ser usado por um jogador.");
+            return true;
         }
-    })
-    .toCompletionStage()
-    .whenComplete((_, failure) -> {
-        if (failure != null) {
-            logger.log(Level.SEVERE, "Não foi possível enviar mensagem ao jogador " + playerId, failure);
-        }
-    });
+
+        helloService.greet(player.getUniqueId());
+
+        return true;
+    }
+}
+
+record HelloService(PaperTaskScheduler scheduler) {
+
+    private void greet(UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
+
+        scheduler.entity("cotani-hello", playerId, () -> {
+            // Seguro para interagir com objetos Bukkit/Paper na entity thread do jogador
+            var onlinePlayer = Bukkit.getPlayer(playerId);
+
+            if (onlinePlayer != null) {
+                onlinePlayer.sendMessage(Component.text("O Cotani está rodando na sua entity thread."));
+            }
+        });
+    }
+}
 ```
+
+Ambos os records ficam dentro do [`CotaniQuickStartPlugin`](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java) no código-fonte verificado por compilação. Quando sua funcionalidade também executa trabalho assíncrono, como consultas ao banco de dados, comece pelo lado assíncrono, retenha apenas o `UUID` e retorne com `scheduler.chain(stage).consumeEntity(playerId, ...)`; o [Cookbook](docs/ai/cotani-cookbook.md) tem receitas completas.
 
 > [!WARNING]
 > Nunca chame `join()`, `get()` ou `Thread.sleep(...)` em código de servidor. Nunca carregue objetos vivos como `Player`, `World`, `Entity`, `Inventory` ou `Block` através de fronteiras assíncronas.
@@ -346,6 +371,7 @@ scheduler.chain(messageStage)
 
 ## Documentação & Recursos
 
+- 🚀 **[Site de Documentação](https://hanielcota.github.io/Cotani/)** — Guias publicados, mapa de módulos e Javadoc hospedado
 - 🌐 **[Wiki do Cotani](https://github.com/HanielCota/Cotani/wiki)** — Guias oficiais, conceitos, mapa de módulos e padrões de contribuição
 - 📖 **[Cookbook do Cotani](docs/ai/cotani-cookbook.md)** — Receitas práticas para padrões comuns em plugins Paper
 - 🗂️ **[Índice da documentação](docs/README.md)** — Guias mantidos, comandos de validação e política de documentação

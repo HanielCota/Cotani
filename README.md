@@ -17,7 +17,7 @@ Build scalable Minecraft plugins with explicit execution boundaries, zero-reflec
 
 [English](README.md) · [Português](README.pt-BR.md)
 
-[Overview](#overview) · [Compatibility](#compatibility) · [Installation](#installation) · [Modules](#choose-your-modules) · [Architecture](#architecture) · [Quick start](#five-minute-quick-start) · [Troubleshooting](#troubleshooting) · [Documentation](#documentation)
+[Overview](#overview) · [Compatibility](#compatibility) · [Installation](#installation) · [Modules](#choose-your-modules) · [Architecture](#architecture) · [Quick start](#five-minute-quick-start) · [Troubleshooting](#troubleshooting) · [Documentation](#documentation--resources)
 
 ---
 
@@ -215,7 +215,7 @@ Read the [complete architecture reference](docs/architecture.md) for the full de
 
 ## Five-Minute Quick Start
 
-This walkthrough sets up a shaded Paper plugin that reads player data asynchronously and safely returns to the player's entity thread before modifying game state.
+This walkthrough sets up a shaded Paper plugin whose `/cotanihello` command captures the player `UUID`, transitions to the player's entity thread, and only then touches Bukkit/Paper state.
 
 ### 1. Configure Gradle
 
@@ -274,57 +274,82 @@ commands:
 
 ### 3. Add the Plugin Bootstrap
 
-Use the compile-checked [`CotaniQuickStartPlugin`](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java). It demonstrates thin lifecycle ownership, constructor injection, and safe entity task transitions:
+Use the compile-checked [`CotaniQuickStartPlugin`](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java). It demonstrates thin lifecycle ownership, constructor injection, command registration, and safe entity task transitions:
 
 ```java
 public final class CotaniQuickStartPlugin extends JavaPlugin {
 
     private Cotani cotani;
-    private PaperTaskScheduler scheduler;
 
     @Override
     public void onEnable() {
-        this.scheduler = SchedulerFactory.create(this);
+        var scheduler = SchedulerFactory.create(this);
         this.cotani = Cotani.forPlugin(this)
             .withAsync(scheduler::closeAsync)
             .build();
+
+        var command = getCommand("cotanihello");
+
+        if (command == null) {
+            throw new IllegalStateException("Command 'cotanihello' is missing from plugin.yml");
+        }
+
+        command.setExecutor(new HelloCommand(new HelloService(scheduler)));
     }
 
     @Override
     public void onDisable() {
         if (cotani != null) {
-            cotani.closeAsync().exceptionally(error -> {
-                getLogger().log(Level.SEVERE, "Error shutting down Cotani", error);
-                return null;
+            cotani.closeAsync().whenComplete((_, failure) -> {
+                if (failure != null) {
+                    getLogger().log(Level.SEVERE, "Error shutting down Cotani", failure);
+                }
             });
         }
     }
 }
 ```
 
-### 4. Async to Entity-Thread Transition
+The `HelloCommand` and `HelloService` records are shown next.
 
-When an asynchronous query or service completes, retain the player `UUID` and transition back to the entity thread using `TaskChain`:
+### 4. Capture Immutable IDs Before Touching Bukkit
+
+Commands validate the sender and delegate immediately. `HelloCommand` guards the sender type and hands off only the `UUID`; `HelloService` schedules the reply on the player's entity thread, so Bukkit/Paper objects are only touched where it is safe:
 
 ```java
-UUID playerId = player.getUniqueId();
-CompletionStage<String> messageStage = messageService.loadAsync(playerId);
+record HelloCommand(HelloService helloService) implements CommandExecutor {
 
-scheduler.chain(messageStage)
-    .consumeEntity(playerId, message -> {
-        // Safe to interact with Bukkit/Paper objects on the player thread
-        var onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null) {
-            onlinePlayer.sendMessage(Component.text(message));
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] arguments) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return true;
         }
-    })
-    .toCompletionStage()
-    .whenComplete((_, failure) -> {
-        if (failure != null) {
-            logger.log(Level.SEVERE, "Could not message player " + playerId, failure);
-        }
-    });
+
+        helloService.greet(player.getUniqueId());
+
+        return true;
+    }
+}
+
+record HelloService(PaperTaskScheduler scheduler) {
+
+    private void greet(UUID playerId) {
+        Objects.requireNonNull(playerId, "playerId");
+
+        scheduler.entity("cotani-hello", playerId, () -> {
+            // Safe to interact with Bukkit/Paper objects on the player's entity thread
+            var onlinePlayer = Bukkit.getPlayer(playerId);
+
+            if (onlinePlayer != null) {
+                onlinePlayer.sendMessage(Component.text("Cotani is running on your entity thread."));
+            }
+        });
+    }
+}
 ```
+
+Both records live inside [`CotaniQuickStartPlugin`](docs-examples/src/main/java/com/example/cotaniquickstart/CotaniQuickStartPlugin.java) in the compile-checked source. When your feature also performs asynchronous work such as database queries, start from the async side, keep only the `UUID`, and return through `scheduler.chain(stage).consumeEntity(playerId, ...)`; the [Cookbook](docs/ai/cotani-cookbook.md) has complete recipes.
 
 > [!WARNING]
 > Never call `join()`, `get()`, or `Thread.sleep(...)` in server code. Never carry live `Player`, `World`, `Entity`, `Inventory`, or `Block` objects across asynchronous boundaries.
@@ -346,6 +371,7 @@ scheduler.chain(messageStage)
 
 ## Documentation & Resources
 
+- 🚀 **[Documentation Site](https://hanielcota.github.io/Cotani/)** — Published guides, module map, and the hosted Javadoc reference
 - 🌐 **[Cotani Wiki](https://github.com/HanielCota/Cotani/wiki)** — Official guides, concepts, module map, and contribution standards
 - 📖 **[Cotani Cookbook](docs/ai/cotani-cookbook.md)** — Copy-paste recipes for common Paper plugin patterns
 - 🗂️ **[Documentation Index](docs/README.md)** — Maintained guides, validation commands, and documentation policy
