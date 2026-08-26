@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -273,13 +274,34 @@ public final class DefaultCommandDispatcher {
 
         if (cause instanceof CommandExecutionException cmdEx
                 && cmdEx.userMessage().isPresent()) {
-            sender.sendMessage(cmdEx.userMessage().get());
+            deliver(sender, cmdEx.userMessage().get());
             return;
         }
 
         plugin.getLogger()
                 .log(Level.SEVERE, cause, () -> "Unhandled exception executing command '/" + node.name() + "'");
-        sender.sendMessage(feedback.formatExecutionError());
+        deliver(sender, feedback.formatExecutionError());
+    }
+
+    /**
+     * Delivers feedback to a sender from any thread.
+     *
+     * <p>Failure feedback can originate from async continuations (for example
+     * {@code whenComplete} on an {@code executesAsync} stage), so player senders are resolved on
+     * their owning entity thread and other senders are messaged from the global scheduler.
+     */
+    private void deliver(CommandSender sender, Component component) {
+        if (sender instanceof Player player) {
+            var playerId = player.getUniqueId();
+            scheduler.entity(playerId, () -> {
+                var current = Bukkit.getPlayer(playerId);
+                if (current != null && current.isOnline()) {
+                    current.sendMessage(component);
+                }
+            });
+            return;
+        }
+        scheduler.global(() -> sender.sendMessage(component));
     }
 
     private String resolveUsage(List<String> path, CommandNode node) {

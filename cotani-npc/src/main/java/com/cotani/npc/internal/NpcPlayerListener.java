@@ -10,6 +10,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
@@ -28,8 +29,13 @@ public final class NpcPlayerListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        module.handlePlayerJoin(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
-        module.handlePlayerQuit(event.getPlayer());
+        module.handlePlayerQuit(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = false)

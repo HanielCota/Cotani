@@ -18,12 +18,14 @@ public final class CotaniEvents {
     /**
      * Creates an {@link EventBus} instance for the given plugin.
      *
+     * <p>The returned bus owns its internal executors and shuts them down on {@link EventBus#close()}.
+     *
      * @param plugin owning plugin
      * @return event bus instance
      */
     public static EventBus create(Plugin plugin) {
         Objects.requireNonNull(plugin, "plugin");
-        return DefaultEventBus.create(
+        return DefaultEventBus.createOwning(
                 new LoggingEventExceptionHandler(plugin.getLogger()), Executors.newVirtualThreadPerTaskExecutor());
     }
 

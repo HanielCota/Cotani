@@ -54,6 +54,44 @@ public final class DefaultEventBus implements EventBus {
         return create(exceptionHandler, asyncExecutor, EventDispatchPolicy.defaults());
     }
 
+    /**
+     * Creates a bus that owns the given async executor.
+     *
+     * <p>The executor is shut down by {@link #close()} together with the bus-owned listener
+     * executor, so resources created by this factory are never leaked to the caller.
+     *
+     * @param exceptionHandler handler for listener failures
+     * @param ownedAsyncExecutor executor used for {@code publishAsync}; closed with the bus
+     * @return a new event bus owning both internal executors
+     */
+    public static DefaultEventBus createOwning(
+            EventExceptionHandler exceptionHandler, ExecutorService ownedAsyncExecutor) {
+        return createOwning(exceptionHandler, ownedAsyncExecutor, EventDispatchPolicy.defaults());
+    }
+
+    /**
+     * Creates a bus that owns the given async executor with a custom dispatch policy.
+     *
+     * @param exceptionHandler handler for listener failures
+     * @param ownedAsyncExecutor executor used for {@code publishAsync}; closed with the bus
+     * @param policy dispatch policy
+     * @return a new event bus owning both internal executors
+     */
+    public static DefaultEventBus createOwning(
+            EventExceptionHandler exceptionHandler, ExecutorService ownedAsyncExecutor, EventDispatchPolicy policy) {
+        Objects.requireNonNull(exceptionHandler, "exceptionHandler cannot be null");
+        Objects.requireNonNull(ownedAsyncExecutor, "ownedAsyncExecutor cannot be null");
+        Objects.requireNonNull(policy, "policy cannot be null");
+
+        var listenerExecutor = Executors.newVirtualThreadPerTaskExecutor();
+        return new DefaultEventBus(
+                new DefaultEventRegistry(),
+                new DefaultEventDispatcher(exceptionHandler, listenerExecutor, policy),
+                ownedAsyncExecutor,
+                Optional.of(listenerExecutor),
+                Optional.of(ownedAsyncExecutor));
+    }
+
     public static DefaultEventBus create(
             EventExceptionHandler exceptionHandler, Executor asyncExecutor, EventDispatchPolicy policy) {
         Objects.requireNonNull(exceptionHandler, "exceptionHandler cannot be null");

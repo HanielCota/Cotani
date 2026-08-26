@@ -315,21 +315,27 @@ public final class DefaultMarketService implements MarketService {
 
     private <T> CompletionStage<T> serializePurchase(
             MarketPurchaseId purchaseId, Supplier<PurchaseOperation<T>> operation) {
-        synchronized (purchaseTails) {
-            var predecessor = purchaseTails.getOrDefault(purchaseId, completedVoid());
-            var flow = predecessor.handle((ignored, failure) -> null).thenCompose(ignored -> {
-                try {
-                    return completed(operation.get());
-                } catch (RuntimeException failure) {
-                    return failed(failure);
-                }
-            });
-            var visible = flow.thenCompose(PurchaseOperation::visible);
-            CompletionStage<Void> tail =
-                    flow.thenCompose(PurchaseOperation::durable).handle((ignored, failure) -> (Void) null);
-            purchaseTails.put(purchaseId, tail);
-            tail.whenComplete((ignored, failure) -> purchaseTails.remove(purchaseId, tail));
-            return accept(() -> visible);
+        synchronized (lifecycleLock) {
+            if (closed) {
+                return failed(new IllegalStateException("Market service is closed"));
+            }
+            synchronized (purchaseTails) {
+                var predecessor = purchaseTails.getOrDefault(purchaseId, completedVoid());
+                var flow = predecessor.handle((ignored, failure) -> null).thenCompose(ignored -> {
+                    try {
+                        return completed(operation.get());
+                    } catch (RuntimeException failure) {
+                        return failed(failure);
+                    }
+                });
+                var visible = flow.thenCompose(PurchaseOperation::visible);
+                CompletionStage<Void> tail =
+                        flow.thenCompose(PurchaseOperation::durable).handle((ignored, failure) -> (Void) null);
+                purchaseTails.put(purchaseId, tail);
+                tail.whenComplete((ignored, failure) -> purchaseTails.remove(purchaseId, tail));
+                trackActive(visible);
+                return visible;
+            }
         }
     }
 
@@ -344,10 +350,14 @@ public final class DefaultMarketService implements MarketService {
             } catch (RuntimeException failure) {
                 return failed(failure);
             }
-            activeOperations.add(stage);
-            stage.whenComplete((ignored, failure) -> activeOperations.remove(stage));
+            trackActive(stage);
             return stage;
         }
+    }
+
+    private void trackActive(CompletionStage<?> stage) {
+        activeOperations.add(stage);
+        stage.whenComplete((ignored, failure) -> activeOperations.remove(stage));
     }
 
     private void publish(com.cotani.event.api.CotaniEvent event, String description) {

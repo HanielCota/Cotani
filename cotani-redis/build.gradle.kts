@@ -17,5 +17,6 @@ dependencies {
     testImplementation(project(":cache"))
     testImplementation(project(":cooldown"))
     testImplementation(project(":event"))
+    testImplementation(libs.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
 }

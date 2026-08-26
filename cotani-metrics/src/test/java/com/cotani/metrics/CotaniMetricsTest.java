@@ -2,9 +2,8 @@ package com.cotani.metrics;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import net.cotani.metrics.CotaniMetricsRegistry;
-import net.cotani.metrics.api.NoOpMetricsRegistry;
-import net.cotani.metrics.config.MetricsConfig;
+import com.cotani.metrics.api.NoOpMetricsRegistry;
+import com.cotani.metrics.config.MetricsConfig;
 import org.junit.jupiter.api.Test;
 
 /**

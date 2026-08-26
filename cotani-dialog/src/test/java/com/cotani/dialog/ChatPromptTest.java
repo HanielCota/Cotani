@@ -30,6 +30,24 @@ class ChatPromptTest {
         player = mock(Player.class);
         playerId = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(playerId);
+        when(player.isOnline()).thenReturn(true);
+
+        // Deliveries are routed through entity-thread hops; run them inline so replies are
+        // observable synchronously.
+        doAnswer(invocation -> {
+                    Runnable task = invocation.getArgument(1);
+                    task.run();
+                    return null;
+                })
+                .when(scheduler)
+                .entity(any(Player.class), any(Runnable.class));
+        doAnswer(invocation -> {
+                    Runnable task = invocation.getArgument(1);
+                    task.run();
+                    return null;
+                })
+                .when(scheduler)
+                .entity(any(UUID.class), any(Runnable.class));
     }
 
     @Test

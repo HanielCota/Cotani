@@ -359,7 +359,7 @@ subprojects {
                 disable("StringConcatToTextBlock")
                 disable("NotJavadoc")
                 error("NullAway")
-                option("NullAway:AnnotatedPackages", "com.cotani,net.cotani")
+                option("NullAway:AnnotatedPackages", "com.cotani")
                 option("NullAway:AcknowledgeRestrictiveAnnotations", "true")
             }
         }
@@ -406,6 +406,14 @@ subprojects {
             }
         }
     }
+}
+
+val integrationTest = tasks.register("integrationTest") {
+    group = "verification"
+    description = "Runs all Docker-backed integration tests from the published modules."
+    dependsOn(subprojects
+        .filter { it.name !in setOf("bom", "examples") }
+        .map { it.tasks.named("integrationTest") })
 }
 
 val publishedModuleNames = listOf(
@@ -480,6 +488,12 @@ tasks.named("check") {
     dependsOn(validateModuleArchitecture)
     dependsOn(validatePackageConventions)
     dependsOn(validateDocumentation)
+}
+
+tasks.register("releaseVerification") {
+    group = "verification"
+    description = "Runs the checks required before publishing a Cotani release."
+    dependsOn("check", "aggregateJavadoc", integrationTest)
 }
 
 val aggregateJavadoc = tasks.register<Sync>("aggregateJavadoc") {

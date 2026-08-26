@@ -94,7 +94,7 @@ When consuming a local checkout instead, run `./gradlew publishToMavenLocal`, ad
 `com.cotani` coordinates documented in [`cotani-bom/README.md`](cotani-bom/README.md).
 
 > [!IMPORTANT]
-> Cotani modules are libraries, not standalone server plugins. Shade and relocate `com.cotani` (and `net.cotani` if using metrics) into your plugin's private namespace using Gradle Shadow.
+> Cotani modules are libraries, not standalone server plugins. Shade and relocate `com.cotani` into your plugin's private namespace using Gradle Shadow.
 
 ---
 

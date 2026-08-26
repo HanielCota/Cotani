@@ -154,20 +154,26 @@ public final class DefaultChatPrompt<T> implements ChatPrompt<T>, ActivePrompt {
         }
 
         Component errorMsg = invalidInputHandler.apply(context, trimmed);
-        player.sendMessage(errorMsg);
+        scheduler.entity(player, () -> {
+            if (player.isOnline()) {
+                player.sendMessage(errorMsg);
+            }
+        });
     }
 
     @Override
     public void cancel(CancelReason reason) {
         complete(PromptResult.cancelled(reason));
         if (cancelHandler != null && targetPlayerId != null) {
-            var server = org.bukkit.Bukkit.getServer();
-            if (server != null) {
-                var player = server.getPlayer(targetPlayerId);
+            // The player is resolved inside the entity-thread hop: this method can run on async
+            // timer or chat threads and must not touch Bukkit lookups off the owning thread.
+            var playerId = targetPlayerId;
+            scheduler.entity(playerId, () -> {
+                var player = org.bukkit.Bukkit.getPlayer(playerId);
                 if (player != null && player.isOnline()) {
-                    scheduler.entity(player, () -> cancelHandler.accept(player, reason));
+                    cancelHandler.accept(player, reason);
                 }
-            }
+            });
         }
     }
 

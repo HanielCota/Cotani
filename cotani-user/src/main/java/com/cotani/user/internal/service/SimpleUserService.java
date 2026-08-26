@@ -244,7 +244,11 @@ public final class SimpleUserService implements InternalUserService {
             return CompletionStages.completedVoid();
         }
 
-        return repository.saveAll(updatedUsers);
+        var saves = updatedUsers.stream()
+                .map(user -> persistSequentially(user.uniqueId(), () -> repository.save(user)))
+                .map(CompletionStage::toCompletableFuture)
+                .toArray(CompletableFuture<?>[]::new);
+        return CompletableFuture.allOf(saves);
     }
 
     public void clearCache() {

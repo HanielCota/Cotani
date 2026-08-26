@@ -76,6 +76,21 @@ public final class DefaultRewardService implements RewardService {
     }
 
     @Override
+    public CompletionStage<Optional<RewardClaim>> findPendingClaimAsync(UUID playerId, RewardId rewardId) {
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(rewardId, "rewardId");
+        CompletionStage<Void> pendingMutations;
+        synchronized (lifecycleLock) {
+            if (closed.get()) {
+                return failed(closedFailure());
+            }
+            pendingMutations = sequencingTail;
+        }
+        var pending = pendingMutations.thenCompose(ignored -> repository.findPendingClaimAsync(playerId, rewardId));
+        return options.withRepositoryTimeout(pending);
+    }
+
+    @Override
     public CompletionStage<Boolean> markSettledAsync(RewardClaimId claimId) {
         Objects.requireNonNull(claimId, "claimId");
         return enqueue(() -> {

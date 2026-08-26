@@ -3,7 +3,7 @@ package com.cotani.npc.internal;
 import com.cotani.api.InternalApi;
 import com.cotani.npc.api.Npc;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,8 +36,14 @@ public final class NpcRegistry {
         return Optional.ofNullable(npcs.get(npcId));
     }
 
+    /**
+     * Returns an immutable snapshot of all registered NPCs.
+     *
+     * <p>The returned collection is an independent copy; later registrations and removals are not
+     * reflected in it.
+     */
     public Collection<Npc> all() {
-        return Collections.unmodifiableCollection(npcs.values());
+        return List.copyOf(npcs.values());
     }
 
     public boolean contains(UUID npcId) {

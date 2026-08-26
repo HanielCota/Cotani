@@ -1,19 +1,8 @@
 package com.cotani.cleanup.internal;
 
 import com.cotani.api.InternalApi;
-import com.cotani.cleanup.api.CleanupEntitySnapshot;
-import com.cotani.cleanup.api.CleanupExecutor;
-import com.cotani.cleanup.api.CleanupPolicy;
-import com.cotani.cleanup.api.CleanupProtection;
-import com.cotani.cleanup.api.CleanupRemovalResult;
-import com.cotani.cleanup.api.CleanupScan;
-import com.cotani.cleanup.api.CleanupTarget;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import com.cotani.cleanup.api.*;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -36,8 +25,8 @@ public final class InMemoryCleanupExecutor implements CleanupExecutor {
     }
 
     public InMemoryCleanupExecutor(Iterable<CleanupEntitySnapshot> initialEntities, CleanupProtection protection) {
-        this(protection);
         Objects.requireNonNull(initialEntities, "initialEntities");
+        this(protection);
         for (var entity : initialEntities) {
             add(entity);
         }

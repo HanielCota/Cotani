@@ -1,11 +1,11 @@
 package com.cotani.permission.storage;
 
+import com.cotani.permission.api.PermissionAssignments;
 import com.cotani.permission.api.PermissionGroup;
 import com.cotani.permission.api.PermissionNode;
 import com.cotani.permission.api.PermissionRepository;
 import com.cotani.permission.api.PermissionSnapshot;
 import com.cotani.permission.api.PermissionState;
-import com.cotani.permission.api.PermissionSubjectData;
 import com.cotani.storage.api.CotaniStorage;
 import com.cotani.storage.migration.Migration;
 import com.cotani.storage.query.ParameterBinder;
@@ -131,18 +131,18 @@ public final class StoragePermissionRepository implements PermissionRepository {
                 .computeIfAbsent(row.userId(), ignored -> new java.util.LinkedHashSet<>())
                 .add(normalizeGroupName(row.groupName())));
 
-        var users = new LinkedHashMap<UUID, PermissionSubjectData>();
+        var users = new LinkedHashMap<UUID, PermissionAssignments>();
         userPermissions
                 .keySet()
                 .forEach(userId -> users.put(
                         userId,
-                        new PermissionSubjectData(
+                        new PermissionAssignments(
                                 userPermissions.getOrDefault(userId, Map.of()),
                                 userGroupMap.getOrDefault(userId, Set.of()))));
         userGroupMap
                 .keySet()
                 .forEach(userId -> users.putIfAbsent(
-                        userId, new PermissionSubjectData(Map.of(), userGroupMap.getOrDefault(userId, Set.of()))));
+                        userId, new PermissionAssignments(Map.of(), userGroupMap.getOrDefault(userId, Set.of()))));
         return new PermissionSnapshot(users, groupMap);
     }
 

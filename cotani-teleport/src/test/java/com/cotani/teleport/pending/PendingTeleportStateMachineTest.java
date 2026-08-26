@@ -19,7 +19,7 @@ class PendingTeleportStateMachineTest {
     @BeforeEach
     @SuppressWarnings("NullAway")
     void setUp() {
-        var data = PendingTeleportData.create(
+        var data = PendingTeleport.create(
                 UUID.randomUUID(),
                 new Location(null, 0, 0, 0),
                 Duration.ofSeconds(5),

@@ -14,14 +14,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
@@ -42,6 +43,7 @@ public final class DefaultNpcModule implements NpcModule {
     private final NpcSkinFetcher skinFetcher;
     private final NpcPlayerListener listener;
     private final SchedulerTask trackingTask;
+    private final Set<UUID> onlineViewerIds = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean closed = new AtomicBoolean();
 
     public DefaultNpcModule(Plugin plugin, PaperTaskScheduler scheduler) {
@@ -63,6 +65,11 @@ public final class DefaultNpcModule implements NpcModule {
         var server = plugin.getServer();
         if (server != null) {
             server.getPluginManager().registerEvents(listener, plugin);
+            // Seeded on the main thread during onEnable; afterwards maintained by join/quit events so
+            // background tasks never enumerate Bukkit player collections off-thread.
+            for (var online : server.getOnlinePlayers()) {
+                onlineViewerIds.add(online.getUniqueId());
+            }
         }
 
         // Periodic tracking loop (every 100ms / 2 ticks) to update distances and look-at
@@ -135,17 +142,12 @@ public final class DefaultNpcModule implements NpcModule {
         }
 
         var npc = optNpc.get();
-        var server = Bukkit.getServer();
-        if (server == null) {
-            return;
-        }
-
-        for (var viewer : List.copyOf(server.getOnlinePlayers())) {
-            scheduler.entity(viewer.getUniqueId(), () -> {
+        for (var viewerId : List.copyOf(onlineViewerIds)) {
+            scheduler.entity(viewerId, () -> {
                 if (closed.get()) {
                     return;
                 }
-                var currentViewer = Bukkit.getPlayer(viewer.getUniqueId());
+                var currentViewer = Bukkit.getPlayer(viewerId);
                 if (currentViewer != null && currentViewer.isOnline()) {
                     renderer.renderDespawn(currentViewer, npc);
                 }
@@ -213,19 +215,16 @@ public final class DefaultNpcModule implements NpcModule {
             var updated = optNpc.get().toBuilder().equipment(equipment).build();
             registry.update(updated);
 
-            var server = Bukkit.getServer();
-            if (server != null) {
-                for (var viewer : List.copyOf(server.getOnlinePlayers())) {
-                    scheduler.entity(viewer.getUniqueId(), () -> {
-                        if (closed.get()) {
-                            return;
-                        }
-                        var currentViewer = Bukkit.getPlayer(viewer.getUniqueId());
-                        if (currentViewer != null && currentViewer.isOnline()) {
-                            renderer.renderEquipment(currentViewer, updated);
-                        }
-                    });
-                }
+            for (var viewerId : List.copyOf(onlineViewerIds)) {
+                scheduler.entity(viewerId, () -> {
+                    if (closed.get()) {
+                        return;
+                    }
+                    var currentViewer = Bukkit.getPlayer(viewerId);
+                    if (currentViewer != null && currentViewer.isOnline()) {
+                        renderer.renderEquipment(currentViewer, updated);
+                    }
+                });
             }
         }
     }
@@ -237,14 +236,8 @@ public final class DefaultNpcModule implements NpcModule {
             return;
         }
 
-        var server = Bukkit.getServer();
-        if (server == null) {
-            return;
-        }
-
         var npcs = List.of(npc);
-        for (var viewer : List.copyOf(server.getOnlinePlayers())) {
-            var viewerId = viewer.getUniqueId();
+        for (var viewerId : List.copyOf(onlineViewerIds)) {
             scheduler.entity(viewerId, () -> {
                 if (closed.get()) {
                     return;
@@ -268,13 +261,7 @@ public final class DefaultNpcModule implements NpcModule {
             return;
         }
 
-        var server = Bukkit.getServer();
-        if (server == null) {
-            return;
-        }
-
-        for (var viewer : List.copyOf(server.getOnlinePlayers())) {
-            var viewerId = viewer.getUniqueId();
+        for (var viewerId : List.copyOf(onlineViewerIds)) {
             scheduler.entity(viewerId, () -> {
                 if (closed.get()) {
                     return;
@@ -287,8 +274,15 @@ public final class DefaultNpcModule implements NpcModule {
         }
     }
 
-    public void handlePlayerQuit(Player quittingPlayer) {
-        renderer.removeViewer(quittingPlayer.getUniqueId());
+    public void handlePlayerJoin(UUID playerId) {
+        Objects.requireNonNull(playerId, "Parameter 'playerId' must not be null");
+        onlineViewerIds.add(playerId);
+    }
+
+    public void handlePlayerQuit(UUID playerId) {
+        Objects.requireNonNull(playerId, "Parameter 'playerId' must not be null");
+        onlineViewerIds.remove(playerId);
+        renderer.removeViewer(playerId);
     }
 
     private void tickTracking() {
@@ -296,13 +290,9 @@ public final class DefaultNpcModule implements NpcModule {
             return;
         }
 
-        var server = Bukkit.getServer();
-        if (server == null) {
-            return;
-        }
-
-        for (var viewer : List.copyOf(server.getOnlinePlayers())) {
-            var viewerId = viewer.getUniqueId();
+        // Enumerates only the event-maintained viewer id snapshot; player resolution happens on each
+        // viewer's entity thread below.
+        for (var viewerId : List.copyOf(onlineViewerIds)) {
             scheduler.entity(viewerId, () -> {
                 if (closed.get()) {
                     return;
@@ -339,14 +329,12 @@ public final class DefaultNpcModule implements NpcModule {
         registry.clear();
         spatialIndex.clear();
 
-        var server = Bukkit.getServer();
-        if (server == null || server.getOnlinePlayers().isEmpty() || npcs.isEmpty()) {
+        if (npcs.isEmpty() || onlineViewerIds.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
 
         var futures = new ArrayList<CompletableFuture<Void>>();
-        for (var viewer : List.copyOf(server.getOnlinePlayers())) {
-            var viewerId = viewer.getUniqueId();
+        for (var viewerId : List.copyOf(onlineViewerIds)) {
             var cleanupFuture = new CompletableFuture<Void>();
             futures.add(cleanupFuture);
 

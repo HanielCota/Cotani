@@ -97,29 +97,47 @@ public final class VirtualThreadExecutor implements AutoCloseable {
     }
 
     public Future<Void> submit(TaskMetadata metadata, Runnable runnable) {
+        return submit(metadata, runnable, () -> {});
+    }
+
+    public Future<Void> submit(TaskMetadata metadata, Runnable runnable, Runnable onTerminal) {
         Objects.requireNonNull(metadata, METADATA_PARAM);
         Objects.requireNonNull(runnable, RUNNABLE_PARAM);
+        Objects.requireNonNull(onTerminal, "onTerminal");
 
-        return taskExecutor.submit(new NamedTask(metadata, runnable, nameThreads), null);
+        return taskExecutor.submit(new NamedTask(metadata, runnable, nameThreads, onTerminal), null);
     }
 
     @SuppressWarnings("unchecked")
     public Future<Void> schedule(TaskMetadata metadata, Runnable runnable, long delayMillis) {
+        return schedule(metadata, runnable, delayMillis, () -> {});
+    }
+
+    @SuppressWarnings("unchecked")
+    public Future<Void> schedule(TaskMetadata metadata, Runnable runnable, long delayMillis, Runnable onTerminal) {
         Objects.requireNonNull(metadata, METADATA_PARAM);
         Objects.requireNonNull(runnable, RUNNABLE_PARAM);
+        Objects.requireNonNull(onTerminal, "onTerminal");
 
         return (Future<Void>) delayedExecutor.schedule(
-                new NamedTask(metadata, runnable, nameThreads), delayMillis, TimeUnit.MILLISECONDS);
+                new NamedTask(metadata, runnable, nameThreads, onTerminal), delayMillis, TimeUnit.MILLISECONDS);
     }
 
     @SuppressWarnings("unchecked")
     public Future<Void> scheduleAtFixedRate(
             TaskMetadata metadata, Runnable runnable, long initialDelayMillis, long periodMillis) {
+        return scheduleAtFixedRate(metadata, runnable, initialDelayMillis, periodMillis, () -> {});
+    }
+
+    @SuppressWarnings("unchecked")
+    public Future<Void> scheduleAtFixedRate(
+            TaskMetadata metadata, Runnable runnable, long initialDelayMillis, long periodMillis, Runnable onTerminal) {
         Objects.requireNonNull(metadata, METADATA_PARAM);
         Objects.requireNonNull(runnable, RUNNABLE_PARAM);
+        Objects.requireNonNull(onTerminal, "onTerminal");
 
         return (Future<Void>) delayedExecutor.scheduleAtFixedRate(
-                new NamedTask(metadata, runnable, nameThreads),
+                new NamedTask(metadata, runnable, nameThreads, onTerminal),
                 initialDelayMillis,
                 periodMillis,
                 TimeUnit.MILLISECONDS);
@@ -180,22 +198,33 @@ public final class VirtualThreadExecutor implements AutoCloseable {
         }
     }
 
-    private record NamedTask(TaskMetadata metadata, Runnable delegate, boolean nameThread) implements Runnable {
+    private record NamedTask(TaskMetadata metadata, Runnable delegate, boolean nameThread, Runnable onTerminal)
+            implements Runnable {
+        private NamedTask {
+            Objects.requireNonNull(metadata, METADATA_PARAM);
+            Objects.requireNonNull(delegate, RUNNABLE_PARAM);
+            Objects.requireNonNull(onTerminal, "onTerminal");
+        }
+
         @Override
         public void run() {
-            if (!nameThread) {
-                delegate.run();
-                return;
-            }
-
-            Thread currentThread = Thread.currentThread();
-            String originalName = currentThread.getName();
-
             try {
-                currentThread.setName(THREAD_NAME + metadata.name());
-                delegate.run();
+                if (!nameThread) {
+                    delegate.run();
+                    return;
+                }
+
+                Thread currentThread = Thread.currentThread();
+                String originalName = currentThread.getName();
+
+                try {
+                    currentThread.setName(THREAD_NAME + metadata.name());
+                    delegate.run();
+                } finally {
+                    currentThread.setName(originalName);
+                }
             } finally {
-                currentThread.setName(originalName);
+                onTerminal.run();
             }
         }
     }

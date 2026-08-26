@@ -26,6 +26,22 @@ var teleports = CotaniTeleports.create(plugin, combatAdapter, regionAdapter, sch
 
 ## Metrics namespace
 
-Use `com.cotani.metrics.CotaniMetrics` as the new stable factory. Returned metrics types retain their `net.cotani.metrics` namespace for binary compatibility. A complete package move is reserved for 2.0 because Java cannot provide transparent aliases for every final class and record.
+All metrics types now live under `com.cotani.metrics`: `CotaniMetricsModule`, `CotaniMetricsRegistry`, `api.*`, `binder.*`, `config.MetricsConfig` and `exporter.PrometheusServer`. The legacy `net.cotani.metrics` packages were removed; update imports and Shadow relocation rules accordingly.
 
+## HUD controller names
 
+The HUD presentation APIs were renamed from `*Manager` to `*Controller` to make their responsibilities explicit:
+`TabListController`, `BossBarController` and `ActionBarController`. Update imports and local variable types; the
+module accessors `HudModule.tabList()`, `HudModule.bossBar()` and `HudModule.actionBar()` return the controller types.
+
+## Permission assignments
+
+`PermissionSubjectData` was replaced by the immutable `PermissionAssignments` value object. Update service and
+repository integrations to use `PermissionAssignments`, including its immutable `permissions()` and `groups()` values.
+
+## Recovery and shutdown behavior
+
+Reward settlement now uses a direct `(playerId, rewardId)` pending-claim lookup, so player-facing recovery is not
+limited to the first 1,000 global claims. Storage and task scheduler shutdowns release owned resources even when an
+executor or delayed scheduler is already unavailable. Marketplace mutations are rejected atomically once shutdown
+begins, while already accepted purchase settlement remains recoverable.

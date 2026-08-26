@@ -11,16 +11,16 @@ import org.jspecify.annotations.Nullable;
 
 @InternalApi
 public final class PendingTeleportStateMachine {
-    private final PendingTeleportData data;
+    private final PendingTeleport data;
     private final AtomicReference<PendingTeleportState> state = new AtomicReference<>(PendingTeleportState.WAITING);
     private final AtomicReference<@Nullable TeleportCancelReason> cancelReason = new AtomicReference<>();
     private final AtomicReference<SchedulerTask> task = new AtomicReference<>(SchedulerTask.noop());
 
-    public PendingTeleportStateMachine(PendingTeleportData data) {
+    public PendingTeleportStateMachine(PendingTeleport data) {
         this.data = Objects.requireNonNull(data, "data");
     }
 
-    public PendingTeleportData data() {
+    public PendingTeleport data() {
         return data;
     }
 

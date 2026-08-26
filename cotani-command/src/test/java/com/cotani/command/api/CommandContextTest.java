@@ -19,18 +19,22 @@ class CommandContextTest {
     @Test
     void shouldIdentifyPlayerAndConsoleSender() {
         var scheduler = mock(PaperTaskScheduler.class);
+        var playerId = java.util.UUID.randomUUID();
         var player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(playerId);
         var playerCtx = new DefaultCommandContext(player, Map.of(), List.of(), "test", scheduler);
 
         assertTrue(playerCtx.isPlayer());
         assertFalse(playerCtx.isConsole());
         assertEquals(player, playerCtx.requirePlayer());
+        assertEquals(java.util.Optional.of(playerId), playerCtx.playerId());
 
         var console = mock(ConsoleCommandSender.class);
         var consoleCtx = new DefaultCommandContext(console, Map.of(), List.of(), "test", scheduler);
 
         assertFalse(consoleCtx.isPlayer());
         assertTrue(consoleCtx.isConsole());
+        assertEquals(java.util.Optional.empty(), consoleCtx.playerId());
         assertThrows(CommandExecutionException.class, consoleCtx::requirePlayer);
     }
 
@@ -70,13 +74,22 @@ class CommandContextTest {
         var bigDecimal = new java.math.BigDecimal("99.99");
 
         var values = Map.<String, Object>of(
-                "longVal", 500L,
-                "doubleVal", 12.34,
-                "bigDecVal", bigDecimal,
-                "boolVal", true,
-                "uuidVal", uuid,
-                "playerVal", player,
-                "durationVal", duration);
+                "longVal",
+                500L,
+                "doubleVal",
+                12.34,
+                "bigDecVal",
+                bigDecimal,
+                "boolVal",
+                true,
+                "uuidVal",
+                uuid,
+                "playerVal",
+                player,
+                "refVal",
+                new com.cotani.command.argument.PlayerRef(uuid, "Haniel"),
+                "durationVal",
+                duration);
 
         var ctx = new DefaultCommandContext(sender, values, List.of(), "test", scheduler);
 
@@ -85,8 +98,12 @@ class CommandContextTest {
         assertEquals(bigDecimal, ctx.getBigDecimal("bigDecVal"));
         assertTrue(ctx.getBoolean("boolVal"));
         assertEquals(uuid, ctx.getUUID("uuidVal"));
-        assertEquals(player, ctx.getPlayer("playerVal"));
+        assertEquals(player, ctx.get("playerVal", Player.class));
         assertEquals(duration, ctx.getDuration("durationVal"));
+
+        var playerRef = ctx.getPlayerRef("refVal");
+        assertEquals(uuid, playerRef.id());
+        assertEquals("Haniel", playerRef.name());
 
         assertEquals(500L, ctx.getOptional("longVal", Long.class).orElseThrow());
         assertEquals(12.34, ctx.getOptional("doubleVal", Double.class).orElseThrow());
@@ -123,6 +140,16 @@ class CommandContextTest {
     void shouldSendReplyVariantsToSender() {
         var scheduler = mock(PaperTaskScheduler.class);
         var sender = mock(CommandSender.class);
+
+        // Replies are delivered through the global scheduler for non-player senders; run inline.
+        doAnswer(invocation -> {
+                    Runnable task = invocation.getArgument(0);
+                    task.run();
+                    return null;
+                })
+                .when(scheduler)
+                .global(any(Runnable.class));
+
         var ctx = new DefaultCommandContext(sender, Map.of(), List.of(), "test", scheduler);
 
         ctx.reply("Hello world");

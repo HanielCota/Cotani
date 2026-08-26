@@ -33,6 +33,19 @@ class VirtualThreadExecutorTest {
     }
 
     @Test
+    void invokesTerminalCallbackAfterExecution() throws ExecutionException, InterruptedException, TimeoutException {
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create();
+        AtomicBoolean terminated = new AtomicBoolean(false);
+
+        var future = executor.submit(METADATA, () -> {}, () -> terminated.set(true));
+
+        future.get(5, TimeUnit.SECONDS);
+        assertTrue(terminated.get());
+
+        executor.close();
+    }
+
+    @Test
     void closeShutsDownExecutor() {
         VirtualThreadExecutor executor = VirtualThreadExecutor.create();
 

@@ -1,7 +1,7 @@
 package com.cotani.teleport.pending;
 
 import com.cotani.api.InternalApi;
-import com.cotani.teleport.util.Locations;
+import com.cotani.teleport.internal.Locations;
 import org.bukkit.Location;
 
 @InternalApi

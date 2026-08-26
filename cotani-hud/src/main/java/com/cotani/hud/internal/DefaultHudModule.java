@@ -1,12 +1,12 @@
 package com.cotani.hud.internal;
 
 import com.cotani.api.InternalApi;
-import com.cotani.hud.api.ActionBarManager;
-import com.cotani.hud.api.BossBarManager;
+import com.cotani.hud.api.ActionBarController;
+import com.cotani.hud.api.BossBarController;
 import com.cotani.hud.api.HudModule;
 import com.cotani.hud.api.Sidebar;
 import com.cotani.hud.api.SidebarBuilder;
-import com.cotani.hud.api.TabListManager;
+import com.cotani.hud.api.TabListController;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.Map;
 import java.util.Objects;
@@ -27,9 +27,9 @@ public final class DefaultHudModule implements HudModule {
     private static final String PLAYER_NULL_MSG = "Parameter 'player' must not be null";
 
     private final PaperTaskScheduler scheduler;
-    private final DefaultTabListManager tabListManager;
-    private final DefaultBossBarManager bossBarManager;
-    private final DefaultActionBarManager actionBarManager;
+    private final DefaultTabListController tabListController;
+    private final DefaultBossBarController bossBarController;
+    private final DefaultActionBarController actionBarController;
     private final HudPlayerQuitListener quitListener;
     private final Map<UUID, Sidebar> sidebars = new ConcurrentHashMap<>();
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -38,9 +38,9 @@ public final class DefaultHudModule implements HudModule {
         Objects.requireNonNull(plugin, "Parameter 'plugin' must not be null");
         this.scheduler = Objects.requireNonNull(scheduler, "Parameter 'scheduler' must not be null");
 
-        this.tabListManager = new DefaultTabListManager(scheduler);
-        this.bossBarManager = new DefaultBossBarManager(scheduler);
-        this.actionBarManager = new DefaultActionBarManager(scheduler);
+        this.tabListController = new DefaultTabListController(scheduler);
+        this.bossBarController = new DefaultBossBarController(scheduler);
+        this.actionBarController = new DefaultActionBarController(scheduler);
         this.quitListener = new HudPlayerQuitListener(this);
 
         plugin.getServer().getPluginManager().registerEvents(quitListener, plugin);
@@ -59,18 +59,18 @@ public final class DefaultHudModule implements HudModule {
     }
 
     @Override
-    public TabListManager tabList() {
-        return tabListManager;
+    public TabListController tabList() {
+        return tabListController;
     }
 
     @Override
-    public BossBarManager bossBar() {
-        return bossBarManager;
+    public BossBarController bossBar() {
+        return bossBarController;
     }
 
     @Override
-    public ActionBarManager actionBar() {
-        return actionBarManager;
+    public ActionBarController actionBar() {
+        return actionBarController;
     }
 
     @Override
@@ -92,9 +92,9 @@ public final class DefaultHudModule implements HudModule {
         if (sidebar != null) {
             sidebar.close();
         }
-        tabListManager.clear(player);
-        bossBarManager.clear(player);
-        actionBarManager.clear(player);
+        tabListController.clear(player);
+        bossBarController.clear(player);
+        actionBarController.clear(player);
     }
 
     @Override
@@ -115,8 +115,8 @@ public final class DefaultHudModule implements HudModule {
         }
         sidebars.clear();
 
-        bossBarManager.close();
-        actionBarManager.close();
-        tabListManager.close();
+        bossBarController.close();
+        actionBarController.close();
+        tabListController.close();
     }
 }

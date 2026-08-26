@@ -4,10 +4,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -145,31 +145,26 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
         }
 
         var asyncTeardown = executeAsyncCloseables(asyncSnapshot).toCompletableFuture();
-        var _ = asyncTeardown
-                .orTimeout(asyncCloseTimeout.toMillis(), TimeUnit.MILLISECONDS)
-                .whenComplete((firstFailure, asyncErr) -> {
-                    var combinedFailure = firstFailure;
+        var _ = asyncTeardown.whenComplete((firstFailure, asyncErr) -> {
+            var combinedFailure = firstFailure;
 
-                    if (asyncErr != null && combinedFailure == null) {
-                        var cause = asyncErr instanceof java.util.concurrent.CompletionException completion
-                                        && completion.getCause() != null
-                                ? completion.getCause()
-                                : asyncErr;
-                        var message = cause instanceof TimeoutException
-                                ? "Failed to close resource within timeout"
-                                : "Failed to execute async closeables";
-                        combinedFailure = new CotaniCloseException(message, cause);
-                    }
+            if (asyncErr != null && combinedFailure == null) {
+                var cause = asyncErr instanceof java.util.concurrent.CompletionException completion
+                                && completion.getCause() != null
+                        ? completion.getCause()
+                        : asyncErr;
+                combinedFailure = new CotaniCloseException("Failed to execute async closeables", cause);
+            }
 
-                    combinedFailure = executeSyncCloseables(syncSnapshot, combinedFailure);
+            combinedFailure = executeSyncCloseables(syncSnapshot, combinedFailure);
 
-                    if (combinedFailure != null) {
-                        result.completeExceptionally(combinedFailure);
-                        return;
-                    }
+            if (combinedFailure != null) {
+                result.completeExceptionally(combinedFailure);
+                return;
+            }
 
-                    result.complete(null);
-                });
+            result.complete(null);
+        });
 
         return result;
     }
@@ -214,21 +209,42 @@ public final class Cotani implements AutoCloseable, AsyncCloseable {
 
         final var capturedFailure = initialFailure;
 
-        return CompletableFuture.allOf(stages.stream()
-                        .map(CompletionStage::toCompletableFuture)
-                        .toArray(CompletableFuture[]::new))
-                .handle((_, _) -> {
-                    var current = capturedFailure;
-                    for (var stage : stages) {
-                        var future = stage.toCompletableFuture();
-                        if (future.isCompletedExceptionally()) {
-                            Throwable cause = future.exceptionNow();
-                            plugin.getLogger().log(Level.SEVERE, "Async closeable failed", cause);
-                            current = mergeFailure(current, cause);
+        var allOf = CompletableFuture.allOf(
+                stages.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new));
+
+        // Enforce the teardown timeout on an independent copy so stages that are still running are
+        // cancelled instead of silently outliving the disable sequence. Cancellation is best effort.
+        var _ = allOf.copy()
+                .orTimeout(asyncCloseTimeout.toMillis(), TimeUnit.MILLISECONDS)
+                .whenComplete((_, timeoutError) -> {
+                    if (timeoutError != null) {
+                        plugin.getLogger()
+                                .log(
+                                        Level.WARNING,
+                                        "Timed out waiting for async closeables; cancelling unfinished stages",
+                                        timeoutError);
+                        for (var stage : stages) {
+                            stage.toCompletableFuture().cancel(true);
                         }
                     }
-                    return current;
                 });
+
+        return allOf.handle((_, _) -> {
+            var current = capturedFailure;
+            for (var stage : stages) {
+                var future = stage.toCompletableFuture();
+                if (future.isCancelled()) {
+                    current = mergeFailure(
+                            current,
+                            new CancellationException("Async closeable did not complete within close timeout"));
+                } else if (future.isCompletedExceptionally()) {
+                    Throwable cause = future.exceptionNow();
+                    plugin.getLogger().log(Level.SEVERE, "Async closeable failed", cause);
+                    current = mergeFailure(current, cause);
+                }
+            }
+            return current;
+        });
     }
 
     private record AsyncCloseRegistration(@Nullable AutoCloseable source, Supplier<CompletionStage<Void>> action) {

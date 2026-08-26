@@ -2,6 +2,9 @@ package com.cotani.reward.api;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -17,6 +20,17 @@ public interface RewardRepository {
     default CompletionStage<List<RewardClaim>> pendingClaimsAsync(int limit) {
         return CompletableFuture.failedFuture(
                 new UnsupportedOperationException("This reward repository does not support pending claim recovery"));
+    }
+
+    /** Finds the oldest unsettled claim for one player and reward without scanning unrelated claims. */
+    default CompletionStage<Optional<RewardClaim>> findPendingClaimAsync(UUID playerId, RewardId rewardId) {
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(rewardId, "rewardId");
+        return pendingClaimsAsync(1_000)
+                .thenApply(pending -> pending.stream()
+                        .filter(claim -> claim.playerId().equals(playerId)
+                                && claim.rewardId().equals(rewardId))
+                        .findFirst());
     }
 
     /** Acknowledges a durable settlement; repeating the acknowledgement is idempotent. Returns false when unknown. */

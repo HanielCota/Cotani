@@ -12,6 +12,7 @@ import com.cotani.redis.lock.DistributedLockService;
 import com.cotani.redis.store.RedisKeyValueStore;
 import com.cotani.task.api.PaperTaskScheduler;
 import io.lettuce.core.*;
+import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.StringCodec;
@@ -41,7 +42,7 @@ public final class DefaultCotaniRedis implements CotaniRedis {
     private final RedisConfig config;
     private final @Nullable PaperTaskScheduler scheduler;
     private final RedisClient redisClient;
-    private final Executor defaultAsyncExecutor;
+    private final ExecutorService defaultAsyncExecutor;
 
     private final ConcurrentHashMap<ChannelId, Set<Consumer<byte[]>>> channelListeners = new ConcurrentHashMap<>();
 
@@ -142,6 +143,10 @@ public final class DefaultCotaniRedis implements CotaniRedis {
 
     @Override
     public synchronized CompletionStage<Void> startAsync() {
+        if (state.get() == RedisState.CLOSING || state.get() == RedisState.CLOSED) {
+            return CompletableFuture.failedFuture(
+                    new IllegalStateException("Redis client is closing or already closed"));
+        }
         if (state.get() == RedisState.CONNECTED) {
             return CompletableFuture.completedFuture(null);
         }
@@ -153,7 +158,7 @@ public final class DefaultCotaniRedis implements CotaniRedis {
         var future = new CompletableFuture<@Nullable Void>();
         this.startFuture = future;
 
-        var _ = CompletableFuture.supplyAsync(
+        var _ = CompletableFuture.runAsync(
                         () -> {
                             try {
                                 this.commandsConnection = redisClient.connect(StringCodec.UTF8);
@@ -180,10 +185,17 @@ public final class DefaultCotaniRedis implements CotaniRedis {
                                     }
                                 });
 
-                                state.set(RedisState.CONNECTED);
-                                return null;
+                                synchronized (this) {
+                                    if (state.get() == RedisState.STARTING) {
+                                        state.set(RedisState.CONNECTED);
+                                    }
+                                }
                             } catch (Exception e) {
-                                state.set(RedisState.FAILED);
+                                synchronized (this) {
+                                    if (state.get() == RedisState.STARTING) {
+                                        state.set(RedisState.FAILED);
+                                    }
+                                }
                                 // Clean up partially established connections
                                 if (pubSubConnection != null) {
                                     try {
@@ -352,23 +364,79 @@ public final class DefaultCotaniRedis implements CotaniRedis {
         this.closeFuture = future;
 
         channelListeners.clear();
-        rpcFallbackExecutor.shutdown();
+        var startCompletion = startFuture == null
+                ? CompletableFuture.<@Nullable Void>completedFuture(null)
+                : startFuture.handle((_, _) -> null);
 
-        CompletableFuture<?> pubSubClose =
-                pubSubConnection != null ? pubSubConnection.closeAsync() : CompletableFuture.completedFuture(null);
-        CompletableFuture<?> binaryClose =
-                binaryConnection != null ? binaryConnection.closeAsync() : CompletableFuture.completedFuture(null);
-        CompletableFuture<?> commandsClose =
-                commandsConnection != null ? commandsConnection.closeAsync() : CompletableFuture.completedFuture(null);
-
-        var _ = CompletableFuture.allOf(pubSubClose, binaryClose, commandsClose)
-                .thenCompose(_ -> redisClient.shutdownAsync())
-                .whenComplete((_, _) -> {
-                    state.set(RedisState.CLOSED);
-                    future.complete(null);
-                });
+        var _ = startCompletion.thenCompose(_ -> closeResourcesAsync()).whenComplete((_, failure) -> {
+            if (failure != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to close Cotani Redis", failure);
+            }
+            state.set(RedisState.CLOSED);
+            if (failure == null) {
+                future.complete(null);
+            } else {
+                future.completeExceptionally(failure);
+            }
+        });
 
         return future;
+    }
+
+    private CompletionStage<Void> closeResourcesAsync() {
+        var failure = new AtomicReference<Throwable>();
+        rpcFallbackExecutor.shutdown();
+        defaultAsyncExecutor.shutdown();
+
+        var pubSubClose = closeConnection(pubSubConnection, failure);
+        var binaryClose = closeConnection(binaryConnection, failure);
+        var commandsClose = closeConnection(commandsConnection, failure);
+
+        return CompletableFuture.allOf(pubSubClose, binaryClose, commandsClose)
+                .thenCompose(_ -> closeClient(failure))
+                .thenRun(() -> {
+                    var closeFailure = failure.get();
+                    if (closeFailure != null) {
+                        throw new CompletionException(closeFailure);
+                    }
+                });
+    }
+
+    private static CompletableFuture<Void> closeConnection(
+            @Nullable StatefulConnection<?, ?> connection, AtomicReference<Throwable> failure) {
+        if (connection == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        try {
+            return connection.closeAsync().handle((_, closeFailure) -> {
+                if (closeFailure != null) {
+                    recordFailure(failure, closeFailure);
+                }
+                return null;
+            });
+        } catch (RuntimeException closeFailure) {
+            recordFailure(failure, closeFailure);
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    private CompletableFuture<Void> closeClient(AtomicReference<Throwable> failure) {
+        try {
+            return redisClient.shutdownAsync().handle((_, shutdownFailure) -> {
+                if (shutdownFailure != null) {
+                    recordFailure(failure, shutdownFailure);
+                }
+                return null;
+            });
+        } catch (RuntimeException shutdownFailure) {
+            recordFailure(failure, shutdownFailure);
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    private static void recordFailure(AtomicReference<Throwable> target, Throwable failure) {
+        var cause = failure instanceof CompletionException && failure.getCause() != null ? failure.getCause() : failure;
+        target.compareAndSet(null, cause);
     }
 
     @Override

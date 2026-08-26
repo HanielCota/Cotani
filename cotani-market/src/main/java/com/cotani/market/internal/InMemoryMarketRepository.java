@@ -57,12 +57,15 @@ public final class InMemoryMarketRepository implements MarketRepository {
         Objects.requireNonNull(now, "now");
         var visible = listings.values().stream()
                 .filter(listing -> listing.isActiveAt(now))
-                .filter(listing ->
-                        query.itemKey() == null || listing.item().key().equals(query.itemKey()))
-                .filter(listing ->
-                        query.currency() == null || listing.price().currency().equals(query.currency()))
-                .filter(listing ->
-                        query.sellerId() == null || listing.sellerId().equals(query.sellerId()))
+                .filter(listing -> query.itemKey()
+                        .map(key -> listing.item().key().equals(key))
+                        .orElse(true))
+                .filter(listing -> query.currency()
+                        .map(cur -> listing.price().currency().equals(cur))
+                        .orElse(true))
+                .filter(listing -> query.sellerId()
+                        .map(seller -> listing.sellerId().equals(seller))
+                        .orElse(true))
                 .sorted(Comparator.comparing(MarketListing::createdAt)
                         .reversed()
                         .thenComparing(listing -> listing.id().value().toString(), Comparator.reverseOrder()))

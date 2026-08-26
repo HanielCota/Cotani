@@ -20,6 +20,9 @@ public final class MiniMessages {
     private static final int PARSE_CACHE_MAX_SIZE = 512;
     private static final int MAX_TEMPLATE_LENGTH = 32_768;
 
+    // Intentional process-global cache: parsed components are immutable and the cache is
+    // size-bounded, so sharing eviction pressure across plugins on the same server is an accepted
+    // trade-off for avoiding repeated parses of trusted templates.
     private static final Cache<String, Component> parseCache =
             Caffeine.newBuilder().maximumSize(PARSE_CACHE_MAX_SIZE).build();
 

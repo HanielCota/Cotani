@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -535,9 +536,10 @@ class CotaniTest {
     }
 
     @Test
-    void closeTimesOutWithoutCancellingAsyncTeardown() {
+    void closeCancelsUnfinishedAsyncTeardownOnTimeout() {
         var plugin = pluginWithLogger();
         var teardownStarted = new AtomicBoolean();
+        var syncClosed = new AtomicBoolean();
         var gate = new CompletableFuture<Void>();
         var cotani = Cotani.forPlugin(plugin)
                 .timeout(Duration.ofMillis(50))
@@ -545,15 +547,21 @@ class CotaniTest {
                     teardownStarted.set(true);
                     return gate;
                 })
+                .with(() -> syncClosed.set(true))
                 .build();
 
         var thrown = awaitFailure(cotani);
 
-        assertEquals("Failed to close resource within timeout", thrown.getMessage());
         assertTrue(teardownStarted.get());
-        assertFalse(gate.isDone());
+        assertEquals("Failed to close resource", thrown.getMessage());
+        assertInstanceOf(CancellationException.class, thrown.getCause());
 
-        gate.complete(null);
+        // The timeout does not skip the synchronous teardown phase.
+        assertTrue(syncClosed.get());
+        // Unfinished async stages are cancelled instead of being abandoned silently.
+        assertTrue(gate.isDone());
+        assertTrue(gate.isCancelled());
+
         assertThrows(
                 CompletionException.class,
                 () -> cotani.closeAsync().toCompletableFuture().join());

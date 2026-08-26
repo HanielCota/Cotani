@@ -26,6 +26,7 @@ instalação e das APIs específicas; esta página organiza os conceitos compart
 - [Índice de módulos](module-index.md): escolha do módulo adequado para cada caso de uso.
 - [Cookbook](ai/cotani-cookbook.md): padrões prontos para integração.
 - [Solução de problemas](troubleshooting.md): falhas comuns e verificações rápidas.
+- [Prontidão para produção](production-readiness.md): staging, soak test, observabilidade, falhas e rollback.
 - [Guia de documentação](documentation-guide.md): padrão para criar e manter páginas.
 
 ## Generated API reference
@@ -45,6 +46,12 @@ Para exemplos que dependem de banco de dados, execute também as suítes com Doc
 
 ```bash
 ./gradlew integrationTest
+```
+
+Para a validação completa antes de publicar uma versão:
+
+```bash
+./gradlew releaseVerification
 ```
 
 Para visualizar a Wiki localmente:

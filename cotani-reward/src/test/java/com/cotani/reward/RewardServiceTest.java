@@ -153,6 +153,45 @@ class RewardServiceTest {
         assertEquals(settled.playerId(), PLAYER);
     }
 
+    @Test
+    void recoversTargetClaimEvenWhenItIsOutsideTheGlobalRecoveryPage() {
+        var service = service(Clock.fixed(START, ZoneId.of("UTC")));
+        var definition = definition(Duration.ofHours(24), Duration.ofDays(2), 3);
+        service.register(definition);
+
+        for (long index = 1; index <= 1_000; index++) {
+            service.claimAsync(new UUID(2L, index), definition.id(), new RewardClaimId(new UUID(1L, index)))
+                    .toCompletableFuture()
+                    .join();
+        }
+        service.claimAsync(PLAYER, definition.id(), new RewardClaimId(new UUID(Long.MAX_VALUE, Long.MAX_VALUE)))
+                .toCompletableFuture()
+                .join();
+
+        var delivered = new java.util.concurrent.atomic.AtomicInteger();
+        var handler = new RewardGrantHandler() {
+            @Override
+            public boolean supports(com.cotani.reward.api.RewardGrant grant) {
+                return true;
+            }
+
+            @Override
+            public java.util.concurrent.CompletionStage<Void> settleAsync(
+                    RewardSettlementContext context, com.cotani.reward.api.RewardGrant grant) {
+                delivered.incrementAndGet();
+                return java.util.concurrent.CompletableFuture.completedFuture(null);
+            }
+        };
+
+        var settled = CotaniRewards.settlement(service, List.of(handler))
+                .claimOrRecoverAsync(PLAYER, definition.id())
+                .toCompletableFuture()
+                .join();
+
+        assertEquals(PLAYER, settled.playerId());
+        assertEquals(1, delivered.get());
+    }
+
     private static RewardService service(Clock clock) {
         return CotaniRewards.fromRepository(
                 new InMemoryRewardRepository(),

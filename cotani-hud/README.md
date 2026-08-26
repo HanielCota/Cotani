@@ -124,6 +124,6 @@ hud.actionBar().sendTimed(player, Component.text("+100 Coins received!", NamedTe
 | [`CotaniHuds`](src/main/java/com/cotani/hud/CotaniHuds.java) | Entrypoint factory for creating `HudModule` |
 | [`Sidebar`](src/main/java/com/cotani/hud/api/Sidebar.java) | Active per-player sidebar interface |
 | [`SidebarBuilder`](src/main/java/com/cotani/hud/api/SidebarBuilder.java) | Fluent builder for assembling reactive scoreboards |
-| [`TabListManager`](src/main/java/com/cotani/hud/api/TabListManager.java) | Player list header and footer manager |
-| [`BossBarManager`](src/main/java/com/cotani/hud/api/BossBarManager.java) | Adventure BossBar builder and registry |
-| [`ActionBarManager`](src/main/java/com/cotani/hud/api/ActionBarManager.java) | Action bar presentation manager |
+| [`TabListController`](src/main/java/com/cotani/hud/api/TabListController.java) | Player list header and footer manager |
+| [`BossBarController`](src/main/java/com/cotani/hud/api/BossBarController.java) | Adventure BossBar builder and registry |
+| [`ActionBarController`](src/main/java/com/cotani/hud/api/ActionBarController.java) | Action bar presentation manager |

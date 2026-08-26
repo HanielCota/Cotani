@@ -1,0 +1,54 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    environment:
+      REDIS_PASSWORD: ${COTANI_REDIS_PASSWORD:?Set COTANI_REDIS_PASSWORD before starting staging}
+    ports:
+      - "127.0.0.1:16379:6379"
+    volumes:
+      - cotani-staging-redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: cotani_staging
+      MYSQL_USER: cotani
+      MYSQL_PASSWORD: ${COTANI_MYSQL_PASSWORD:?Set COTANI_MYSQL_PASSWORD before starting staging}
+      MYSQL_ROOT_PASSWORD: ${COTANI_MYSQL_ROOT_PASSWORD:?Set COTANI_MYSQL_ROOT_PASSWORD before starting staging}
+    ports:
+      - "127.0.0.1:13306:3306"
+    volumes:
+      - cotani-staging-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --silent -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: cotani_staging
+      MARIADB_USER: cotani
+      MARIADB_PASSWORD: ${COTANI_MARIADB_PASSWORD:?Set COTANI_MARIADB_PASSWORD before starting staging}
+      MARIADB_ROOT_PASSWORD: ${COTANI_MARIADB_ROOT_PASSWORD:?Set COTANI_MARIADB_ROOT_PASSWORD before starting staging}
+    ports:
+      - "127.0.0.1:13307:3306"
+    volumes:
+      - cotani-staging-mariadb:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  cotani-staging-redis:
+  cotani-staging-mysql:
+  cotani-staging-mariadb:

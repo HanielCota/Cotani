@@ -57,7 +57,7 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
         Objects.requireNonNull(cause, "cause");
         Objects.requireNonNull(source, "source");
 
-        PendingTeleportData data = PendingTeleportData.create(playerId, target, delay, options, cause, source);
+        PendingTeleport data = PendingTeleport.create(playerId, target, delay, options, cause, source);
         PendingTeleportStateMachine pending = new PendingTeleportStateMachine(data);
 
         PendingTeleportStateMachine previous = pendingByPlayer.put(playerId, pending);
@@ -125,7 +125,7 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
             return;
         }
 
-        PendingTeleportData data = pending.data();
+        PendingTeleport data = pending.data();
         // Re-check after claiming EXECUTING: damage/move may have cancelled in the gap.
         if (pending.isCancelled()) {
             pendingByPlayer.remove(data.playerId(), pending);
@@ -178,7 +178,7 @@ public final class DefaultPendingTeleportService implements PendingTeleportServi
     }
 
     private PendingTeleportView toView(PendingTeleportStateMachine pending) {
-        PendingTeleportData data = pending.data();
+        PendingTeleport data = pending.data();
         return new PendingTeleportView(
                 data.id(),
                 data.playerId(),

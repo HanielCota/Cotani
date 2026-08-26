@@ -1,8 +1,7 @@
 package com.cotani.metrics;
 
+import com.cotani.metrics.config.MetricsConfig;
 import java.util.Objects;
-import net.cotani.metrics.CotaniMetricsModule;
-import net.cotani.metrics.config.MetricsConfig;
 
 /** Stable {@code com.cotani} entry point for the legacy 1.x metrics namespace. */
 public final class CotaniMetrics {

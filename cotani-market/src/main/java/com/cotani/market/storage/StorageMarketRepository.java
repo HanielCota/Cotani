@@ -93,17 +93,17 @@ public final class StorageMarketRepository implements MarketRepository {
         var parameters = new ArrayList<Object>();
         parameters.add(MarketListingStatus.ACTIVE.name());
         parameters.add(now);
-        if (query.itemKey() != null) {
+        if (query.itemKey().isPresent()) {
             sql.append(" AND item_key = ?");
-            parameters.add(query.itemKey());
+            parameters.add(query.itemKey().get());
         }
-        if (query.currency() != null) {
+        if (query.currency().isPresent()) {
             sql.append(" AND currency_id = ?");
-            parameters.add(query.currency().value());
+            parameters.add(query.currency().get().value());
         }
-        if (query.sellerId() != null) {
+        if (query.sellerId().isPresent()) {
             sql.append(" AND seller_id = ?");
-            parameters.add(query.sellerId());
+            parameters.add(query.sellerId().get());
         }
         sql.append(" ORDER BY created_at DESC, listing_id DESC LIMIT ? OFFSET ?");
         parameters.add(query.pageSize() + 1);

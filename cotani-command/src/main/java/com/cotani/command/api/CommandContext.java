@@ -1,9 +1,11 @@
 package com.cotani.command.api;
 
 import com.cotani.command.argument.Argument;
+import com.cotani.command.argument.PlayerRef;
 import com.cotani.task.api.PaperTaskScheduler;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.command.CommandSender;
@@ -16,12 +18,32 @@ public interface CommandContext {
     /**
      * Returns the command sender (player, console, block, etc.).
      *
+     * <p>The returned sender is a live Bukkit/Paper object. Touching it is only safe on the thread
+     * that owns it: the main thread for {@code executes} handlers, the sender's entity thread for
+     * {@code executesEntity} handlers. Inside {@code executesAsync} handlers use {@link #playerId()}
+     * and reply methods instead of accessing the sender directly.
+     *
      * @return the sender
      */
     CommandSender sender();
 
     /**
+     * Returns the immutable identity of the sender when the sender is an in-game player.
+     *
+     * <p>This is the preferred way to identify the sender from any thread: the returned id may be
+     * captured across async boundaries, while live {@link Player} access must remain on the owning
+     * thread.
+     *
+     * @return the player id, or empty when the sender is not an in-game player
+     */
+    Optional<UUID> playerId();
+
+    /**
      * Returns the sender as a {@link Player} if the sender is an in-game player.
+     *
+     * <p>The returned player is a live Bukkit/Paper object. Only touch it on the thread that owns
+     * the sender ({@code executes}/{@code executesEntity}); in async handlers prefer
+     * {@link #playerId()}.
      *
      * @return player or empty
      */
@@ -49,6 +71,10 @@ public interface CommandContext {
 
     /**
      * Returns the sender as a {@link Player} or throws {@link CommandExecutionException} if not a player.
+     *
+     * <p>Only call this from handlers that run on the sender's owning thread ({@code executes} or
+     * {@code executesEntity}). In {@code executesAsync} handlers capture {@link #playerId()} instead
+     * and re-resolve the player through the scheduler before touching it.
      *
      * @return the player sender
      * @throws CommandExecutionException if sender is not a player
@@ -205,13 +231,17 @@ public interface CommandContext {
     }
 
     /**
-     * Returns the online {@link Player} value for the given argument name.
+     * Returns the immutable {@link PlayerRef} value parsed for the given argument name.
+     *
+     * <p>Arguments created by {@code Arguments.player(String)} store this reference instead of a
+     * live player, making it safe to read inside {@code executesAsync} handlers. Use the scheduler
+     * ({@link #scheduler()}) entity transitions when the live player must be touched.
      *
      * @param name argument name
-     * @return parsed Player
+     * @return parsed player reference
      */
-    default Player getPlayer(String name) {
-        return get(name, Player.class);
+    default PlayerRef getPlayerRef(String name) {
+        return get(name, PlayerRef.class);
     }
 
     /**
@@ -228,6 +258,9 @@ public interface CommandContext {
 
     /**
      * Sends an Adventure {@link Component} message to the sender.
+     *
+     * <p>This method is safe to call from any thread, including inside async continuations:
+     * delivery is routed through the scheduler to the thread that owns the sender.
      *
      * @param component message component
      */

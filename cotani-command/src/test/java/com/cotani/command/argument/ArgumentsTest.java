@@ -184,8 +184,11 @@ class ArgumentsTest {
         var server = mock(org.bukkit.Server.class);
         setBukkitServer(server);
 
+        var playerId = java.util.UUID.randomUUID();
         var player = mock(org.bukkit.entity.Player.class);
         when(player.isOnline()).thenReturn(true);
+        when(player.getUniqueId()).thenReturn(playerId);
+        when(player.getName()).thenReturn("Haniel");
         when(server.getPlayerExact("Haniel")).thenReturn(player);
 
         var arg = Arguments.player("target");
@@ -194,7 +197,7 @@ class ArgumentsTest {
 
         var result = arg.parser().parse(ctx);
         assertInstanceOf(ParseResult.Success.class, result);
-        assertEquals(player, ((ParseResult.Success<org.bukkit.entity.Player>) result).value());
+        assertEquals(new PlayerRef(playerId, "Haniel"), ((ParseResult.Success<PlayerRef>) result).value());
     }
 
     @Test
@@ -221,8 +224,11 @@ class ArgumentsTest {
         var server = mock(org.bukkit.Server.class);
         setBukkitServer(server);
 
+        var targetId = java.util.UUID.randomUUID();
         var target = mock(org.bukkit.entity.Player.class);
         when(target.isOnline()).thenReturn(true);
+        when(target.getUniqueId()).thenReturn(targetId);
+        when(target.getName()).thenReturn("HiddenPlayer");
         when(server.getPlayerExact("HiddenPlayer")).thenReturn(target);
 
         var sender = mock(org.bukkit.entity.Player.class);
@@ -233,7 +239,7 @@ class ArgumentsTest {
 
         var result = arg.parser().parse(ctx);
         assertInstanceOf(ParseResult.Success.class, result);
-        assertEquals(target, ((ParseResult.Success<?>) result).value());
+        assertEquals(new PlayerRef(targetId, "HiddenPlayer"), ((ParseResult.Success<?>) result).value());
     }
 
     @Test

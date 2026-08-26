@@ -26,4 +26,4 @@ metrics.registry().counter("economy.transactions", "result", "success");
 
 When Prometheus export is enabled, bind to a private interface such as `127.0.0.1` unless the endpoint is protected by the surrounding network. Closing the module stops the HTTP server and closes the registry.
 
-Use the `com.cotani.metrics.CotaniMetrics` factory for new code. Returned 1.x types retain their `net.cotani.metrics` package for binary compatibility; see the [migration notes](../docs/migration-1.x.md).
+All metrics types live under the `com.cotani.metrics` packages (`CotaniMetricsModule`, `CotaniMetricsRegistry`, `api.*`, `binder.*`, `config.*`, `exporter.*`). The legacy `net.cotani.metrics` namespace was removed; see the [migration notes](../docs/migration-1.x.md).

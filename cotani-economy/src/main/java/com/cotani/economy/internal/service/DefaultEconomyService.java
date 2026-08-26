@@ -13,7 +13,6 @@ import com.cotani.economy.internal.repository.EconomyTransferRepository;
 import com.cotani.economy.transaction.EconomyOperationId;
 import com.cotani.economy.transaction.EconomyReason;
 import com.cotani.economy.transaction.EconomyTransaction;
-import com.cotani.task.util.VoidResult;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.math.BigDecimal;
@@ -23,6 +22,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,6 +42,8 @@ public final class DefaultEconomyService implements EconomyService {
             .maximumSize(MAX_PUBLISHED_OPERATIONS_CACHE)
             .expireAfterWrite(PUBLISHED_OPERATIONS_EXPIRY)
             .build();
+    private final ConcurrentHashMap<EconomyOperationId, CompletableFuture<Void>> eventPublications =
+            new ConcurrentHashMap<>();
 
     private DefaultEconomyService(
             EconomySettings settings,
@@ -209,21 +211,35 @@ public final class DefaultEconomyService implements EconomyService {
     }
 
     private CompletionStage<EconomyTransaction> publishAndReturn(EconomyTransaction transaction) {
-        if (publishedOperations.asMap().putIfAbsent(transaction.operationId(), Boolean.TRUE) != null) {
+        if (publishedOperations.getIfPresent(transaction.operationId()) != null) {
             return CompletableFuture.completedFuture(transaction);
         }
-        try {
-            return eventPublisher
-                    .publishAsync(new EconomyTransactionEvent(transaction))
-                    .exceptionally(error -> {
-                        LOGGER.log(Level.WARNING, FAILED_PUBLISH_MSG, error);
-                        return VoidResult.nullValue();
-                    })
-                    .thenApply(_ -> transaction);
-        } catch (RuntimeException exception) {
-            LOGGER.log(Level.WARNING, FAILED_PUBLISH_MSG, exception);
-            return CompletableFuture.completedFuture(transaction);
+
+        var created = new CompletableFuture<Void>();
+        var publication = eventPublications.putIfAbsent(transaction.operationId(), created);
+        if (publication == null) {
+            publication = created;
+            try {
+                var source = Objects.requireNonNull(
+                        eventPublisher.publishAsync(new EconomyTransactionEvent(transaction)),
+                        "event publication stage");
+                source.whenComplete((ignored, failure) -> {
+                    if (failure == null) {
+                        publishedOperations.put(transaction.operationId(), Boolean.TRUE);
+                        created.complete(null);
+                    } else {
+                        LOGGER.log(Level.WARNING, FAILED_PUBLISH_MSG, failure);
+                        created.completeExceptionally(failure);
+                    }
+                    eventPublications.remove(transaction.operationId(), created);
+                });
+            } catch (RuntimeException failure) {
+                LOGGER.log(Level.WARNING, FAILED_PUBLISH_MSG, failure);
+                eventPublications.remove(transaction.operationId(), created);
+                created.completeExceptionally(failure);
+            }
         }
+        return publication.handle((ignored, failure) -> transaction);
     }
 
     private <I, O> CompletionStage<O> runGuarded(

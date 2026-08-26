@@ -77,6 +77,21 @@ public final class InMemoryRewardRepository implements RewardRepository {
     }
 
     @Override
+    public synchronized CompletionStage<java.util.Optional<RewardClaim>> findPendingClaimAsync(
+            UUID playerId, com.cotani.reward.api.RewardId rewardId) {
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(rewardId, "rewardId");
+        var pending = claims.values().stream()
+                .filter(claim -> claim.playerId().equals(playerId)
+                        && claim.rewardId().equals(rewardId)
+                        && !settledClaims.contains(claim.claimId()))
+                .sorted(Comparator.comparing(RewardClaim::claimedAt)
+                        .thenComparing(claim -> claim.claimId().value().toString()))
+                .findFirst();
+        return CompletableFuture.completedFuture(pending);
+    }
+
+    @Override
     public synchronized CompletionStage<Boolean> markSettledAsync(com.cotani.reward.api.RewardClaimId claimId) {
         Objects.requireNonNull(claimId, "claimId");
         if (!claims.containsKey(claimId)) {

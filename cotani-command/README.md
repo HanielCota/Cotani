@@ -86,12 +86,12 @@ CommandNode payCommand = CommandBuilder.of("pay")
     .argument(Arguments.bigDecimal("amount", BigDecimal.ONE, new BigDecimal("1000000")))
     .executesEntity((ctx, sender) -> {
         UUID senderId = sender.getUniqueId();
-        UUID targetId = ctx.getPlayer("target").getUniqueId();
+        PlayerRef target = ctx.getPlayerRef("target");
         BigDecimal amount = ctx.getBigDecimal("amount");
 
         economyService.transferAsync(
             senderId,
-            targetId,
+            target.id(),
             amount,
             EconomyReason.custom("PLAYER_PAY")
         ).thenAccept(result -> {

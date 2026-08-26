@@ -10,8 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -42,6 +44,11 @@ public final class DefaultCommandContext implements CommandContext {
     @Override
     public CommandSender sender() {
         return sender;
+    }
+
+    @Override
+    public Optional<UUID> playerId() {
+        return sender instanceof Player player ? Optional.of(player.getUniqueId()) : Optional.empty();
     }
 
     @Override
@@ -124,7 +131,27 @@ public final class DefaultCommandContext implements CommandContext {
     @Override
     public void reply(Component component) {
         Objects.requireNonNull(component, "component");
-        sender.sendMessage(component);
+        deliver(component);
+    }
+
+    /**
+     * Delivers a message to the sender from any thread.
+     *
+     * <p>Player senders are resolved on their owning entity thread; other senders are messaged from
+     * the global scheduler, so {@code reply} is safe to call from async handlers and continuations.
+     */
+    private void deliver(Component component) {
+        if (sender instanceof Player player) {
+            var playerId = player.getUniqueId();
+            scheduler.entity(playerId, () -> {
+                var current = Bukkit.getPlayer(playerId);
+                if (current != null && current.isOnline()) {
+                    current.sendMessage(component);
+                }
+            });
+            return;
+        }
+        scheduler.global(() -> sender.sendMessage(component));
     }
 
     @Override

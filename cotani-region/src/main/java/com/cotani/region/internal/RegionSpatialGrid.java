@@ -87,8 +87,14 @@ public final class RegionSpatialGrid {
         return Optional.ofNullable(regionsById.get(regionId));
     }
 
+    /**
+     * Returns an immutable snapshot of all registered regions.
+     *
+     * <p>The returned collection is an independent copy; later registrations and removals are not
+     * reflected in it.
+     */
     public Collection<Region3D> all() {
-        return Collections.unmodifiableCollection(regionsById.values());
+        return List.copyOf(regionsById.values());
     }
 
     public List<Region3D> regionsAt(Location location) {

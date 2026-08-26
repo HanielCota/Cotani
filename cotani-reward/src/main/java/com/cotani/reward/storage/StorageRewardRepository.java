@@ -4,6 +4,7 @@ import com.cotani.reward.api.RewardClaim;
 import com.cotani.reward.api.RewardClaimCommand;
 import com.cotani.reward.api.RewardClaimConflictException;
 import com.cotani.reward.api.RewardClaimId;
+import com.cotani.reward.api.RewardId;
 import com.cotani.reward.api.RewardOnCooldownException;
 import com.cotani.reward.api.RewardRepository;
 import com.cotani.storage.api.CotaniStorage;
@@ -89,6 +90,24 @@ public final class StorageRewardRepository implements RewardRepository {
                         binder -> {
                             binder.set(false);
                             binder.integer(limit);
+                        },
+                        StorageRewardRepository::mapClaim);
+    }
+
+    @Override
+    public CompletionStage<Optional<RewardClaim>> findPendingClaimAsync(UUID playerId, RewardId rewardId) {
+        Objects.requireNonNull(playerId, "playerId");
+        Objects.requireNonNull(rewardId, "rewardId");
+        return storage.queryExecutor()
+                .queryOne(
+                        "SELECT claim_id, player_id, reward_id, claimed_at, next_available_at, streak, total_claims, grants FROM "
+                                + CLAIMS
+                                + " WHERE settled = ? AND player_id = ? AND reward_id = ?"
+                                + " ORDER BY claimed_at ASC, claim_id ASC LIMIT 1",
+                        binder -> {
+                            binder.set(false);
+                            binder.uuid(playerId);
+                            binder.string(rewardId.value());
                         },
                         StorageRewardRepository::mapClaim);
     }

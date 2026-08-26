@@ -256,7 +256,10 @@ class MarketServiceTest {
     void queryRejectsInvalidItemKeys() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new MarketQuery(0, 10, "minecraft:diamond with spaces", null, null));
+                () -> MarketQuery.builder()
+                        .pageSize(10)
+                        .itemKey("minecraft:diamond with spaces")
+                        .build());
     }
 
     private static MarketListingRequest listingRequest(UUID sellerId, Instant createdAt) {

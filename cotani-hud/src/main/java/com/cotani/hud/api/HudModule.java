@@ -21,21 +21,21 @@ public interface HudModule extends AutoCloseable {
      *
      * @return the TabList manager
      */
-    TabListManager tabList();
+    TabListController tabList();
 
     /**
      * Returns the BossBar manager.
      *
      * @return the BossBar manager
      */
-    BossBarManager bossBar();
+    BossBarController bossBar();
 
     /**
      * Returns the ActionBar manager.
      *
      * @return the ActionBar manager
      */
-    ActionBarManager actionBar();
+    ActionBarController actionBar();
 
     /**
      * Returns the active sidebar for a player if present.

@@ -117,13 +117,12 @@ class SimpleUserServiceTest {
                 .thenAnswer(invocation -> Optional.of(invocation
                         .<UnaryOperator<SimpleCotaniUser>>getArgument(2)
                         .apply(user)));
-        when(repository.saveAll(any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(repository.save(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.saveAll().toCompletableFuture().join();
 
-        verify(repository)
-                .saveAll(argThat(
-                        saved -> saved.size() == 1 && saved.iterator().next().version() == 2L));
+        verify(repository).save(argThat(saved -> saved.version() == 2L));
+        verify(repository, never()).saveAll(any());
     }
 
     @Test

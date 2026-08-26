@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /** Immutable snapshot used by permission repositories. */
-public record PermissionSnapshot(Map<UUID, PermissionSubjectData> users, Map<String, PermissionGroup> groups) {
+public record PermissionSnapshot(Map<UUID, PermissionAssignments> users, Map<String, PermissionGroup> groups) {
     public PermissionSnapshot {
         Objects.requireNonNull(users, "users");
         Objects.requireNonNull(groups, "groups");

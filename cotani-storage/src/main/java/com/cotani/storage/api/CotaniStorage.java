@@ -39,6 +39,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -183,10 +184,17 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable, Stora
                     abortFailedStartup(error, startupPromise);
                     return;
                 }
+                boolean started;
                 synchronized (lifecycleLock) {
-                    if (state == LifecycleState.STARTING) {
+                    started = state == LifecycleState.STARTING;
+                    if (started) {
                         state = LifecycleState.RUNNING;
                     }
+                }
+                if (!started) {
+                    startupPromise.completeExceptionally(
+                            new IllegalStateException("CotaniStorage close began before startup completed."));
+                    return;
                 }
                 startupPromise.complete(storage);
             });
@@ -294,21 +302,90 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable, Stora
             state = LifecycleState.CLOSING;
         }
 
-        var _ = predecessor.whenComplete((_, _) -> {
-            try {
-                asyncExecutor.asyncExecutor().execute(() -> {
-                    try {
-                        var _ = closeResourcesAsync().whenComplete((_, failure) -> completeClose(failure));
-                    } catch (Exception failure) {
-                        completeClose(failure);
-                    }
-                });
-            } catch (RejectedExecutionException rejected) {
-                closePromise.completeExceptionally(rejected);
-            }
-        });
+        var _ = predecessor.whenComplete((_, _) -> beginResourceTeardown());
 
         return closePromise;
+    }
+
+    /**
+     * Starts resource teardown on the injected async executor.
+     *
+     * <p>When that executor no longer accepts work (for example because modules are torn down out
+     * of order and the scheduler was closed first), teardown falls back to a dedicated daemon
+     * thread so owned resources are still released instead of leaking.
+     */
+    private void beginResourceTeardown() {
+        try {
+            asyncExecutor.asyncExecutor().execute(() -> {
+                try {
+                    var _ = closeResourcesAsync().whenComplete((_, failure) -> completeClose(failure));
+                } catch (Exception failure) {
+                    completeClose(failure);
+                }
+            });
+        } catch (RejectedExecutionException rejected) {
+            plugin.getLogger()
+                    .warning("Storage async executor unavailable; running storage teardown on a dedicated thread");
+            Thread.ofPlatform().name("cotani-storage-close").daemon().start(() -> {
+                try {
+                    var _ = closeResourcesWithoutExecutors().whenComplete((_, failure) -> completeClose(failure));
+                } catch (Exception failure) {
+                    completeClose(failure);
+                }
+            });
+        }
+    }
+
+    /**
+     * Fallback teardown used when the injected executors are unavailable.
+     *
+     * <p>Runs entirely on the caller (the dedicated {@code cotani-storage-close} daemon thread):
+     * drains the storage executor with a bounded await and then releases resources.
+     */
+    private CompletionStage<Void> closeResourcesWithoutExecutors() {
+        synchronized (resourceCloseLock) {
+            if (!resourcesClosed.compareAndSet(false, true)) {
+                return CompletableFuture.completedFuture(null);
+            }
+            storageExecutor.shutdown();
+        }
+
+        var promise = new CompletableFuture<Void>();
+        Throwable failure = null;
+        try {
+            if (!storageExecutor.awaitTermination(SHUTDOWN_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)) {
+                storageExecutor.shutdownNow();
+            }
+        } catch (InterruptedException interrupted) {
+            storageExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+            failure = interrupted;
+        } catch (RuntimeException | Error shutdownFailure) {
+            failure = shutdownFailure;
+        }
+        try {
+            releaseResources();
+        } catch (RuntimeException | Error closeFailure) {
+            if (failure == null) {
+                failure = closeFailure;
+            } else {
+                failure.addSuppressed(closeFailure);
+            }
+        }
+        if (failure == null) {
+            promise.complete(null);
+        } else {
+            promise.completeExceptionally(failure);
+        }
+        return promise;
+    }
+
+    private void releaseResources() {
+        try {
+            provider.close();
+        } finally {
+            repositories.clear();
+        }
     }
 
     private void registerRepositories() {
@@ -350,9 +427,40 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable, Stora
             return CompletableFuture.completedFuture(null);
         }
 
-        return delayedScheduler
-                .delayAsync(Duration.ofMillis(25))
-                .thenCompose(_ -> awaitExecutorTerminationAsync(deadlineNanos));
+        try {
+            var poll = delayedScheduler.delayAsync(Duration.ofMillis(25));
+            return poll.thenCompose(_ -> awaitExecutorTerminationAsync(deadlineNanos))
+                    .exceptionallyCompose(failure -> {
+                        if (failure instanceof RejectedExecutionException) {
+                            // The delayed scheduler was closed first (out-of-order teardown); finish
+                            // draining on this background thread instead of failing the close.
+                            return drainExecutorOnCurrentThread(deadlineNanos);
+                        }
+                        return CompletableFuture.failedFuture(failure);
+                    });
+        } catch (RejectedExecutionException schedulerUnavailable) {
+            return drainExecutorOnCurrentThread(deadlineNanos);
+        }
+    }
+
+    /**
+     * Drains the storage executor with a bounded await on the current (background) thread.
+     * Used only as a fallback when the injected scheduler can no longer schedule polls.
+     */
+    private CompletionStage<Void> drainExecutorOnCurrentThread(long deadlineNanos) {
+        var promise = new CompletableFuture<Void>();
+        try {
+            long remainingMillis = Math.max(0L, (deadlineNanos - System.nanoTime()) / 1_000_000L);
+            if (!storageExecutor.awaitTermination(remainingMillis, TimeUnit.MILLISECONDS)) {
+                storageExecutor.shutdownNow();
+            }
+            promise.complete(null);
+        } catch (InterruptedException interrupted) {
+            storageExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+            promise.completeExceptionally(interrupted);
+        }
+        return promise;
     }
 
     private void executeStorageOperation(Runnable operation) {
@@ -401,13 +509,24 @@ public final class CotaniStorage implements AutoCloseable, AsyncCloseable, Stora
             shutdownDeadlineNanos = System.nanoTime() + SHUTDOWN_TIMEOUT.toNanos();
         }
 
-        return awaitExecutorTerminationAsync(shutdownDeadlineNanos).thenRun(() -> {
-            try {
-                provider.close();
-            } finally {
-                repositories.clear();
-            }
-        });
+        return awaitExecutorTerminationAsync(shutdownDeadlineNanos)
+                .handle((ignored, failure) -> {
+                    Throwable combined = failure == null ? null : unwrapCompletionFailure(failure);
+                    try {
+                        releaseResources();
+                    } catch (RuntimeException | Error closeFailure) {
+                        if (combined == null) {
+                            combined = closeFailure;
+                        } else {
+                            combined.addSuppressed(closeFailure);
+                        }
+                    }
+                    if (combined == null) {
+                        return CompletableFuture.<Void>completedFuture(null);
+                    }
+                    return CompletableFuture.<Void>failedFuture(combined);
+                })
+                .thenCompose(stage -> stage);
     }
 
     private void completeClose(@Nullable Throwable failure) {

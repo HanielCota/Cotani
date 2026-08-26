@@ -334,23 +334,27 @@ public final class Arguments {
     }
 
     /**
-     * Online {@link Player} argument resolved by username.
+     * Online player argument resolved by username.
+     *
+     * <p>The parser resolves the live player on the main thread during dispatch and stores an
+     * immutable {@link PlayerRef}; async handlers never receive live Bukkit objects. Read the
+     * parsed value with {@code CommandContext#getPlayerRef(String)}.
      *
      * @param name argument name
      * @return argument definition
      */
-    public static Argument<Player> player(String name) {
+    public static Argument<PlayerRef> player(String name) {
         return player(name, false);
     }
 
     /**
-     * Online {@link Player} argument resolved by username with optional vanish bypass.
+     * Online player argument resolved by username with optional vanish bypass.
      *
      * @param name argument name
      * @param allowVanished whether to allow matching players hidden from the sender (e.g. vanished admins)
      * @return argument definition
      */
-    public static Argument<Player> player(String name, boolean allowVanished) {
+    public static Argument<PlayerRef> player(String name, boolean allowVanished) {
         Objects.requireNonNull(name, "name");
         return Argument.of(
                 name,
@@ -374,7 +378,7 @@ public final class Arguments {
                         return ParseResult.failure(
                                 "<red>Player '<yellow>" + MiniMessages.escape(raw) + "</yellow>' is not online.</red>");
                     }
-                    return ParseResult.success(target, 1);
+                    return ParseResult.success(PlayerRef.of(target), 1);
                 },
                 SuggestionProvider.players());
     }

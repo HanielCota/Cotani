@@ -55,7 +55,7 @@ public record CleanupPolicy(
         if (minimumAge.isNegative()) {
             throw new IllegalArgumentException("minimumAge must not be negative");
         }
-        if (protectedTags.stream().anyMatch(tag -> tag.isBlank())) {
+        if (protectedTags.stream().anyMatch(String::isBlank)) {
             throw new IllegalArgumentException("protectedTags must not contain blank values");
         }
         if (maxEntities <= 0 || maxEntities > 1_000_000) {

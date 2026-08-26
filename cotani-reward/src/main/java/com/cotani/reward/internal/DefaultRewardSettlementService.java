@@ -46,13 +46,9 @@ public final class DefaultRewardSettlementService implements RewardSettlementSer
         Objects.requireNonNull(playerId, "playerId");
         Objects.requireNonNull(rewardId, "rewardId");
         return rewardService
-                .pendingClaimsAsync(1_000)
-                .thenCompose(pending -> pending.stream()
-                        .filter(claim -> claim.playerId().equals(playerId)
-                                && claim.rewardId().equals(rewardId))
-                        .findFirst()
-                        .map(this::settleAsync)
-                        .orElseGet(() -> claimAndSettleAsync(playerId, rewardId)));
+                .findPendingClaimAsync(playerId, rewardId)
+                .thenCompose(pending ->
+                        pending.map(this::settleAsync).orElseGet(() -> claimAndSettleAsync(playerId, rewardId)));
     }
 
     @Override

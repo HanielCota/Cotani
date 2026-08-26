@@ -1,6 +1,7 @@
 package com.cotani.permission.internal;
 
 import com.cotani.api.InternalApi;
+import com.cotani.permission.api.PermissionAssignments;
 import com.cotani.permission.api.PermissionDecision;
 import com.cotani.permission.api.PermissionGroup;
 import com.cotani.permission.api.PermissionNode;
@@ -9,7 +10,6 @@ import com.cotani.permission.api.PermissionRepository;
 import com.cotani.permission.api.PermissionService;
 import com.cotani.permission.api.PermissionSnapshot;
 import com.cotani.permission.api.PermissionState;
-import com.cotani.permission.api.PermissionSubjectData;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -259,17 +259,17 @@ public final class InMemoryPermissionService implements PermissionService {
     }
 
     private PermissionSnapshot snapshotLocked() {
-        var users = new LinkedHashMap<UUID, PermissionSubjectData>();
+        var users = new LinkedHashMap<UUID, PermissionAssignments>();
         userPermissions
                 .keySet()
                 .forEach(userId -> users.put(
                         userId,
-                        new PermissionSubjectData(userAssignments(userId), userGroups.getOrDefault(userId, Set.of()))));
+                        new PermissionAssignments(userAssignments(userId), userGroups.getOrDefault(userId, Set.of()))));
         userGroups
                 .keySet()
                 .forEach(userId -> users.putIfAbsent(
                         userId,
-                        new PermissionSubjectData(userAssignments(userId), userGroups.getOrDefault(userId, Set.of()))));
+                        new PermissionAssignments(userAssignments(userId), userGroups.getOrDefault(userId, Set.of()))));
         return new PermissionSnapshot(users, new LinkedHashMap<>(groups));
     }
 

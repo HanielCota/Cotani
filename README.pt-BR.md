@@ -94,7 +94,7 @@ Ao consumir um checkout local, execute `./gradlew publishToMavenLocal`, adicione
 `com.cotani` documentadas em [`cotani-bom/README.md`](cotani-bom/README.md).
 
 > [!IMPORTANT]
-> Os módulos Cotani são bibliotecas, não plugins de servidor independentes. Faça o shadow e relocation de `com.cotani` (e `net.cotani` caso use métricas) para o namespace privado do seu plugin usando o Gradle Shadow.
+> Os módulos Cotani são bibliotecas, não plugins de servidor independentes. Faça o shadow e relocation de `com.cotani` para o namespace privado do seu plugin usando o Gradle Shadow.
 
 ---
 

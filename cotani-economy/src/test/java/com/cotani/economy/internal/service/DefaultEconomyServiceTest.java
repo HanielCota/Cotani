@@ -159,6 +159,26 @@ class DefaultEconomyServiceTest {
     }
 
     @Test
+    void retriesEventPublicationAfterAFailedAttempt() {
+        var service = newService();
+        var transaction = sampleDeposit();
+        when(accountRepository.deposit(USER_ID, CURRENCY, NORMALIZED_TEN, REASON, OP_ID))
+                .thenReturn(CompletableFuture.completedFuture(transaction));
+        when(eventPublisher.publishAsync(any(EconomyTransactionEvent.class)))
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("temporary failure")))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        service.deposit(USER_ID, CURRENCY, BigDecimal.TEN, REASON, OP_ID)
+                .toCompletableFuture()
+                .join();
+        service.deposit(USER_ID, CURRENCY, BigDecimal.TEN, REASON, OP_ID)
+                .toCompletableFuture()
+                .join();
+
+        verify(eventPublisher, times(2)).publishAsync(any(EconomyTransactionEvent.class));
+    }
+
+    @Test
     void withdrawValidatesInputAndReturnsTransaction() {
         var service = newService();
         var transaction = EconomyTransaction.withdraw(

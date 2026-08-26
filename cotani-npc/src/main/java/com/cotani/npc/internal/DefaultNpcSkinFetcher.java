@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -71,13 +72,15 @@ public final class DefaultNpcSkinFetcher implements NpcSkinFetcher {
         return deduplicate(
                 cacheKey,
                 () -> executeBounded(() -> httpClient
-                        .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                                .thenApply(Optional::of))
+                        .exceptionally(_ -> Optional.empty())
                         .thenCompose(response -> {
-                            if (response.statusCode() != 200) {
+                            if (response.isEmpty() || response.get().statusCode() != 200) {
                                 return CompletableFuture.completedFuture(cacheResult(cacheKey, Optional.empty()));
                             }
 
-                            var matcher = UUID_PATTERN.matcher(response.body());
+                            var matcher = UUID_PATTERN.matcher(response.get().body());
                             if (!matcher.find()) {
                                 return CompletableFuture.completedFuture(cacheResult(cacheKey, Optional.empty()));
                             }
@@ -87,7 +90,7 @@ public final class DefaultNpcSkinFetcher implements NpcSkinFetcher {
                                 cache.put(cacheKey, optSkin);
                                 return optSkin;
                             });
-                        })));
+                        }));
     }
 
     @Override
@@ -112,23 +115,24 @@ public final class DefaultNpcSkinFetcher implements NpcSkinFetcher {
         return deduplicate(
                 cacheKey,
                 () -> executeBounded(() -> httpClient
-                        .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                        .thenApply(response -> {
-                            if (response.statusCode() != 200) {
-                                return cacheResult(cacheKey, Optional.<NpcSkin>empty());
-                            }
+                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                                .thenApply(response -> {
+                                    if (response.statusCode() != 200) {
+                                        return cacheResult(cacheKey, Optional.<NpcSkin>empty());
+                                    }
 
-                            var body = response.body();
-                            var valueMatcher = VALUE_PATTERN.matcher(body);
-                            var sigMatcher = SIGNATURE_PATTERN.matcher(body);
+                                    var body = response.body();
+                                    var valueMatcher = VALUE_PATTERN.matcher(body);
+                                    var sigMatcher = SIGNATURE_PATTERN.matcher(body);
 
-                            if (valueMatcher.find() && sigMatcher.find()) {
-                                var skin = NpcSkin.of(valueMatcher.group(1), sigMatcher.group(1));
-                                return cacheResult(cacheKey, Optional.of(skin));
-                            }
+                                    if (valueMatcher.find() && sigMatcher.find()) {
+                                        var skin = NpcSkin.of(valueMatcher.group(1), sigMatcher.group(1));
+                                        return cacheResult(cacheKey, Optional.of(skin));
+                                    }
 
-                            return cacheResult(cacheKey, Optional.<NpcSkin>empty());
-                        })));
+                                    return cacheResult(cacheKey, Optional.<NpcSkin>empty());
+                                }))
+                        .exceptionally(_ -> Optional.empty()));
     }
 
     private CompletionStage<Optional<NpcSkin>> deduplicate(
@@ -137,17 +141,15 @@ public final class DefaultNpcSkinFetcher implements NpcSkinFetcher {
         return stage.whenComplete((_, _) -> inFlight.remove(key, stage));
     }
 
-    private CompletionStage<Optional<NpcSkin>> executeBounded(Supplier<CompletionStage<Optional<NpcSkin>>> operation) {
+    private <T> CompletionStage<T> executeBounded(Supplier<CompletionStage<T>> operation) {
         if (!requestPermits.tryAcquire()) {
-            return CompletableFuture.completedFuture(Optional.empty());
+            return CompletableFuture.failedFuture(new RejectedExecutionException("NPC skin request limit reached"));
         }
 
         try {
-            return operation
-                    .get()
+            return Objects.requireNonNull(operation.get(), "operation stage")
                     .toCompletableFuture()
                     .orTimeout(TIMEOUT.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
-                    .exceptionally(_ -> Optional.empty())
                     .whenComplete((_, _) -> requestPermits.release());
         } catch (RuntimeException failure) {
             requestPermits.release();

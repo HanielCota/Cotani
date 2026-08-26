@@ -5,13 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cotani.permission.api.PermissionAssignments;
 import com.cotani.permission.api.PermissionGroup;
 import com.cotani.permission.api.PermissionNode;
 import com.cotani.permission.api.PermissionOrigin;
 import com.cotani.permission.api.PermissionRepository;
 import com.cotani.permission.api.PermissionSnapshot;
 import com.cotani.permission.api.PermissionState;
-import com.cotani.permission.api.PermissionSubjectData;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -175,7 +175,7 @@ class PermissionServiceTest {
                         .saved()
                         .get(repository.saved().size() - 1)
                         .users()
-                        .getOrDefault(userId, PermissionSubjectData.empty())
+                        .getOrDefault(userId, PermissionAssignments.empty())
                         .permissions()
                         .getOrDefault(PermissionNode.of("feature.use"), PermissionState.UNSET));
     }

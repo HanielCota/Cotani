@@ -13,8 +13,9 @@ import java.util.concurrent.CompletionStage;
  * Public economy API used by other Cotani modules.
  *
  * <p>All methods are asynchronous and never block the calling thread. They return a
- * {@link CompletionStage} that completes with the result once persistence and event publication are
- * done. Callers must compose stages (for example via {@code thenApply}, {@code thenCompose} or
+ * {@link CompletionStage} that completes with the result once persistence is durable. Event
+ * publication is best effort: a publication failure is logged and a later idempotent invocation may
+ * retry it. Callers must compose stages (for example via {@code thenApply}, {@code thenCompose} or
  * {@code whenComplete}) instead of blocking on the result.
  *
  * <p>Domain failures are delivered through the failed stage rather than thrown synchronously:

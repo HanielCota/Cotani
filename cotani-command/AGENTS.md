@@ -43,17 +43,20 @@ var payCommand = CommandBuilder.of("pay")
     .argument(Arguments.player("target"))
     .argument(Arguments.bigDecimal("amount", BigDecimal.ONE, new BigDecimal("1000000")))
     .executesAsync(ctx -> {
-        var sender = ctx.requirePlayer();
-        var target = ctx.get("target", Player.class);
-        var amount = ctx.get("amount", BigDecimal.class);
+        // Arguments.player stores an immutable PlayerRef resolved on the main thread, so the
+        // handler never touches live Player objects.
+        var senderId = ctx.playerId().orElseThrow();
+        var target = ctx.getPlayerRef("target");
+        var amount = ctx.getBigDecimal("amount");
 
         return economyService.transferAsync(
-            sender.getUniqueId(),
-            target.getUniqueId(),
+            senderId,
+            target.id(),
             amount,
             EconomyReason.custom("PLAYER_PAY")
         ).thenAccept(result -> {
-            ctx.reply("<green>Transferred <gold>$" + amount + "</gold> to <yellow>" + target.getName() + "</yellow>!</green>");
+            // ctx.reply is thread-safe: delivery is routed to the sender's owning thread.
+            ctx.reply("<green>Transferred <gold>$" + amount + "</gold> to <yellow>" + MiniMessages.escape(target.name()) + "</yellow>!</green>");
         });
     })
     .build();
@@ -88,7 +91,8 @@ commands.register("warp", root -> {
 ## Anti-patterns
 
 - Blocking on `future.join()` or `future.get()` inside command handlers.
-- Touching live Bukkit/Paper `Player` or `World` objects inside `executesAsync` without transitioning to entity/main thread.
+- Touching live Bukkit/Paper `Player` or `World` objects inside `executesAsync` without transitioning to entity/main thread; capture `ctx.playerId()` and immutable values instead.
+- Calling `ctx.requirePlayer()` inside `executesAsync`; it is reserved for `executes`/`executesEntity` handlers.
 - Manually parsing raw string tokens when typed `Arguments` are available.
 - Unescaped interpolation of raw user input into MiniMessage formatting.
 

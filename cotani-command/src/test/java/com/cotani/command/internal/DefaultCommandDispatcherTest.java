@@ -176,6 +176,15 @@ class DefaultCommandDispatcherTest {
 
     @Test
     void shouldHandleExecutionExceptionGracefully() {
+        // Failure feedback is delivered through the global scheduler for non-player senders.
+        doAnswer(invocation -> {
+                    Runnable task = invocation.getArgument(0);
+                    task.run();
+                    return null;
+                })
+                .when(scheduler)
+                .global(any(Runnable.class));
+
         var cmd = CommandBuilder.of("crash")
                 .executes(ctx -> {
                     throw new RuntimeException("Simulated failure");

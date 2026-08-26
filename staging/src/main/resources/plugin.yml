@@ -1,0 +1,10 @@
+name: CotaniStaging
+version: '1.1.1'
+main: com.cotani.staging.CotaniStagingPlugin
+api-version: '1.21'
+folia-supported: true
+description: Real Paper/Folia lifecycle harness for Cotani
+commands:
+  cotani-staging:
+    description: Reports the staging scheduler heartbeat
+    usage: /cotani-staging
