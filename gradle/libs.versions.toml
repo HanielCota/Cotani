@@ -17,7 +17,7 @@ placeholderapi = "2.11.6"
 spotless = "8.9.0"
 sqlite = "3.53.2.1"
 testcontainers = "2.0.5"
-lettuce = "6.5.3.RELEASE"
+lettuce = "7.7.0.RELEASE"
 
 [libraries]
 adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure" }
