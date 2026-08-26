@@ -8,6 +8,13 @@ updates:
     labels:
       - "dependencies"
       - "gradle"
+    groups:
+      gradle-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -17,3 +24,7 @@ updates:
     labels:
       - "dependencies"
       - "actions"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
