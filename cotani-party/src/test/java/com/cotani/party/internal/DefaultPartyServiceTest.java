@@ -57,6 +57,21 @@ class DefaultPartyServiceTest {
     }
 
     @Test
+    void acceptingOneInvitationKeepsOtherInvitationsForTheSameParty() {
+        var service = service(new MutableClock(NOW));
+        var party = join(service.createAsync(LEADER, new PartyOptions(3)));
+        join(service.inviteAsync(party.id(), LEADER, MEMBER, Duration.ofMinutes(1)));
+        join(service.inviteAsync(party.id(), LEADER, OTHER_MEMBER, Duration.ofMinutes(1)));
+
+        join(service.acceptInviteAsync(MEMBER, party.id()));
+        var joined = join(service.acceptInviteAsync(OTHER_MEMBER, party.id()));
+
+        assertEquals(3, joined.members().size());
+        assertTrue(joined.contains(MEMBER));
+        assertTrue(joined.contains(OTHER_MEMBER));
+    }
+
+    @Test
     void leaderLeavingSelectsTheOldestRemainingMember() {
         var clock = new MutableClock(NOW);
         var service = service(clock);

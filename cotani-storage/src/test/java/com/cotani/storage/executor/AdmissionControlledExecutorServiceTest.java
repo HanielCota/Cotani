@@ -3,15 +3,38 @@ package com.cotani.storage.executor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.cotani.testkit.StressTestSupport;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class AdmissionControlledExecutorServiceTest {
+    @Test
+    @Tag("stress")
+    void executesThousandsOfAdmittedStorageOperationsWithoutLoss() {
+        var completed = new AtomicInteger();
+        try (var executor = AdmissionControlledExecutorService.create(
+                Executors.newVirtualThreadPerTaskExecutor(), 32, StressTestSupport.iterations())) {
+            var operations = new CompletableFuture<?>[StressTestSupport.iterations()];
+            for (int index = 0; index < operations.length; index++) {
+                operations[index] = CompletableFuture.runAsync(completed::incrementAndGet, executor);
+            }
+            CompletableFuture.allOf(operations).join();
+
+            assertEquals(StressTestSupport.iterations(), completed.get());
+            assertEquals(0, executor.activeOperations());
+            assertEquals(0, executor.queuedOperations());
+            assertEquals(0, executor.rejectedOperations());
+        }
+    }
+
     @Test
     void boundsActiveWorkAndQueueWithoutRunningOnCaller() throws InterruptedException {
         var release = new CountDownLatch(1);

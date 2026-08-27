@@ -6,7 +6,7 @@ import org.gradle.api.tasks.SourceSetContainer
 plugins {
     base
     alias(libs.plugins.errorprone) apply false
-    alias(libs.plugins.spotless) apply false
+    alias(libs.plugins.spotless)
 }
 
 // The type-safe `libs` accessor is not resolvable inside the `subprojects` block,
@@ -293,6 +293,16 @@ abstract class ValidatePackageConventions : DefaultTask() {
 group = "com.cotani"
 description = "Cotani — modular Paper library"
 
+val githubRepository = "HanielCota/Cotani"
+val githubRepositoryUrl = "https://github.com/$githubRepository"
+
+configure<com.diffplug.gradle.spotless.SpotlessExtension> {
+    java {
+        target("test-support/src/main/java/**/*.java")
+        palantirJavaFormat("2.96.0")
+    }
+}
+
 subprojects {
     group = "com.cotani"
     val isPlatform = name == "bom"
@@ -335,6 +345,40 @@ subprojects {
                     pom {
                         name.set("cotani-${project.name}")
                         description.set(project.description ?: "Cotani — ${project.name} module")
+                        url.set(githubRepositoryUrl)
+                        licenses {
+                            license {
+                                name.set("MIT License")
+                                url.set("https://opensource.org/license/mit")
+                                distribution.set("repo")
+                            }
+                        }
+                        developers {
+                            developer {
+                                id.set("HanielCota")
+                                name.set("Haniel Cota")
+                                url.set("https://github.com/HanielCota")
+                            }
+                        }
+                        scm {
+                            connection.set("scm:git:https://github.com/$githubRepository.git")
+                            developerConnection.set("scm:git:ssh://git@github.com/$githubRepository.git")
+                            url.set(githubRepositoryUrl)
+                        }
+                    }
+                }
+            }
+            repositories {
+                maven {
+                    name = "GitHubPackages"
+                    url = uri("https://maven.pkg.github.com/$githubRepository")
+                    credentials {
+                        username = providers.gradleProperty("gpr.user")
+                            .orElse(providers.environmentVariable("GITHUB_ACTOR"))
+                            .orNull
+                        password = providers.gradleProperty("gpr.key")
+                            .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+                            .orNull
                     }
                 }
             }
@@ -369,17 +413,85 @@ subprojects {
             jvmArgs("-Dnet.bytebuddy.experimental=true")
         }
 
+        val testSourceSet = extensions.getByType<SourceSetContainer>()["test"]
+        testSourceSet.java.srcDir(rootProject.file("test-support/src/main/java"))
+
         tasks.named<Test>("test") {
             exclude("**/*IntegrationTest.class")
+            useJUnitPlatform {
+                excludeTags("stress", "fuzz")
+            }
         }
 
-        val testSourceSet = extensions.getByType<SourceSetContainer>()["test"]
         tasks.register<Test>("integrationTest") {
             group = "verification"
             description = "Runs Docker-backed integration tests separately from unit tests."
             testClassesDirs = testSourceSet.output.classesDirs
             classpath = testSourceSet.runtimeClasspath
             include("**/*IntegrationTest.class")
+            shouldRunAfter(tasks.named("test"))
+        }
+
+        tasks.register<Test>("stressTest") {
+            enabled = !isExample
+            group = "verification"
+            description = "Runs deterministic high-volume and concurrency tests."
+            testClassesDirs = testSourceSet.output.classesDirs
+            classpath = testSourceSet.runtimeClasspath
+            useJUnitPlatform {
+                includeTags("stress")
+            }
+            systemProperty("cotani.test.module", project.name)
+            systemProperty(
+                "cotani.test.iterations",
+                providers.gradleProperty("stressIterations").orElse("1200").get(),
+            )
+            systemProperty(
+                "cotani.test.seed",
+                providers.gradleProperty("testSeed").orElse("6840227782638526189").get(),
+            )
+            shouldRunAfter(tasks.named("test"))
+        }
+
+        if (project.name == "reward-integration") {
+            tasks.register<Test>("playerSimulationTest") {
+                group = "verification"
+                description = "Runs cross-module player journey simulations."
+                testClassesDirs = testSourceSet.output.classesDirs
+                classpath = testSourceSet.runtimeClasspath
+                useJUnitPlatform {
+                    includeTags("player-simulation")
+                }
+                systemProperty(
+                    "cotani.test.iterations",
+                    providers.gradleProperty("stressIterations").orElse("1200").get(),
+                )
+                systemProperty(
+                    "cotani.test.seed",
+                    providers.gradleProperty("testSeed").orElse("6840227782638526189").get(),
+                )
+                shouldRunAfter(tasks.named("test"))
+            }
+        }
+
+        tasks.register<Test>("fuzzTest") {
+            enabled = !isExample
+            group = "verification"
+            description = "Runs deterministic fuzz and property-style tests."
+            testClassesDirs = testSourceSet.output.classesDirs
+            classpath = testSourceSet.runtimeClasspath
+            useJUnitPlatform {
+                includeTags("fuzz")
+            }
+            systemProperty("cotani.test.module", project.name)
+            systemProperty(
+                "cotani.test.iterations",
+                providers.gradleProperty("fuzzIterations").orElse("10000").get(),
+            )
+            systemProperty(
+                "cotani.test.seed",
+                providers.gradleProperty("testSeed").orElse("6840227782638526189").get(),
+            )
             shouldRunAfter(tasks.named("test"))
         }
 
@@ -402,6 +514,7 @@ subprojects {
 
         configure<com.diffplug.gradle.spotless.SpotlessExtension> {
             java {
+                target("src/**/*.java")
                 palantirJavaFormat("2.96.0")
             }
         }
@@ -414,6 +527,28 @@ val integrationTest = tasks.register("integrationTest") {
     dependsOn(subprojects
         .filter { it.name !in setOf("bom", "examples") }
         .map { it.tasks.named("integrationTest") })
+}
+
+tasks.register("stressTest") {
+    group = "verification"
+    description = "Runs stress tests from every runtime module."
+    dependsOn(subprojects
+        .filter { it.name !in setOf("bom", "examples") }
+        .map { it.tasks.named("stressTest") })
+}
+
+tasks.register("playerSimulationTest") {
+    group = "verification"
+    description = "Runs the integrated player journey simulation."
+    dependsOn(project(":reward-integration").tasks.named("playerSimulationTest"))
+}
+
+tasks.register("fuzzTest") {
+    group = "verification"
+    description = "Runs fuzz tests from every runtime module."
+    dependsOn(subprojects
+        .filter { it.name !in setOf("bom", "examples") }
+        .map { it.tasks.named("fuzzTest") })
 }
 
 val publishedModuleNames = listOf(
@@ -919,7 +1054,7 @@ abstract class GenerateJavadocIndex : DefaultTask() {
             <body>
                 <div class="container">
                     <header>
-                        <div class="hero-tag">Cotani Framework v1.1.1 · Java 25 · Paper 26.2</div>
+                        <div class="hero-tag">Cotani Framework v1.1.2 · Java 25 · Paper 26.2</div>
                         <h1>Cotani API Documentation</h1>
                         <p class="subtitle">Official API javadocs for modular Paper & Folia plugin architecture with non-blocking execution and clear contracts.</p>
                         <div class="nav-links">

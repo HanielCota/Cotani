@@ -16,7 +16,7 @@ Bill of Materials (BOM) for dependency alignment across all Cotani modules in Gr
 
 ```kotlin
 dependencies {
-    implementation(platform("com.cotani:cotani-bom:1.1.1"))
+    implementation(platform("com.cotani:cotani-bom:1.1.2"))
     implementation("com.cotani:cotani-core")
     implementation("com.cotani:cotani-task")
     implementation("com.cotani:cotani-gui")
@@ -32,7 +32,7 @@ dependencies {
         <dependency>
             <groupId>com.cotani</groupId>
             <artifactId>cotani-bom</artifactId>
-            <version>1.1.1</version>
+            <version>1.1.2</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -48,5 +48,4 @@ dependencies {
 ## Related skills
 
 - `java-engineering-standards`
-
 

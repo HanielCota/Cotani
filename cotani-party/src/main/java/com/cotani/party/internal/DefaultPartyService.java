@@ -518,7 +518,11 @@ public final class DefaultPartyService implements PartyService {
     }
 
     private void replacePartyLocked(Party party) {
-        removePartyLocked(party.id());
+        var previous = parties.remove(party.id());
+        if (previous == null) {
+            throw new PartyNotFoundException(party.id());
+        }
+        previous.members().forEach(member -> membership.remove(member.playerId(), party.id()));
         registerPartyLocked(party);
     }
 

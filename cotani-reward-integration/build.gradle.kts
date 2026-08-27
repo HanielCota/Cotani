@@ -8,4 +8,11 @@ dependencies {
     api(libs.jspecify)
 
     compileOnlyApi(libs.paper.api)
+    testImplementation(libs.paper.api)
+    testImplementation(project(":achievement"))
+    testImplementation(project(":event"))
+    testImplementation(project(":quest"))
+    testImplementation(project(":ranking"))
+    testImplementation(project(":season"))
+    testImplementation(project(":statistics"))
 }

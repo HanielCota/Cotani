@@ -29,13 +29,16 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:v1.1.1"))
+    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:v1.1.2"))
     implementation("com.github.HanielCota.Cotani:cotani-task")
 }
 ```
 
 Substitua as linhas de exemplo pelos módulos reais que o plugin utiliza. O [README principal](https://github.com/HanielCota/Cotani#choose-your-modules)
 contém a tabela de módulos e as coordenadas atuais.
+
+As releases também são publicadas no GitHub Packages sob o grupo `com.cotani`. Esse registry exige autenticação com
+um token clássico `read:packages`, mesmo para pacotes públicos; consulte a seção GitHub Packages do README principal.
 
 ## Bootstrap mínimo
 

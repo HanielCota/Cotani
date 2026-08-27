@@ -12,10 +12,12 @@ import static org.mockito.Mockito.when;
 import com.cotani.gui.state.State;
 import com.cotani.hud.internal.DefaultSidebarBuilder;
 import com.cotani.task.api.PaperTaskScheduler;
+import com.cotani.testkit.StressTestSupport;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class SidebarTest {
@@ -50,6 +52,24 @@ class SidebarTest {
                 })
                 .when(scheduler)
                 .entity(any(UUID.class), any(Runnable.class));
+    }
+
+    @Test
+    @Tag("stress")
+    void propagatesThousandsOfReactiveHudUpdatesAndDisposesBindings() {
+        var score = State.of(0);
+        var sidebar = new DefaultSidebarBuilder(scheduler, null, null)
+                .title(Component.text("Stress"))
+                .bindLine(15, score, value -> Component.text("Score: " + value))
+                .apply(player);
+
+        for (int value = 1; value <= StressTestSupport.iterations(); value++) {
+            score.set(value);
+        }
+
+        assertEquals(StressTestSupport.iterations(), score.get());
+        sidebar.close();
+        assertTrue(sidebar.isDestroyed());
     }
 
     @Test

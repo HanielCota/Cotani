@@ -12,12 +12,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that {@link CotaniMetricsRegistry} never loses counter updates under real
  * concurrency.
  */
+@Tag("stress")
 class CotaniMetricsRegistryConcurrencyTest {
 
     private static final int THREADS = 8;

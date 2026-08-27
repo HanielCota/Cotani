@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.cotani.config.exception.ConfigException;
 import com.cotani.config.serializer.ConfigSerializerRegistry;
 import com.cotani.config.value.ConfigValue;
+import com.cotani.testkit.StressTestSupport;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class DurationSerializerTest {
@@ -17,6 +19,18 @@ class DurationSerializerTest {
     void setUp() {
         registry = new ConfigSerializerRegistry();
         registry.register(new DurationSerializer());
+    }
+
+    @Test
+    @Tag("stress")
+    void roundTripsThousandsOfGeneratedDurationsWithoutUnitDrift() {
+        var serializer = new DurationSerializer();
+        StressTestSupport.scenarios("config", "duration-round-trip", (context, random, player) -> {
+            long seconds = random.nextLong(0, 10_000_001);
+            var duration = Duration.ofSeconds(seconds);
+            String serialized = String.valueOf(serializer.write(duration));
+            assertEquals(duration, registry.convert(valueOf(serialized), Duration.class), context::description);
+        });
     }
 
     @Test

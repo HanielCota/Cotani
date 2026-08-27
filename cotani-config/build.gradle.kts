@@ -8,5 +8,6 @@ dependencies {
     compileOnlyApi(libs.paper.api)
     api(libs.jspecify)
 
+    testImplementation(libs.jimfs)
     testImplementation(libs.paper.api)
 }

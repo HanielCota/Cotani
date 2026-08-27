@@ -11,5 +11,6 @@ dependencies {
     runtimeOnly(libs.mariadb.java.client)
     runtimeOnly(libs.sqlite.jdbc)
 
+    testImplementation(libs.jimfs)
     testImplementation(libs.paper.api)
 }

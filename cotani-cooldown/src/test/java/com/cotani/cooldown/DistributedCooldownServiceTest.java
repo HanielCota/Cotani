@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 import org.bukkit.plugin.Plugin;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -112,6 +113,7 @@ class DistributedCooldownServiceTest {
     }
 
     @Test
+    @Tag("stress")
     void inMemoryStorePerformsOpportunisticCleanupUnderKeyChurn() {
         var clock = new MutableClock(Instant.parse("2026-01-01T00:00:00Z"));
         var store = new InMemoryCooldownStore();

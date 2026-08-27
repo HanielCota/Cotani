@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class VirtualThreadExecutorTest {
@@ -100,6 +101,7 @@ class VirtualThreadExecutorTest {
     }
 
     @Test
+    @Tag("stress")
     void saturationRejectsWithoutBlockingOrRunningOnCaller() throws InterruptedException {
         VirtualThreadExecutor executor = VirtualThreadExecutor.create(1, true);
         var started = new CountDownLatch(1);
@@ -129,5 +131,29 @@ class VirtualThreadExecutorTest {
             release.countDown();
             executor.close();
         }
+    }
+
+    @Test
+    @Tag("stress")
+    void executesOneThousandTasksAndTerminatesEveryCallback() throws Exception {
+        VirtualThreadExecutor executor = VirtualThreadExecutor.create(64, true);
+        var executions = new java.util.concurrent.atomic.AtomicInteger();
+        var terminals = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            var futures = java.util.stream.IntStream.range(0, 1_000)
+                    .mapToObj(index -> executor.submit(
+                            TaskMetadata.named("stress-" + index, ExecutionTarget.async()),
+                            executions::incrementAndGet,
+                            terminals::incrementAndGet))
+                    .toList();
+            for (var future : futures) {
+                future.get(30, TimeUnit.SECONDS);
+            }
+            assertEquals(1_000, executions.get());
+            assertEquals(1_000, terminals.get());
+        } finally {
+            executor.closeAsync().toCompletableFuture().get(30, TimeUnit.SECONDS);
+        }
+        assertTrue(executor.isShutdown());
     }
 }

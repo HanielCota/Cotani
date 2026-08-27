@@ -22,7 +22,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$headers = @{ "User-Agent" = "Cotani-real-plugin-staging/1.1.1 (https://github.com/HanielCota/Cotani)" }
+$headers = @{ "User-Agent" = "Cotani-real-plugin-staging/1.1.2 (https://github.com/HanielCota/Cotani)" }
 $projectVersion = if ($ServerType -eq "paper") { "26.2" } else { "26.1.2" }
 $builds = Invoke-RestMethod -Headers $headers -Uri "https://fill.papermc.io/v3/projects/$ServerType/versions/$projectVersion/builds"
 $build = $builds | Where-Object channel -eq "STABLE" | Select-Object -First 1

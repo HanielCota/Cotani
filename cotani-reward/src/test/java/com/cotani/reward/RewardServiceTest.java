@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class RewardServiceTest {
@@ -154,6 +155,7 @@ class RewardServiceTest {
     }
 
     @Test
+    @Tag("stress")
     void recoversTargetClaimEvenWhenItIsOutsideTheGlobalRecoveryPage() {
         var service = service(Clock.fixed(START, ZoneId.of("UTC")));
         var definition = definition(Duration.ofHours(24), Duration.ofDays(2), 3);
