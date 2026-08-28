@@ -24,7 +24,8 @@ public record ScenarioContext(long seed, int iteration, String module, String op
         try {
             scenario.run();
         } catch (AssertionError failure) {
-            throw new AssertionError(description() + ": " + failure.getMessage(), failure);
+            var message = Objects.toString(failure.getMessage(), "assertion failed");
+            throw new AssertionError(description() + ": " + message, failure);
         } catch (Exception failure) {
             throw new AssertionError(description() + ": unexpected failure", failure);
         }

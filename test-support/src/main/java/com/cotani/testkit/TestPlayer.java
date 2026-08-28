@@ -22,8 +22,10 @@ public record TestPlayer(
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(username, "username");
         Objects.requireNonNull(sessionId, "sessionId");
+        Objects.requireNonNull(permissions, "permissions");
         permissions = Set.copyOf(permissions);
         Objects.requireNonNull(balance, "balance");
+        Objects.requireNonNull(inventory, "inventory");
         inventory = List.copyOf(inventory);
         Objects.requireNonNull(locale, "locale");
         Objects.requireNonNull(location, "location");
