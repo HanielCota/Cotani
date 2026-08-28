@@ -2,6 +2,7 @@ package com.cotani.text;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.cotani.testkit.StressTestSupport;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
@@ -10,9 +11,20 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class PlaceholdersTest {
+    @Test
+    @Tag("stress")
+    void rendersThousandsOfUntrustedPlayerValuesAsLiteralText() {
+        StressTestSupport.scenarios("text", "unparsed-player-input", (context, random, player) -> {
+            String untrusted = "<red>" + player.username() + "</red> & iteration=" + context.iteration();
+            var component = MiniMessages.parse("<value>", Placeholders.unparsed("value", untrusted));
+            assertEquals(untrusted, ComponentTexts.toPlain(component), context::description);
+        });
+    }
+
     @Test
     void createsComponentPlaceholder() {
         var resolver = Placeholders.component("name", Component.text("World"));

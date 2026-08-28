@@ -19,6 +19,7 @@ import com.cotani.season.api.SeasonId;
 import com.cotani.season.api.SeasonLevel;
 import com.cotani.season.api.SeasonLevelLockedException;
 import com.cotani.season.api.SeasonServiceOptions;
+import com.cotani.testkit.StressTestSupport;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -28,11 +29,42 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class DefaultSeasonServiceTest {
     private static final Instant NOW = Instant.parse("2026-07-01T00:00:00Z");
     private static final SeasonId SEASON_ID = SeasonId.of("summer-2026");
+
+    @Test
+    @Tag("stress")
+    void generatedPlayersGainExperienceAndClaimLevelsIdempotently() {
+        var fixture = new Fixture();
+        var service = fixture.service();
+        try {
+            StressTestSupport.scenarios("season", "experience-level-claim", (context, random, player) -> {
+                var operationId = new SeasonExperienceId(random.uuid("season-experience"));
+                var first = StressTestSupport.await(
+                        service.addExperienceAsync(player.id(), SEASON_ID, 1_000, operationId),
+                        Duration.ofSeconds(30),
+                        context);
+                var replay = StressTestSupport.await(
+                        service.addExperienceAsync(player.id(), SEASON_ID, 1_000, operationId),
+                        Duration.ofSeconds(30),
+                        context);
+                assertEquals(first, replay, context::description);
+
+                var claim = StressTestSupport.await(
+                        service.claimLevelAsync(player.id(), SEASON_ID, 2), Duration.ofSeconds(30), context);
+                var repeated = StressTestSupport.await(
+                        service.claimLevelAsync(player.id(), SEASON_ID, 2), Duration.ofSeconds(30), context);
+                assertEquals(claim.claimId(), repeated.claimId(), context::description);
+                assertEquals(1_000, replay.experience(), context::description);
+            });
+        } finally {
+            service.closeAsync().toCompletableFuture().join();
+        }
+    }
 
     @Test
     void appliesExperienceExactlyOnceForTheSameOperation() {

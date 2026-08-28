@@ -21,6 +21,7 @@ import com.cotani.cleanup.api.event.CleanupStartedEvent;
 import com.cotani.cleanup.internal.InMemoryCleanupExecutor;
 import com.cotani.event.api.CotaniEvent;
 import com.cotani.event.api.EventBus;
+import com.cotani.testkit.StressTestSupport;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -37,6 +38,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class CleanupServiceTest {
@@ -49,6 +51,34 @@ class CleanupServiceTest {
         if (service != null) {
             service.close();
         }
+    }
+
+    @Test
+    @Tag("stress")
+    void scansAndRemovesThousandsOfEligibleEntitiesWithoutTouchingProtectedOnes() {
+        var entities = new ArrayList<CleanupEntitySnapshot>();
+        for (int index = 0; index < StressTestSupport.iterations(); index++) {
+            entities.add(snapshot(CleanupTarget.DROPPED_ITEM, Duration.ofHours(1), index % 3 == 0, false, false));
+        }
+        var executor = new InMemoryCleanupExecutor(entities);
+        service = create(executor);
+        var policy = CleanupPolicy.builder()
+                .minimumAge(Duration.ofMinutes(5))
+                .maxEntities(10_000)
+                .build();
+
+        var report = service.executeAsync(policy).toCompletableFuture().join();
+        long protectedCount = java.util.stream.IntStream.range(0, StressTestSupport.iterations())
+                .filter(index -> index % 3 == 0)
+                .count();
+
+        assertEquals(StressTestSupport.iterations(), report.scannedEntities());
+        assertEquals(StressTestSupport.iterations() - protectedCount, report.removedEntities());
+        assertEquals(
+                protectedCount,
+                entities.stream()
+                        .filter(entity -> executor.contains(entity.entityId()))
+                        .count());
     }
 
     @Test

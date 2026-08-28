@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.cotani.job.api.JobExecutionContext;
 import com.cotani.job.api.JobFailure;
+import com.cotani.job.api.JobId;
 import com.cotani.job.api.JobRequest;
 import com.cotani.job.api.JobRetryPolicy;
 import com.cotani.job.api.JobServiceOptions;
@@ -28,12 +29,42 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 
 @SuppressWarnings("unchecked")
 class DefaultJobServiceTest {
+    @Test
+    @Tag("stress")
+    void schedulesAndExecutesOneThousandDurableJobsExactlyOnce() {
+        var fixture = new Fixture();
+        var executions = new java.util.concurrent.ConcurrentHashMap<JobId, AtomicInteger>();
+        var service = fixture.service();
+        service.registerHandler("massive", context -> {
+            executions
+                    .computeIfAbsent(context.jobId(), _ -> new AtomicInteger())
+                    .incrementAndGet();
+            return CompletableFuture.completedFuture(null);
+        });
+
+        for (int index = 0; index < 1_000; index++) {
+            service.scheduleAsync(JobRequest.once("massive", new byte[] {(byte) index}, Duration.ZERO))
+                    .toCompletableFuture()
+                    .join();
+        }
+        for (int index = 0; index < 1_000; index++) {
+            fixture.runNextTimer();
+        }
+
+        assertEquals(1_000, executions.size());
+        assertTrue(executions.values().stream().allMatch(count -> count.get() == 1));
+        assertEquals(1_000, fixture.store.completed.size());
+        service.closeAsync().toCompletableFuture().join();
+    }
+
     @Test
     void schedulesPersistsAndExecutesAJob() {
         var fixture = new Fixture();

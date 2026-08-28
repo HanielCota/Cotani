@@ -8,11 +8,14 @@
 
 Bill of Materials (BOM) for dependency alignment across all Cotani modules.
 
+Use `com.github.HanielCota.Cotani` with the `v`-prefixed version on public JitPack, or `com.cotani` with the plain
+version on authenticated GitHub Packages and Maven Local.
+
 ## Gradle
 
 ```kotlin
 dependencies {
-    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:v1.1.1"))
+    implementation(platform("com.github.HanielCota.Cotani:cotani-bom:v1.1.2"))
 
     implementation("com.github.HanielCota.Cotani:cotani-core")
     implementation("com.github.HanielCota.Cotani:cotani-task")
@@ -25,6 +28,9 @@ dependencies {
 For a local checkout, run `./gradlew publishToMavenLocal` and replace the `com.github.HanielCota.Cotani` group with
 `com.cotani`.
 
+For GitHub Packages, use `https://maven.pkg.github.com/HanielCota/Cotani`, authenticate with a classic token carrying
+`read:packages`, use the `com.cotani` group, and omit the `v` prefix from the version.
+
 ## Maven
 
 ```xml
@@ -33,7 +39,7 @@ For a local checkout, run `./gradlew publishToMavenLocal` and replace the `com.g
         <dependency>
             <groupId>com.github.HanielCota.Cotani</groupId>
             <artifactId>cotani-bom</artifactId>
-            <version>v1.1.1</version>
+            <version>v1.1.2</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>

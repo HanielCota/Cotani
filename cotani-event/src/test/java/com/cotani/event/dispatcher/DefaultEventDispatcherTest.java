@@ -203,8 +203,8 @@ final class DefaultEventDispatcherTest {
         EventExceptionHandler handler = mock(EventExceptionHandler.class);
         ExecutorService executor = Executors.newCachedThreadPool();
         try {
-            DefaultEventDispatcher dispatcher =
-                    new DefaultEventDispatcher(handler, executor, new EventDispatchPolicy(Duration.ofMillis(20), true));
+            DefaultEventDispatcher dispatcher = new DefaultEventDispatcher(
+                    handler, startConfirmingExecutor(executor), new EventDispatchPolicy(Duration.ofMillis(20), true));
             CountDownLatch blocker = new CountDownLatch(1);
             EventSubscription slow = DefaultEventSubscription.create(TestEvent.class, EventPriority.LOWEST, event -> {
                 try {
@@ -238,7 +238,7 @@ final class DefaultEventDispatcherTest {
         ExecutorService executor = Executors.newCachedThreadPool();
         try {
             DefaultEventDispatcher dispatcher = new DefaultEventDispatcher(
-                    handler, executor, new EventDispatchPolicy(Duration.ofMillis(20), false));
+                    handler, startConfirmingExecutor(executor), new EventDispatchPolicy(Duration.ofMillis(20), false));
             EventSubscription slow = DefaultEventSubscription.create(TestEvent.class, EventPriority.NORMAL, event -> {
                 try {
                     new CountDownLatch(1).await();
@@ -286,6 +286,24 @@ final class DefaultEventDispatcherTest {
                 () -> new DefaultEventDispatcher(exception -> {}, null, EventDispatchPolicy.defaults()));
         assertThrows(
                 NullPointerException.class, () -> new DefaultEventDispatcher(exception -> {}, Runnable::run, null));
+    }
+
+    private static Executor startConfirmingExecutor(ExecutorService delegate) {
+        return task -> {
+            var started = new CountDownLatch(1);
+            delegate.execute(() -> {
+                started.countDown();
+                task.run();
+            });
+            try {
+                if (!started.await(5, TimeUnit.SECONDS)) {
+                    throw new AssertionError("listener task did not start");
+                }
+            } catch (InterruptedException failure) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("interrupted while waiting for listener task to start", failure);
+            }
+        };
     }
 
     private record TestEvent() implements CotaniEvent {}

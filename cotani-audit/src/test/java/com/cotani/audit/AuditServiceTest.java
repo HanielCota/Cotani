@@ -14,6 +14,8 @@ import com.cotani.audit.api.AuditQuery;
 import com.cotani.audit.api.AuditRepository;
 import com.cotani.audit.api.AuditSeverity;
 import com.cotani.audit.api.AuditTarget;
+import com.cotani.testkit.StressTestSupport;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +24,46 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class AuditServiceTest {
+    @Test
+    @Tag("stress")
+    void recordsAndQueriesOneThousandGeneratedAuditEntriesInStableOrder() {
+        var service = CotaniAudits.inMemory(2_000);
+        var action = AuditAction.of("stress.player.action");
+        try {
+            StressTestSupport.scenarios("audit", "record-query-order", (context, random, player) -> {
+                var occurredAt = Instant.EPOCH.plusMillis(context.iteration());
+                var entry = new AuditEntry(
+                        random.uuid("entry"),
+                        occurredAt,
+                        AuditActor.player(player.id()),
+                        action,
+                        AuditTarget.resource("player", player.id().toString()),
+                        AuditSeverity.INFO,
+                        Map.of("iteration", Integer.toString(context.iteration())));
+                StressTestSupport.await(service.recordAsync(entry), Duration.ofSeconds(30), context);
+            });
+
+            var page = service.findAsync(
+                            AuditQuery.builder().action(action).limit(1_000).build())
+                    .toCompletableFuture()
+                    .join();
+            assertEquals(1_000, page.size());
+            assertEquals(
+                    StressTestSupport.iterations() - 1L,
+                    page.getFirst().occurredAt().toEpochMilli());
+            assertTrue(java.util.stream.IntStream.range(1, page.size())
+                    .allMatch(index -> !page.get(index - 1)
+                            .occurredAt()
+                            .isBefore(page.get(index).occurredAt())));
+        } finally {
+            service.closeAsync().toCompletableFuture().join();
+        }
+    }
+
     @Test
     void recordsEntriesAndReturnsNewestFirstWithFilters() {
         var service = CotaniAudits.inMemory();

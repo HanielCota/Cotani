@@ -7,10 +7,12 @@ import static org.mockito.Mockito.when;
 
 import com.cotani.npc.api.Npc;
 import com.cotani.npc.internal.NpcSpatialIndex;
+import com.cotani.testkit.StressTestSupport;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class NpcSpatialIndexTest {
@@ -25,6 +27,31 @@ class NpcSpatialIndexTest {
         world = mock(World.class);
         worldId = UUID.randomUUID();
         when(world.getUID()).thenReturn(worldId);
+    }
+
+    @Test
+    @Tag("stress")
+    void indexesQueriesAndRemovesThousandsOfVirtualNpcsByChunk() {
+        for (int index = 0; index < StressTestSupport.iterations(); index++) {
+            spatialIndex.add(Npc.builder()
+                    .id(new UUID(30L, index + 1L))
+                    .name("generated-" + index)
+                    .location(new Location(world, index * 16.0, 64, 0))
+                    .build());
+        }
+
+        for (int index = 0; index < StressTestSupport.iterations(); index++) {
+            var nearby = spatialIndex.getNearby(worldId, index, 0, 0);
+            assertEquals(1, nearby.size());
+            assertEquals(new UUID(30L, index + 1L), nearby.getFirst().id());
+        }
+        for (int index = 0; index < StressTestSupport.iterations(); index += 2) {
+            spatialIndex.remove(new UUID(30L, index + 1L));
+        }
+        assertTrue(spatialIndex
+                        .getNearby(worldId, 0, 0, StressTestSupport.iterations())
+                        .size()
+                <= StressTestSupport.iterations() / 2);
     }
 
     @Test

@@ -18,6 +18,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class CaffeineDataCacheCoordinationTest {
@@ -66,6 +67,7 @@ class CaffeineDataCacheCoordinationTest {
     }
 
     @Test
+    @Tag("stress")
     void saveAllKeepsRepositoryConcurrencyWithinConfiguredLimit() {
         var repository = new ControlledRepository();
         var cache = CaffeineDataCache.create(

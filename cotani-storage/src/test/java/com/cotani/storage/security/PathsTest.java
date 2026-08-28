@@ -3,10 +3,11 @@ package com.cotani.storage.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -39,16 +40,13 @@ class PathsTest {
 
     @Test
     void requireContainedRejectsSymbolicLinkEvenWhenTargetIsInsideRoot() throws IOException {
-        var target = tempDir.resolve("target.db");
-        Files.createFile(target);
-        var link = tempDir.resolve("link.db");
-
-        try {
+        try (var fileSystem = Jimfs.newFileSystem(Configuration.unix())) {
+            var root = Files.createDirectory(fileSystem.getPath("/storage"));
+            var target = Files.createFile(root.resolve("target.db"));
+            var link = root.resolve("link.db");
             Files.createSymbolicLink(link, target);
-        } catch (UnsupportedOperationException | IOException unsupported) {
-            Assumptions.abort("symbolic links are unavailable: " + unsupported.getMessage());
-        }
 
-        assertThrows(IllegalArgumentException.class, () -> Paths.requireContained(link, tempDir));
+            assertThrows(IllegalArgumentException.class, () -> Paths.requireContained(link, root));
+        }
     }
 }

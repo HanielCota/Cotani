@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class AchievementServiceTest {
@@ -98,6 +99,26 @@ class AchievementServiceTest {
     @AfterEach
     void tearDown() {
         service.close();
+    }
+
+    @Test
+    @Tag("stress")
+    void evaluatesAndUnlocksOneThousandGeneratedPlayersWithoutCrossContamination() {
+        when(statistics.findAsync(any(UUID.class), any(StatisticId.class)))
+                .thenAnswer(invocation -> CompletableFuture.completedFuture(Optional.of(new StatisticEntry(
+                        invocation.getArgument(0), invocation.getArgument(1), 3, Instant.EPOCH, 1))));
+
+        com.cotani.testkit.StressTestSupport.scenarios("achievement", "evaluate-unlock", (context, random, player) -> {
+            var first = com.cotani.testkit.StressTestSupport.await(
+                    service.evaluateAsync(player.id(), ACHIEVEMENT_ID), Duration.ofSeconds(30), context);
+            var replay = com.cotani.testkit.StressTestSupport.await(
+                    service.evaluateAsync(player.id(), ACHIEVEMENT_ID), Duration.ofSeconds(30), context);
+
+            assertTrue(first.unlocked(), context::description);
+            assertEquals(first, replay, context::description);
+            assertEquals(player.id(), replay.playerId(), context::description);
+            assertTrue(replay.rewardClaimId().isPresent(), context::description);
+        });
     }
 
     @Test

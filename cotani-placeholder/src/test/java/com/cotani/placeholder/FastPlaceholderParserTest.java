@@ -3,10 +3,37 @@ package com.cotani.placeholder;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.cotani.placeholder.internal.FastPlaceholderParser;
+import com.cotani.testkit.StressTestSupport;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class FastPlaceholderParserTest {
+
+    @Test
+    @Tag("stress")
+    void parsesAndReplacesThousandsOfPlayerSpecificTokensExactly() {
+        StressTestSupport.scenarios("placeholder", "tokenize-replace", (context, random, player) -> {
+            String input = "Player {player_name} has %economy_balance_" + context.iteration() + "% coins";
+            var tokens = FastPlaceholderParser.findTokens(input);
+            assertEquals(2, tokens.size(), context::description);
+            assertEquals("player_name", tokens.getFirst().innerToken(), context::description);
+
+            String output = FastPlaceholderParser.replaceTokens(input, token -> {
+                if (token.equals("player_name")) {
+                    return player.username();
+                }
+                if (token.equals("economy_balance_" + context.iteration())) {
+                    return Integer.toString(context.iteration());
+                }
+                return null;
+            });
+            assertEquals(
+                    "Player " + player.username() + " has " + context.iteration() + " coins",
+                    output,
+                    context::description);
+        });
+    }
 
     @Test
     void testFindTokensBothDelimiters() {

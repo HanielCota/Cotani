@@ -5,11 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import com.cotani.config.exception.ConfigException;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.bukkit.plugin.Plugin;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -55,21 +56,18 @@ class BukkitYamlConfigSourceTest {
     }
 
     @Test
-    void saveNeverFollowsSymbolicLinkTarget(@TempDir Path directory) throws IOException {
-        var root = Files.createDirectory(directory.resolve("root"));
-        var outside = directory.resolve("outside.yml");
-        Files.writeString(outside, "safe: true\n");
-        var link = root.resolve("config.yml");
-
-        try {
+    void saveNeverFollowsSymbolicLinkTarget() throws IOException {
+        try (var fileSystem = Jimfs.newFileSystem(Configuration.unix())) {
+            var root = Files.createDirectory(fileSystem.getPath("/root"));
+            var outside = fileSystem.getPath("/outside.yml");
+            Files.writeString(outside, "safe: true\n");
+            var link = root.resolve("config.yml");
             Files.createSymbolicLink(link, outside);
-        } catch (UnsupportedOperationException | IOException unsupported) {
-            Assumptions.abort("symbolic links are unavailable: " + unsupported.getMessage());
-        }
-        var source = BukkitYamlConfigSource.create(mock(Plugin.class), "config.yml", link, root, false, false);
-        source.set("safe", false);
+            var source = BukkitYamlConfigSource.create(mock(Plugin.class), "config.yml", link, root, false, false);
+            source.set("safe", false);
 
-        assertThrows(ConfigException.class, source::save);
-        assertEquals("safe: true\n", Files.readString(outside));
+            assertThrows(ConfigException.class, source::save);
+            assertEquals("safe: true\n", Files.readString(outside));
+        }
     }
 }

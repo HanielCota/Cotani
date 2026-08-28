@@ -2,6 +2,7 @@ package com.cotani;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.cotani.testkit.StressTestSupport;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -50,6 +52,26 @@ class CotaniTest {
     @AfterEach
     void restoreBukkitServer() {
         setBukkitServer(null);
+    }
+
+    @Test
+    @Tag("stress")
+    void closesThousandsOfRegisteredResourcesExactlyOnceInOneLifecycle() {
+        var plugin = pluginWithLogger();
+        var closed = new AtomicInteger();
+        var builder = Cotani.forPlugin(plugin);
+        for (int index = 0; index < StressTestSupport.iterations(); index++) {
+            builder.with(closed::incrementAndGet);
+        }
+        var cotani = builder.build();
+
+        var firstClose = cotani.closeAsync();
+        var repeatedClose = cotani.closeAsync();
+        CompletableFuture.allOf(firstClose.toCompletableFuture(), repeatedClose.toCompletableFuture())
+                .join();
+
+        assertSame(firstClose, repeatedClose);
+        assertEquals(StressTestSupport.iterations(), closed.get());
     }
 
     @Test

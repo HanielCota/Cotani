@@ -13,6 +13,7 @@ import com.cotani.locale.api.MessageArguments;
 import com.cotani.locale.api.MessageBundle;
 import com.cotani.locale.api.MessageKey;
 import com.cotani.locale.api.MissingMessageException;
+import com.cotani.testkit.StressTestSupport;
 import com.cotani.text.ComponentTexts;
 import java.time.Duration;
 import java.util.List;
@@ -22,10 +23,36 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class DefaultLocaleServiceTest {
     private static final UUID PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    @Test
+    @Tag("stress")
+    void generatedPlayerPreferencesRenderAndFallBackWithoutLeakingAcrossPlayers() {
+        var service = CotaniLocales.inMemory(catalog());
+        try {
+            StressTestSupport.scenarios("locale", "preference-render-fallback", (context, random, player) -> {
+                var locale = context.iteration() % 2 == 0 ? LocaleId.of("pt-BR") : LocaleId.of("en-US");
+                StressTestSupport.await(
+                        service.setPlayerLocaleAsync(player.id(), locale), Duration.ofSeconds(30), context);
+                var rendered = service.render(
+                        player.id(),
+                        MessageKey.of("welcome"),
+                        MessageArguments.builder()
+                                .text("name", player.username())
+                                .build());
+                var expectedPrefix = context.iteration() % 2 == 0 ? "Olá " : "Hello ";
+                assertEquals(
+                        expectedPrefix + player.username(), ComponentTexts.toPlain(rendered), context::description);
+                assertEquals(locale, service.findPlayerLocale(player.id()).orElseThrow(), context::description);
+            });
+        } finally {
+            service.closeAsync().toCompletableFuture().join();
+        }
+    }
 
     @Test
     void rendersUsingPlayerLocaleAndConfiguredFallback() {

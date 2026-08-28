@@ -9,13 +9,34 @@ import com.cotani.display.api.BlockLine;
 import com.cotani.display.api.DisplayBillboard;
 import com.cotani.display.api.ItemLine;
 import com.cotani.display.api.TextLine;
+import com.cotani.testkit.StressTestSupport;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Color;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 class HologramLineTest {
+
+    @Test
+    @Tag("stress")
+    void transformsThousandsOfHologramLinesWithoutMutatingTheOriginal() {
+        var original = TextLine.of(Component.text("base"));
+        StressTestSupport.scenarios("display", "hologram-line-update", (context, random, player) -> {
+            float scale = random.nextInt(1, 501) / 100.0F;
+            double offset = random.nextInt(-1_000, 1_001) / 100.0;
+            var updated = original.withText(Component.text(player.username()))
+                    .withScale(scale)
+                    .withHeightOffset(offset)
+                    .withOpacity((byte) (context.iteration() % 128));
+
+            assertEquals(Component.text(player.username()), updated.text(), context::description);
+            assertEquals(scale, updated.scale(), context::description);
+            assertEquals(offset, updated.heightOffset(), context::description);
+            assertEquals(Component.text("base"), original.text(), context::description);
+        });
+    }
 
     @Test
     void shouldCreateAndModifyTextLine() {
